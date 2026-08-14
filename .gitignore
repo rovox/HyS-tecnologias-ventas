@@ -9,10 +9,16 @@ dist/
 build/
 out/
 
+# Next.js build
+/.next/
+/out/
+next-env.d.ts
+
 # Environments
 .env
 .env.local
 .env.*.local
+.env*.local
 
 # PocketBase local data (NO subir a git)
 apps/pocketbase/pb_data/
@@ -39,3 +45,25 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Vercel
+.vercel
+
+# Keys / certs
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa
+id_rsa.pub
+
+# Docker / cloud creds
+.docker/
+.docker/config.json
+.aws/credentials
+.aws/config
+.azure/
+.netrc
+
+# TypeScript build info
+*.tsbuildinfo
