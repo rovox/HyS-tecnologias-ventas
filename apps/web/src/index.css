@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 40% 10%;
+    
+    --primary: 220 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 210 40% 96%; 
+    --secondary-foreground: 220 40% 10%; 
+    
+    --accent: 210 40% 96%; 
+    --accent-foreground: 220 40% 10%; 
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 40% 10%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 40% 10%;
+    
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 100% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 220 100% 40%;
+    --radius: 0.75rem;
+
+    /* Dashboard & Component Specific Tokens */
+    --metric-card-bg: 0 0% 100%;
+    --metric-card-border: 214 32% 91%;
+    --metric-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+    
+    --table-row-hover: 210 40% 98%;
+    --table-header-bg: 210 40% 96%;
+
+    --progress-track: 214 32% 91%;
+    --progress-fill: 220 100% 40%;
+
+    --sidebar-bg: 220 100% 15%;
+    --corporate-dark: 220 100% 10%;
+    
+    /* Schedule & Status Tokens */
+    --state-pending: 210 40% 96%;
+    --state-pending-fg: 220 40% 10%;
+    
+    --state-progress: 40 90% 50%;
+    --state-progress-fg: 0 0% 100%;
+    
+    --state-completed: 142 71% 45%;
+    --state-completed-fg: 0 0% 100%;
+    
+    --state-canceled: 215 16% 47%;
+    --state-canceled-fg: 0 0% 100%;
+
+    --content-padding: clamp(1rem, 3vw, 2rem);
+  }
+
+  .dark {
+    --background: 220 100% 10%;
+    --foreground: 0 0% 100%;
+    
+    --primary: 220 100% 50%;
+    --primary-foreground: 220 100% 10%;
+    
+    --secondary: 220 60% 20%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --accent: 220 60% 20%;
+    --accent-foreground: 0 0% 100%;
+
+    --card: 220 80% 12%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 220 80% 12%;
+    --popover-foreground: 0 0% 100%;
+    
+    --muted: 220 60% 25%;
+    --muted-foreground: 220 20% 75%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 100% 40%;
+    --warning-foreground: 0 0% 100%;
+    
+    --border: 220 60% 25%;
+    --input: 220 60% 25%;
+    --ring: 220 100% 50%;
+
+    /* Dashboard & Component Specific Tokens Dark */
+    --metric-card-bg: 220 80% 14%;
+    --metric-card-border: 220 60% 25%;
+    --metric-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+    
+    --table-row-hover: 220 60% 18%;
+    --table-header-bg: 220 60% 16%;
+
+    --progress-track: 220 60% 25%;
+    --progress-fill: 220 100% 50%;
+
+    /* Schedule & Status Tokens Dark */
+    --state-pending: 220 60% 20%;
+    --state-pending-fg: 220 20% 90%;
+    
+    --state-progress: 40 100% 30%;
+    --state-progress-fg: 0 0% 100%;
+    
+    --state-completed: 142 71% 30%;
+    --state-completed-fg: 0 0% 100%;
+    
+    --state-canceled: 220 20% 25%;
+    --state-canceled-fg: 220 20% 80%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .content-container {
+    @apply w-full px-[var(--content-padding)] max-w-none mx-0;
+  }
+
+  /* Metric Card Utilities */
+  .metric-card {
+    @apply bg-[hsl(var(--metric-card-bg))] border border-[hsl(var(--metric-card-border))] rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+    box-shadow: var(--metric-card-shadow);
+  }
+
+  .progress-bar-container {
+    @apply w-full h-2 rounded-full overflow-hidden bg-[hsl(var(--progress-track))];
+  }
+
+  .progress-bar-fill {
+    @apply h-full transition-all duration-500 ease-out bg-[hsl(var(--progress-fill))];
+  }
+
+  /* Table Utilities */
+  .table-container {
+    @apply w-full overflow-x-auto rounded-xl border border-border bg-card shadow-sm;
+  }
+  
+  .table-header {
+    @apply bg-[hsl(var(--table-header-bg))] text-muted-foreground text-xs font-bold uppercase tracking-wider text-left;
+  }
+  
+  .table-row {
+    @apply border-b border-border transition-colors duration-200 hover:bg-[hsl(var(--table-row-hover))];
+  }
+
+  .table-cell {
+    @apply px-4 py-3 align-middle text-sm text-foreground;
+  }
+
+  /* Status Colors */
+  .bg-state-pending {
+    background-color: hsl(var(--state-pending));
+    color: hsl(var(--state-pending-fg));
+  }
+  .bg-state-progress {
+    background-color: hsl(var(--state-progress));
+    color: hsl(var(--state-progress-fg));
+  }
+  .bg-state-completed {
+    background-color: hsl(var(--state-completed));
+    color: hsl(var(--state-completed-fg));
+  }
+  .bg-state-canceled {
+    background-color: hsl(var(--state-canceled));
+    color: hsl(var(--state-canceled-fg));
+  }
+  .border-state-pending { border-color: hsl(var(--state-pending-fg) / 0.2); }
+  .border-state-progress { border-color: hsl(var(--state-progress)); }
+  .border-state-completed { border-color: hsl(var(--state-completed)); }
+  .border-state-canceled { border-color: hsl(var(--state-canceled)); }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
