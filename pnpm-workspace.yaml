@@ -1,14 +1,11 @@
 packages:
   - 'apps/*'
 
-# Hostinger: do not run esbuild's postinstall. It only spawns `bin/esbuild --version`
-# and fails with EACCES on their hbuilds mount (hardlinked store, missing +x / noexec).
-# Listing it here acknowledges the scripts so ERR_PNPM_IGNORED_BUILDS does not fire.
-# Vite still needs the binary at build time — see apps/web/tools/ensure-esbuild-bin.mjs.
+# Hostinger cannot execute esbuild (noexec on hbuilds and /tmp). Skip its postinstall
+# so `pnpm install` succeeds; the SPA is pre-built and committed in apps/web/dist.
 ignoredBuiltDependencies:
   - esbuild
 allowBuilds:
   esbuild: false
-# Hardlinks from the pnpm store drop execute bits on Hostinger. Copy instead.
 packageImportMethod: copy
 confirmModulesPurge: false
