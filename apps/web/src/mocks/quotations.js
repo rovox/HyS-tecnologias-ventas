@@ -1,0 +1,130 @@
+/**
+ * Quotations
+ *
+ * EXISTING product behavior: document library (titulo, categoria, archivo).
+ * POC-ONLY extension: numbered commercial quotes with items, totals, and status workflow.
+ * Field `kind`: 'library' | 'commercial'
+ */
+
+export const QUOTATION_STATUSES = ['borrador', 'enviada', 'aceptada', 'rechazada', 'convertida'];
+
+export const QUOTATION_FLOW = {
+  borrador: ['enviada', 'rechazada'],
+  enviada: ['aceptada', 'rechazada', 'borrador'],
+  aceptada: ['convertida', 'rechazada'],
+  rechazada: ['borrador'],
+  convertida: [],
+};
+
+export const mockQuotationCategories = [
+  { id: 'qcat_camaras', nombre: 'Cámaras', orden: 1, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+  { id: 'qcat_alarmas', nombre: 'Alarmas', orden: 2, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+  { id: 'qcat_cercos', nombre: 'Cercos eléctricos', orden: 3, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+  { id: 'qcat_acceso', nombre: 'Control de acceso', orden: 4, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+];
+
+export const mockQuotations = [
+  {
+    id: 'quo_andina',
+    kind: 'commercial',
+    numero: 'COT-2026-014',
+    titulo: 'CCTV 16 canales — Comercial Andina',
+    categoria: 'Cámaras',
+    cliente_id: 'cli_andina',
+    cliente_nombre: 'Comercial Andina SRL',
+    fecha: '2026-08-04',
+    estado: 'aceptada',
+    vendedor_id: 'usr_ventas',
+    vendedor_nombre: 'Luis Mendoza',
+    items: [
+      { descripcion: 'Cámara IP 4MP dome', cantidad: 12, precio_unitario: 780, subtotal: 9360 },
+      { descripcion: 'NVR 16ch + HDD 4TB', cantidad: 1, precio_unitario: 4200, subtotal: 4200 },
+      { descripcion: 'Instalación y cableado UTP', cantidad: 1, precio_unitario: 4940, subtotal: 4940 },
+    ],
+    subtotal: 18500,
+    total: 18500,
+    observacion: 'POC: cotización aceptada lista para convertir a trabajo',
+    archivo: 'cot-andina-cctv.pdf',
+    imagen_preview: '',
+    uploaded_by: 'Luis Mendoza',
+    schedule_id: 'sch_andina',
+    created: '2026-08-04 09:15:00',
+    updated: '2026-08-06 14:00:00',
+  },
+  {
+    id: 'quo_hospital',
+    kind: 'commercial',
+    numero: 'COT-2026-018',
+    titulo: 'Control de acceso — Clínica Horizonte',
+    categoria: 'Control de acceso',
+    cliente_id: 'cli_hospital',
+    cliente_nombre: 'Clínica Horizonte',
+    fecha: '2026-08-09',
+    estado: 'enviada',
+    vendedor_id: 'usr_ventas',
+    vendedor_nombre: 'Luis Mendoza',
+    items: [
+      { descripcion: 'Lector biométrico', cantidad: 4, precio_unitario: 1100, subtotal: 4400 },
+      { descripcion: 'Cerradura electromagnética', cantidad: 4, precio_unitario: 650, subtotal: 2600 },
+      { descripcion: 'Software y puesta en marcha', cantidad: 1, precio_unitario: 1800, subtotal: 1800 },
+    ],
+    subtotal: 8800,
+    total: 8800,
+    observacion: 'Enviada al cliente — pendiente de aceptación',
+    archivo: 'cot-horizonte-acceso.pdf',
+    imagen_preview: '',
+    uploaded_by: 'Luis Mendoza',
+    schedule_id: '',
+    created: '2026-08-09 11:00:00',
+    updated: '2026-08-09 11:20:00',
+  },
+  {
+    id: 'quo_pino',
+    kind: 'commercial',
+    numero: 'COT-2026-021',
+    titulo: 'Cerco eléctrico — Residencial Los Pinos',
+    categoria: 'Cercos eléctricos',
+    cliente_id: 'cli_resid',
+    cliente_nombre: 'Residencial Los Pinos',
+    fecha: '2026-08-12',
+    estado: 'borrador',
+    vendedor_id: 'usr_ventas',
+    vendedor_nombre: 'Luis Mendoza',
+    items: [
+      { descripcion: 'Kit cerco 400 m', cantidad: 1, precio_unitario: 6200, subtotal: 6200 },
+      { descripcion: 'Energizador 30J', cantidad: 1, precio_unitario: 1450, subtotal: 1450 },
+    ],
+    subtotal: 7650,
+    total: 7650,
+    observacion: 'Borrador interno',
+    archivo: '',
+    imagen_preview: '',
+    uploaded_by: 'Luis Mendoza',
+    schedule_id: '',
+    created: '2026-08-12 16:40:00',
+    updated: '2026-08-12 16:40:00',
+  },
+  {
+    id: 'quo_lib_cam',
+    kind: 'library',
+    numero: '',
+    titulo: 'Listado de precios cámaras 2026-Q3',
+    categoria: 'Cámaras',
+    cliente_id: '',
+    cliente_nombre: '',
+    fecha: '2026-07-01',
+    estado: 'documento',
+    vendedor_id: 'usr_admin',
+    vendedor_nombre: 'Ana Vargas',
+    items: [],
+    subtotal: 0,
+    total: 0,
+    observacion: 'Documento de referencia (comportamiento original de biblioteca)',
+    archivo: 'lista-camaras-2026.pdf',
+    imagen_preview: '',
+    uploaded_by: 'Ana Vargas',
+    schedule_id: '',
+    created: '2026-07-01 10:00:00',
+    updated: '2026-07-01 10:00:00',
+  },
+];
