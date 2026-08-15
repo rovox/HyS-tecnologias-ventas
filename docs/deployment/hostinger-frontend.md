@@ -27,19 +27,16 @@ Hostinger auto-detects many fields. Confirm each value on the deploy screen; lab
 
 Do **not** set Root directory to `/` for this POC unless the pnpm allowlist fallback below is needed. The root `package.json` `start` script still launches PocketBase, which is not this milestone.
 
-## pnpm + `ERR_PNPM_IGNORED_BUILDS`
+## pnpm + esbuild on Hostinger
 
-Hostinger’s pnpm 10+ blocks dependency lifecycle scripts (supply-chain policy). Vite needs `esbuild`’s postinstall to unpack its binary. `pnpm approve-builds` is **interactive** and cannot run on Hostinger.
+Two separate failures show up in Hostinger logs. Do **not** delete `pnpm-lock.yaml`, do **not** run `pnpm store prune` on the server, and do **not** downgrade `esbuild` to `^0.24.0` (Vite 7 needs a current esbuild). Hostinger’s auto-diagnosis suggesting those steps is wrong for this repo.
 
-This repo already allowlists `esbuild` in `pnpm-workspace.yaml` (`onlyBuiltDependencies` / `allowBuilds`). After this commit is on `migration/frontend-poc`, redeploy. Do not try to approve builds in the Hostinger log UI.
+1. **`ERR_PNPM_IGNORED_BUILDS`** — pnpm 10+ blocks lifecycle scripts. `pnpm approve-builds` is interactive and cannot run on Hostinger. `esbuild` is listed in `pnpm-workspace.yaml` as ignored (`allowBuilds.esbuild: false`) so install does not try to spawn the binary during postinstall.
+2. **`EACCES` on `esbuild/bin/esbuild`** — pnpm hardlinks from `~/.local/share/pnpm/store` into `hbuilds/source/repository`; the wrapper is not executable (or the mount is noexec). `packageImportMethod: copy` plus `apps/web/tools/build.sh` chmod the binary, or copy it to `/tmp` and set `ESBUILD_BINARY_PATH`.
 
-If install still fails with the same error, in hPanel set **Root directory** to the repo root (`/`) and:
+Keep **Package manager = pnpm**, **Build command = `pnpm run build`**, **Root directory = `apps/web`**, **Entry file empty**. The log line `Scope: all 3 workspace projects` is expected (repo root + `apps/web` + `apps/pocketbase`).
 
-- Build command: `pnpm --filter web build`
-- Output directory: `apps/web/dist`
-- Entry file: leave empty
-
-That keeps the workspace file visible to pnpm. The current log (`Scope: all 3 workspace projects`, virtual store at `../../node_modules/.pnpm`) already means Hostinger is installing the monorepo, not `apps/web` in isolation — that is expected.
+If install still cannot see `pnpm-workspace.yaml`, set Root to `/`, build `pnpm --filter web build`, output `apps/web/dist`.
 
 ## Environment variables
 

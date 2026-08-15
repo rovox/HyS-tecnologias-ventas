@@ -1,11 +1,14 @@
 packages:
   - 'apps/*'
 
-# Hostinger pnpm 10+ fails install unless esbuild's postinstall is allowlisted.
-# `pnpm approve-builds` is interactive and cannot run on their CI.
-# pnpm 10: onlyBuiltDependencies. pnpm 11+: allowBuilds.
-onlyBuiltDependencies:
+# Hostinger: do not run esbuild's postinstall. It only spawns `bin/esbuild --version`
+# and fails with EACCES on their hbuilds mount (hardlinked store, missing +x / noexec).
+# Listing it here acknowledges the scripts so ERR_PNPM_IGNORED_BUILDS does not fire.
+# Vite still needs the binary at build time — see apps/web/tools/ensure-esbuild-bin.mjs.
+ignoredBuiltDependencies:
   - esbuild
 allowBuilds:
-  esbuild: true
+  esbuild: false
+# Hardlinks from the pnpm store drop execute bits on Hostinger. Copy instead.
+packageImportMethod: copy
 confirmModulesPurge: false
