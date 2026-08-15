@@ -39,12 +39,14 @@ Set `VITE_API_MODE=api` only after REST repositories exist. Until then the app s
 
 Fictional accounts, password `Demo1234!`:
 
-| Email | Role |
-|-------|------|
-| ana.admin@demo.hs.local | ADMINISTRADOR |
-| luis.ventas@demo.hs.local | VENTAS / ADMINISTRACIÓN |
-| marco.tec@demo.hs.local | SEGURIDAD ELECTRÓNICA |
-| elena.conta@demo.hs.local | Contadora |
+| Email | Role | Name |
+|-------|------|------|
+| julio.admin@demo.hs.local | ADMINISTRADOR | Julio |
+| dennis.ventas@demo.hs.local | VENTAS / ADMINISTRACIÓN | Dennis |
+| wilson.ventas@demo.hs.local | VENTAS / ADMINISTRACIÓN | Wilson |
+| vanesa.ventas@demo.hs.local | VENTAS / ADMINISTRACIÓN | Vanesa |
+| elias.ops@demo.hs.local | SEGURIDAD ELECTRÓNICA | Elias |
+| elena.conta@demo.hs.local | Contadora | Elena Rojas |
 
 This is **not** production JWT. Tokens are `poc.*` strings in `localStorage`.
 

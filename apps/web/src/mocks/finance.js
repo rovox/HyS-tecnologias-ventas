@@ -114,7 +114,7 @@ export const mockGastosOperativos = [
   {
     id: 'gas_1',
     persona_id: 'usr_tec',
-    persona_nombre: 'Marco Quispe',
+    persona_nombre: 'Elias',
     monto: 180,
     concepto: 'Pasajes El Alto — Plaza Norte',
     trabajo_id: 'sch_mall',
@@ -132,7 +132,7 @@ export const mockGastosOperativos = [
   {
     id: 'gas_2',
     persona_id: 'usr_tec',
-    persona_nombre: 'Marco Quispe',
+    persona_nombre: 'Elias',
     monto: 280,
     concepto: 'Combustible Hilux',
     trabajo_id: '',

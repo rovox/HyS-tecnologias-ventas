@@ -1,2 +1,11 @@
 packages:
   - 'apps/*'
+
+# Hostinger pnpm 10+ fails install unless esbuild's postinstall is allowlisted.
+# `pnpm approve-builds` is interactive and cannot run on their CI.
+# pnpm 10: onlyBuiltDependencies. pnpm 11+: allowBuilds.
+onlyBuiltDependencies:
+  - esbuild
+allowBuilds:
+  esbuild: true
+confirmModulesPurge: false

@@ -229,7 +229,7 @@ function seedCollections() {
         pedido_id: 'ped_andina',
         sucursal_nombre: 'Central La Paz',
         created_by: 'usr_tec',
-        created_by_nombre: 'Marco Quispe',
+        created_by_nombre: 'Elias',
         usuario_id: 'usr_tec',
         estado: 'activo',
         es_importante: true,
