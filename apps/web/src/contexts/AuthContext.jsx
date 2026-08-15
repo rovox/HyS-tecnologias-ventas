@@ -1,32 +1,31 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
+import authService from '@/services/auth/index.js';
+import mockAdapter from '@/api/mockAdapter.js';
+import { isMockMode } from '@/api/config.js';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(pb.authStore.record);
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = pb.authStore.onChange((token, record) => {
+    const unsubscribe = mockAdapter.authStore.onChange((_token, record) => {
       setCurrentUser(record);
     });
     setInitialLoading(false);
-
     return () => unsubscribe();
   }, []);
 
   const login = async (email, password) => {
     try {
-      const authData = await pb.collection('users').authWithPassword(email, password, { $autoCancel: false });
-      // Check custom active field if present
-      if (authData.record.active === false) {
-        pb.authStore.clear();
+      const result = await authService.login(email, password);
+      if (result.user?.active === false) {
+        authService.logout();
         return { success: false, error: 'Cuenta desactivada. Contacta al administrador.' };
       }
-      return { success: true, user: authData.record };
+      return { success: true, user: result.user };
     } catch (error) {
-      console.error('Login error:', error);
       const status = error?.status;
       if (status === 400) {
         return { success: false, error: 'Credenciales inválidas. Verificá email y contraseña.' };
@@ -39,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    pb.authStore.clear();
+    authService.logout();
     setCurrentUser(null);
   };
 
@@ -47,18 +46,7 @@ export const AuthProvider = ({ children }) => {
   const isVentas = () => currentUser?.role === 'VENTAS / ADMINISTRACIÓN';
   const isSeguridad = () => currentUser?.role === 'SEGURIDAD ELECTRÓNICA';
   const isContadora = () => currentUser?.role === 'Contadora';
-
-  // Permission Helper Functions
-  // VENTAS / ADMINISTRACIÓN = same financial level as Contadora
   const isVentasLevel = () => isAdmin() || isVentas() || isContadora();
-
-  const canViewFinancialReports = () => isVentasLevel();
-  const canRegisterFinancial = () => isVentasLevel();
-  const canApproveExpenses = () => isVentasLevel();  // can approve/reject gastos operativos
-  const canDeleteRecords = () => isAdmin();           // only admin deletes
-  const canAccessExecutivePanel = () => isAdmin();
-  const canManageVehicles = () => isAdmin() || isVentas() || isSeguridad() || isContadora();
-  const canViewVehicleAnalytics = () => isAdmin();
 
   const value = {
     currentUser,
@@ -66,20 +54,21 @@ export const AuthProvider = ({ children }) => {
     department: currentUser?.department,
     login,
     logout,
-    isAuthenticated: pb.authStore.isValid,
+    isAuthenticated: mockAdapter.authStore.isValid,
     initialLoading,
+    isMockAuth: isMockMode,
     isAdmin,
     isVentas,
     isSeguridad,
     isVentasLevel,
-    canApproveExpenses,
-    canDeleteRecords,
+    canApproveExpenses: isVentasLevel,
+    canDeleteRecords: isAdmin,
     isContadora,
-    canViewFinancialReports,
-    canRegisterFinancial,
-    canAccessExecutivePanel,
-    canManageVehicles,
-    canViewVehicleAnalytics
+    canViewFinancialReports: isVentasLevel,
+    canRegisterFinancial: isVentasLevel,
+    canAccessExecutivePanel: isAdmin,
+    canManageVehicles: () => isAdmin() || isVentas() || isSeguridad() || isContadora(),
+    canViewVehicleAnalytics: isAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

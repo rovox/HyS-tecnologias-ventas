@@ -9,15 +9,12 @@ import { Lock, Mail, Users, ShieldCheck, TrendingUp, Calendar, ArrowRight, Eye, 
 import { Helmet } from 'react-helmet';
 import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient.js';
+import authService from '@/services/auth/index.js';
+import { DEMO_PASSWORD } from '@/mocks/users.js';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const COMPANY_PHOTOS = [
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/5e09f49c87c76724184c3a96b506ae4e.jpg',
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/e91a9d2218785f03ece7241c60f26054.jpg',
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/678b128cd24307a62ce8ce01addea550.jpg',
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/6912031f86c0fa93a97dc23aabe18170.jpg',
-];
+const COMPANY_PHOTOS = ['/branding/login-bg.svg'];
 
 
 
@@ -32,6 +29,7 @@ const LoginPage = () => {
   const [schedules, setSchedules] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const demoAccounts = authService.listDemoAccounts();
 
   const today = startOfToday();
   const tomorrow = addDays(today, 1);
@@ -218,7 +216,7 @@ const LoginPage = () => {
               <div className="relative shrink-0">
                 <div className="absolute -inset-2 rounded-3xl blur-xl opacity-40" style={{ background: 'rgba(17,212,177,0.35)' }} />
                 <img
-                  src="https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/293556251_3188912498016330_4232731385862456813_n-a0Gkd.jpg"
+                  src="/branding/logo.svg"
                   alt="H&S Tecnologías"
                   className="relative h-[72px] w-[72px] rounded-2xl object-contain p-2"
                   style={{
@@ -381,6 +379,24 @@ const LoginPage = () => {
                   <p className="text-[11.5px] font-medium mt-2" style={{ color: '#6B8499' }}>Plataforma H&amp;S Tecnologías</p>
                 </div>
 
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[#11D4B1]">POC · autenticación mock</p>
+                  <p className="text-[11px] text-[#8DA4B8]">Datos ficticios. Contraseña de todas las cuentas: <span className="font-mono text-white">{DEMO_PASSWORD}</span></p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {demoAccounts.map((account) => (
+                      <button
+                        key={account.email}
+                        type="button"
+                        onClick={() => { setEmail(account.email); setPassword(account.password); }}
+                        className="text-left text-[11px] rounded-lg px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[#d6e8f5]"
+                      >
+                        <span className="block font-bold truncate">{account.name}</span>
+                        <span className="block opacity-70 truncate">{account.role.split('/')[0]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-5">
                   {/* Email */}
                   <div className="space-y-2">
@@ -447,8 +463,8 @@ const LoginPage = () => {
                           return;
                         }
                         try {
-                          await pb.collection('users').requestPasswordReset(email);
-                          toast.success('Correo de restablecimiento enviado. Revisá tu bandeja.');
+                          await authService.requestPasswordReset(email);
+                          toast.success('POC mock: no se envía correo real. Usá las cuentas de demostración.');
                         } catch (err) {
                           toast.error('No se pudo enviar el correo. Contactá al administrador.');
                         }
