@@ -19,13 +19,27 @@ Hostinger auto-detects many fields. Confirm each value on the deploy screen; lab
 | Framework preset | **Vite** (or React) | Auto-detect; override if it picks Nest/Other |
 | Node.js version | **22** | 18/20/22/24 are supported; 22 is the documented default |
 | Root directory | `apps/web` | Required. Monorepo: Hostinger builds **only this subdirectory** |
-| Package manager | npm | Auto from lockfile |
-| Build command | `npm run build` | Script lives in `apps/web/package.json` |
+| Package manager | **pnpm** | Auto from `pnpm-lock.yaml`. Do not switch to npm unless you also commit a `package-lock.json` |
+| Build command | `pnpm run build` | Script lives in `apps/web/package.json` |
 | Output directory | `dist` | Vite writes `apps/web/dist` |
 | Entry file | **leave empty** | Static Vite apps have no Node server process |
 | Environment variables | see below | Applied at build and runtime |
 
-Do **not** set Root directory to `/` for this POC. The root `package.json` `start` script still launches PocketBase, which is not this milestone.
+Do **not** set Root directory to `/` for this POC unless the pnpm allowlist fallback below is needed. The root `package.json` `start` script still launches PocketBase, which is not this milestone.
+
+## pnpm + `ERR_PNPM_IGNORED_BUILDS`
+
+Hostinger’s pnpm 10+ blocks dependency lifecycle scripts (supply-chain policy). Vite needs `esbuild`’s postinstall to unpack its binary. `pnpm approve-builds` is **interactive** and cannot run on Hostinger.
+
+This repo already allowlists `esbuild` in `pnpm-workspace.yaml` (`onlyBuiltDependencies` / `allowBuilds`). After this commit is on `migration/frontend-poc`, redeploy. Do not try to approve builds in the Hostinger log UI.
+
+If install still fails with the same error, in hPanel set **Root directory** to the repo root (`/`) and:
+
+- Build command: `pnpm --filter web build`
+- Output directory: `apps/web/dist`
+- Entry file: leave empty
+
+That keeps the workspace file visible to pnpm. The current log (`Scope: all 3 workspace projects`, virtual store at `../../node_modules/.pnpm`) already means Hostinger is installing the monorepo, not `apps/web` in isolation — that is expected.
 
 ## Environment variables
 
@@ -92,7 +106,7 @@ Do not move the `horizons-original` tag. Do not force-push `main`.
 
 ## Checklist after first deploy
 
-- [ ] Login with `ana.admin@demo.hs.local` / `Demo1234!`
+- [ ] Login with `julio.admin@demo.hs.local` / `Demo1234!`
 - [ ] Banner “POC frontend · datos ficticios”
 - [ ] `/quotations` commercial flow
 - [ ] Browser network tab: **no** requests to `/hcgi/platform`
