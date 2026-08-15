@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "vite --host --port 3000",
-    "build": "sh tools/build.sh",
+    "build": "vite build",
+    "verify:dist": "node tools/verify-prebuilt-dist.mjs",
     "start": "vite preview --host --port 3000",
     "lint": "eslint . --quiet; lint_status=$?; eslint \"src/**/*.jsx\" --config eslint.config.mjs --format ./eslint.unicode-escapes-formatter.mjs --no-error-on-unmatched-pattern; exit $lint_status",
     "lint:warn": "eslint ."

@@ -8,35 +8,47 @@ Use the **existing private GitHub repository**. Do not create another repo.
 
 This document describes **Option A: frontend-only** (Vite static + mock services). NestJS is not part of this deploy.
 
+## TEMPORARY: pre-built `dist/` (do not run Vite on Hostinger)
+
+Hostinger Cloud Startup mounts the build filesystem **`noexec`**. `esbuild`’s native binary cannot run during `pnpm install` postinstall, during `vite build`, or even after copying it to `/tmp`. That is kernel-level. Do not try to chmod, allowlist, or downgrade esbuild on Hostinger.
+
+**POC workaround:** build the SPA on a machine that can execute esbuild, commit `apps/web/dist/`, and tell Hostinger to skip Vite.
+
+Local rebuild (required after frontend changes):
+
+```bash
+pnpm --filter web build
+git add apps/web/dist
+git commit -m "chore: refresh pre-built frontend POC for Hostinger"
+git push
+```
+
+Follow-up (not this milestone): GitHub Actions on `ubuntu-latest` that builds and deploys `dist/` (FTP/API). Use that when NestJS is in production. Do not add that workflow until then.
+
 ## Recommended hPanel settings
 
-Hostinger auto-detects many fields. Confirm each value on the deploy screen; labels below match current Hostinger Node.js Web App docs (GitHub flow, root directory, build command, output directory, entry file, env vars).
+Hostinger auto-detects many fields. Confirm each value. **Do not use `pnpm run build` on Hostinger** — that runs Vite and will fail with `EACCES` on esbuild.
 
 | Setting | Recommended value | Verify in hPanel |
 |---------|-------------------|------------------|
 | Source | Import Git repository → existing private repo | Pick the already-connected GitHub account |
 | Branch | `migration/frontend-poc` | Defaults to repo default (`main`) — **change it** |
-| Framework preset | **Vite** (or React) | Auto-detect; override if it picks Nest/Other |
-| Node.js version | **22** | 18/20/22/24 are supported; 22 is the documented default |
-| Root directory | `apps/web` | Required. Monorepo: Hostinger builds **only this subdirectory** |
-| Package manager | **pnpm** | Auto from `pnpm-lock.yaml`. Do not switch to npm unless you also commit a `package-lock.json` |
-| Build command | `pnpm run build` | Script lives in `apps/web/package.json` |
-| Output directory | `dist` | Vite writes `apps/web/dist` |
-| Entry file | **leave empty** | Static Vite apps have no Node server process |
-| Environment variables | see below | Applied at build and runtime |
+| Framework preset | **Vite** (or Static / Other) | Override if it picks Nest |
+| Node.js version | **22** | Used only for `pnpm install` + verify |
+| Root directory | `apps/web` | Required |
+| Package manager | **pnpm** | Auto from `pnpm-lock.yaml` |
+| Build command | `pnpm run verify:dist` | Checks committed `dist/index.html`. **Not** `pnpm run build` |
+| Output directory | `dist` | Committed `apps/web/dist` |
+| Entry file | **leave empty** | Hostinger copies `dist` to the site root |
+| Environment variables | see below | Already baked into the committed bundle |
 
-Do **not** set Root directory to `/` for this POC unless the pnpm allowlist fallback below is needed. The root `package.json` `start` script still launches PocketBase, which is not this milestone.
+If Hostinger refuses an empty entry file, set **Entry file** to `serve-dist.mjs` (Node stdlib static server, no native binaries). Leave it empty if the panel copies `dist` without a process.
 
-## pnpm + esbuild on Hostinger
+`pnpm install` on Hostinger is expected to succeed (esbuild postinstall is ignored in `pnpm-workspace.yaml`). The previous log `Done in 4.5s using pnpm v11.21.0` is the success case. Failure starts only if the build command runs Vite.
 
-Two separate failures show up in Hostinger logs. Do **not** delete `pnpm-lock.yaml`, do **not** run `pnpm store prune` on the server, and do **not** downgrade `esbuild` to `^0.24.0` (Vite 7 needs a current esbuild). Hostinger’s auto-diagnosis suggesting those steps is wrong for this repo.
+Do **not** set Root directory to `/`. The root `package.json` `start` script still launches PocketBase.
 
-1. **`ERR_PNPM_IGNORED_BUILDS`** — pnpm 10+ blocks lifecycle scripts. `pnpm approve-builds` is interactive and cannot run on Hostinger. `esbuild` is listed in `pnpm-workspace.yaml` as ignored (`allowBuilds.esbuild: false`) so install does not try to spawn the binary during postinstall.
-2. **`EACCES` on `esbuild/bin/esbuild`** — pnpm hardlinks from `~/.local/share/pnpm/store` into `hbuilds/source/repository`; the wrapper is not executable (or the mount is noexec). `packageImportMethod: copy` plus `apps/web/tools/build.sh` chmod the binary, or copy it to `/tmp` and set `ESBUILD_BINARY_PATH`.
-
-Keep **Package manager = pnpm**, **Build command = `pnpm run build`**, **Root directory = `apps/web`**, **Entry file empty**. The log line `Scope: all 3 workspace projects` is expected (repo root + `apps/web` + `apps/pocketbase`).
-
-If install still cannot see `pnpm-workspace.yaml`, set Root to `/`, build `pnpm --filter web build`, output `apps/web/dist`.
+Do **not** delete `pnpm-lock.yaml`, prune the pnpm store, or pin `esbuild@^0.24.0`.
 
 ## Environment variables
 
@@ -45,19 +57,17 @@ VITE_API_MODE=mock
 VITE_API_URL=/api
 ```
 
-No secrets. `VITE_*` values are baked into the browser bundle at **build** time. After changing them, trigger a new deploy.
-
-`apps/web/.env.production` already contains these values, so hPanel env vars are optional but useful as an explicit record.
+These are already in `apps/web/.env.production` and were applied when `dist/` was built. Changing them in hPanel does **nothing** until you rebuild locally and commit a new `dist/`.
 
 ## Domain
 
-1. In hPanel, deploy the Node.js Web App onto the existing Hostinger domain (the flow creates/uses the website slot for that domain).
-2. If the domain already has another website on the plan, Hostinger may require removing or replacing that slot first — confirm in the panel; do not assume two sites share one document root.
-3. DNS for the existing domain should already point at Hostinger. No extra DNS is required for a mock frontend.
+1. In hPanel, deploy onto the existing Hostinger domain.
+2. If the domain already has another website on the plan, Hostinger may require replacing that slot first.
+3. DNS should already point at Hostinger.
 
 ## SPA routing
 
-`apps/web/public/.htaccess` rewrites unknown paths to `index.html` (Apache). Hostinger also generates an `.htaccess` in `public_html` for Node/Vite apps.
+`apps/web/public/.htaccess` is copied into `dist/` by Vite. It rewrites unknown paths to `index.html`.
 
 After deploy, hard-refresh:
 
@@ -67,13 +77,11 @@ After deploy, hard-refresh:
 - `/quotations`
 - `/pedidos-internos/ped_andina` (nested)
 
-If a nested URL 404s, the rewrite did not apply. Check `public_html/.htaccess` in File Manager. Do not hand-edit Hostinger-generated rules if a redeploy will overwrite them; prefer keeping the copy in `apps/web/public/.htaccess`.
-
-Static Vite apps **do not** expose Restart. There is no long-running Node process.
+If a nested URL 404s, check `public_html/.htaccess` in File Manager.
 
 ## GitHub auto-deploy
 
-Push to `migration/frontend-poc` triggers a rebuild when this branch is the connected deploy branch.
+Push to `migration/frontend-poc` after committing an updated `apps/web/dist/`.
 
 ```bash
 git push -u origin migration/frontend-poc
@@ -81,25 +89,24 @@ git push -u origin migration/frontend-poc
 
 Logs:
 
-- **Build logs** — website dashboard → Deployments
-- **Runtime logs** — not used for this static POC
+- **Build logs** — should show `pnpm install` then `pre-built dist present`
+- **Runtime logs** — unused unless `serve-dist.mjs` is the entry file
 
 ## Rollback
 
 1. In GitHub, note the previous good commit on `migration/frontend-poc`.
-2. Revert with a new commit (`git revert`) or reset **only if you explicitly intend to rewrite the branch** — do not force-push unless requested.
-3. Push; Hostinger rebuilds.
-4. Alternatively, in hPanel Deployments, redeploy a previous successful build if the UI offers it (confirm in panel; this control varies).
+2. Revert with a new commit (`git revert`). Do not force-push unless requested.
+3. Push; Hostinger redeploys the committed `dist/`.
 
 Do not move the `horizons-original` tag. Do not force-push `main`.
 
 ## Option A vs later architecture
 
-**This POC:** Option A — one Vite Web App from `apps/web`.
+**This POC:** Option A — pre-built Vite static files from `apps/web/dist`.
 
-**Final target (not this milestone):** Option B — one NestJS Web App at repo root (or `apps/api`) that serves `/api` and the built SPA. Compatible if the SPA keeps using `VITE_API_URL=/api`.
+**Final target (not this milestone):** Option B — NestJS serves `/api` and the SPA. Build the frontend in CI (GitHub Actions), not on Hostinger’s noexec builder.
 
-**Option C** (two Web Apps) is allowed by Cloud Startup (up to 10 Node.js sites) but adds CORS and cookies. Not needed for the mock POC.
+**Option C** (two Web Apps) is allowed by Cloud Startup but not needed for the mock POC.
 
 ## Checklist after first deploy
 

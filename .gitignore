@@ -4,10 +4,12 @@ node_modules/
 .pnp.js
 .pnpm-store/
 
-# Builds
+# Builds (Hostinger POC ships a pre-built SPA — see docs/deployment/hostinger-frontend.md)
 dist/
 build/
 out/
+!apps/web/dist/
+!apps/web/dist/**
 app.tar.gz
 *.tar.gz
 
