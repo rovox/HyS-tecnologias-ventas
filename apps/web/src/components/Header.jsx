@@ -22,7 +22,7 @@ const Header = ({ onMenuClick }) => {
           </Button>
           <div className="flex items-center gap-2 lg:hidden">
             <img 
-              src="https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/76c659f73df9e65530b4b8590c65d5d1.jpg" 
+              src="/branding/logo.svg" 
               alt="H&S Tecnologías" 
               className="h-8 w-8 object-contain bg-transparent"
             />

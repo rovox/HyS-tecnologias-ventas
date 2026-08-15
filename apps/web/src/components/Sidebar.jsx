@@ -107,7 +107,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <div className="flex flex-col items-center w-full gap-2 mt-2">
             <div className="bg-white rounded-xl shadow-lg w-32 h-32 flex items-center justify-center overflow-hidden">
               <img 
-                src="https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/8c235e1b3f39ed2e6a9db8769e467035.jpg" 
+                src="/branding/logo.svg" 
                 alt="H&S Tecnologías" 
                 className="w-full h-full object-cover mix-blend-multiply"
               />
