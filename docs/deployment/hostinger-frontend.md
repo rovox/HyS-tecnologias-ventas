@@ -64,22 +64,17 @@ If you push source without a new `dist/`, the live site stays on the last commit
 | Node.js version | **22** | Only for `pnpm install` + verify |
 | Root directory | `apps/web` | Required |
 | Package manager | **pnpm** | Auto from `pnpm-lock.yaml` |
-| Build command | `pnpm run verify:dist` | Must appear in the log as `$ pnpm run verify:dist`, never `$ vite build` |
+| Build command | empty, or `pnpm run verify:dist` | Hostinger already copies committed `dist/` after `pnpm install`. A custom command is optional. Never `$ vite build` |
+
 | Output directory | `dist` | Committed `apps/web/dist` |
 | Entry file | **leave empty** | Hostinger copies `dist` to the site root |
 | Environment variables | see below | Already baked into the committed bundle |
 
 If Hostinger refuses an empty entry file, set **Entry file** to `serve-dist.mjs` (Node stdlib static server, no native binaries).
 
-`pnpm install` on Hostinger should succeed (esbuild postinstall is ignored in `pnpm-workspace.yaml`). A good log:
+`pnpm install` on Hostinger should succeed (esbuild postinstall is ignored in `pnpm-workspace.yaml`). A good log ends with **Done … using pnpm v11.21.0** and does **not** run `$ vite build`. `verify:dist` is optional.
 
-```
-Done in … using pnpm v11…
-$ pnpm run verify:dist
-pre-built dist present; skipping vite
-```
-
-A bad log still contains `$ vite build` or `spawn .../esbuild EACCES` — the Framework/build command was not overridden.
+A bad log still contains `$ vite build` or `spawn .../esbuild EACCES` — the Framework preset is still Vite.
 
 Do **not** set Root directory to `/`. The root `package.json` `start` script still launches PocketBase.
 
