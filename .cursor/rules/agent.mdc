@@ -15,3 +15,4 @@ Operational, minimalist ERP for registering and sharing work information. Not a 
 - **Out of scope for now:** finance module, costos, egresos/ingresos, Nest rewrite of the UI.
 - pnpm only. No PocketBase at runtime. No quotation line-items.
 - Domain logic lives in `apps/web/src/services/*`. One domain, one owner.
+- Frontend deploy: GitHub Actions compiles `dist/`; Hostinger only publishes. See `.cursor/rules/frontend-cicd.mdc`.

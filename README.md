@@ -116,11 +116,10 @@ Backend objetivo: NestJS + Prisma + MySQL — [`docs/migration/backend-status.md
 
 ## Deploy
 
-Static frontend on Hostinger from committed `apps/web/dist`. GitHub Actions lints and compiles; Hostinger only verifies and publishes. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md)
+Static frontend on Hostinger from `apps/web/dist`. Push source to `migration/frontend-poc`; GitHub Actions compiles and commits `dist/`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md)
 
 ```bash
-pnpm build:web
-# commit apps/web/dist when the UI changed, then push migration/frontend-poc
+git push origin migration/frontend-poc
 ```
 
 ---
