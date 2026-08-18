@@ -24,33 +24,27 @@ So the split is:
 
 | Step | Where it runs | Why |
 |------|----------------|-----|
-| `pnpm --filter web build` (`vite build`) | Your machine (or later GitHub Actions) | Needs esbuild; that environment is not `noexec` |
-| Commit `apps/web/dist/` | Git | The compiled HTML/JS/CSS **is** the deployable |
-| GitHub → Hostinger | Hostinger | Pulls the repo and **publishes** `dist/` |
-| `pnpm run verify:dist` | Hostinger | Does **not** compile. Only checks `dist/index.html` exists so a bad clone fails fast |
+| `pnpm --filter web build` (`vite build`) | GitHub Actions (`ubuntu-latest`) | Needs esbuild; Hostinger is `noexec` |
+| Commit `apps/web/dist/` | GitHub Actions (`[skip ci]`) | The compiled HTML/JS/CSS **is** the deployable |
+| GitHub → Hostinger | Hostinger | Pulls the repo and **publishes** `dist/` after `pnpm install` |
 
-`verify:dist` is a gate, not a build. If Hostinger runs `vite build` (Vite framework preset), the log shows `$ vite build` and fails with `EACCES` even when `dist/` is already in the repo.
+`verify:dist` is optional. If Hostinger runs `vite build` (Vite framework preset), the log shows `$ vite build` and fails with `EACCES` even when `dist/` is already in the repo.
 
 The GitHub connection is **CD** (every push deploys the committed `dist/`). Hostinger is not the compiler.
 
-**CI** is [`.github/workflows/web.yml`](../../.github/workflows/web.yml) on `ubuntu-latest`: `pnpm install --frozen-lockfile`, lint, `vite build`, upload `web-dist`. That workflow does **not** commit `dist/` back to the branch.
+**CI** is [`.github/workflows/web.yml`](../../.github/workflows/web.yml) on `ubuntu-latest`: lint, `vite build`, then commit `apps/web/dist` with `[skip ci]`. Do not build `dist/` on your laptop for deploy.
 
 **pnpm on Hostinger:** Cloud Startup Corepack may invoke pnpm 11.x while the repo used to pin 10.14.0. That mismatch aborts install (`does not switch versions when running under corepack`). The root `package.json` pins `pnpm@11.21.0` with `devEngines.packageManager.onFail: ignore` and `.npmrc` `pm-on-fail=ignore` so a 11.22 bump does not break CD.
 
-## TEMPORARY: pre-built `dist/`
+## Publishing `dist/`
 
-**POC workaround:** build locally, commit `apps/web/dist/`, Hostinger only verifies and copies that folder.
-
-After any frontend change:
+Push **source** to `migration/frontend-poc`. Actions compiles. Hostinger’s first deploy of that push may still have the previous bundle; wait for the follow-up commit `chore: refresh web dist [skip ci]`, then hard-refresh the site.
 
 ```bash
-pnpm --filter web build
-git add apps/web/dist
-git commit -m "chore: refresh pre-built frontend POC for Hostinger"
 git push origin migration/frontend-poc
 ```
 
-If you push source without a new `dist/`, the live site stays on the last committed bundle.
+Do not `git add apps/web/dist` locally. Preview locally with `pnpm build:web` + `pnpm start:web` if needed.
 
 ## Recommended hPanel settings
 
@@ -64,11 +58,10 @@ If you push source without a new `dist/`, the live site stays on the last commit
 | Node.js version | **22** | Only for `pnpm install` + verify |
 | Root directory | `apps/web` | Required |
 | Package manager | **pnpm** | Auto from `pnpm-lock.yaml` |
-| Build command | empty, or `pnpm run verify:dist` | Hostinger already copies committed `dist/` after `pnpm install`. A custom command is optional. Never `$ vite build` |
-
+| Build command | empty | Hostinger copies committed `dist/` after `pnpm install`. Never `$ vite build` |
 | Output directory | `dist` | Committed `apps/web/dist` |
 | Entry file | **leave empty** | Hostinger copies `dist` to the site root |
-| Environment variables | see below | Already baked into the committed bundle |
+| Environment variables | see below | Baked in at Actions build time |
 
 If Hostinger refuses an empty entry file, set **Entry file** to `serve-dist.mjs` (Node stdlib static server, no native binaries).
 
@@ -87,7 +80,7 @@ VITE_API_MODE=mock
 VITE_API_URL=/api
 ```
 
-These are already in `apps/web/.env.production` and were applied when `dist/` was built. Changing them in hPanel does **nothing** until you rebuild locally and commit a new `dist/`.
+These are already in `apps/web/.env.production` and are applied when **GitHub Actions** runs `vite build`. Changing them in hPanel does **nothing** until the next Actions build.
 
 ## Domain
 
@@ -111,16 +104,16 @@ If a nested URL 404s, check `public_html/.htaccess` in File Manager.
 
 ## GitHub auto-deploy
 
-Push to `migration/frontend-poc` **including** an updated `apps/web/dist/` when the UI changed. GitHub Actions will also lint and compile; Hostinger still publishes the committed `dist/`.
+Push source to `migration/frontend-poc`. Do not include a local `dist/` refresh.
 
 ```bash
-git push -u origin migration/frontend-poc
+git push origin migration/frontend-poc
 ```
 
 Logs:
 
-- **GitHub Actions** — `pnpm install`, lint, `vite build` (compiler)
-- **Hostinger build logs** — `pnpm install` (v11) then `pre-built dist present` (publisher)
+- **GitHub Actions `web`** — lint + `vite build`, then bot commit of `apps/web/dist`
+- **Hostinger** — `pnpm install` (v11), copy `dist/` (twice: source push, then dist commit)
 - **Runtime logs** — unused unless `serve-dist.mjs` is the entry file
 
 A Hostinger log that still says `configured to use 10.14.0 of pnpm` or `$ vite build` is a bad deploy.
@@ -135,7 +128,7 @@ Do not move the `horizons-original` tag. Do not force-push `main`.
 
 ## Option A vs later architecture
 
-**This POC:** Option A — GitHub delivers a pre-built `apps/web/dist`. Hostinger hosts files; it does not compile. GitHub Actions is the compile check.
+**This POC:** Option A — GitHub Actions compiles `apps/web/dist` and commits it. Hostinger hosts those files; it does not compile.
 
 **Later:** Option B — NestJS (MySQL) serves `/api`. **CI** stays GitHub Actions. **CD** stays Hostinger publishing static files (and a separate Node app for the API). Hostinger still should not run esbuild.
 

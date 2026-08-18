@@ -70,7 +70,7 @@ aca/
 1. `pnpm install`
 2. `pnpm dev:web`
 3. Login con una cuenta demo → [demo-accounts.md](./demo-accounts.md)
-4. Tras cambios de UI para deploy: `pnpm build:web` y commitear `apps/web/dist/` (ver [deployment/hostinger-frontend.md](../deployment/hostinger-frontend.md))
+4. Para el sitio en Hostinger: `git push origin migration/frontend-poc` y esperar el commit de Actions `chore: refresh web dist` (ver [deployment/hostinger-frontend.md](../deployment/hostinger-frontend.md))
 
 ## Solución de problemas
 
@@ -79,4 +79,4 @@ aca/
 | `Use "pnpm install" instead` | No uses npm/yarn; instala pnpm vía Corepack |
 | Puerto 3000 ocupado | Cambia `--port` en `apps/web/package.json` o libera el puerto |
 | Datos no persisten al recargar | Esperado en POC — el mock es por sesión en memoria |
-| `esbuild EACCES` en Hostinger | No compilar en el host; build local + `dist/` commiteado |
+| `esbuild EACCES` en Hostinger | No compilar en el host; Actions genera `dist/` |
