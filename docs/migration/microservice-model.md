@@ -52,10 +52,10 @@ Same three commercial categories as quotations.
 | id | UI label |
 |----|----------|
 | `seguridad_electronica` | Seguridad Electrónica |
-| `equipos_tecnologia` | Equipos y tecnología (panels, PCs, laptops, routers, printers, 3D, etc.) |
+| `insumos_tecnologicos` | Equipos y tecnología (panels, PCs, laptops, routers, printers, 3D, etc.) |
 | `proyectos` | Proyectos |
 
-`ClientFormModal` must show all three (today it omits equipos). Subcategories: SE Instalaciones / Asistencias; Proyectos Redes/Datos / Eléctrico; Equipos y tecnología optional free text.
+`ClientFormModal` shows all three (same labels as quotations). Subcategories: SE Instalaciones / Asistencias; Proyectos Redes/Datos / Eléctrico; Equipos y tecnología optional free text.
 
 Minimum fields: name (required), category, contact, email, phone, address, notes.
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import Layout from '@/components/Layout.jsx';
+import SalesMetricsRow from '@/components/SalesMetricsRow.jsx';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
 import {
@@ -263,6 +264,8 @@ const DashboardPage = () => {
           </h1>
           <p className="text-lg text-muted-foreground mt-2 font-medium">Resumen ejecutivo de operaciones y rendimiento.</p>
         </div>
+
+        <SalesMetricsRow />
 
         {/* FILA 1: KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

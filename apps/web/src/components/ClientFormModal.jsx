@@ -8,6 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClients } from '@/hooks/useClients.js';
+import { QUOTATION_MAIN_CATEGORIES } from '@/mocks/quotations.js';
+
+const CLIENT_TYPE_LABELS = QUOTATION_MAIN_CATEGORIES.map((row) => row.label);
+
+const normalizeClientTipo = (tipo) => {
+  if (tipo === 'Proyecto') return 'Proyectos';
+  if (tipo === 'Insumos tecnológicos') return 'Equipos y tecnología';
+  return tipo || CLIENT_TYPE_LABELS[0];
+};
 
 const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => {
   const { createClient, updateClient, loading } = useClients();
@@ -27,7 +36,7 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
       if (initialData) {
         setFormData({
           nombre: initialData.nombre || '',
-          tipo: initialData.tipo || 'Seguridad Electrónica',
+          tipo: normalizeClientTipo(initialData.tipo),
           contacto: initialData.contacto || '',
           email: initialData.email || '',
           telefono: initialData.telefono || '',
@@ -107,8 +116,9 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Seguridad Electrónica">Seguridad Electrónica</SelectItem>
-                  <SelectItem value="Proyecto">Proyecto</SelectItem>
+                  {CLIENT_TYPE_LABELS.map((label) => (
+                    <SelectItem key={label} value={label}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

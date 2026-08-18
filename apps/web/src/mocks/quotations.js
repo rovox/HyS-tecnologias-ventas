@@ -34,10 +34,13 @@ export const QUOTATION_FLOW = {
   convertida: [],
 };
 
-/** Categorías principales del formulario comercial */
+/** Id de equipos (paneles, PCs, laptops, routers, impresoras). Se conserva el id del mock. */
+export const EQUIPOS_TECNOLOGIA_ID = 'insumos_tecnologicos';
+
+/** Categorías principales del formulario comercial y del alta de cliente */
 export const QUOTATION_MAIN_CATEGORIES = [
   { id: 'seguridad_electronica', label: 'Seguridad Electrónica' },
-  { id: 'insumos_tecnologicos', label: 'Insumos tecnológicos' },
+  { id: EQUIPOS_TECNOLOGIA_ID, label: 'Equipos y tecnología' },
   { id: 'proyectos', label: 'Proyectos' },
 ];
 
@@ -186,6 +189,35 @@ export const mockQuotations = [
     schedule_id: '',
     created: '2026-08-12 16:40:00',
     updated: '2026-08-12 16:40:00',
+  },
+  {
+    id: 'quo_mall_equipos',
+    kind: 'commercial',
+    numero: 'COT-081526',
+    titulo: 'Laptops y red — Plaza Norte Retail',
+    categoria: 'Equipos y tecnología',
+    categoria_id: 'insumos_tecnologicos',
+    subcategoria: 'Laptops, router y panel solar',
+    subcategoria_custom: 'Laptops, router y panel solar',
+    sucursal_id: 'suc_norte',
+    sucursal_nombre: 'Norte El Alto',
+    cliente_id: 'cli_mall',
+    cliente_nombre: 'Plaza Norte Retail',
+    fecha: '2026-08-15',
+    estado: 'enviada',
+    vendedor_id: 'usr_ventas',
+    vendedor_nombre: 'Dennis',
+    vendedores: [{ user_id: 'usr_ventas', nombre: 'Dennis', comision_pct: 100 }],
+    items: [],
+    subtotal: 12500,
+    total: 12500,
+    observacion: 'Equipos de cómputo y red — detalle en adjunto',
+    archivo: 'cot-plaza-equipos.pdf',
+    imagen_preview: '',
+    uploaded_by: 'Dennis',
+    schedule_id: '',
+    created: '2026-08-15 10:00:00',
+    updated: '2026-08-15 10:00:00',
   },
   {
     id: 'quo_lib_cam',
