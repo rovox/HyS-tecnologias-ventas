@@ -91,7 +91,9 @@ export const mockUsers = [
 ];
 
 export const mockSucursales = [
-  { id: 'suc_central', nombre: 'Central La Paz', codigo: 'LPZ-C', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+  { id: 'suc_central', nombre: 'Central', codigo: 'LPZ-C', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+  { id: 'suc_quillacollo', nombre: 'Quillacollo', codigo: 'CBB-Q', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
+  { id: 'suc_punata', nombre: 'Punata', codigo: 'CBB-P', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
   { id: 'suc_norte', nombre: 'Norte El Alto', codigo: 'EAT-N', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
   { id: 'suc_sur', nombre: 'Sur Calacoto', codigo: 'LPZ-S', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
   { id: 'suc_cocha', nombre: 'Cochabamba', codigo: 'CBB-1', activa: true, created: '2026-03-01 00:00:00', updated: '2026-03-01 00:00:00' },

@@ -62,14 +62,15 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
     }
 
     try {
+      let saved;
       if (initialData?.id) {
-        await updateClient(initialData.id, formData);
+        saved = await updateClient(initialData.id, formData);
         toast.success('Cliente actualizado exitosamente');
       } else {
-        await createClient(formData);
+        saved = await createClient(formData);
         toast.success('Cliente registrado exitosamente');
       }
-      onSuccess();
+      onSuccess?.(saved);
       onClose();
     } catch (err) {
       toast.error(err.message || 'Error al guardar el cliente');
@@ -81,7 +82,7 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
       <DialogContent className="sm:max-w-xl bg-background rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-extrabold tracking-tight">
-            {initialData ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
+            {initialData?.id ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
           </DialogTitle>
         </DialogHeader>
         
@@ -172,7 +173,7 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
             <Button type="button" variant="ghost" onClick={onClose} disabled={loading} className="font-bold">Cancelar</Button>
             <Button type="submit" disabled={loading} className="font-bold px-6">
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {initialData ? 'Guardar Cambios' : 'Registrar Cliente'}
+              {initialData?.id ? 'Guardar Cambios' : 'Registrar Cliente'}
             </Button>
           </DialogFooter>
         </form>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout.jsx';
 import { Helmet } from 'react-helmet';
-import { BookOpen, UploadCloud, FileText, Download, Search, Loader2, Plus, Pencil, Trash2, Settings, X, ArrowRight, Calculator } from 'lucide-react';
+import { BookOpen, UploadCloud, Download, Search, Loader2, Plus, Pencil, Trash2, Settings, X, ArrowRight, Calculator } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,28 +17,16 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import quotationsService from '@/services/quotations/index.js';
 import clientsService from '@/services/clients/index.js';
-import { QUOTATION_FLOW } from '@/mocks/quotations.js';
+import {
+  QUOTATION_FLOW,
+  QUOTATION_MAIN_CATEGORIES,
+  QUOTATION_STATUS_LABEL,
+  QUOTATION_STATUS_CLASS,
+  formatQuotationTitle,
+} from '@/mocks/quotations.js';
 import pb from '@/lib/pocketbaseClient.js';
-
-const STATUS_LABEL = {
-  borrador: 'Borrador',
-  enviada: 'Enviada',
-  aceptada: 'Aceptada',
-  rechazada: 'Rechazada',
-  convertida: 'Convertida',
-  documento: 'Biblioteca',
-};
-
-const STATUS_CLASS = {
-  borrador: 'bg-slate-100 text-slate-700',
-  enviada: 'bg-blue-100 text-blue-700',
-  aceptada: 'bg-emerald-100 text-emerald-800',
-  rechazada: 'bg-red-100 text-red-700',
-  convertida: 'bg-violet-100 text-violet-800',
-  documento: 'bg-muted text-muted-foreground',
-};
-
-const emptyItem = () => ({ descripcion: '', cantidad: 1, precio_unitario: 0 });
+import { ROLES } from '@/mocks/users.js';
+import NewQuotationForm from '@/components/NewQuotationForm.jsx';
 
 const QuotationsLibraryPage = () => {
   const { currentUser, isAdmin } = useAuth();
@@ -48,9 +36,10 @@ const QuotationsLibraryPage = () => {
   const [quotations, setQuotations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [clients, setClients] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState('all');
-  const [kindFilter, setKindFilter] = useState('all');
+  const [kindFilter, setKindFilter] = useState('commercial');
   const [search, setSearch] = useState('');
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -63,28 +52,21 @@ const QuotationsLibraryPage = () => {
   const [newCatName, setNewCatName] = useState('');
   const [editCat, setEditCat] = useState(null);
   const [deleteCatTarget, setDeleteCatTarget] = useState(null);
-
   const [commercialOpen, setCommercialOpen] = useState(false);
-  const [commercial, setCommercial] = useState({
-    titulo: '',
-    categoria: '',
-    cliente_id: '',
-    observacion: '',
-    items: [emptyItem()],
-  });
-  const [savingCommercial, setSavingCommercial] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [quotes, cats, cli] = await Promise.all([
+      const [quotes, cats, cli, usersRes] = await Promise.all([
         quotationsService.getAll(),
         quotationsService.getCategories(),
         clientsService.getAll(),
+        pb.collection('users').getFullList({ $autoCancel: false }).catch(() => []),
       ]);
       setQuotations(quotes);
       setCategories(cats);
       setClients(cli);
+      setVendors((usersRes || []).filter((u) => u.role === ROLES.VENTAS || u.role === ROLES.ADMIN));
     } catch {
       toast.error('Error al cargar cotizaciones');
     } finally {
@@ -94,10 +76,14 @@ const QuotationsLibraryPage = () => {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  const categoryChips = kindFilter === 'library'
+    ? categories.map((c) => c.nombre)
+    : QUOTATION_MAIN_CATEGORIES.map((c) => c.label);
+
   const filteredQuotes = quotations.filter((quote) => {
     const matchCat = selectedCat === 'all' || quote.categoria === selectedCat;
     const matchKind = kindFilter === 'all' || quote.kind === kindFilter || (kindFilter === 'library' && quote.kind !== 'commercial');
-    const matchSearch = `${quote.titulo || ''} ${quote.numero || ''}`.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = `${quote.titulo || ''} ${quote.numero || ''} ${quote.cliente_nombre || ''}`.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchKind && matchSearch;
   });
 
@@ -185,43 +171,10 @@ const QuotationsLibraryPage = () => {
     } catch { toast.error('Error al eliminar categoría'); }
   };
 
-  const commercialTotal = commercial.items.reduce((sum, item) => sum + (Number(item.cantidad) || 0) * (Number(item.precio_unitario) || 0), 0);
-
-  const saveCommercial = async (e) => {
-    e.preventDefault();
-    if (!commercial.titulo) return toast.error('El título es obligatorio');
-    if (!commercial.cliente_id) return toast.error('Selecciona un cliente');
-    setSavingCommercial(true);
-    try {
-      const client = clients.find((row) => row.id === commercial.cliente_id);
-      await quotationsService.create({
-        kind: 'commercial',
-        titulo: commercial.titulo,
-        categoria: commercial.categoria || categories[0]?.nombre || '',
-        cliente_id: commercial.cliente_id,
-        cliente_nombre: client?.nombre || '',
-        observacion: commercial.observacion,
-        items: commercial.items,
-        vendedor_id: currentUser?.id,
-        vendedor_nombre: currentUser?.name,
-        uploaded_by: currentUser?.name,
-        estado: 'borrador',
-      });
-      toast.success('Cotización comercial creada (POC)');
-      setCommercialOpen(false);
-      setCommercial({ titulo: '', categoria: categories[0]?.nombre || '', cliente_id: '', observacion: '', items: [emptyItem()] });
-      fetchAll();
-    } catch (err) {
-      toast.error(err.message || 'Error al guardar');
-    } finally {
-      setSavingCommercial(false);
-    }
-  };
-
   const changeStatus = async (quote, estado) => {
     try {
       await quotationsService.updateStatus(quote.id, estado);
-      toast.success(`Estado: ${STATUS_LABEL[estado]}`);
+      toast.success(`Estado: ${QUOTATION_STATUS_LABEL[estado]}`);
       fetchAll();
     } catch (err) {
       toast.error(err.message);
@@ -231,8 +184,8 @@ const QuotationsLibraryPage = () => {
   const convertQuote = async (quote) => {
     try {
       const result = await quotationsService.convertToSchedule(quote.id, {
-        sucursal_id: clients.find((row) => row.id === quote.cliente_id)?.sucursal_id,
-        vendedor_responsable_id: currentUser?.id,
+        sucursal_id: quote.sucursal_id || clients.find((row) => row.id === quote.cliente_id)?.sucursal_id,
+        vendedor_responsable_id: quote.vendedor_id || currentUser?.id,
       });
       toast.success(result.alreadyConverted ? 'Ya estaba convertida' : `Trabajo ${result.schedule.id} creado`);
       fetchAll();
@@ -242,169 +195,187 @@ const QuotationsLibraryPage = () => {
     }
   };
 
+  const QuoteActions = ({ quote }) => {
+    const next = QUOTATION_FLOW[quote.estado] || [];
+    return (
+      <div className="flex flex-wrap gap-2">
+        {(quote.archivo || quote.imagen_preview) && (
+          <Button size="sm" variant="outline" onClick={() => handleDownload(quote)}>
+            <Download className="h-3.5 w-3.5 mr-1" /> Adjuntos
+          </Button>
+        )}
+        {quote.kind === 'commercial' && next.map((estado) => (
+          <Button key={estado} size="sm" variant="secondary" className="font-semibold" onClick={() => changeStatus(quote, estado)}>
+            {QUOTATION_STATUS_LABEL[estado]}
+          </Button>
+        ))}
+        {quote.estado === 'aceptada' && (
+          <Button size="sm" variant="action" className="font-semibold" onClick={() => convertQuote(quote)}>
+            Crear venta / trabajo <ArrowRight className="h-3.5 w-3.5 ml-1" />
+          </Button>
+        )}
+        {quote.estado === 'convertida' && quote.schedule_id && (
+          <Button size="sm" variant="outline" onClick={() => navigate('/schedule')}>Ver cronograma</Button>
+        )}
+        {admin && (
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(quote)}><Trash2 className="h-4 w-4" /></Button>
+        )}
+        {quote.kind !== 'commercial' && admin && (
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openUpload(quote)}><Pencil className="h-4 w-4" /></Button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Layout>
       <Helmet>
         <title>Cotizaciones - H&S Tecnologías</title>
-        <meta name="description" content="Biblioteca de documentos y cotizaciones comerciales POC" />
+        <meta name="description" content="Registro de cotizaciones comerciales enviadas al cliente" />
       </Helmet>
 
-      <div className="content-container space-y-6 py-6 w-full max-w-none">
+      <div className="content-container space-y-6 py-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Cotizaciones</h1>
-            <p className="text-muted-foreground font-medium">
-              Biblioteca de documentos (existente) + flujo comercial simulado (POC)
+            <h1 className="text-2xl md:text-[32px] font-bold tracking-tight text-foreground">Cotizaciones</h1>
+            <p className="text-muted-foreground mt-1">
+              Registro de cotizaciones ya enviadas al cliente. El detalle vive en los adjuntos.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {admin && (
-              <Button variant="outline" className="font-bold gap-2" onClick={() => setShowCatMgr(true)}>
+            {admin && kindFilter === 'library' && (
+              <Button variant="outline" className="font-semibold gap-2" onClick={() => setShowCatMgr(true)}>
                 <Settings className="h-4 w-4" /> Categorías
               </Button>
             )}
-            <Button variant="outline" onClick={() => openUpload()} className="gap-2 font-bold">
+            <Button variant="outline" onClick={() => openUpload()} className="gap-2 font-semibold">
               <UploadCloud className="h-4 w-4" /> Subir documento
             </Button>
-            <Button onClick={() => {
-              setCommercial({ titulo: '', categoria: categories[0]?.nombre || '', cliente_id: '', observacion: '', items: [emptyItem()] });
-              setCommercialOpen(true);
-            }} className="gap-2 font-bold">
+            <Button variant="action" onClick={() => setCommercialOpen(true)} className="gap-2">
               <Calculator className="h-4 w-4" /> Nueva cotización
             </Button>
           </div>
         </div>
 
         <Card className="p-4 shadow-sm flex flex-col gap-4 border">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar título o número..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Buscar código, título o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <div className="flex gap-2">
-              {[['all', 'Todas'], ['commercial', 'Comerciales'], ['library', 'Biblioteca']].map(([id, label]) => (
-                <Button key={id} size="sm" variant={kindFilter === id ? 'default' : 'outline'} className="font-bold" onClick={() => setKindFilter(id)}>{label}</Button>
+              {[['commercial', 'Comerciales'], ['library', 'Biblioteca'], ['all', 'Todas']].map(([id, label]) => (
+                <Button key={id} size="sm" variant={kindFilter === id ? 'default' : 'outline'} className="font-semibold" onClick={() => { setKindFilter(id); setSelectedCat('all'); }}>{label}</Button>
               ))}
             </div>
           </div>
           <div className="flex overflow-x-auto gap-2 pb-1">
-            <Button size="sm" variant={selectedCat === 'all' ? 'default' : 'outline'} className="whitespace-nowrap font-bold" onClick={() => setSelectedCat('all')}>Todas</Button>
-            {categories.map((cat) => (
-              <Button key={cat.id} size="sm" variant={selectedCat === cat.nombre ? 'default' : 'outline'} className="whitespace-nowrap font-bold" onClick={() => setSelectedCat(cat.nombre)}>{cat.nombre}</Button>
+            <Button size="sm" variant={selectedCat === 'all' ? 'default' : 'outline'} className="whitespace-nowrap font-semibold" onClick={() => setSelectedCat('all')}>Todas</Button>
+            {categoryChips.map((name) => (
+              <Button key={name} size="sm" variant={selectedCat === name ? 'default' : 'outline'} className="whitespace-nowrap font-semibold" onClick={() => setSelectedCat(name)}>{name}</Button>
             ))}
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {loading ? Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-56 w-full rounded-xl" />)
-            : filteredQuotes.length > 0 ? filteredQuotes.map((quote) => {
-              const next = QUOTATION_FLOW[quote.estado] || [];
-              return (
-                <Card key={quote.id} className="p-4 border shadow-sm flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-[11px] font-bold text-muted-foreground">{quote.numero || 'Documento'}</p>
-                      <h3 className="font-bold leading-snug">{quote.titulo}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">{quote.cliente_nombre || quote.categoria}</p>
-                    </div>
-                    <Badge className={`text-[10px] font-bold ${STATUS_CLASS[quote.estado] || STATUS_CLASS.documento}`}>{STATUS_LABEL[quote.estado] || quote.estado}</Badge>
+        {/* Mobile cards */}
+        <div className="grid grid-cols-1 gap-4 lg:hidden">
+          {loading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl" />)
+            : filteredQuotes.length > 0 ? filteredQuotes.map((quote) => (
+              <Card key={quote.id} className="p-4 border shadow-sm flex flex-col gap-3 rounded-2xl">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-base font-bold tracking-tight truncate">{formatQuotationTitle(quote)}</p>
+                    {quote.cliente_nombre && <p className="text-sm font-medium text-muted-foreground truncate">{quote.cliente_nombre}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {[quote.categoria, quote.subcategoria, quote.sucursal_nombre].filter(Boolean).join(' · ')}
+                    </p>
                   </div>
-                  {quote.kind === 'commercial' && (
-                    <p className="text-lg font-black tabular-nums">Bs {Number(quote.total || 0).toLocaleString('es-BO')}</p>
-                  )}
-                  {quote.observacion && <p className="text-xs text-muted-foreground line-clamp-2">{quote.observacion}</p>}
-                  <div className="flex flex-wrap gap-2 mt-auto pt-2 border-t">
-                    {quote.archivo && (
-                      <Button size="sm" variant="outline" onClick={() => handleDownload(quote)}><Download className="h-3.5 w-3.5 mr-1" /> Ver</Button>
-                    )}
-                    {quote.kind === 'commercial' && next.map((estado) => (
-                      <Button key={estado} size="sm" variant="secondary" className="font-bold" onClick={() => changeStatus(quote, estado)}>
-                        {STATUS_LABEL[estado]}
-                      </Button>
-                    ))}
-                    {quote.estado === 'aceptada' && (
-                      <Button size="sm" className="font-bold" onClick={() => convertQuote(quote)}>
-                        Convertir a trabajo <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                      </Button>
-                    )}
-                    {quote.estado === 'convertida' && quote.schedule_id && (
-                      <Button size="sm" variant="outline" onClick={() => navigate('/schedule')}>Ver cronograma</Button>
-                    )}
-                    {admin && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8 ml-auto text-destructive" onClick={() => handleDelete(quote)}><Trash2 className="h-4 w-4" /></Button>
-                    )}
-                    {quote.kind !== 'commercial' && admin && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openUpload(quote)}><Pencil className="h-4 w-4" /></Button>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">{quote.uploaded_by} · {quote.created ? format(new Date(String(quote.created).replace(' ', 'T')), 'dd MMM yyyy', { locale: es }) : ''}</p>
-                </Card>
-              );
-            }) : (
-              <div className="col-span-full py-20 text-center">
+                  <Badge className={`text-[10px] font-bold shrink-0 ${QUOTATION_STATUS_CLASS[quote.estado] || QUOTATION_STATUS_CLASS.documento}`}>
+                    {QUOTATION_STATUS_LABEL[quote.estado] || quote.estado}
+                  </Badge>
+                </div>
+                {quote.kind === 'commercial' && (
+                  <p className="text-lg font-bold tabular-nums">Bs {Number(quote.total || 0).toLocaleString('es-BO')}</p>
+                )}
+                <QuoteActions quote={quote} />
+              </Card>
+            )) : (
+              <div className="py-16 text-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                 <h3 className="text-xl font-bold">No se encontraron resultados</h3>
               </div>
             )}
         </div>
+
+        {/* Desktop table — uses full 12-col width */}
+        <div className="hidden lg:block table-container">
+          {loading ? <Skeleton className="h-64 w-full" /> : filteredQuotes.length === 0 ? (
+            <div className="py-16 text-center">
+              <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-xl font-bold">No se encontraron resultados</h3>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="table-header h-14">
+                  <th className="table-cell">Código / título</th>
+                  <th className="table-cell">Cliente</th>
+                  <th className="table-cell">Categoría</th>
+                  <th className="table-cell">Sucursal</th>
+                  <th className="table-cell text-right">Monto</th>
+                  <th className="table-cell">Estado</th>
+                  <th className="table-cell">Vendedor</th>
+                  <th className="table-cell">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuotes.map((quote) => (
+                  <tr key={quote.id} className="table-row h-14">
+                    <td className="table-cell font-semibold max-w-[280px]">
+                      <div className="truncate">{formatQuotationTitle(quote)}</div>
+                      <div className="text-[11px] text-muted-foreground font-normal">
+                        {quote.created ? format(new Date(String(quote.created).replace(' ', 'T')), 'dd MMM yyyy', { locale: es }) : ''}
+                      </div>
+                    </td>
+                    <td className="table-cell font-medium">{quote.cliente_nombre || '—'}</td>
+                    <td className="table-cell text-muted-foreground">
+                      {[quote.categoria, quote.subcategoria].filter(Boolean).join(' · ') || '—'}
+                    </td>
+                    <td className="table-cell">{quote.sucursal_nombre || '—'}</td>
+                    <td className="table-cell text-right tabular-nums font-semibold">
+                      {quote.kind === 'commercial' ? `Bs ${Number(quote.total || 0).toLocaleString('es-BO')}` : '—'}
+                    </td>
+                    <td className="table-cell">
+                      <Badge className={`text-[10px] font-bold ${QUOTATION_STATUS_CLASS[quote.estado] || QUOTATION_STATUS_CLASS.documento}`}>
+                        {QUOTATION_STATUS_LABEL[quote.estado] || quote.estado}
+                      </Badge>
+                    </td>
+                    <td className="table-cell text-xs text-muted-foreground">
+                      {quote.vendedores?.length
+                        ? quote.vendedores.map((v) => `${v.nombre} (${v.comision_pct}%)`).join(', ')
+                        : quote.vendedor_nombre || '—'}
+                    </td>
+                    <td className="table-cell"><QuoteActions quote={quote} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
-      <Dialog open={commercialOpen} onOpenChange={setCommercialOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Nueva cotización comercial (POC)</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={saveCommercial} className="space-y-4">
-            <p className="text-xs text-muted-foreground">Extensión de demostración. El producto original era una biblioteca de archivos.</p>
-            <Input required placeholder="Título" value={commercial.titulo} onChange={(e) => setCommercial({ ...commercial, titulo: e.target.value })} />
-            <div className="grid grid-cols-2 gap-3">
-              <Select value={commercial.cliente_id} onValueChange={(v) => setCommercial({ ...commercial, cliente_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Cliente" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => <SelectItem key={client.id} value={client.id}>{client.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={commercial.categoria} onValueChange={(v) => setCommercial({ ...commercial, categoria: v })}>
-                <SelectTrigger><SelectValue placeholder="Categoría" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              {commercial.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2">
-                  <Input className="col-span-6" placeholder="Ítem" value={item.descripcion} onChange={(e) => {
-                    const items = [...commercial.items];
-                    items[index] = { ...item, descripcion: e.target.value };
-                    setCommercial({ ...commercial, items });
-                  }} />
-                  <Input className="col-span-2" type="number" min="1" value={item.cantidad} onChange={(e) => {
-                    const items = [...commercial.items];
-                    items[index] = { ...item, cantidad: Number(e.target.value) };
-                    setCommercial({ ...commercial, items });
-                  }} />
-                  <Input className="col-span-3" type="number" min="0" value={item.precio_unitario} onChange={(e) => {
-                    const items = [...commercial.items];
-                    items[index] = { ...item, precio_unitario: Number(e.target.value) };
-                    setCommercial({ ...commercial, items });
-                  }} />
-                  <Button type="button" variant="ghost" className="col-span-1" onClick={() => setCommercial({ ...commercial, items: commercial.items.filter((_, i) => i !== index) })}><X className="h-4 w-4" /></Button>
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={() => setCommercial({ ...commercial, items: [...commercial.items, emptyItem()] })}>
-                <Plus className="h-4 w-4 mr-1" /> Ítem
-              </Button>
-            </div>
-            <Textarea placeholder="Observaciones" value={commercial.observacion} onChange={(e) => setCommercial({ ...commercial, observacion: e.target.value })} />
-            <p className="text-right font-black">Total Bs {commercialTotal.toLocaleString('es-BO')}</p>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCommercialOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={savingCommercial}>{savingCommercial && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Guardar borrador</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <NewQuotationForm
+        open={commercialOpen}
+        onOpenChange={setCommercialOpen}
+        quotations={quotations}
+        clients={clients}
+        vendors={vendors}
+        currentUser={currentUser}
+        onSaved={fetchAll}
+        onClientCreated={(created) => {
+          if (created) setClients((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+        }}
+      />
 
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         <DialogContent>
@@ -437,7 +408,7 @@ const QuotationsLibraryPage = () => {
             </DialogHeader>
             <div className="flex gap-2">
               <Input placeholder="Nueva categoría..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), createCat())} />
-              <Button onClick={createCat} className="font-bold shrink-0"><Plus className="h-4 w-4 mr-1" /> Crear</Button>
+              <Button onClick={createCat} className="font-semibold shrink-0"><Plus className="h-4 w-4 mr-1" /> Crear</Button>
             </div>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {categories.map((cat) => (
