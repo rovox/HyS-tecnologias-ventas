@@ -1,4 +1,4 @@
-# Frontend ↔ backend contract (future NestJS)
+# Frontend ↔ backend contract (future NestJS + MySQL)
 
 The frontend services are the contract. Mock implementations live under `apps/web/src/services`. REST repositories are not implemented.
 
@@ -9,10 +9,13 @@ Auth: `Authorization: Bearer <access>` (future). POC uses a fake `poc.*` token i
 ## Resources (aligned with audited UI)
 
 ### Auth
-- `POST /auth/login` `{ email, password }` → `{ user, accessToken }`
+- `POST /auth/login` `{ email, password }` → `{ user, accessToken }` (opens a session)
 - `POST /auth/logout`
 - `GET /auth/me`
 - `POST /auth/forgot-password` `{ email }`
+- `GET /sessions` / `GET /sessions/:id/activity` (admin; activity control)
+
+Accounts are created manually. No public signup. Schema: [microservice-model.md](./microservice-model.md).
 
 ### Clients
 - `GET /clients`
@@ -33,7 +36,10 @@ Auth: `Authorization: Bearer <access>` (future). POC uses a fake `poc.*` token i
 - `POST /sales/:id/jobs`
 - `POST /sales/:id/payments`
 
-Detalle: [api-quotations-sales.md](./api-quotations-sales.md).
+### Metrics (not a finance module)
+- `GET /metrics/sales?month=` → quotations total, sales total, monthly goal, remaining
+
+Detalle: [api-quotations-sales.md](./api-quotations-sales.md). Schema: [microservice-model.md](./microservice-model.md).
 
 ### Schedules / jobs
 - `GET /schedules`

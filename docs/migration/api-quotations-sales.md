@@ -1,149 +1,111 @@
-# Plan API fase 1 — cotizaciones y ventas
+# API phase 1 — quotations and sales (sketch)
 
-Migración PocketBase → **NestJS + Prisma + MySQL** en Hostinger. Primera entrega: **un microservicio** (un Node Web App) solo para el dominio comercial. El resto del ERP sigue en el frontend mock.
+PocketBase → **NestJS + Prisma + MySQL** on Hostinger. First delivery: one microservice for the commercial domain. The rest of the ERP stays on the frontend mock until later services exist.
 
-Contrato UI actual: `apps/web/src/services/quotations` y `clients`. No reimplementar cronograma completo aquí.
+**This file is a sketch.** Do not implement Nest/Prisma in the frontend-POC pass. Canonical model: [microservice-model.md](./microservice-model.md).
 
----
+UI contract today: `apps/web/src/services/quotations` and `clients`. Do not reimplement the full calendar here; jobs are stored so they can show on the schedule.
 
-## Alcance (sí / no)
+## Scope
 
-| Incluye | No incluye (fases posteriores) |
-|---------|--------------------------------|
-| Auth mínima (login JWT) | Finanzas, cajas, vehículos |
-| Clientes (CRUD corto, necesario para cotizar) | Pedidos internos, marketing |
-| Cotizaciones comerciales + adjuntos | Calendario / cronograma de campo |
-| Aceptar cotización → **venta** | Nest monolito con todos los módulos |
-| Trabajos **dentro de la venta** (delegación) | PocketBase removal |
-| Pagos contra el monto de la venta | Relevamientos / visitas |
+| Includes | Does not include |
+|----------|------------------|
+| Manual users + login JWT + sessions/activity | Public signup |
+| Clients (short CRUD, three categories) | Finance, cajas, costos, egresos/ingresos |
+| Commercial quotations + attachments | Internal orders, marketing |
+| Accept quotation → **sale** | Nest monolith of every module |
+| Jobs **on the sale** (calendar rows) | PocketBase removal |
+| Payments against the sale total | Field visits / relevamientos |
+| Sales-goal metrics (month, remaining) | BI / P&amp;L |
 
-**Cronograma:** se seguirá usando el POC/mock. Esta API no es el dueño del calendario; como máximo guarda `sale.jobs[]` con estado y monto, sin UI de agenda.
-
----
-
-## Lógica de negocio
+## Business flow
 
 ```
-Cliente
-  └── Cotización (enviada)  monto, vendedores+%, adjuntos
-        └── aceptada
-              └── Venta (sale)
-                    ├── total = quotation.total
-                    ├── cobrado = Σ payments
-                    ├── saldo = total − cobrado
-                    └── Trabajos (jobs) delegados al equipo
+Client
+  └── Quotation (enviada)  amount, sellers+%, attachments
+        └── accepted
+              └── Sale
+                    ├── total = quotation.amount
+                    ├── collected = Σ payments
+                    ├── balance = total − collected
+                    └── Jobs → calendar
 ```
 
-Reglas:
+Rules:
 
-1. Alta de cotización = `enviada`. Código `COT-MMDDYY` (+ sufijo si hay colisión el mismo día).
-2. Sin líneas de ítems. `total` es el monto declarado; el detalle está en archivos.
-3. Comisión del creador = 100% si es el único vendedor.
-4. `POST /quotations/:id/accept` crea la venta (una sola vez).
-5. Trabajos no pueden sumar más que `sale.total` (aviso o bloqueo configurable).
-6. Pagos no pueden superar `sale.total`.
-7. Rechazar cotización no crea venta.
+1. New quotation = `enviada`. Code `COT-MMDDYY` (+ suffix on collision).
+2. No line-items. `amount` is declared; detail is in files.
+3. Creator commission = 100% if they are the only seller.
+4. `POST /quotations/:id/accept` creates the sale once.
+5. Job amounts must not exceed `sale.total` (warn or block).
+6. Payments must not exceed `sale.total`.
+7. Rejecting a quotation does not create a sale.
 
----
+## Hostinger service (when implementation starts)
 
-## Servicio Hostinger (fase 1)
-
-Un Web App Node 22:
+One Node 22 Web App + one MySQL database:
 
 ```
-apps/api-sales/          ← microservicio (nuevo, no inflar apps/api placeholder)
+apps/api/sales/
   src/
-    auth/
+    auth/            # login + sessions + activity
+    users/           # manual accounts, monthlyGoalBs
     clients/
     quotations/
-    sales/               ← ventas + jobs + payments
-    files/               ← upload PDF/imagen (disco o S3 compatible)
+    sales/           # sales + jobs + payments
+    files/
   prisma/
 ```
 
-Nombre sugerido de app: `hys-sales-api`. Base path: `/api`. El frontend apunta `VITE_API_MODE=api` y `VITE_API_URL`.
+App name suggestion: `hys-sales-api`. Base path: `/api`. Frontend: `VITE_API_MODE=api` and `VITE_API_URL`.
 
-PocketBase queda como referencia de colecciones (`quotations`, `clientes`, `users`). No se arranca en esta fase.
+## Implementation order (later)
 
----
+1. Scaffold Nest + Prisma + MySQL on Hostinger.
+2. Users (manual) + `POST /auth/login` + session/activity rows. Same four POC roles. JWT.
+3. Clients CRUD with three categories (`seguridad_electronica`, `equipos_tecnologia`, `proyectos`).
+4. Quotations: create (`enviada`), list/filter, status, files.
+5. Sales: `accept` → sale; jobs; payments.
+6. Metrics: month quotations/sales totals, goal, remaining.
+7. Frontend HTTP adapters behind existing services. Do not rewrite screens.
 
-## Orden de implementación
+## Endpoints (sketch)
 
-1. **Scaffold Nest + Prisma + MySQL** en Hostinger (un schema, un deploy).
-2. **Auth:** `POST /auth/login` con los mismos 4 roles del POC. JWT.
-3. **Clients:** CRUD mínimo (`nombre`, contacto, sucursal).
-4. **Quotations:** create (enviada), list/filter, status, upload files.
-5. **Sales:** `accept` → venta; `POST /sales/:id/jobs`; `POST /sales/:id/payments`.
-6. **Swap frontend:** repositorios HTTP detrás de `quotationsService` / `clientsService` (mismo contrato). Sin reescribir pantallas.
+### Auth / users
 
-No empezar por cronograma, reportes ni Nest “completo”.
-
----
-
-## Endpoints fase 1
-
-### Auth
-- `POST /auth/login` `{ email, password }` → `{ user, accessToken }`
+- `POST /auth/login` `{ email, password }` → `{ user, accessToken }` (opens a session)
 - `GET /auth/me`
-- `POST /auth/logout`
+- `POST /auth/logout` (closes session)
+- `GET /sessions` / `GET /sessions/:id/activity` (admin)
 
 ### Clients
+
 - `GET /clients?q=`
 - `POST /clients`
 - `GET /clients/:id`
 - `PATCH /clients/:id`
 
 ### Quotations
+
 - `GET /quotations?estado=&vendedorId=&sucursalId=`
 - `POST /quotations` `{ titulo, clienteId, categoria, subcategoria, sucursalId, monto, vendedores[], observacion }`
 - `GET /quotations/:id`
-- `POST /quotations/:id/files` multipart PDF/imagen
+- `POST /quotations/:id/files`
 - `POST /quotations/:id/status` `{ estado: aceptada | rechazada }`
 - `POST /quotations/:id/accept` → `{ quotation, sale }`
 
 ### Sales
+
 - `GET /sales`
-- `GET /sales/:id` (jobs + payments + saldo)
+- `GET /sales/:id`
 - `POST /sales/:id/jobs` `{ titulo, asignadoId?, monto? }`
 - `PATCH /sales/:id/jobs/:jobId` `{ estado }`
 - `POST /sales/:id/payments` `{ monto, metodo, nota }`
 
-Estados job (mínimos, alineados al ERP): `programado | en_proceso | terminado | cancelado`.
+Job states: `programado | en_proceso | terminado | cancelado`.
 
----
+### Metrics
 
-## Modelo Prisma (borrador)
+- `GET /metrics/sales?month=` → `{ quotationsTotal, salesTotal, goalBs, remainingBs }` per current user (or `?userId=` for admin)
 
-```
-User, Client, Branch
-Quotation (numero, titulo, estado, monto, cliente, sucursal, files)
-QuotationSeller (userId, commissionPct)
-Sale (quotationId unique, total, status)
-SaleJob (saleId, titulo, estado, monto)
-SalePayment (saleId, monto, metodo)
-```
-
-IDs: UUID. `numero` unique.
-
----
-
-## Criterios de listo
-
-- [ ] Login demo funciona contra Nest
-- [ ] Crear cotización desde `NewQuotationForm` persiste en MySQL
-- [ ] Adjunto PDF/imagen recuperable
-- [ ] Aceptar → venta con saldo = monto
-- [ ] Registrar pago reduce saldo
-- [ ] Un job no rompe el total de la venta
-- [ ] Cronograma UI no depende de esta API
-
----
-
-## Fases siguientes (no hacer ahora)
-
-2. Operaciones / cronograma (calendario, visitas)
-3. Pedidos internos
-4. Finanzas
-5. Apagar PocketBase
-
-Ver [backend-status.md](./backend-status.md) y [frontend-backend-contract.md](./frontend-backend-contract.md).
+See [backend-status.md](./backend-status.md) and [frontend-backend-contract.md](./frontend-backend-contract.md).

@@ -8,10 +8,11 @@ Monorepo del sistema de gestión para **H&S Tecnologías**: ventas, cronograma d
 
 ## Inicio rápido
 
-Requisitos: **Node.js ≥ 22**, **pnpm ≥ 9** (este repo usa pnpm exclusivamente).
+Requisitos: **Node.js ≥ 22**, **pnpm ≥ 11** (este repo usa pnpm exclusivamente).
 
 ```bash
 corepack enable
+corepack prepare pnpm@11.21.0 --activate
 pnpm install
 pnpm dev:web
 ```
@@ -115,11 +116,11 @@ Backend objetivo: NestJS + Prisma + MySQL — [`docs/migration/backend-status.md
 
 ## Deploy
 
-Frontend estático en Hostinger con `dist/` pre-compilado. Guía: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md)
+Static frontend on Hostinger from committed `apps/web/dist`. GitHub Actions lints and compiles; Hostinger only verifies and publishes. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md)
 
 ```bash
 pnpm build:web
-# commitear apps/web/dist/ antes de push a rama de deploy
+# commit apps/web/dist when the UI changed, then push migration/frontend-poc
 ```
 
 ---

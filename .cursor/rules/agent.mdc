@@ -1,0 +1,17 @@
+---
+description: H&S ERP environment — stack, language, product scope. Always apply.
+alwaysApply: true
+---
+
+# H&S Tecnologías ERP
+
+Operational, minimalist ERP for registering and sharing work information. Not a finance suite.
+
+- **Docs** (`docs/**`, `agent.md`, READMEs): English.
+- **UI copy and code comments:** Spanish.
+- **Frontend now:** Vite + React in `apps/web`. Read `apps/web/agent.md`. Keep the SPA; improve working flows only. Short files. Reuse `components/ui` and existing modals.
+- **Backend target:** NestJS microservices in `apps/api`, **MySQL only** on Hostinger (one DB per service). Model first — read `apps/api/agent.md`. Do not scaffold Nest in the frontend-POC pass.
+- **In scope:** users (manual signup), sessions/activity, clients, quotations, sales, jobs on the calendar, sales-goal metrics.
+- **Out of scope for now:** finance module, costos, egresos/ingresos, Nest rewrite of the UI.
+- pnpm only. No PocketBase at runtime. No quotation line-items.
+- Domain logic lives in `apps/web/src/services/*`. One domain, one owner.
