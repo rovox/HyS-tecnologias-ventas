@@ -31,7 +31,11 @@ So the split is:
 
 `verify:dist` is a gate, not a build. If Hostinger runs `vite build` (Vite framework preset), the log shows `$ vite build` and fails with `EACCES` even when `dist/` is already in the repo.
 
-The GitHub connection is **CD** (every push deploys the committed `dist/`). It is not **CI** (Hostinger is not the compiler). That is still worth it: one `git push` updates the live site, rollback is a git revert, no FTP. What is missing until NestJS is the **build** half of CI/CD — GitHub Actions on `ubuntu-latest`. Do not add that workflow in this POC.
+The GitHub connection is **CD** (every push deploys the committed `dist/`). Hostinger is not the compiler.
+
+**CI** is [`.github/workflows/web.yml`](../../.github/workflows/web.yml) on `ubuntu-latest`: `pnpm install --frozen-lockfile`, lint, `vite build`, upload `web-dist`. That workflow does **not** commit `dist/` back to the branch.
+
+**pnpm on Hostinger:** Cloud Startup Corepack may invoke pnpm 11.x while the repo used to pin 10.14.0. That mismatch aborts install (`does not switch versions when running under corepack`). The root `package.json` pins `pnpm@11.21.0` with `devEngines.packageManager.onFail: ignore` and `.npmrc` `pm-on-fail=ignore` so a 11.22 bump does not break CD.
 
 ## TEMPORARY: pre-built `dist/`
 
@@ -112,7 +116,7 @@ If a nested URL 404s, check `public_html/.htaccess` in File Manager.
 
 ## GitHub auto-deploy
 
-Push to `migration/frontend-poc` **including** an updated `apps/web/dist/` when the UI changed.
+Push to `migration/frontend-poc` **including** an updated `apps/web/dist/` when the UI changed. GitHub Actions will also lint and compile; Hostinger still publishes the committed `dist/`.
 
 ```bash
 git push -u origin migration/frontend-poc
@@ -120,8 +124,11 @@ git push -u origin migration/frontend-poc
 
 Logs:
 
-- **Build logs** — `pnpm install` then `pre-built dist present`
+- **GitHub Actions** — `pnpm install`, lint, `vite build` (compiler)
+- **Hostinger build logs** — `pnpm install` (v11) then `pre-built dist present` (publisher)
 - **Runtime logs** — unused unless `serve-dist.mjs` is the entry file
+
+A Hostinger log that still says `configured to use 10.14.0 of pnpm` or `$ vite build` is a bad deploy.
 
 ## Rollback
 
@@ -133,9 +140,9 @@ Do not move the `horizons-original` tag. Do not force-push `main`.
 
 ## Option A vs later architecture
 
-**This POC:** Option A — GitHub delivers a pre-built `apps/web/dist`. Hostinger hosts files; it does not compile.
+**This POC:** Option A — GitHub delivers a pre-built `apps/web/dist`. Hostinger hosts files; it does not compile. GitHub Actions is the compile check.
 
-**Final target (not this milestone):** Option B — NestJS serves `/api` and the SPA. **CI** = GitHub Actions (`ubuntu-latest`) runs `vite build`. **CD** = Hostinger (or Actions upload) publishes the artifact. Hostinger still should not run esbuild.
+**Later:** Option B — NestJS (MySQL) serves `/api`. **CI** stays GitHub Actions. **CD** stays Hostinger publishing static files (and a separate Node app for the API). Hostinger still should not run esbuild.
 
 **Option C** (two Web Apps) is allowed by Cloud Startup but not needed for the mock POC.
 

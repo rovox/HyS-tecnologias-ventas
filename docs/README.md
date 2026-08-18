@@ -15,6 +15,7 @@
 | Arquitectura del POC frontend | [architecture/frontend-poc.md](./architecture/frontend-poc.md) |
 | Contrato futuro con NestJS | [migration/frontend-backend-contract.md](./migration/frontend-backend-contract.md) |
 | Plan API cotizaciones y ventas | [migration/api-quotations-sales.md](./migration/api-quotations-sales.md) |
+| Modelo MySQL (microservicios) | [migration/microservice-model.md](./migration/microservice-model.md) |
 | Estado del backend | [migration/backend-status.md](./migration/backend-status.md) |
 | Deploy en Hostinger | [deployment/hostinger-frontend.md](./deployment/hostinger-frontend.md) |
 

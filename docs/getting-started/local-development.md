@@ -7,12 +7,12 @@ Este monorepo usa **pnpm exclusivamente**. npm y yarn están bloqueados vía `on
 | Herramienta | Versión |
 |-------------|---------|
 | Node.js | ≥ 22 (ver `.nvmrc`) |
-| pnpm | ≥ 9 (Corepack recomendado) |
+| pnpm | ≥ 11 (Corepack; repo pin `pnpm@11.21.0`) |
 
 ```bash
 # Activar Corepack (una vez por máquina)
 corepack enable
-corepack prepare pnpm@10.14.0 --activate
+corepack prepare pnpm@11.21.0 --activate
 ```
 
 ## Instalación

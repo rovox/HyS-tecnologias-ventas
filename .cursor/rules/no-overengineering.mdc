@@ -1,13 +1,16 @@
 ---
-description: Evitar sobreingeniería, duplicados y desviarse de la lógica de cada sección. Siempre aplicar.
+description: Avoid over-engineering, duplicates, and leaving each section’s logic. Always apply.
 alwaysApply: true
 ---
 
-# Simplicidad y dominio
+# Simplicity and domain ownership
 
-- Resuelve el pedido actual. No agregues capas, abstracciones ni features “por si acaso”.
-- Antes de crear un archivo, busca si ya existe el mismo flujo (modal, service, mock). Reutiliza.
-- Un dominio, un dueño: cotizaciones en `quotationsService` + `NewQuotationForm`; clientes en `clientsService` + `ClientFormModal`. No copies CRUD entre módulos.
-- La lógica de negocio vive en `apps/web/src/services/*` (contrato futuro NestJS), no en JSX duplicado.
-- No reintroduzcas ítems de cotización, PocketBase en runtime ni `npm` — el repo es pnpm + mock/API.
-- Si tocas un flujo, actualiza solo el doc de esa sección en `docs/operations/`.
+- Solve the current request. Do not add layers, abstractions, or features “just in case”.
+- Before creating a file, look for the same flow (modal, service, mock). Reuse it.
+- One domain, one owner: quotations in `quotationsService` + `NewQuotationForm`; clients in `clientsService` + `ClientFormModal`. Do not copy CRUD across modules.
+- Business logic lives in `apps/web/src/services/*` (future NestJS HTTP), not duplicated in JSX.
+- Prefer existing `apps/web/src/components/ui` and current forms. Avoid long files; split by domain instead of a new library.
+- Docs: English. UI copy and code comments: Spanish.
+- Do not reintroduce quotation line-items, PocketBase at runtime, or npm — the repo is pnpm + mock/API.
+- Backend target is NestJS + MySQL on Hostinger. Model first (`apps/api/agent.md`). No finance module yet.
+- If you change a business flow, update only that section under `docs/operations/` (new ops docs in English).

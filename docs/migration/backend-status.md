@@ -1,66 +1,54 @@
 # Backend status
 
 ```
-Backend re-engineering: PENDING
-Target: NestJS + Prisma + MySQL
+Backend re-engineering: PENDING (model only)
+Target: NestJS + Prisma + MySQL (Hostinger)
 PocketBase: legacy/reference only
 Horizons: target dependency removed
 ```
 
+This milestone does **not** scaffold NestJS or run Prisma. Schema intent: [microservice-model.md](./microservice-model.md).
+
 ## Intentionally not done in this phase
 
+- NestJS production API / Prisma migrations
 - PocketBase collection migration
-- MySQL schema / Prisma migrations for the ERP
 - JWT production authentication
 - File storage migration (`pb_data/storage`)
-- Financial transaction integrity
-- NestJS production API
+- Finance module (costos, egresos, ingresos, cajas)
 - Removal of `apps/pocketbase/`
 - Mechanical rewrite of remaining `pb.collection(...)` calls to HTTP
 
-`apps/pocketbase` remains in the repo as the audited legacy system. The frontend POC does not start it (`pnpm dev:web`).
+`apps/pocketbase` remains as the audited legacy system. The frontend POC does not start it (`pnpm dev:web`).
 
-## Future migration order (do not start from this document)
+## Migration order
 
 ```
-Auth (mínimo)
+Model (this pass)
   ↓
-Clients + Quotations + Sales   ← FASE 1 (microservicio Hostinger)
+Users (manual) + sessions/activity
   ↓
-Operations / cronograma (otro servicio o módulo)
+Clients + Quotations + Sales + Jobs   ← first Hostinger MySQL service
   ↓
-Internal Orders
+Operations / calendar owner
+  ↓
+Internal orders
   ↓
 Vehicles
   ↓
-Finance
-  ↓
-Reports
+Finance (later)
   ↓
 PocketBase removal
 ```
 
-Plan detallado de la fase 1: [api-quotations-sales.md](./api-quotations-sales.md).
+Phase 1 API sketch: [api-quotations-sales.md](./api-quotations-sales.md). Frontend contract: [frontend-backend-contract.md](./frontend-backend-contract.md).
 
-Intended NestJS layout (empty — documentation only):
+Intended layout when implementation starts (empty until then):
 
 ```
 apps/api/
-├── src/
-│   ├── auth/
-│   ├── users/
-│   ├── roles/
-│   ├── organization/
-│   ├── clients/
-│   ├── operations/
-│   ├── internal-orders/
-│   ├── vehicles/
-│   ├── quotations/
-│   ├── marketing/
-│   ├── finance/
-│   ├── accounting/
-│   ├── files/
-│   ├── audit/
-│   └── reports/
-└── prisma/
+├── agent.md
+└── sales/          # first NestJS microservice + its MySQL schema
+    ├── src/
+    └── prisma/
 ```
