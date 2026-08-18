@@ -17,7 +17,7 @@ export const mockClientes = [
   {
     id: 'cli_hospital',
     nombre: 'Clínica Horizonte',
-    tipo: 'Proyecto',
+    tipo: 'Proyectos',
     contacto: 'Dr. Iván Paz',
     email: 'infra@horizonte-demo.example',
     telefono: '22444555',
@@ -32,8 +32,7 @@ export const mockClientes = [
   {
     id: 'cli_mall',
     nombre: 'Plaza Norte Retail',
-    tipo: 'Seguridad Electrónica',
-    contacto: 'Carla Benítez',
+    tipo: 'Equipos y tecnología',
     email: 'ops@plazanorte-demo.example',
     telefono: '22888999',
     direccion: 'Av. Juan Pablo II, El Alto',
@@ -62,7 +61,7 @@ export const mockClientes = [
   {
     id: 'cli_fabrica',
     nombre: 'Industrias Altiplano',
-    tipo: 'Proyecto',
+    tipo: 'Proyectos',
     contacto: 'Rocío Vega',
     email: 'planta@altiplano-demo.example',
     telefono: '44111222',

@@ -12,6 +12,7 @@ import {
   QUOTATION_MAIN_CATEGORIES,
   QUOTATION_SUBCATEGORIES,
   QUOTATION_SUCURSALES,
+  EQUIPOS_TECNOLOGIA_ID,
   COT_PREFIX,
   peekNextQuotationNumero,
 } from '@/mocks/quotations.js';
@@ -72,7 +73,7 @@ const NewQuotationForm = ({
   );
   const commissionTotal = form.vendedores.reduce((sum, row) => sum + (Number(row.comision_pct) || 0), 0);
   const subOptions = QUOTATION_SUBCATEGORIES[form.categoria_id] || [];
-  const isInsumos = form.categoria_id === 'insumos_tecnologicos';
+  const isEquipos = form.categoria_id === EQUIPOS_TECNOLOGIA_ID;
 
   const reset = () => {
     setForm(createEmptyCommercial(currentUser));
@@ -107,7 +108,7 @@ const NewQuotationForm = ({
     if (!form.cliente_id) return toast.error('Selecciona o registra un cliente');
     if (!form.categoria_id) return toast.error('Selecciona una categoría');
     if (!form.sucursal_id) return toast.error('Selecciona una sucursal');
-    if (!isInsumos && !form.subcategoria) return toast.error('Selecciona una subcategoría');
+    if (!isEquipos && !form.subcategoria) return toast.error('Selecciona una subcategoría');
 
     const monto = Number(form.monto);
     if (!monto || monto <= 0) return toast.error('Ingresa el monto de la cotización');
@@ -124,7 +125,7 @@ const NewQuotationForm = ({
       const client = clients.find((row) => row.id === form.cliente_id);
       const categoriaLabel = QUOTATION_MAIN_CATEGORIES.find((row) => row.id === form.categoria_id)?.label || '';
       const sucursal = QUOTATION_SUCURSALES.find((row) => row.id === form.sucursal_id);
-      const subcategoria = isInsumos ? form.subcategoria_custom.trim() : form.subcategoria;
+      const subcategoria = isEquipos ? form.subcategoria_custom.trim() : form.subcategoria;
 
       await quotationsService.create({
         kind: 'commercial',
@@ -273,11 +274,11 @@ const NewQuotationForm = ({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">
-                      Subcategoría {isInsumos ? '(opcional)' : '*'}
+                      Subcategoría {isEquipos ? '(opcional)' : '*'}
                     </Label>
-                    {isInsumos ? (
+                    {isEquipos ? (
                       <Input
-                        placeholder="Texto libre (opcional)"
+                        placeholder="Ej. laptop, panel solar, impresora"
                         className="h-11"
                         value={form.subcategoria_custom}
                         onChange={(e) => setForm({ ...form, subcategoria_custom: e.target.value })}

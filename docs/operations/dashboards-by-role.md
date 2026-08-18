@@ -39,7 +39,7 @@ Cuando el usuario es **VENTAS / ADMINISTRACIÓN**, el dashboard debería prioriz
 
 ### Estado POC actual
 
-El dashboard muestra KPIs globales (metas comerciales, avance operativo, ranking vendedores). **Mejora pendiente:** filtro automático por vendedor logueado y widgets dedicados a cotizaciones/relevamientos/conversión.
+El dashboard muestra KPIs globales y una fila de **cotizaciones / ventas / meta mensual / faltante** (`SalesMetricsRow` + `reportsService.getSalesMetrics`). Un usuario VENTAS ve sus cifras; admin y el resto ven el total del equipo. No incluye costos, egresos ni ingresos.
 
 ---
 

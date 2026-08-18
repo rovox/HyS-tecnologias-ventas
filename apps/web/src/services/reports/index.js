@@ -43,6 +43,39 @@ export const reportsService = {
       goals,
     };
   },
+
+  /** Cotizaciones, ventas y meta mensual. Sin costos ni estado de resultados. */
+  async getSalesMetrics({ userId, month } = {}) {
+    const prefix = month || new Date().toISOString().slice(0, 7);
+    const inMonth = (quote) => String(quote.fecha || quote.created || '').startsWith(prefix);
+    const amount = (quote) => Number(quote.total ?? quote.monto) || 0;
+    const isVendor = (quote) => {
+      if (!userId) return true;
+      if (quote.vendedor_id === userId) return true;
+      return Array.isArray(quote.vendedores) && quote.vendedores.some((row) => row.user_id === userId);
+    };
+    const isSale = (quote) => quote.estado === 'convertida' || Boolean(quote.schedule_id);
+
+    const quotes = store
+      .list('quotations')
+      .filter((row) => row.kind === 'commercial' && inMonth(row) && isVendor(row));
+    const quotationsTotal = quotes
+      .filter((row) => row.estado !== 'rechazada')
+      .reduce((sum, row) => sum + amount(row), 0);
+    const salesTotal = quotes.filter(isSale).reduce((sum, row) => sum + amount(row), 0);
+    const goals = store.list('salesperson_goals');
+    const goalBs = userId
+      ? Number(goals.find((row) => row.user_id === userId)?.monthly_goal) || 0
+      : goals.reduce((sum, row) => sum + (Number(row.monthly_goal) || 0), 0);
+
+    return {
+      month: prefix,
+      quotationsTotal,
+      salesTotal,
+      goalBs,
+      remainingBs: Math.max(0, goalBs - salesTotal),
+    };
+  },
 };
 
 export default reportsService;

@@ -9,7 +9,7 @@ Formulario comercial: `apps/web/src/components/NewQuotationForm.jsx` (no duplica
 
 ## Clientes
 
-Alta mínima: nombre. Si el cliente no existe al cotizar, **Nuevo cliente** abre `ClientFormModal` (mismo componente que `/clientes`).
+Alta mínima: nombre y **categoría** (las mismas tres que en cotizaciones: Seguridad Electrónica, Equipos y tecnología, Proyectos). El formulario es `ClientFormModal`.
 
 No eliminar cliente con cotizaciones o ventas abiertas (regla de producción).
 
@@ -29,8 +29,8 @@ Toda cotización nueva **ya fue hablada o enviada** al cliente → estado inicia
 | Campo | Regla |
 |-------|--------|
 | Cliente | Obligatorio. Buscar o crear. |
-| Categoría | Seguridad Electrónica / Insumos tecnológicos / Proyectos |
-| Subcategoría | SE: Instalaciones, Asistencias. Proyectos: Redes/Datos, Eléctrico. Insumos: texto libre opcional |
+| Categoría | Seguridad Electrónica / Equipos y tecnología / Proyectos |
+| Subcategoría | SE: Instalaciones, Asistencias. Proyectos: Redes/Datos, Eléctrico. Equipos y tecnología: texto libre opcional |
 | Sucursal | Central, Quillacollo, Punata |
 | Monto | Directo en Bs. Sin ítems: el detalle está en adjuntos |
 | Vendedor(es) | El creador entra con **100%** de comisión. Más vendedores = ajustar % |
