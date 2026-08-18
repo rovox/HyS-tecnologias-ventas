@@ -23,11 +23,17 @@ Auth: `Authorization: Bearer <access>` (future). POC uses a fake `poc.*` token i
 
 ### Quotations
 - `GET /quotations`
-- `POST /quotations`
-- `PATCH /quotations/:id`
-- `POST /quotations/:id/status` `{ estado }`
-- `POST /quotations/:id/convert` → `{ quotation, schedule }`  *(POC extension; not in original PB app)*
-- `GET/POST /quotation-categories`
+- `POST /quotations`  `{ titulo, clienteId, categoria, subcategoria, sucursalId, monto, vendedores[], observacion }` — estado inicial `enviada`
+- `POST /quotations/:id/files`
+- `POST /quotations/:id/status` `{ estado }`  enviada → aceptada | rechazada
+- `POST /quotations/:id/accept` → `{ quotation, sale }`
+
+### Sales (fase 1 API)
+- `GET /sales/:id`
+- `POST /sales/:id/jobs`
+- `POST /sales/:id/payments`
+
+Detalle: [api-quotations-sales.md](./api-quotations-sales.md).
 
 ### Schedules / jobs
 - `GET /schedules`

@@ -2,19 +2,27 @@
   "name": "monorepo",
   "version": "0.0.0",
   "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
   "scripts": {
-    "setup": "npm install",
-    "dev": "concurrently --kill-others --raw \"npm run dev --prefix apps/web\" \"npm run dev --prefix apps/pocketbase\"",
-    "dev:web": "npm run dev --prefix apps/web",
-    "build": "npm run build --prefix apps/web",
-    "build:web": "npm run build --prefix apps/web",
-    "start": "concurrently --kill-others --raw \"npm run start --prefix apps/pocketbase\"",
-    "start:web": "npm run start --prefix apps/web",
-    "lint": "concurrently --raw \"npm run lint --prefix apps/web\""
+    "preinstall": "npx only-allow pnpm",
+    "setup": "pnpm install",
+    "dev": "concurrently --kill-others --raw \"pnpm --filter web dev\" \"pnpm --filter pocketbase-app dev\"",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "build:web": "pnpm --filter web build",
+    "start": "concurrently --kill-others --raw \"pnpm --filter pocketbase-app start\"",
+    "start:web": "pnpm --filter web start",
+    "lint": "pnpm --filter web lint",
+    "verify:dist": "pnpm --filter web verify:dist"
   },
   "devDependencies": {
     "concurrently": "^10.0.4",
-    "knip": "^6.32.1"
+    "knip": "^6.32.1",
+    "only-allow": "^1.2.1"
   },
   "workspaces": [
     "apps/*"

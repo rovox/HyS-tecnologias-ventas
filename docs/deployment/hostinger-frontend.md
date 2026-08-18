@@ -8,43 +8,74 @@ Use the **existing private GitHub repository**. Do not create another repo.
 
 This document describes **Option A: frontend-only** (Vite static + mock services). NestJS is not part of this deploy.
 
-## TEMPORARY: pre-built `dist/` (do not run Vite on Hostinger)
+## Why Hostinger does not *build* the app
 
-Hostinger Cloud Startup mounts the build filesystem **`noexec`**. `esbuild`’s native binary cannot run during `pnpm install` postinstall, during `vite build`, or even after copying it to `/tmp`. That is kernel-level. Do not try to chmod, allowlist, or downgrade esbuild on Hostinger.
+GitHub ↔ Hostinger is still useful. What Hostinger **cannot** do is compile this Vite app.
 
-**POC workaround:** build the SPA on a machine that can execute esbuild, commit `apps/web/dist/`, and tell Hostinger to skip Vite.
+Vite 7 always starts a native **esbuild** binary (`@esbuild/linux-x64/.../bin/esbuild`) to load `vite.config.js` and to bundle. Hostinger Cloud Startup mounts the builder filesystem **`noexec`** (the kernel refuses to execute binaries from that disk). That includes:
 
-Local rebuild (required after frontend changes):
+- `esbuild` postinstall
+- `vite build`
+- a copy of the binary in `/tmp`
+
+`EACCES` / `spawn .../esbuild` is that restriction. Reinstalling (`pnpm install --force`), chmod, `approve-builds`, or pinning `esbuild@0.24` does not change it. Hostinger’s auto-diagnosis that “permissions were lost and a reinstall will restore +x” is wrong for this host.
+
+So the split is:
+
+| Step | Where it runs | Why |
+|------|----------------|-----|
+| `pnpm --filter web build` (`vite build`) | Your machine (or later GitHub Actions) | Needs esbuild; that environment is not `noexec` |
+| Commit `apps/web/dist/` | Git | The compiled HTML/JS/CSS **is** the deployable |
+| GitHub → Hostinger | Hostinger | Pulls the repo and **publishes** `dist/` |
+| `pnpm run verify:dist` | Hostinger | Does **not** compile. Only checks `dist/index.html` exists so a bad clone fails fast |
+
+`verify:dist` is a gate, not a build. If Hostinger runs `vite build` (Vite framework preset), the log shows `$ vite build` and fails with `EACCES` even when `dist/` is already in the repo.
+
+The GitHub connection is **CD** (every push deploys the committed `dist/`). It is not **CI** (Hostinger is not the compiler). That is still worth it: one `git push` updates the live site, rollback is a git revert, no FTP. What is missing until NestJS is the **build** half of CI/CD — GitHub Actions on `ubuntu-latest`. Do not add that workflow in this POC.
+
+## TEMPORARY: pre-built `dist/`
+
+**POC workaround:** build locally, commit `apps/web/dist/`, Hostinger only verifies and copies that folder.
+
+After any frontend change:
 
 ```bash
 pnpm --filter web build
 git add apps/web/dist
 git commit -m "chore: refresh pre-built frontend POC for Hostinger"
-git push
+git push origin migration/frontend-poc
 ```
 
-Follow-up (not this milestone): GitHub Actions on `ubuntu-latest` that builds and deploys `dist/` (FTP/API). Use that when NestJS is in production. Do not add that workflow until then.
+If you push source without a new `dist/`, the live site stays on the last committed bundle.
 
 ## Recommended hPanel settings
 
-Hostinger auto-detects many fields. Confirm each value. **Do not use `pnpm run build` on Hostinger** — that runs Vite and will fail with `EACCES` on esbuild.
+**Do not leave Framework = Vite.** That preset forces `$ vite build` and ignores a safe command. Set Framework to **Other**.
 
 | Setting | Recommended value | Verify in hPanel |
 |---------|-------------------|------------------|
-| Source | Import Git repository → existing private repo | Pick the already-connected GitHub account |
-| Branch | `migration/frontend-poc` | Defaults to repo default (`main`) — **change it** |
-| Framework preset | **Vite** (or Static / Other) | Override if it picks Nest |
-| Node.js version | **22** | Used only for `pnpm install` + verify |
+| Source | Import Git repository → existing private repo | Already-connected GitHub account |
+| Branch | `migration/frontend-poc` | Defaults to `main` — **change it** |
+| Framework preset | **Other** (not Vite) | Vite preset runs `vite build` → `EACCES` |
+| Node.js version | **22** | Only for `pnpm install` + verify |
 | Root directory | `apps/web` | Required |
 | Package manager | **pnpm** | Auto from `pnpm-lock.yaml` |
-| Build command | `pnpm run verify:dist` | Checks committed `dist/index.html`. **Not** `pnpm run build` |
+| Build command | `pnpm run verify:dist` | Must appear in the log as `$ pnpm run verify:dist`, never `$ vite build` |
 | Output directory | `dist` | Committed `apps/web/dist` |
 | Entry file | **leave empty** | Hostinger copies `dist` to the site root |
 | Environment variables | see below | Already baked into the committed bundle |
 
-If Hostinger refuses an empty entry file, set **Entry file** to `serve-dist.mjs` (Node stdlib static server, no native binaries). Leave it empty if the panel copies `dist` without a process.
+If Hostinger refuses an empty entry file, set **Entry file** to `serve-dist.mjs` (Node stdlib static server, no native binaries).
 
-`pnpm install` on Hostinger is expected to succeed (esbuild postinstall is ignored in `pnpm-workspace.yaml`). The previous log `Done in 4.5s using pnpm v11.21.0` is the success case. Failure starts only if the build command runs Vite.
+`pnpm install` on Hostinger should succeed (esbuild postinstall is ignored in `pnpm-workspace.yaml`). A good log:
+
+```
+Done in … using pnpm v11…
+$ pnpm run verify:dist
+pre-built dist present; skipping vite
+```
+
+A bad log still contains `$ vite build` or `spawn .../esbuild EACCES` — the Framework/build command was not overridden.
 
 Do **not** set Root directory to `/`. The root `package.json` `start` script still launches PocketBase.
 
@@ -81,7 +112,7 @@ If a nested URL 404s, check `public_html/.htaccess` in File Manager.
 
 ## GitHub auto-deploy
 
-Push to `migration/frontend-poc` after committing an updated `apps/web/dist/`.
+Push to `migration/frontend-poc` **including** an updated `apps/web/dist/` when the UI changed.
 
 ```bash
 git push -u origin migration/frontend-poc
@@ -89,22 +120,22 @@ git push -u origin migration/frontend-poc
 
 Logs:
 
-- **Build logs** — should show `pnpm install` then `pre-built dist present`
+- **Build logs** — `pnpm install` then `pre-built dist present`
 - **Runtime logs** — unused unless `serve-dist.mjs` is the entry file
 
 ## Rollback
 
 1. In GitHub, note the previous good commit on `migration/frontend-poc`.
 2. Revert with a new commit (`git revert`). Do not force-push unless requested.
-3. Push; Hostinger redeploys the committed `dist/`.
+3. Push; Hostinger republishes that commit’s `dist/`.
 
 Do not move the `horizons-original` tag. Do not force-push `main`.
 
 ## Option A vs later architecture
 
-**This POC:** Option A — pre-built Vite static files from `apps/web/dist`.
+**This POC:** Option A — GitHub delivers a pre-built `apps/web/dist`. Hostinger hosts files; it does not compile.
 
-**Final target (not this milestone):** Option B — NestJS serves `/api` and the SPA. Build the frontend in CI (GitHub Actions), not on Hostinger’s noexec builder.
+**Final target (not this milestone):** Option B — NestJS serves `/api` and the SPA. **CI** = GitHub Actions (`ubuntu-latest`) runs `vite build`. **CD** = Hostinger (or Actions upload) publishes the artifact. Hostinger still should not run esbuild.
 
 **Option C** (two Web Apps) is allowed by Cloud Startup but not needed for the mock POC.
 

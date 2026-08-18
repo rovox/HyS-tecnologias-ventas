@@ -1,0 +1,13 @@
+---
+description: Evitar sobreingeniería, duplicados y desviarse de la lógica de cada sección. Siempre aplicar.
+alwaysApply: true
+---
+
+# Simplicidad y dominio
+
+- Resuelve el pedido actual. No agregues capas, abstracciones ni features “por si acaso”.
+- Antes de crear un archivo, busca si ya existe el mismo flujo (modal, service, mock). Reutiliza.
+- Un dominio, un dueño: cotizaciones en `quotationsService` + `NewQuotationForm`; clientes en `clientsService` + `ClientFormModal`. No copies CRUD entre módulos.
+- La lógica de negocio vive en `apps/web/src/services/*` (contrato futuro NestJS), no en JSX duplicado.
+- No reintroduzcas ítems de cotización, PocketBase en runtime ni `npm` — el repo es pnpm + mock/API.
+- Si tocas un flujo, actualiza solo el doc de esa sección en `docs/operations/`.

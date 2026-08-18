@@ -79,10 +79,14 @@ CDN logos were replaced with `/branding/*.svg`.
 
 ## Local commands
 
+Este monorepo usa **pnpm exclusivamente**:
+
 ```bash
-npm run dev:web     # Vite only — no PocketBase
-npm run build:web   # production static build → apps/web/dist
-npm run start:web   # vite preview
+pnpm dev:web     # Vite only — no PocketBase
+pnpm build:web   # production static build → apps/web/dist
+pnpm start:web   # vite preview
 ```
 
-`npm run dev` still starts PocketBase as well (legacy). The POC does not need it.
+`pnpm dev` still starts PocketBase as well (legacy). The POC does not need it.
+
+Ver [getting-started/local-development.md](../getting-started/local-development.md).

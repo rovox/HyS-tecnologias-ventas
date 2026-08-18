@@ -18,35 +18,29 @@ Horizons: target dependency removed
 - Removal of `apps/pocketbase/`
 - Mechanical rewrite of remaining `pb.collection(...)` calls to HTTP
 
-`apps/pocketbase` remains in the repo as the audited legacy system. The frontend POC does not start it (`npm run dev:web`).
+`apps/pocketbase` remains in the repo as the audited legacy system. The frontend POC does not start it (`pnpm dev:web`).
 
 ## Future migration order (do not start from this document)
 
 ```
-Auth
+Auth (mínimo)
   ↓
-Users / Roles
+Clients + Quotations + Sales   ← FASE 1 (microservicio Hostinger)
   ↓
-Organization
-  ↓
-Clients
-  ↓
-Operations
+Operations / cronograma (otro servicio o módulo)
   ↓
 Internal Orders
-  ↓
-Quotations
   ↓
 Vehicles
   ↓
 Finance
   ↓
-Accounting
-  ↓
 Reports
   ↓
 PocketBase removal
 ```
+
+Plan detallado de la fase 1: [api-quotations-sales.md](./api-quotations-sales.md).
 
 Intended NestJS layout (empty — documentation only):
 

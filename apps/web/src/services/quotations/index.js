@@ -1,5 +1,5 @@
 import * as store from '@/mocks/store.js';
-import { QUOTATION_FLOW } from '@/mocks/quotations.js';
+import { QUOTATION_FLOW, buildQuotationDateCode } from '@/mocks/quotations.js';
 import { schedulesService } from '@/services/schedules/index.js';
 
 function sumItems(items = []) {
@@ -11,6 +11,12 @@ function sumItems(items = []) {
 }
 
 function withTotals(data) {
+  const explicitTotal = data.total ?? data.monto;
+  if (data.kind === 'commercial' && explicitTotal != null && explicitTotal !== '') {
+    const total = Number(explicitTotal) || 0;
+    return { ...data, items: [], subtotal: total, total };
+  }
+
   const items = (data.items || []).map((item) => {
     const cantidad = Number(item.cantidad) || 0;
     const precio_unitario = Number(item.precio_unitario) || 0;
@@ -21,10 +27,21 @@ function withTotals(data) {
 }
 
 function nextNumero() {
-  const commercial = store.list('quotations').filter((row) => row.kind === 'commercial' && row.numero);
-  const nums = commercial.map((row) => Number(String(row.numero).split('-').pop()) || 0);
-  const next = Math.max(20, ...nums) + 1;
-  return `COT-2026-${String(next).padStart(3, '0')}`;
+  const base = buildQuotationDateCode(new Date());
+  const commercial = store.list('quotations').filter(
+    (row) => row.kind === 'commercial' && row.numero && (row.numero === base || row.numero.startsWith(`${base}-`))
+  );
+  if (commercial.length === 0) return base;
+  return `${base}-${commercial.length + 1}`;
+}
+
+function normalizeVendedores(data) {
+  const rows = Array.isArray(data.vendedores) ? data.vendedores.filter((row) => row?.user_id) : [];
+  if (rows.length > 0) return rows;
+  if (data.vendedor_id) {
+    return [{ user_id: data.vendedor_id, nombre: data.vendedor_nombre || '', comision_pct: 100 }];
+  }
+  return [];
 }
 
 export const quotationsService = {
@@ -54,11 +71,16 @@ export const quotationsService = {
   },
 
   async create(data) {
-    const kind = data.kind || (data.items?.length ? 'commercial' : 'library');
+    const kind = data.kind || (data.monto != null || data.total != null ? 'commercial' : 'library');
+    const vendedores = normalizeVendedores(data);
+    const primaryVendor = vendedores[0];
     const payload = withTotals({
       ...data,
       kind,
-      estado: data.estado || (kind === 'commercial' ? 'borrador' : 'documento'),
+      vendedores,
+      vendedor_id: primaryVendor?.user_id || data.vendedor_id || '',
+      vendedor_nombre: primaryVendor?.nombre || data.vendedor_nombre || '',
+      estado: data.estado || (kind === 'commercial' ? 'enviada' : 'documento'),
       numero: data.numero || (kind === 'commercial' ? nextNumero() : ''),
       fecha: data.fecha || new Date().toISOString().slice(0, 10),
     });
@@ -89,10 +111,6 @@ export const quotationsService = {
     return store.update('quotations', id, { estado });
   },
 
-  /**
-   * POC-only: convert an accepted commercial quotation into a schedule/job.
-   * Existing production app did not have this conversion.
-   */
   async convertToSchedule(id, extras = {}) {
     const quote = store.findById('quotations', id);
     if (!quote) throw new Error('Cotización no encontrada');
@@ -114,7 +132,7 @@ export const quotationsService = {
       saldo: (quote.total || 0) - (extras.adelanto || 0),
       estado: 'programado',
       fecha_programada: extras.fecha_programada || `${new Date().toISOString().slice(0, 10)} 00:00:00`,
-      sucursal_id: client?.sucursal_id || extras.sucursal_id || '',
+      sucursal_id: quote.sucursal_id || client?.sucursal_id || extras.sucursal_id || '',
       vendedor_responsable_id: quote.vendedor_id || extras.vendedor_responsable_id || '',
       vendedor_nombre: quote.vendedor_nombre || '',
       tecnico_responsable_id: extras.tecnico_responsable_id || '',
