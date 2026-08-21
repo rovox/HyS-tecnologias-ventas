@@ -202,7 +202,7 @@ function seedCollections() {
         nombre: 'Campaña cámaras Q3',
         status: 'active',
         canal: 'WhatsApp',
-        sucursal_nombre: 'Central La Paz',
+        sucursal_nombre: 'Central',
         presupuesto_asignado: 2500,
         gasto_real: 800,
         interesados: 18,
@@ -227,7 +227,7 @@ function seedCollections() {
         cliente_id: 'cli_andina',
         cliente_nombre: 'Comercial Andina SRL',
         pedido_id: 'ped_andina',
-        sucursal_nombre: 'Central La Paz',
+        sucursal_nombre: 'Central',
         created_by: 'usr_tec',
         created_by_nombre: 'Elias',
         usuario_id: 'usr_tec',
@@ -242,6 +242,54 @@ function seedCollections() {
     ],
     comentarios_actividad: [],
     historial_actividad: [],
+    tasks: [
+      {
+        id: 'task_cotizar',
+        titulo: 'Seguimiento cotización Andina',
+        descripcion: 'Llamar al cliente para confirmar envío del PDF.',
+        sucursalId: 'suc_central',
+        sucursal_id: 'suc_central',
+        creadorId: 'usr_admin',
+        creador_nombre: 'Julio',
+        asignadoId: 'usr_ventas',
+        asignado_nombre: 'Dennis',
+        estado: 'pendiente',
+        prioridad: 'alta',
+        plazo: '2026-08-22',
+        horario: '10:00',
+        cotizacionId: 'quo_andina',
+        cotizacion_numero: 'COT-080426',
+        scheduleId: 'sch_andina',
+        schedule_label: 'Instalación CCTV 16 canales según COT-2026-014',
+        archivosUrl: [],
+        completedAt: null,
+        created: '2026-08-18 09:00:00',
+        updated: '2026-08-18 09:00:00',
+      },
+      {
+        id: 'task_proceso',
+        titulo: 'Confirmar visita Plaza Norte',
+        descripcion: 'Coordinar acceso al local.',
+        sucursalId: 'suc_central',
+        sucursal_id: 'suc_central',
+        creadorId: 'usr_ventas',
+        creador_nombre: 'Dennis',
+        asignadoId: 'usr_tec',
+        asignado_nombre: 'Elias',
+        estado: 'en_proceso',
+        prioridad: 'media',
+        plazo: '2026-08-20',
+        horario: '15:30',
+        cotizacionId: 'quo_mall_equipos',
+        cotizacion_numero: 'COT-081526',
+        scheduleId: '',
+        schedule_label: '',
+        archivosUrl: [],
+        completedAt: null,
+        created: '2026-08-19 08:00:00',
+        updated: '2026-08-19 12:00:00',
+      },
+    ],
     reports: [],
     income: [],
     expenses: [],
@@ -254,9 +302,41 @@ function seedCollections() {
 }
 
 let collections = seedCollections();
+const STORE_KEY = 'hs_poc_store_v1';
+const PERSIST_KEYS = ['clientes', 'quotations', 'tasks', 'visitas_tecnicas', 'schedules'];
+
+function persistStore() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const payload = {};
+    for (const key of PERSIST_KEYS) payload[key] = collections[key] || [];
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
+  } catch { /* quota */ }
+}
+
+function hydrateStore() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+    collections = { ...seedCollections(), ...parsed };
+    const seedUsers = seedCollections().users;
+    collections.users = seedUsers.map((seedUser) => {
+      const stored = Array.isArray(parsed.users)
+        ? parsed.users.find((row) => row.id === seedUser.id)
+        : null;
+      return { ...seedUser, ...stored, password: seedUser.password, email: seedUser.email, role: seedUser.role };
+    });
+  } catch { /* ignore corrupt cache */ }
+}
+
+hydrateStore();
 
 export function resetStore() {
   collections = seedCollections();
+  persistStore();
 }
 
 export function ensureCollection(name) {
@@ -282,6 +362,7 @@ export function insert(name, data) {
     updated: data.updated || nowStamp(),
   };
   ensureCollection(name).unshift(record);
+  persistStore();
   return clone(record);
 }
 
@@ -291,6 +372,7 @@ export function update(name, id, data) {
   if (index < 0) return null;
   const next = { ...rows[index], ...data, id, updated: nowStamp() };
   rows[index] = next;
+  persistStore();
   return clone(next);
 }
 
@@ -299,7 +381,15 @@ export function remove(name, id) {
   const index = rows.findIndex((item) => item.id === id);
   if (index < 0) return false;
   rows.splice(index, 1);
+  persistStore();
   return true;
 }
 
-export { nowStamp, newId, clone };
+export function touchClientActivity(clienteId) {
+  if (!clienteId) return;
+  const row = ensureCollection('clientes').find((item) => item.id === clienteId);
+  if (!row) return;
+  row.lastActivityAt = new Date().toISOString();
+  row.updated = nowStamp();
+  persistStore();
+}

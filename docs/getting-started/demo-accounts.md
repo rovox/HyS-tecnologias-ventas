@@ -1,38 +1,37 @@
-# Cuentas demo y roles
+# Demo accounts and roles
 
-Contraseña común para todas las cuentas POC: **`Demo1234!`**
+Each demo user has a **simple personal password** (first name, lowercase). Local seed only.
 
-| Email | Rol | Nombre | Grupo operativo |
-|-------|-----|--------|-----------------|
-| `julio.admin@demo.hs.local` | ADMINISTRADOR | Julio | Administración |
-| `dennis.ventas@demo.hs.local` | VENTAS / ADMINISTRACIÓN | Dennis | Ventas |
-| `wilson.ventas@demo.hs.local` | VENTAS / ADMINISTRACIÓN | Wilson | Ventas |
-| `vanesa.ventas@demo.hs.local` | VENTAS / ADMINISTRACIÓN | Vanesa | Ventas |
-| `elias.ops@demo.hs.local` | SEGURIDAD ELECTRÓNICA | Elias | Técnicos |
-| `elena.conta@demo.hs.local` | Contadora | Elena Rojas | Finanzas |
+| Email | Password | Role | Name |
+|-------|----------|------|------|
+| `julio.admin@demo.hs.local` | `julio` | ADMINISTRADOR | Julio |
+| `dennis.ventas@demo.hs.local` | `dennis` | VENTAS / ADMINISTRACIÓN | Dennis |
+| `wilson.ventas@demo.hs.local` | `wilson` | VENTAS / ADMINISTRACIÓN | Wilson |
+| `vanesa.ventas@demo.hs.local` | `vanesa` | VENTAS / ADMINISTRACIÓN | Vanesa |
+| `elias.ops@demo.hs.local` | `elias` | SEGURIDAD ELECTRÓNICA | Elias |
+| `elena.conta@demo.hs.local` | `elena` | Contadora | Elena Rojas |
 
-## Grupos operativos
+There is **one** administrator: Julio. Sales users only see their own quotations and their branch clients.
 
-| Grupo | Roles incluidos | Enfoque principal |
-|-------|-----------------|-------------------|
-| **Ventas** | VENTAS / ADMINISTRACIÓN | Clientes, cotizaciones, relevamientos, cronograma (planificación), conversión comercial |
-| **Técnicos** | SEGURIDAD ELECTRÓNICA | Ejecución en cronograma, visitas, pedidos internos, evidencia |
-| **Finanzas** | Contadora (+ ventas/admin en módulos compartidos) | Reportes, costos, cajas, movimientos |
-| **Administración** | ADMINISTRADOR | Visión transversal, panel de control, configuración, auditoría |
+## Auth
 
-## Autenticación POC
+- Mock (`VITE_API_MODE=mock`): `poc.*` tokens. **Remember me** uses `localStorage`; unchecked uses `sessionStorage`.
+- Nest (`VITE_API_MODE=api`): JWT 8h with required `sessionId`. Logout ends the session row; the guard rejects ended sessions or tokens without `sessionId`.
+- Defined in `apps/api/prisma/seed.ts` and `apps/web/src/services/auth/`.
 
-- Tokens ficticios `poc.*` en `localStorage`
-- **No** es JWT de producción
-- Definido en `apps/web/src/mocks/users.js` y `apps/web/src/services/auth/`
+Do **not** run `prisma seed` on Hostinger (it overwrites password hashes). Apply additive migrations only.
 
-## Qué probar por rol
+## What to try by role
 
-| Rol | Rutas sugeridas |
-|-----|-----------------|
-| Ventas | `/dashboard`, `/clientes`, `/surveys`, `/quotations`, `/schedule` |
-| Técnicos | `/schedule`, `/surveys`, `/pedidos-internos` |
-| Finanzas | `/finanzas`, `/accounting`, `/reports` |
-| Admin | `/admin/management`, `/configuration`, todas las anteriores |
+| Role | Sidebar |
+|------|---------|
+| Sales | Dashboard, Cotizaciones, Clientes, Relevamientos |
+| Technician | Dashboard, Relevamientos |
+| Accountant | Dashboard, Clientes, Cotizaciones (read), Reportes |
+| Admin | All of the above plus Reportes, Panel de Control, Configuración |
 
-Ver dashboards esperados por rol en [operations/dashboards-by-role.md](../operations/dashboards-by-role.md).
+**Tareas** open from the floating button (bottom-right), not the sidebar. Cronograma lives in the **Actividad** overlay and `/schedule`.
+
+Logout is in the sidebar footer.
+
+Suggested dashboards: [operations/dashboards-by-role.md](../operations/dashboards-by-role.md).

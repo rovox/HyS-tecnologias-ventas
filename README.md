@@ -2,7 +2,7 @@
 
 Monorepo del sistema de gestión para **H&S Tecnologías**: ventas, cronograma de instalaciones, relevamientos, cotizaciones, logística interna y finanzas.
 
-**Milestone actual:** frontend POC con datos ficticios en memoria (sin PocketBase ni NestJS en runtime).
+**Milestone actual:** frontend POC en mock. NestJS sales corre en local (`pnpm dev:api`); Hostinger aún no publica esa API.
 
 ---
 
@@ -25,6 +25,7 @@ Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `denn
 | `pnpm build:web` | Build → `apps/web/dist` |
 | `pnpm start:web` | Preview del build |
 | `pnpm lint` | ESLint |
+| `pnpm dev:api` | NestJS sales en `:3001` (MySQL local) |
 | `pnpm dev` | Frontend + PocketBase legacy (no necesario para POC) |
 
 Documentación completa: **[`docs/README.md`](./docs/README.md)**
@@ -37,7 +38,7 @@ Documentación completa: **[`docs/README.md`](./docs/README.md)**
 aca/
 ├── apps/
 │   ├── web/              ← SPA React + Vite (activo)
-│   ├── api/              ← NestJS placeholder (pendiente)
+│   ├── api/              ← NestJS sales (Prisma + MySQL)
 │   └── pocketbase/       ← Legacy / referencia auditada
 ├── docs/                 ← Documentación canónica modular
 │   ├── getting-started/
@@ -116,7 +117,7 @@ Backend objetivo: NestJS + Prisma + MySQL — [`docs/migration/backend-status.md
 
 ## Deploy
 
-Static frontend on Hostinger from `apps/web/dist`. Push source to `migration/frontend-poc`; GitHub Actions compiles and commits `dist/`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md)
+Static frontend on Hostinger from `apps/web/dist`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md). Sales API (separate Node Web App + MySQL): [`docs/deployment/hostinger-api.md`](./docs/deployment/hostinger-api.md). Do not flip `VITE_API_MODE=api` until `GET /api/health` succeeds.
 
 ```bash
 git push origin migration/frontend-poc

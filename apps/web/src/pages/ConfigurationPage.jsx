@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Target, Users, Building2, Trash2, Wrench, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { goalsService } from '@/services/goals/index.js';
+import { isMockMode } from '@/api/config.js';
 
 const ConfigurationPage = () => {
-  const { canAccessExecutivePanel, currentUser } = useAuth();
+  const { canAccessExecutivePanel, currentUser, isAdmin } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [globalConfig, setGlobalConfig] = useState(null);
@@ -22,19 +24,24 @@ const ConfigurationPage = () => {
 
   // Form states
   const [globalForm, setGlobalForm] = useState({ general_goal: 0, monthly_goal: 0, weekly_goal: 0 });
-  const [newSalesperson, setNewSalesperson] = useState({ salesperson_name: '', monthly_goal: '', annual_goal: '' });
+  const [newSalesperson, setNewSalesperson] = useState({ salesperson_name: '', monthly_goal: '' });
   const [newBranchGoal, setNewBranchGoal] = useState({ branch_name: '', monthly_goal: '', annual_goal: '' });
   const [newSucursal, setNewSucursal] = useState({ nombre: '', codigo: '' });
   const [newTecnico, setNewTecnico] = useState({ nombre: '' });
   const [editingSucursalId, setEditingSucursalId] = useState(null);
   const [editSucursalForm, setEditSucursalForm] = useState({ nombre: '', codigo: '', activa: true });
+  const [editingGoalId, setEditingGoalId] = useState(null);
+  const [editGoalValue, setEditGoalValue] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
+
+  const canEditGoals = isAdmin();
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
         const [configRes, sgRes, bgRes, sucRes, tecRes] = await Promise.all([
           pb.collection('configuration').getFullList({ $autoCancel: false }),
-          pb.collection('salesperson_goals').getFullList({ $autoCancel: false }),
+          goalsService.listSellerGoals(),
           pb.collection('branch_goals').getFullList({ $autoCancel: false }),
           pb.collection('sucursales').getFullList({ sort: 'nombre', $autoCancel: false }),
           pb.collection('tecnicos').getFullList({ sort: 'nombre', $autoCancel: false })
@@ -97,30 +104,60 @@ const ConfigurationPage = () => {
 
   const handleAddSalesperson = async (e) => {
     e.preventDefault();
+    if (!canEditGoals) return;
     if (!newSalesperson.salesperson_name) return;
     try {
-      const data = {
-        salesperson_name: newSalesperson.salesperson_name,
-        monthly_goal: Number(newSalesperson.monthly_goal) || 0,
-        annual_goal: Number(newSalesperson.annual_goal) || 0,
-        created_by: currentUser.id
-      };
-      const record = await pb.collection('salesperson_goals').create(data, { $autoCancel: false });
+      const record = await goalsService.createSellerGoal({
+        name: newSalesperson.salesperson_name,
+        monthlyGoal: newSalesperson.monthly_goal,
+      });
       setSalespersonGoals([...salespersonGoals, record]);
-      setNewSalesperson({ salesperson_name: '', monthly_goal: '', annual_goal: '' });
-      toast.success('Vendedor y metas agregados');
+      setNewSalesperson({ salesperson_name: '', monthly_goal: '' });
+      toast.success('Vendedor y meta mensual agregados');
     } catch (error) {
-      toast.error('Error al agregar vendedor');
+      toast.error(error.message || 'Error al agregar vendedor');
+    }
+  };
+
+  const startEditGoal = (row) => {
+    if (!canEditGoals) return;
+    setEditingGoalId(row.id);
+    setEditGoalValue(String(row.monthly_goal ?? 0));
+  };
+
+  const cancelEditGoal = () => {
+    setEditingGoalId(null);
+    setEditGoalValue('');
+  };
+
+  const handleSaveGoal = async (row) => {
+    if (!canEditGoals) return;
+    setSavingGoal(true);
+    try {
+      await goalsService.setMonthlyGoal({
+        id: row.id,
+        userId: row.user_id,
+        monthlyGoal: editGoalValue,
+      });
+      const next = await goalsService.listSellerGoals();
+      setSalespersonGoals(next);
+      cancelEditGoal();
+      toast.success('Meta mensual actualizada');
+    } catch (error) {
+      toast.error(error.message || 'No se pudo guardar la meta');
+    } finally {
+      setSavingGoal(false);
     }
   };
 
   const handleDeleteSalesperson = async (id) => {
+    if (!canEditGoals) return;
     try {
-      await pb.collection('salesperson_goals').delete(id, { $autoCancel: false });
+      await goalsService.removeSellerGoal(id);
       setSalespersonGoals(salespersonGoals.filter(s => s.id !== id));
       toast.success('Registro eliminado');
     } catch (error) {
-      toast.error('Error al eliminar');
+      toast.error(error.message || 'Error al eliminar');
     }
   };
 
@@ -324,6 +361,7 @@ const ConfigurationPage = () => {
 
             <TabsContent value="sales" className="w-full">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+                {isMockMode && canEditGoals && (
                 <Card className="border-slate-200 dark:border-slate-800 shadow-sm h-fit w-full">
                   <CardHeader>
                     <CardTitle>Agregar Vendedor</CardTitle>
@@ -335,21 +373,21 @@ const ConfigurationPage = () => {
                         <input required type="text" value={newSalesperson.salesperson_name} onChange={(e) => setNewSalesperson({...newSalesperson, salesperson_name: e.target.value})} className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white" />
                       </div>
                       <div className="w-full">
-                        <label className="block text-sm font-bold mb-1">Meta Mensual ($)</label>
-                        <input type="number" value={newSalesperson.monthly_goal} onChange={(e) => setNewSalesperson({...newSalesperson, monthly_goal: e.target.value})} className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white" />
-                      </div>
-                      <div className="w-full">
-                        <label className="block text-sm font-bold mb-1">Meta Anual ($)</label>
-                        <input type="number" value={newSalesperson.annual_goal} onChange={(e) => setNewSalesperson({...newSalesperson, annual_goal: e.target.value})} className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white" />
+                        <label className="block text-sm font-bold mb-1">Meta Mensual (Bs)</label>
+                        <input type="number" min="0" value={newSalesperson.monthly_goal} onChange={(e) => setNewSalesperson({...newSalesperson, monthly_goal: e.target.value})} className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white" />
                       </div>
                       <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700">Registrar Vendedor</Button>
                     </form>
                   </CardContent>
                 </Card>
+                )}
 
-                <Card className="lg:col-span-2 border-slate-200 dark:border-slate-800 shadow-sm w-full">
+                <Card className={`${isMockMode && canEditGoals ? 'lg:col-span-2' : 'lg:col-span-3'} border-slate-200 dark:border-slate-800 shadow-sm w-full`}>
                   <CardHeader>
                     <CardTitle>Lista de Vendedores y Metas</CardTitle>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Solo el administrador puede editar la meta mensual. No se usa meta anual.
+                    </p>
                   </CardHeader>
                   <CardContent className="w-full">
                     <div className="overflow-x-auto w-full">
@@ -358,23 +396,91 @@ const ConfigurationPage = () => {
                           <tr>
                             <th className="px-4 py-3">Nombre</th>
                             <th className="px-4 py-3 text-right">Meta Mensual</th>
-                            <th className="px-4 py-3 text-right">Meta Anual</th>
                             <th className="px-4 py-3 text-right">Acción</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {salespersonGoals.map(s => (
+                          {salespersonGoals.map((s) => (
                             <tr key={s.id}>
                               <td className="px-4 py-3 font-bold">{s.salesperson_name}</td>
-                              <td className="px-4 py-3 text-right font-medium">${s.monthly_goal?.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-right font-medium">${s.annual_goal?.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-right font-medium">
+                                {editingGoalId === s.id ? (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={editGoalValue}
+                                    onChange={(e) => setEditGoalValue(e.target.value)}
+                                    className="ml-auto w-32 p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-right tabular-nums"
+                                    disabled={savingGoal}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span className="tabular-nums">Bs {Number(s.monthly_goal || 0).toLocaleString('es-BO')}</span>
+                                )}
+                              </td>
                               <td className="px-4 py-3 text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleDeleteSalesperson(s.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4"/></Button>
+                                {canEditGoals ? (
+                                  <div className="inline-flex items-center gap-1 justify-end">
+                                    {editingGoalId === s.id ? (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled={savingGoal}
+                                          onClick={() => handleSaveGoal(s)}
+                                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                          title="Guardar"
+                                        >
+                                          <Check className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled={savingGoal}
+                                          onClick={cancelEditGoal}
+                                          className="text-slate-500"
+                                          title="Cancelar"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => startEditGoal(s)}
+                                          className="text-primary hover:bg-primary/10"
+                                          title="Editar meta"
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        {isMockMode && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeleteSalesperson(s.id)}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                            title="Eliminar"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Solo lectura</span>
+                                )}
                               </td>
                             </tr>
                           ))}
                           {salespersonGoals.length === 0 && (
-                            <tr><td colSpan="4" className="text-center p-4 text-slate-500">No hay vendedores registrados.</td></tr>
+                            <tr><td colSpan="3" className="text-center p-4 text-slate-500">No hay vendedores registrados.</td></tr>
                           )}
                         </tbody>
                       </table>

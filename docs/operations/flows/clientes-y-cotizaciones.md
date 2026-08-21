@@ -1,86 +1,54 @@
 # Flujo — Clientes y cotizaciones
 
-Módulos: `/clientes`, `/quotations`  
-Responsable: **Ventas / Admin**. Consulta: técnicos y finanzas.
+Modules: `/clientes`, `/quotations`  
+Owner: **Ventas / Admin**. Read: técnicos and finance.
 
-Formulario comercial: `apps/web/src/components/NewQuotationForm.jsx` (no duplicar en la página).
-
----
-
-## Clientes
-
-Alta mínima: nombre y **categoría** (las mismas tres que en cotizaciones: Seguridad Electrónica, Equipos y tecnología, Proyectos). El formulario es `ClientFormModal`.
-
-No eliminar cliente con cotizaciones o ventas abiertas (regla de producción).
+Form: `apps/web/src/components/NewQuotationForm.jsx` (do not duplicate).
 
 ---
 
-## Cotización comercial (fase actual)
+## Clients
 
-Toda cotización nueva **ya fue hablada o enviada** al cliente → estado inicial `enviada`. No hay borrador en este flujo.
+Official directory: name, contact, phone, email, address, notes. Category on the client is **optional** — the same client can have quotations/jobs across categories.
 
-### Código y título
+List (`/clientes`): activity summary (active/inactive, open jobs, quotation count, recent tasks). No monto/saldo on this view. Detail (eye) opens full history: cotizaciones, relevamientos, ventas/trabajos.
 
-- Código automático: `COT-MMDDYY` (mes, día, año 2 dígitos). Si hay más de una el mismo día: `COT-MMDDYY-2`.
-- Título: texto resumido que registra el vendedor. Display: `COT-081726 — CCTV 16 canales`.
+**Never delete** clients (UI and API). Edit general data only.
 
-### Campos
+Accepting a quotation (`POST /api/quotations/:id/accept`) opens a frozen `Sale`. Optional next step: create a **Schedule** job (`POST /api/schedules`) linked via `quotationId` for the calendar / Activity overlay.
 
-| Campo | Regla |
-|-------|--------|
-| Cliente | Obligatorio. Buscar o crear. |
-| Categoría | Seguridad Electrónica / Equipos y tecnología / Proyectos |
-| Subcategoría | SE: Instalaciones, Asistencias. Proyectos: Redes/Datos, Eléctrico. Equipos y tecnología: texto libre opcional |
-| Sucursal | Central, Quillacollo, Punata |
-| Monto | Directo en Bs. Sin ítems: el detalle está en adjuntos |
-| Vendedor(es) | El creador entra con **100%** de comisión. Más vendedores = ajustar % |
-| Observaciones | Opcional |
-| Adjuntos | Al menos un PDF y/o imagen |
+Sucursales: **Central, Punata, Quillacollo** only.
 
-### Estados
+---
+
+## Commercial quotation
+
+Two save actions: **Guardar borrador** and **Enviar**. No document library.
+
+### Code and title
+
+- Code: `COT-MMDDYY` (month, day, 2-digit year). Same day: `COT-MMDDYY-2`.
+- Title: seller summary. Display: `COT-081726 — CCTV 16 canales`.
+
+### Fields
+
+- Client (search or create), category, subcategory, sucursal, amount (no line-items), sellers + commission %, notes, PDF.
+- Creator starts at **100%** commission. Extra sellers must make the total 100%.
+- PDF required to **Enviar**. Optional on draft. Bytes go to the API (`UPLOAD_DIR`); the row stores `archivoPdfUrl`.
+
+### States
 
 ```
-enviada → aceptada → convertida (venta / trabajos)
-              ↘ rechazada
+borrador → enviado → aceptado | rechazado
 ```
 
-`aceptada` habilita **Crear venta / trabajo**. El cronograma de campo se gestiona aparte (no bloquear esta fase).
+Records are **not deleted**. `aceptado` can open a sale once; the quotation stays `aceptado`.
 
 ---
 
-## De cotización a venta
-
-```
-Cotización enviada
-    ↓ (cliente acepta)
-Cotización aceptada
-    ↓
-Venta (monto = cotización)
-    ↓
-Trabajos delegados dentro de la venta
-    ↓
-Pagos acumulan contra el monto de la venta
-```
-
-Lo crítico de esta fase: **registrar cotización + convertir a venta y controlar cobros**. El cronograma (fechas de técnicos) se desacopla y se abordará en otro servicio.
-
----
-
-## Métricas
-
-| KPI | Cálculo |
-|-----|---------|
-| Cotizaciones | count por vendedor |
-| Enviadas / aceptadas / rechazadas | por `estado` |
-| Conversión | (aceptadas + convertidas) / enviadas |
-
----
-
-## Código
+## Code
 
 - UI form: `NewQuotationForm.jsx`
-- Listado: `QuotationsLibraryPage.jsx` (cards mobile, tabla `lg+`)
-- Servicio: `apps/web/src/services/quotations/index.js`
-- Constantes: `apps/web/src/mocks/quotations.js`
-
-API fase 1: [migration/api-quotations-sales.md](../../migration/api-quotations-sales.md)
+- List: `QuotationsLibraryPage.jsx`
+- Service: `apps/web/src/services/quotations/index.js`
+- API: `apps/api` + `VITE_API_MODE=api`. Default SPA remains mock.

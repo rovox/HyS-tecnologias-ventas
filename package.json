@@ -19,6 +19,7 @@
     "setup": "pnpm install",
     "dev": "concurrently --kill-others --raw \"pnpm --filter web dev\" \"pnpm --filter pocketbase-app dev\"",
     "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
     "build": "pnpm --filter web build",
     "build:web": "pnpm --filter web build",
     "start": "concurrently --kill-others --raw \"pnpm --filter pocketbase-app start\"",

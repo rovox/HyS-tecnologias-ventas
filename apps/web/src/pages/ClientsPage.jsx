@@ -7,27 +7,37 @@ import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
-import { Users, Search, Plus, Edit2, Trash2, Eye, Loader2, Building2 } from 'lucide-react';
+import { Search, Plus, Edit2, Eye, Building2, Phone, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useClients } from '@/hooks/useClients.js';
+import { canWriteClients } from '@/config/nav.js';
 import ClientFormModal from '@/components/ClientFormModal.jsx';
-import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.jsx';
-import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+
+function fmtDate(value) {
+  if (!value) return '';
+  try {
+    const d = new Date(String(value).includes('T') || String(value).includes(' ') ? value : `${value}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
+    return d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return String(value).slice(0, 10);
+  }
+}
 
 const ClientsPage = () => {
-  const { isAdmin, isVentas, isContadora } = useAuth();
+  const { userRole } = useAuth();
   const navigate = useNavigate();
-  const { getClients, deleteClient } = useClients();
+  const { getClients } = useClients();
 
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
+  const [activeOnly, setActiveOnly] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
 
-  const canEdit = isAdmin() || isVentas() || isContadora();
+  const canEdit = canWriteClients(userRole);
 
   const loadData = async () => {
     setLoading(true);
@@ -41,138 +51,152 @@ const ClientsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredClients = clients.filter(c => 
-    c.nombre?.toLowerCase().includes(search.toLowerCase()) || 
-    c.tipo?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleOpenCreate = () => {
-    setSelectedClient(null);
-    setIsFormOpen(true);
-  };
-
-  const handleOpenEdit = (client) => {
-    setSelectedClient(client);
-    setIsFormOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!selectedClient) return;
-    const success = await deleteClient(selectedClient.id);
-    if (success) {
-      toast.success('Cliente eliminado');
-      setIsDeleteOpen(false);
-      loadData();
-    }
-  };
+  const q = search.trim().toLowerCase();
+  const filteredClients = clients.filter((c) => {
+    if (activeOnly && !c.esActivo) return false;
+    if (!q) return true;
+    return [c.nombre, c.telefono, c.email, c.contacto]
+      .some((v) => String(v || '').toLowerCase().includes(q));
+  });
 
   return (
     <Layout>
       <Helmet><title>Directorio de Clientes - H&S</title></Helmet>
-      
-      <div className="content-container py-6 pb-24 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+
+      <div className="content-container py-6 pb-24 space-y-5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
-              <Building2 className="h-8 w-8 text-primary" /> Clientes y Proyectos
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+              <Building2 className="h-6 w-6 text-primary shrink-0" /> Directorio de clientes
             </h1>
-            <p className="text-muted-foreground mt-1 font-medium">Gestión de empresas, clientes y consolidado financiero.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Datos generales y actividad. No se eliminan clientes del directorio.
+            </p>
           </div>
           {canEdit && (
-            <Button onClick={handleOpenCreate} className="font-bold shadow-md"><Plus className="h-4 w-4 mr-2"/> Nuevo Cliente</Button>
+            <Button
+              onClick={() => { setSelectedClient(null); setIsFormOpen(true); }}
+              className="font-semibold min-h-11 shrink-0"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Nuevo cliente
+            </Button>
           )}
         </div>
 
-        <Card className="border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-          <div className="p-4 border-b bg-muted/20">
-            <div className="relative w-full max-w-md">
+        <Card className="border rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-3 sm:p-4 border-b bg-muted/20 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="relative w-full sm:max-w-md min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar por nombre o tipo..." 
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background shadow-sm"
+              <Input
+                placeholder="Buscar por nombre, teléfono o correo…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-background min-h-11"
               />
             </div>
+            <label className="flex items-center gap-2 text-sm font-medium min-h-11 shrink-0">
+              <Checkbox checked={activeOnly} onCheckedChange={(v) => setActiveOnly(Boolean(v))} />
+              Solo activos
+            </label>
           </div>
 
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-sm text-left whitespace-nowrap">
-              <thead className="bg-muted/50 text-muted-foreground font-bold uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">Cliente</th>
-                  <th className="px-6 py-4">Contacto</th>
-                  <th className="px-6 py-4">Tipo</th>
-                  <th className="px-6 py-4 text-right">Monto Total</th>
-                  <th className="px-6 py-4 text-right">Saldo Pend.</th>
-                  <th className="px-6 py-4 text-center">Trabajos</th>
-                  <th className="px-6 py-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y bg-card">
-                {loading ? (
-                  Array.from({length: 5}).map((_, i) => (
-                    <tr key={i}><td colSpan="7" className="px-6 py-4"><Skeleton className="h-8 w-full"/></td></tr>
-                  ))
-                ) : filteredClients.length > 0 ? (
-                  filteredClients.map(c => (
-                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-6 py-4 font-extrabold text-foreground cursor-pointer hover:text-primary" onClick={() => navigate(`/clientes/${c.id}`)}>
-                        {c.nombre}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-muted-foreground">
-                        {c.contacto || c.telefono || 'Sin contacto'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge className={`uppercase text-[9px] font-bold shadow-none tracking-wider ${
-                          c.tipo === 'Proyecto' ? 'bg-[hsl(var(--project-bg))] text-[hsl(var(--project-fg))]' : 'bg-[hsl(var(--security-bg))] text-[hsl(var(--security-fg))]'
-                        }`}>
-                          {c.tipo}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium tabular-nums">${(c.monto_total || 0).toFixed(2)}</td>
-                      <td className="px-6 py-4 text-right font-black tabular-nums text-destructive">${(c.saldo_total || 0).toFixed(2)}</td>
-                      <td className="px-6 py-4 text-center font-bold text-muted-foreground">{c.cantidad_trabajos || 0}</td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/clientes/${c.id}`)} className="text-primary hover:bg-primary/10 h-8 w-8" title="Ver Detalles">
-                            <Eye className="h-4 w-4"/>
-                          </Button>
-                          {canEdit && (
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(c)} className="text-foreground hover:bg-muted h-8 w-8" title="Editar">
-                              <Edit2 className="h-4 w-4"/>
-                            </Button>
-                          )}
-                          {isAdmin() && (
-                            <Button variant="ghost" size="icon" onClick={() => { setSelectedClient(c); setIsDeleteOpen(true); }} className="text-destructive hover:bg-destructive/10 h-8 w-8" title="Eliminar">
-                              <Trash2 className="h-4 w-4"/>
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="7" className="px-6 py-16 text-center text-muted-foreground font-medium">No se encontraron clientes que coincidan con la búsqueda.</td></tr>
-                )}
-              </tbody>
-            </table>
+          <div className="divide-y">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4"><Skeleton className="h-16 w-full" /></div>
+              ))
+            ) : filteredClients.length === 0 ? (
+              <p className="p-10 text-center text-sm text-muted-foreground">
+                No hay clientes que coincidan con la búsqueda.
+              </p>
+            ) : filteredClients.map((c) => (
+              <div
+                key={c.id}
+                className="p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between hover:bg-muted/20 transition-colors min-w-0"
+              >
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-left text-sm sm:text-base font-semibold text-foreground hover:text-primary truncate max-w-full"
+                      onClick={() => navigate(`/clientes/${c.id}`)}
+                    >
+                      {c.nombre}
+                    </button>
+                    <Badge
+                      variant={c.esActivo ? 'secondary' : 'outline'}
+                      className="text-[10px] font-semibold shrink-0"
+                    >
+                      {c.esActivo ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {c.contacto ? <span className="font-medium text-foreground/80">{c.contacto}</span> : null}
+                    {c.telefono ? (
+                      <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{c.telefono}</span>
+                    ) : null}
+                    {c.email ? (
+                      <span className="inline-flex items-center gap-1 truncate max-w-[14rem]">
+                        <Mail className="h-3 w-3 shrink-0" />{c.email}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="text-xs text-muted-foreground leading-relaxed">
+                    <span className="font-semibold text-foreground/80">Actividad:</span>{' '}
+                    {c.cotizacionesCount || 0} cotiz. · {c.trabajosEnProceso || 0} trabajos en proceso · {c.tareasCount || 0} tareas
+                    {c.lastActivityAt ? (
+                      <span className="block sm:inline sm:before:content-['·_']"> última {fmtDate(c.lastActivityAt)}</span>
+                    ) : null}
+                  </div>
+
+                  {(c.tareasRecientes || []).length > 0 ? (
+                    <ul className="text-[11px] text-muted-foreground space-y-0.5 pt-0.5">
+                      {c.tareasRecientes.map((t) => (
+                        <li key={t.id} className="truncate">
+                          <span className="capitalize">{t.estado.replace('_', ' ')}</span>
+                          {' · '}{t.titulo}
+                          {t.at ? ` · ${fmtDate(t.at)}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+
+                <div className="flex gap-2 shrink-0 self-stretch sm:self-start">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-10 flex-1 sm:flex-none"
+                    onClick={() => navigate(`/clientes/${c.id}`)}
+                    title="Ver actividad"
+                  >
+                    <Eye className="h-4 w-4 mr-1.5" /> Ver
+                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="min-h-10"
+                      onClick={() => { setSelectedClient(c); setIsFormOpen(true); }}
+                      title="Editar datos"
+                    >
+                      <Edit2 className="h-4 w-4 mr-1.5" /> Editar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       </div>
 
-      <ClientFormModal 
+      <ClientFormModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onSuccess={loadData}
         initialData={selectedClient}
-      />
-
-      <DeleteConfirmationModal
-        isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        itemName={`Cliente: ${selectedClient?.nombre}`}
-        isDeleting={false}
       />
     </Layout>
   );

@@ -5,10 +5,10 @@ import clientsService from '@/services/clients/index.js';
 export const useClients = () => {
   const [loading, setLoading] = useState(false);
 
-  const getClients = useCallback(async () => {
+  const getClients = useCallback(async (options = {}) => {
     setLoading(true);
     try {
-      return await clientsService.getAll();
+      return await clientsService.getAll(options);
     } catch (e) {
       console.error(e);
       toast.error('Error al cargar clientes');
@@ -55,25 +55,11 @@ export const useClients = () => {
     }
   };
 
-  const deleteClient = async (id) => {
-    setLoading(true);
-    try {
-      await clientsService.delete(id);
-      return true;
-    } catch (e) {
-      console.error(e);
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return {
     loading,
     getClients,
     getClientById,
     createClient,
     updateClient,
-    deleteClient
   };
 };

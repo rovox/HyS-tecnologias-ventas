@@ -1,0 +1,23 @@
+---
+description: Tasks floating panel and Nest Schedule cronograma rules.
+globs: apps/api/src/{tasks,schedules}/**/*,apps/web/src/**/{Tasks*,Schedule*,ActivityOverlay*,*schedules*,*tasks*}
+alwaysApply: false
+---
+
+# Tasks & schedules
+
+## Tasks
+
+- States: `pendiente` → `en_proceso` → `completada` (hide completed after 24h).
+- UI: `TasksFloatingPanel` only — not in sidebar.
+- Optional links: `plazo`, `horario`, `cotizacionId`, `scheduleId` (empty/null must not 400).
+- API owner: `apps/api` TasksModule + `apps/web/src/services/tasks`.
+- Contadora: no task access. Toast errors; never crash the panel.
+
+## Cronograma (Schedule)
+
+- Nest model `Schedule` / table `schedules`. States: `programado` → `en_proceso` → `terminado` | `cancelado`.
+- UI: Activity overlay + `/schedule` via `schedulesService` (Nest when `VITE_API_MODE=api`).
+- Create/edit: ADMIN + VENTAS. TEC: status/observaciones only.
+- Coerce money: `Number(value ?? 0)` before `.toFixed`.
+- No hard delete on API — cancel instead. No `prisma db push`. Seed only local.

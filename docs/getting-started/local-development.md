@@ -31,7 +31,7 @@ pnpm install
 | `pnpm build:web` | Build de producción → `apps/web/dist` |
 | `pnpm start:web` | Preview del build (`vite preview`) |
 | `pnpm lint` | ESLint del frontend |
-| `pnpm verify:dist` | Verifica que `dist/index.html` exista (gate de deploy) |
+| `pnpm dev:api` | NestJS sales API en `http://localhost:3001/api` (MySQL local, ver abajo) |
 | `pnpm dev` | Frontend + PocketBase legacy (no necesario para el POC) |
 
 ## Variables de entorno
@@ -49,7 +49,23 @@ VITE_API_MODE=mock
 VITE_API_URL=/api
 ```
 
-En el POC, `mock` usa `apps/web/src/mocks/store.js`. No cambies a `api` hasta que exista NestJS.
+En el POC, `mock` usa `apps/web/src/mocks/store.js`. Para apuntar al Nest local:
+
+```env
+VITE_API_MODE=api
+VITE_API_URL=http://localhost:3001/api
+```
+
+```bash
+cp apps/api/.env.example apps/api/.env
+docker compose -f apps/api/docker-compose.yml up -d
+pnpm --filter api prisma:generate
+pnpm --filter api prisma:deploy
+pnpm --filter api prisma:seed   # solo local; nunca en Hostinger (reescribe passwordHash)
+pnpm --filter api dev
+```
+
+Demo: `dennis.ventas@demo.hs.local` / `Demo1234!`. El frontend en Hostinger sigue en `mock` hasta que Actions compile con `VITE_API_MODE=api`.
 
 ## Estructura del monorepo
 
@@ -57,7 +73,7 @@ En el POC, `mock` usa `apps/web/src/mocks/store.js`. No cambies a `api` hasta qu
 aca/
 ├── apps/
 │   ├── web/           ← SPA React + Vite (activo)
-│   ├── api/           ← placeholder NestJS (pendiente)
+│   ├── api/           ← NestJS sales (Prisma + MySQL local)
 │   └── pocketbase/    ← legacy / referencia (no se usa en POC)
 ├── docs/              ← documentación canónica
 ├── DESIGN.md          ← tokens de diseño oficiales

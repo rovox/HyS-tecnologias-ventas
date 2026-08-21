@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import Layout from '@/components/Layout.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import { surveysService } from '@/services/surveys/index.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
@@ -75,7 +75,7 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
   const changeStatus = async (newStatus) => {
     setSaving(true);
     try {
-      await pb.collection('visitas_tecnicas').update(visita.id, { estado: newStatus });
+      await surveysService.update(visita.id, { estado: newStatus });
       toast.success('Estado actualizado');
       onStatusChange();
     } catch { toast.error('Error al actualizar'); }
@@ -216,10 +216,7 @@ const ScheduleSurveysPage = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const records = await pb.collection('visitas_tecnicas').getFullList({
-        sort: '-fecha',
-        requestKey: 'surveys-fetch',
-      });
+      const records = await surveysService.getAll();
       setVisitas(records);
     } catch (err) {
       console.error('Error al cargar visitas:', err);
@@ -297,10 +294,7 @@ const ScheduleSurveysPage = () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await pb.collection('visitas_tecnicas').delete(deleteTarget.id);
-      toast.success('Visita eliminada');
-      setDeleteTarget(null);
-      fetchData();
+      toast.error('Los relevamientos no se eliminan. Cambia el estado si ya no aplica.');
     } catch (e) {
       toast.error('Error al eliminar');
     } finally {

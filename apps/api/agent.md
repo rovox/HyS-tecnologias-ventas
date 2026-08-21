@@ -1,28 +1,33 @@
 # Backend agent notes (`apps/api`)
 
-Placeholder for NestJS microservices. **Do not implement Nest/Prisma in the frontend-POC milestone.** Model first; see `docs/migration/microservice-model.md`.
+First NestJS microservice: **sales** (this package). MySQL only. pnpm workspace name `api`. Prisma, not TypeORM.
 
-## Target
+## Stack
 
-- NestJS + Prisma + **MySQL** (Hostinger allows MySQL only).
-- One Hostinger Node app and **one MySQL database per microservice**.
-- pnpm workspace. No npm/yarn. No Next.js backend.
+- NestJS, Prisma, MySQL, JWT (`bcryptjs`), Swagger at `/api/docs`
+- Global prefix `/api`
+- AuthGuard requires JWT **with** `sessionId`; ended sessions → 401
+- No public signup. Seed creates demo users with simple per-user passwords. **Never seed on Hostinger/production.**
+- No client DELETE. Never `prisma db push` — use migrations.
+- PDFs: `UPLOAD_DIR` (local default `./uploads`). Hostinger: path outside git.
 
-## First service (sales)
+## Domain
 
-Manual user accounts, login sessions + activity, clients, quotations, sales, jobs for the calendar, sales-goal metrics.
+Users + sessions, sucursales (Central, Punata, Quillacollo), clients, quotations (`borrador` → `enviado` → `aceptado`|`rechazado`), relevamientos, monthly seller goals, **Schedule cronograma**, tasks (optional `scheduleId` FK), metrics (includes schedule counts). Frozen sales/jobs/payments (admin-only mutations).
 
-Not in this service: finance/caja, operational costs, egresos/ingresos, full schedule ownership (jobs are created so they can appear on the calendar).
+Out of scope: finance/caja, TypeORM.
 
-## Layout (when implementation starts)
+## Commands
 
+```bash
+pnpm --filter api dev
+pnpm --filter api prisma:deploy
+pnpm --filter api prisma:seed
+pnpm --filter api test
+pnpm --filter api test:e2e
 ```
-apps/api/
-  sales/          # first NestJS service + its Prisma/MySQL schema
-  operations/     # later, own DB
-```
 
-Frontend keeps `apps/web/src/services/*` method names. REST adapters come after the schema is agreed.
+SPA: `apps/web/src/services/*` with `VITE_API_MODE=api`.
 
 ## Language
 

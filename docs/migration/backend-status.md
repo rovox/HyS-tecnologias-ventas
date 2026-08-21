@@ -1,54 +1,27 @@
 # Backend status
 
 ```
-Backend re-engineering: PENDING (model only)
-Target: NestJS + Prisma + MySQL (Hostinger)
+Backend re-engineering: sales NestJS + Prisma aligned to registration (3 sucursales, PDF, states, relevamientos, goals).
+Hostinger API deploy: documented, not started.
+Target: NestJS + Prisma + MySQL (Hostinger Node Web App, not the SPA instance)
 PocketBase: legacy/reference only
-Horizons: target dependency removed
 ```
 
-This milestone does **not** scaffold NestJS or run Prisma. Schema intent: [microservice-model.md](./microservice-model.md).
+The sales API lives in [`apps/api`](../../apps/api). Local MySQL: `apps/api/docker-compose.yml`. The SPA still defaults to `VITE_API_MODE=mock`.
 
-## Intentionally not done in this phase
+## Intentionally not done
 
-- NestJS production API / Prisma migrations
-- PocketBase collection migration
-- JWT production authentication
-- File storage migration (`pb_data/storage`)
+- Hostinger production deploy of this API (see [hostinger-api.md](../deployment/hostinger-api.md))
 - Finance module (costos, egresos, ingresos, cajas)
 - Removal of `apps/pocketbase/`
-- Mechanical rewrite of remaining `pb.collection(...)` calls to HTTP
+- Rewrite of remaining `pb.collection(...)` UI to HTTP
 
-`apps/pocketbase` remains as the audited legacy system. The frontend POC does not start it (`pnpm dev:web`).
-
-## Migration order
-
-```
-Model (this pass)
-  ↓
-Users (manual) + sessions/activity
-  ↓
-Clients + Quotations + Sales + Jobs   ← first Hostinger MySQL service
-  ↓
-Operations / calendar owner
-  ↓
-Internal orders
-  ↓
-Vehicles
-  ↓
-Finance (later)
-  ↓
-PocketBase removal
-```
-
-Phase 1 API sketch: [api-quotations-sales.md](./api-quotations-sales.md). Frontend contract: [frontend-backend-contract.md](./frontend-backend-contract.md).
-
-Intended layout when implementation starts (empty until then):
+## Layout
 
 ```
 apps/api/
-├── agent.md
-└── sales/          # first NestJS microservice + its MySQL schema
-    ├── src/
-    └── prisma/
+├── prisma/schema.prisma
+└── src/   auth, clients, quotations, sucursales, relevamientos, goals, sales, metrics
 ```
+
+Phase 1: [api-quotations-sales.md](./api-quotations-sales.md). Contract: [frontend-backend-contract.md](./frontend-backend-contract.md).

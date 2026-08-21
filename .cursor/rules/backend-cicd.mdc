@@ -1,0 +1,25 @@
+---
+description: Sales API CI/CD — GitHub compiles Nest; Hostinger Node Web App + MySQL, not the SPA instance.
+alwaysApply: true
+---
+
+# Backend CI/CD (NestJS sales API)
+
+The API is a **separate** Hostinger Node Web App + its own MySQL. Never run Nest on the static SPA instance (`noexec` / esbuild). See `docs/deployment/hostinger-api.md`.
+
+## Split
+
+- **Local:** `pnpm dev:api` against `apps/api/docker-compose.yml` MySQL.
+- **CI:** `.github/workflows/api.yml` — `prisma generate` + `nest build` on `ubuntu-latest`.
+- **CD:** Hostinger Node app starts `node dist/main.js`. `prisma migrate deploy` against Hostinger MySQL. Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
+
+`UPLOAD_DIR` must sit **outside** the git checkout (redeploys wipe `apps/api`). PDFs are not committed.
+
+## Do not
+
+- Deploy this API on the Vite/SPA Web App.
+- Run `vite build` or esbuild on the API host.
+- Flip production `VITE_API_MODE=api` until `GET /api/health` succeeds.
+- Treat Prisma query engine as optional — if the Node disk is `noexec`, use a VPS.
+
+SPA publish stays `.cursor/rules/frontend-cicd.mdc`.

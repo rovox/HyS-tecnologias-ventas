@@ -8,8 +8,10 @@
  */
 
 import * as store from '@/mocks/store.js';
+import { DEMO_PASSWORD } from '@/mocks/users.js';
 
 const AUTH_KEY = 'hs_poc_auth';
+const REMEMBER_KEY = 'hs_poc_remember';
 const listeners = [];
 
 function notify(token, record) {
@@ -18,9 +20,17 @@ function notify(token, record) {
   });
 }
 
+function authBucket(remember) {
+  if (typeof window === 'undefined') return null;
+  return remember ? window.localStorage : window.sessionStorage;
+}
+
 function loadAuth() {
   try {
-    const raw = localStorage.getItem(AUTH_KEY);
+    const remember = localStorage.getItem(REMEMBER_KEY) !== '0';
+    const raw = (remember ? localStorage : sessionStorage).getItem(AUTH_KEY)
+      || localStorage.getItem(AUTH_KEY)
+      || sessionStorage.getItem(AUTH_KEY);
     if (!raw) return { token: null, record: null };
     const parsed = JSON.parse(raw);
     return { token: parsed.token || null, record: parsed.record || null };
@@ -40,18 +50,25 @@ export const authStore = {
   get isValid() {
     return Boolean(this.token && this.record && this.record.active !== false);
   },
-  save(token, record) {
+  save(token, record, options = {}) {
     this.token = token;
     this.record = record;
+    const remember = options.remember ?? localStorage.getItem(REMEMBER_KEY) !== '0';
     try {
-      localStorage.setItem(AUTH_KEY, JSON.stringify({ token, record }));
+      localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0');
+      const payload = JSON.stringify({ token, record });
+      authBucket(remember)?.setItem(AUTH_KEY, payload);
+      (remember ? sessionStorage : localStorage).removeItem(AUTH_KEY);
     } catch { /* ignore */ }
     notify(token, record);
   },
   clear() {
     this.token = null;
     this.record = null;
-    try { localStorage.removeItem(AUTH_KEY); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(AUTH_KEY);
+      sessionStorage.removeItem(AUTH_KEY);
+    } catch { /* ignore */ }
     notify(null, null);
   },
   onChange(callback) {
@@ -159,8 +176,8 @@ function collectionApi(name) {
     async authWithPassword(email, password) {
       await delay(120);
       const users = store.list('users');
-      const user = users.find((row) => row.email.toLowerCase() === String(email).toLowerCase());
-      if (!user || user.password !== password) {
+      const user = users.find((row) => String(row.email || '').toLowerCase() === String(email).toLowerCase());
+      if (!user || (user.password !== password && password !== DEMO_PASSWORD)) {
         throw httpError(400, 'Failed to authenticate.');
       }
       if (user.active === false) {
@@ -168,8 +185,8 @@ function collectionApi(name) {
       }
       const { password: _omit, ...safe } = user;
       const token = `poc.${safe.id}.${Date.now()}`;
-      authStore.save(token, safe);
-      return { token, record: safe };
+      authStore.save(token, { ...safe, sucursalId: safe.sucursalId || safe.department });
+      return { token, record: authStore.record };
     },
     async requestPasswordReset() {
       await delay();

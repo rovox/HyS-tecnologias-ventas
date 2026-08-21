@@ -1,0 +1,31 @@
+---
+description: Master non-regression rules for UI/UX, clients, Prisma, and phased delivery.
+alwaysApply: true
+---
+
+# Master stability (do not regress)
+
+## UI / React
+
+- Never call hooks after an early `return`.
+- Never export non-React helpers from a file that exports components (Vite Fast Refresh).
+- Coerce before Number methods: `Number(value ?? 0).toFixed(2)`.
+- Never nest block elements (`div`, `Skeleton`) inside `<p>`.
+- Modals: scrollable body + fixed footer (actions always reachable).
+- Tareas = `TasksFloatingPanel` (not sidebar). Actividad = `ActivityOverlay` (not a route).
+
+## Clients
+
+- No client deletion in UI or API. Edit only.
+
+## Prisma / API
+
+- Schema change → additive `migrate dev` + `migrate deploy`. Never `db push`.
+- Never `prisma seed` on Hostinger/production.
+- Optional DTO fields: `@IsOptional()`. Prefer graceful `toast.error` over uncaught API errors in services.
+
+## Delivery
+
+- One phase at a time (stability → Swagger → tests → Hostinger).
+- Do not refactor frozen legacy pages (finance/marketing) for line limits.
+- End each task with a 3-bullet change + test summary.
