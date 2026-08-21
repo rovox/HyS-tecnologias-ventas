@@ -17,7 +17,8 @@
 | Plan API cotizaciones y ventas | [migration/api-quotations-sales.md](./migration/api-quotations-sales.md) |
 | Modelo MySQL (microservicios) | [migration/microservice-model.md](./migration/microservice-model.md) |
 | Estado del backend | [migration/backend-status.md](./migration/backend-status.md) |
-| Deploy en Hostinger | [deployment/hostinger-frontend.md](./deployment/hostinger-frontend.md) |
+| Deploy en Hostinger (SPA) | [deployment/hostinger-frontend.md](./deployment/hostinger-frontend.md) |
+| Deploy en Hostinger (API ventas) | [deployment/hostinger-api.md](./deployment/hostinger-api.md) |
 
 ## Estructura
 
@@ -39,7 +40,7 @@ Los tokens de color, tipografía y espaciado oficiales están en [`DESIGN.md`](.
 
 ## Milestone actual
 
-**Frontend POC** — UI completa con datos ficticios en memoria. No requiere PocketBase ni NestJS en runtime. Ver [architecture/frontend-poc.md](./architecture/frontend-poc.md).
+**Frontend POC** — UI completa con datos ficticios en memoria. NestJS sales corre en local si lo levantas; Hostinger sigue sirviendo el SPA en mock. Ver [architecture/frontend-poc.md](./architecture/frontend-poc.md).
 
 ## Documentación legacy en código
 

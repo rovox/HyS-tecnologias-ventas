@@ -74,3 +74,6 @@ id_rsa.pub
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Local quotation PDF uploads
+apps/api/uploads/

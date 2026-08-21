@@ -42,7 +42,9 @@ async function request(method, path, { body, query, token } = {}) {
     : await response.text();
 
   if (!response.ok) {
-    const error = new Error(payload?.message || `HTTP ${response.status}`);
+    const raw = payload?.message;
+    const message = Array.isArray(raw) ? raw.join(', ') : raw || `HTTP ${response.status}`;
+    const error = new Error(message);
     error.status = response.status;
     error.data = payload;
     throw error;

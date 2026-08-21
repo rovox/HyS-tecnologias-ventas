@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx';
-import { ArrowLeft, Building2, MapPin, Mail, Phone, Edit2, Trash2, Calendar, FileText, DollarSign, Briefcase, Plus, Shield, Wrench, ClipboardList, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Building2, MapPin, Mail, Phone, Edit2, Calendar, FileText, DollarSign, Briefcase, Plus, Shield, Wrench, ClipboardList, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useClients } from '@/hooks/useClients.js';
+import { clientsService } from '@/services/clients/index.js';
+import { surveysService } from '@/services/surveys/index.js';
 import ClientFormModal from '@/components/ClientFormModal.jsx';
 import ScheduleFormModal from '@/components/ScheduleFormModal.jsx';
-import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import { canWriteClients } from '@/config/nav.js';
 import { cn } from '@/lib/utils.js';
 
 const fmtDate = (d) => {
@@ -45,21 +46,21 @@ const garantiaEstado = (fechaProgramada) => {
 const ClientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isVentas, isContadora } = useAuth();
-  const { getClientById, deleteClient } = useClients();
+  const { userRole } = useAuth();
+  const { getClientById } = useClients();
 
   const [clientData, setClientData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [equipos, setEquipos] = useState([]);
   const [visitas, setVisitas] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [historyEvents, setHistoryEvents] = useState([]);
   
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
 
-  const canEdit = isAdmin() || isVentas() || isContadora();
+  const canEdit = canWriteClients(userRole);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -67,39 +68,18 @@ const ClientDetailPage = () => {
     if (!data) { navigate('/clientes'); return; }
     setClientData(data);
 
-    // Load related data in parallel
-    const [eq, vis, pay] = await Promise.all([
-      pb.collection('equipos_instalados').getFullList({
-        filter: pb.filter('cliente_nombre = {:n} || trabajo_id != ""', { n: data.nombre || '' }),
-        sort: '-fecha',
-        requestKey: 'cd-equipos',
-      }).catch(() => []),
-      pb.collection('visitas_tecnicas').getFullList({
-        filter: pb.filter('cliente_id = {:id}', { id }),
-        sort: '-fecha',
-        requestKey: 'cd-visitas',
-      }).catch(() => []),
-      pb.collection('schedule_payments').getFullList({
-        sort: '-created',
-        requestKey: 'cd-payments',
-      }).catch(() => []),
+    const [vis, history] = await Promise.all([
+      surveysService.getAll().then((rows) => rows.filter((row) => row.cliente_id === id || row.clienteId === id)).catch(() => []),
+      clientsService.getHistory(id).catch(() => ({ events: [] })),
     ]);
-
-    // Filter equipos by schedules of this client
-    const scheduleIds = new Set((data.schedules || []).map(s => s.id));
-    setEquipos(eq.filter(e => scheduleIds.has(e.trabajo_id) || e.cliente_nombre === data.nombre));
+    setEquipos([]);
     setVisitas(vis);
-    // filter payments by client's schedule ids
-    setPayments(pay.filter(p => scheduleIds.has(p.trabajo_id)));
+    setPayments([]);
+    setHistoryEvents(history.events || []);
     setLoading(false);
   }, [id, navigate, getClientById]);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  const handleDeleteConfirm = async () => {
-    const success = await deleteClient(id);
-    if (success) navigate('/clientes');
-  };
 
   const handleCreateWork = () => { setSelectedSchedule({ cliente_id: id }); setIsScheduleModalOpen(true); };
   const handleEditWork = (schedule) => { setSelectedSchedule(schedule); setIsScheduleModalOpen(true); };
@@ -151,22 +131,20 @@ const ClientDetailPage = () => {
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{clientData.nombre}</h1>
-              <Badge className="uppercase text-[10px] font-bold shadow-none tracking-wider bg-primary/10 text-primary">
-                {clientData.tipo}
-              </Badge>
+              {clientData.tipo ? (
+                <Badge className="uppercase text-[10px] font-bold shadow-none tracking-wider bg-muted text-muted-foreground">
+                  Ref. {clientData.tipo}
+                </Badge>
+              ) : null}
             </div>
             {clientData.contacto && <p className="text-muted-foreground font-medium text-lg">Contacto: {clientData.contacto}</p>}
+            <p className="text-xs text-muted-foreground mt-1">Directorio oficial — solo se editan datos generales, no se elimina.</p>
           </div>
           {canEdit && (
             <div className="flex gap-2 shrink-0">
               <Button variant="outline" onClick={() => setIsFormOpen(true)} className="font-bold">
                 <Edit2 className="h-4 w-4 mr-2" /> Editar Cliente
               </Button>
-              {isAdmin() && (
-                <Button variant="outline" onClick={() => setIsDeleteOpen(true)} className="text-destructive hover:bg-destructive/10 font-bold">
-                  <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -235,14 +213,35 @@ const ClientDetailPage = () => {
 
           {/* Tabs */}
           <div className="lg:col-span-3">
-            <Tabs defaultValue="trabajos">
-              <TabsList className="grid w-full grid-cols-5 mb-4 h-auto">
-                <TabsTrigger value="trabajos" className="text-xs font-bold py-2"><Briefcase className="h-3.5 w-3.5 mr-1" />Trabajos</TabsTrigger>
+            <Tabs defaultValue="historial">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6 mb-4 h-auto">
+                <TabsTrigger value="historial" className="text-xs font-bold py-2 min-h-11">Historial</TabsTrigger>
+                <TabsTrigger value="trabajos" className="text-xs font-bold py-2 min-h-11"><Briefcase className="h-3.5 w-3.5 mr-1" />Trabajos</TabsTrigger>
                 <TabsTrigger value="equipos" className="text-xs font-bold py-2"><Building2 className="h-3.5 w-3.5 mr-1" />Equipos</TabsTrigger>
                 <TabsTrigger value="garantias" className="text-xs font-bold py-2"><Shield className="h-3.5 w-3.5 mr-1" />Garantías</TabsTrigger>
                 <TabsTrigger value="asistencias" className="text-xs font-bold py-2"><Wrench className="h-3.5 w-3.5 mr-1" />Asistencias</TabsTrigger>
                 <TabsTrigger value="deudas" className="text-xs font-bold py-2"><AlertTriangle className="h-3.5 w-3.5 mr-1" />Deudas</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="historial">
+                <Card className="rounded-2xl border shadow-sm overflow-hidden">
+                  <div className="p-4 border-b">
+                    <h3 className="font-semibold">Actividad del cliente</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Cotizaciones y relevamientos. No se borra el historial.</p>
+                  </div>
+                  <div className="divide-y">
+                    {historyEvents.length === 0 ? (
+                      <p className="p-6 text-sm text-muted-foreground">Sin registros aún.</p>
+                    ) : historyEvents.map((event) => (
+                      <div key={`${event.type}-${event.id}`} className="p-4">
+                        <p className="text-sm font-semibold">{event.titulo}</p>
+                        <p className="text-xs text-muted-foreground mt-1 capitalize">{event.type} · {event.detalle}</p>
+                        <p className="text-xs text-muted-foreground">{event.at ? new Date(event.at).toLocaleString('es-BO') : ''}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </TabsContent>
 
               {/* TAB: Trabajos */}
               <TabsContent value="trabajos">
@@ -521,7 +520,7 @@ const ClientDetailPage = () => {
           <ClientFormModal 
             isOpen={isFormOpen}
             onClose={() => setIsFormOpen(false)}
-            onSave={() => { setIsFormOpen(false); loadData(); }}
+            onSuccess={() => { setIsFormOpen(false); loadData(); }}
             initialData={clientData}
           />
           <ScheduleFormModal
@@ -531,15 +530,6 @@ const ClientDetailPage = () => {
             initialData={selectedSchedule}
           />
         </>
-      )}
-      {isAdmin() && (
-        <DeleteConfirmationModal
-          isOpen={isDeleteOpen}
-          onClose={() => setIsDeleteOpen(false)}
-          onConfirm={handleDeleteConfirm}
-          title="Eliminar Cliente"
-          description={`¿Eliminar a ${clientData.nombre}? Esta acción es irreversible.`}
-        />
       )}
     </Layout>
   );

@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { User, Wrench, MapPin, DollarSign, Briefcase, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Wrench, MapPin, DollarSign, Loader2, ListTodo, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge.jsx';
+import { Button } from '@/components/ui/button.jsx';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.jsx';
 import { cn } from '@/lib/utils.js';
 import { useSchedules, calculateBalance } from '@/hooks/useSchedules.js';
 import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient.js';
 import WorkDetailModal from '@/components/WorkDetailModal.jsx';
 
-const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, refreshKey }) => {
+const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, refreshKey, tasks = [] }) => {
   const { getSchedules, rescheduleWork } = useSchedules();
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +19,8 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
 
   const [selectedWorkId, setSelectedWorkId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const stripRef = useRef(null);
 
   const fetchWeeklySchedules = useCallback(async () => {
     setLoading(true);
@@ -28,11 +32,14 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
       
       const filtered = allSchedules.filter(s => {
         if (!s.fecha_programada) return false;
-        const jobDate = s.fecha_programada.includes('T') || s.fecha_programada.includes(' ') 
-          ? parseISO(s.fecha_programada.replace(' ', 'T')) 
-          : parseISO(s.fecha_programada);
-          
-        return isWithinInterval(jobDate, { start: weekStart, end: weekEnd });
+        try {
+          const raw = String(s.fecha_programada).replace(' ', 'T');
+          const jobDate = parseISO(raw);
+          if (Number.isNaN(jobDate.getTime())) return false;
+          return isWithinInterval(jobDate, { start: weekStart, end: weekEnd });
+        } catch {
+          return false;
+        }
       });
       
       setSchedules(filtered);
@@ -104,11 +111,18 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
   };
 
   const isSameDayLocal = (dateStr, targetDate) => {
-    if (!dateStr) return false;
-    const parsedDate = dateStr.includes('T') || dateStr.includes(' ') 
-      ? parseISO(dateStr.replace(' ', 'T')) 
-      : parseISO(dateStr);
-    return format(parsedDate, 'yyyy-MM-dd') === format(targetDate, 'yyyy-MM-dd');
+    if (!dateStr || !targetDate) return false;
+    try {
+      const raw = String(dateStr).replace(' ', 'T');
+      const parsedDate = parseISO(raw.includes('T') ? raw : raw);
+      if (Number.isNaN(parsedDate.getTime())) {
+        const clean = String(dateStr).split(' ')[0].split('T')[0];
+        return clean === format(targetDate, 'yyyy-MM-dd');
+      }
+      return format(parsedDate, 'yyyy-MM-dd') === format(targetDate, 'yyyy-MM-dd');
+    } catch {
+      return false;
+    }
   };
 
   const handleCardClick = (job) => {
@@ -165,6 +179,27 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
     }
   };
 
+  const scrollStrip = (dir) => {
+    const el = stripRef.current;
+    if (!el) return;
+    const step = Math.min(360, Math.max(180, el.clientWidth * 0.55));
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
+
+  // Debe ir antes de cualquier return: si no, React crashea al pasar de loading → listo
+  useEffect(() => {
+    if (loading) return;
+    const el = stripRef.current;
+    if (!el) return;
+    const timer = window.setTimeout(() => {
+      const target = el.querySelector('[data-day-active="true"]') || el.querySelector('[data-day-today="true"]');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [loading, refreshKey, currentDate]);
+
   if (loading && schedules.length === 0) {
     return (
       <div className="flex-1 w-full h-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl">
@@ -174,51 +209,150 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/20">
+    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/20 relative">
       {schedules.length === 0 && !loading && (
         <div className="flex items-center justify-center p-4 bg-muted/40 border-b border-border text-sm font-medium text-muted-foreground">
           No hay trabajos programados para esta semana
         </div>
       )}
+
+      <div className="shrink-0 flex items-center justify-between gap-2 px-3 sm:px-4 pt-3">
+        <p className="text-[11px] text-muted-foreground font-medium">
+          Días vacíos comprimidos · desliza o usa las flechas
+        </p>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => scrollStrip(-1)}
+            aria-label="Días anteriores"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => scrollStrip(1)}
+            aria-label="Días siguientes"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
       
-      <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 custom-scrollbar flex-1 min-h-0 w-full p-3 sm:p-6 snap-x snap-mandatory sm:snap-none">
+      <div
+        ref={stripRef}
+        className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 custom-scrollbar flex-1 min-h-0 w-full p-3 sm:px-4 sm:pb-6 snap-x snap-mandatory scroll-smooth"
+      >
         {days.map(day => {
           const daySchedules = schedules.filter(s => isSameDayLocal(s.fecha_programada, day));
+          const dayTasks = tasks.filter((t) => t.plazo && isSameDayLocal(String(t.plazo), day));
+          const hasEvents = daySchedules.length > 0 || dayTasks.length > 0;
           const isToday = format(new Date(), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          const eventCount = daySchedules.length + dayTasks.length;
+
+          if (!hasEvents) {
+            return (
+              <div
+                key={day.toISOString()}
+                data-day-today={isToday ? 'true' : undefined}
+                className={cn(
+                  'snap-start shrink-0 w-12 sm:w-14 min-w-12 sm:min-w-14 flex flex-col items-center rounded-xl border py-3 px-1 gap-2',
+                  isToday
+                    ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/20'
+                    : 'bg-muted/30 border-border/70',
+                )}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, day)}
+                title={`${format(day, 'EEEE d/MM', { locale: es })} · sin eventos (puedes soltar aquí)`}
+              >
+                <span className={cn(
+                  'text-[10px] font-bold uppercase tracking-wide writing-mode-vertical',
+                  isToday ? 'text-primary' : 'text-muted-foreground',
+                )}
+                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                >
+                  {format(day, 'EEE', { locale: es })}
+                </span>
+                <span className={cn(
+                  'text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded',
+                  isToday ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground',
+                )}>
+                  {format(day, 'dd')}
+                </span>
+              </div>
+            );
+          }
 
           return (
             <div 
-              key={day.toISOString()} 
+              key={day.toISOString()}
+              data-day-active="true"
+              data-day-today={isToday ? 'true' : undefined}
               className={cn(
-                "flex-1 w-[85vw] min-w-[85vw] sm:w-auto sm:min-w-[320px] md:min-w-[350px] flex flex-col rounded-2xl p-3 sm:p-4 border overflow-hidden transition-colors snap-start",
-                isToday ? "bg-card border-primary/40 shadow-md ring-1 ring-primary/20" : "bg-card border-border shadow-sm"
+                'snap-start shrink-0 flex flex-col rounded-2xl p-3 sm:p-4 border overflow-hidden transition-colors',
+                'w-[min(88vw,22rem)] min-w-[16.5rem] sm:min-w-[18rem] max-w-[22rem]',
+                isToday ? 'bg-card border-primary/40 shadow-md ring-1 ring-primary/20' : 'bg-card border-border shadow-sm',
               )}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, day)}
             >
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-border shrink-0 w-full pointer-events-none">
-                <span className={cn("font-bold capitalize", isToday ? "text-primary text-lg" : "text-foreground")}>
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border shrink-0 w-full">
+                <span className={cn('font-bold capitalize text-sm sm:text-base', isToday ? 'text-primary' : 'text-foreground')}>
                   {format(day, 'EEEE', { locale: es })}
                 </span>
-                <span className={cn(
-                  "text-xs font-bold px-2 py-1 rounded-md tracking-wide", 
-                  isToday ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground"
-                )}>
-                  {format(day, 'dd/MM')}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="secondary" className="text-[10px] font-bold tabular-nums">
+                    {eventCount}
+                  </Badge>
+                  <span className={cn(
+                    'text-xs font-bold px-2 py-1 rounded-md tracking-wide', 
+                    isToday ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-muted-foreground',
+                  )}>
+                    {format(day, 'dd/MM')}
+                  </span>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-3 min-h-0 w-full">
-                {daySchedules.length > 0 ? (
-                  daySchedules.map(job => {
+                {dayTasks.map((task) => (
+                  <button
+                    type="button"
+                    key={task.id}
+                    onClick={() => setSelectedTask(task)}
+                    className="w-full rounded-xl border border-dashed border-secondary/40 bg-secondary/5 p-3 text-left hover:bg-secondary/10 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <ListTodo className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{task.titulo}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
+                          Tarea · {String(task.estado || '').replace('_', ' ')}
+                          {task.horario ? ` · ${task.horario}` : ''}
+                        </p>
+                        {(task.creador_nombre || task.creador?.name) ? (
+                          <p className="text-[11px] text-muted-foreground">Creó: {task.creador_nombre || task.creador?.name}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {daySchedules.map(job => {
                     const isProject = job.tipo_trabajo === 'proyectos';
                     const isDragging = draggedJobId === job.id;
                     const dynamicStyles = getDynamicStyles(job.estado);
                     
-                    const costoTotal = job.costo_total || job.monto || 0;
-                    const adelantoRecibido = job.adelanto || 0;
-                    const saldoMostrar = job.saldo || 0;
+                    const costoTotal = Number(job.costo_total ?? job.monto ?? 0);
+                    const adelantoRecibido = Number(job.adelanto ?? 0);
+                    const saldoMostrar = Number(job.saldo ?? 0);
+                    const vendedorLabel = job.vendedor_nombre || usersMap[job.vendedor_id] || usersMap[job.vendedor_responsable_id] || 'Sin asignar';
+                    const tecnicoLabel = tecnicosMap[job.tecnico_id] || tecnicosMap[job.tecnico_responsable_id] || job.tecnico_nombre || 'Sin asignar';
 
                     return (
                       <div 
@@ -239,19 +373,31 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
                             {isProject ? 'Proyecto' : 'Seg. Electrónica'}
                           </Badge>
                         </div>
+
+                        {job.descripcion_trabajo ? (
+                          <p className="text-xs font-medium line-clamp-2 opacity-90" title={job.descripcion_trabajo}>
+                            {job.descripcion_trabajo}
+                          </p>
+                        ) : null}
                         
-                        <div className="flex flex-col gap-1.5 mt-1 opacity-90">
+                        <div className="flex flex-col gap-1.5 mt-0.5 opacity-90">
+                          {job.horario ? (
+                            <div className="flex items-center gap-1.5 text-xs min-w-0 font-semibold">
+                              <Clock className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                              <span className="truncate">{job.horario}</span>
+                            </div>
+                          ) : null}
                           <div className="flex items-center gap-1.5 text-xs min-w-0">
                             <MapPin className="h-3.5 w-3.5 shrink-0 opacity-70" />
                             <span className="truncate font-medium" title={job.lugar}>{job.lugar}</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-xs min-w-0">
                             <User className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                            <span className="truncate font-medium">{job.vendedor_nombre || usersMap[job.vendedor_id] || usersMap[job.vendedor_responsable_id] || 'Sin asignar'}</span>
+                            <span className="truncate font-medium">{vendedorLabel}</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-xs min-w-0">
                             <Wrench className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                            <span className="truncate font-medium">{tecnicosMap[job.tecnico_id] || 'Sin asignar'}</span>
+                            <span className="truncate font-medium">{tecnicoLabel}</span>
                           </div>
                         </div>
 
@@ -288,13 +434,7 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
                         </div>
                       </div>
                     );
-                  })
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-center h-28 border border-dashed border-border rounded-xl bg-muted/10 w-full pointer-events-none">
-                    <Briefcase className="h-6 w-6 text-muted-foreground/30 mb-2" />
-                    <p className="text-xs font-medium text-muted-foreground">Sin trabajos</p>
-                  </div>
-                )}
+                  })}
               </div>
             </div>
           );
@@ -309,6 +449,31 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
         onWorkUpdated={handleWorkUpdated}
         onWorkDeleted={(deletedId) => setSchedules(prev => prev.filter(s => s.id !== deletedId))}
       />
+
+      <Dialog open={Boolean(selectedTask)} onOpenChange={(open) => { if (!open) setSelectedTask(null); }}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">{selectedTask?.titulo || 'Tarea'}</DialogTitle>
+            <DialogDescription>
+              Detalle de la tarea en el cronograma.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTask ? (
+            <div className="space-y-3 text-sm">
+              <p className="text-foreground whitespace-pre-wrap">
+                {selectedTask.descripcion || 'Sin descripción adicional.'}
+              </p>
+              <div className="rounded-xl border bg-muted/30 p-3 space-y-1.5">
+                <p><span className="font-semibold">Estado:</span> <span className="capitalize">{String(selectedTask.estado || '').replace('_', ' ')}</span></p>
+                <p><span className="font-semibold">Plazo:</span> {selectedTask.plazo ? String(selectedTask.plazo).slice(0, 10) : '—'}</p>
+                <p><span className="font-semibold">Horario:</span> {selectedTask.horario || 'Sin horario'}</p>
+                <p><span className="font-semibold">Creó:</span> {selectedTask.creador_nombre || selectedTask.creador?.name || '—'}</p>
+                <p><span className="font-semibold">Asignado:</span> {selectedTask.asignado_nombre || selectedTask.asignado?.name || 'Sin asignar'}</p>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

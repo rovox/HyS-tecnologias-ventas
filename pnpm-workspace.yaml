@@ -5,7 +5,15 @@ packages:
 # so `pnpm install` succeeds; the SPA is pre-built and committed in apps/web/dist.
 ignoredBuiltDependencies:
   - esbuild
+# Prisma engines must run postinstall locally and in CI (API). Web on Hostinger does
+# not install apps/api, so these never run on that host.
+# @scarf/scarf is pulled by swagger-ui; deny its telemetry postinstall (no approve-builds needed).
 allowBuilds:
   esbuild: false
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  unrs-resolver: false
 packageImportMethod: copy
 confirmModulesPurge: false

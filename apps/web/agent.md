@@ -12,8 +12,9 @@ The SPA is the current product. Keep it. Improve working flows; do not rewrite t
 ## Data
 
 - `src/services/*` is the contract (future NestJS HTTP).
-- POC uses in-memory mocks (`VITE_API_MODE=mock`). Do not switch to `api` until the Nest service exists.
-- One domain, one owner: quotations → `quotationsService` + `NewQuotationForm`; clients → `clientsService` + `ClientFormModal`.
+- POC uses in-memory mocks (`VITE_API_MODE=mock`). Opt into Nest with `VITE_API_MODE=api` and `VITE_API_URL=http://localhost:3001/api`.
+- One domain, one owner: quotations → `quotationsService` + `NewQuotationForm`; clients → `clientsService` + `ClientFormModal`; relevamientos → `surveysService`.
+- Sucursales: Central, Punata, Quillacollo. Quotation states: `borrador` → `enviado` → `aceptado` | `rechazado`. No biblioteca.
 
 ## How to change UI
 

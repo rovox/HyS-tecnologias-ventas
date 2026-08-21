@@ -1,37 +1,28 @@
 /**
- * Quotations
- *
- * EXISTING product behavior: document library (titulo, categoria, archivo).
- * POC-ONLY extension: numbered commercial quotes with items, totals, and status workflow.
- * Field `kind`: 'library' | 'commercial'
+ * Cotizaciones comerciales. Sin biblioteca de documentos.
  */
 
-export const QUOTATION_STATUSES = ['borrador', 'enviada', 'aceptada', 'rechazada', 'convertida'];
+export const QUOTATION_STATUSES = ['borrador', 'enviado', 'aceptado', 'rechazado'];
 
 export const QUOTATION_STATUS_LABEL = {
   borrador: 'Borrador',
-  enviada: 'Enviada',
-  aceptada: 'Aceptada',
-  rechazada: 'Rechazada',
-  convertida: 'Convertida',
-  documento: 'Biblioteca',
+  enviado: 'Enviado',
+  aceptado: 'Aceptado',
+  rechazado: 'Rechazado',
 };
 
 export const QUOTATION_STATUS_CLASS = {
   borrador: 'bg-slate-100 text-slate-700',
-  enviada: 'bg-blue-100 text-blue-700',
-  aceptada: 'bg-emerald-100 text-emerald-800',
-  rechazada: 'bg-red-100 text-red-700',
-  convertida: 'bg-violet-100 text-violet-800',
-  documento: 'bg-muted text-muted-foreground',
+  enviado: 'bg-blue-100 text-blue-700',
+  aceptado: 'bg-emerald-100 text-emerald-800',
+  rechazado: 'bg-red-100 text-red-700',
 };
 
 export const QUOTATION_FLOW = {
-  borrador: ['enviada', 'rechazada'],
-  enviada: ['aceptada', 'rechazada', 'borrador'],
-  aceptada: ['convertida', 'rechazada'],
-  rechazada: ['borrador'],
-  convertida: [],
+  borrador: ['enviado'],
+  enviado: ['aceptado', 'rechazado'],
+  aceptado: [],
+  rechazado: [],
 };
 
 /** Id de equipos (paneles, PCs, laptops, routers, impresoras). Se conserva el id del mock. */
@@ -106,7 +97,7 @@ export const mockQuotations = [
     cliente_id: 'cli_andina',
     cliente_nombre: 'Comercial Andina SRL',
     fecha: '2026-08-04',
-    estado: 'aceptada',
+    estado: 'aceptado',
     vendedor_id: 'usr_ventas',
     vendedor_nombre: 'Dennis',
     vendedores: [{ user_id: 'usr_ventas', nombre: 'Dennis', comision_pct: 100 }],
@@ -139,7 +130,7 @@ export const mockQuotations = [
     cliente_id: 'cli_hospital',
     cliente_nombre: 'Clínica Horizonte',
     fecha: '2026-08-09',
-    estado: 'enviada',
+    estado: 'enviado',
     vendedor_id: 'usr_wilson',
     vendedor_nombre: 'Wilson',
     vendedores: [{ user_id: 'usr_wilson', nombre: 'Wilson', comision_pct: 100 }],
@@ -172,7 +163,7 @@ export const mockQuotations = [
     cliente_id: 'cli_resid',
     cliente_nombre: 'Residencial Los Pinos',
     fecha: '2026-08-12',
-    estado: 'enviada',
+    estado: 'borrador',
     vendedor_id: 'usr_vanesa',
     vendedor_nombre: 'Vanesa',
     vendedores: [{ user_id: 'usr_vanesa', nombre: 'Vanesa', comision_pct: 100 }],
@@ -183,6 +174,7 @@ export const mockQuotations = [
     subtotal: 7650,
     total: 7650,
     observacion: 'Borrador interno',
+    estado: 'borrador',
     archivo: '',
     imagen_preview: '',
     uploaded_by: 'Vanesa',
@@ -199,12 +191,12 @@ export const mockQuotations = [
     categoria_id: 'insumos_tecnologicos',
     subcategoria: 'Laptops, router y panel solar',
     subcategoria_custom: 'Laptops, router y panel solar',
-    sucursal_id: 'suc_norte',
-    sucursal_nombre: 'Norte El Alto',
+    sucursal_id: 'suc_quillacollo',
+    sucursal_nombre: 'Quillacollo',
     cliente_id: 'cli_mall',
     cliente_nombre: 'Plaza Norte Retail',
     fecha: '2026-08-15',
-    estado: 'enviada',
+    estado: 'enviado',
     vendedor_id: 'usr_ventas',
     vendedor_nombre: 'Dennis',
     vendedores: [{ user_id: 'usr_ventas', nombre: 'Dennis', comision_pct: 100 }],
@@ -218,28 +210,5 @@ export const mockQuotations = [
     schedule_id: '',
     created: '2026-08-15 10:00:00',
     updated: '2026-08-15 10:00:00',
-  },
-  {
-    id: 'quo_lib_cam',
-    kind: 'library',
-    numero: '',
-    titulo: 'Listado de precios cámaras 2026-Q3',
-    categoria: 'Cámaras',
-    cliente_id: '',
-    cliente_nombre: '',
-    fecha: '2026-07-01',
-    estado: 'documento',
-    vendedor_id: 'usr_admin',
-    vendedor_nombre: 'Julio',
-    items: [],
-    subtotal: 0,
-    total: 0,
-    observacion: 'Documento de referencia (comportamiento original de biblioteca)',
-    archivo: 'lista-camaras-2026.pdf',
-    imagen_preview: '',
-    uploaded_by: 'Julio',
-    schedule_id: '',
-    created: '2026-07-01 10:00:00',
-    updated: '2026-07-01 10:00:00',
   },
 ];

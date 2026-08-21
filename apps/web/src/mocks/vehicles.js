@@ -20,7 +20,7 @@ export const mockVehiculos = [
     modelo: 'Frontier',
     anio: 2019,
     estado: 'activo',
-    sucursal_id: 'suc_norte',
+    sucursal_id: 'suc_quillacollo',
     kilometraje_actual: 76110,
     fotografias: [],
     created_by: 'usr_admin',

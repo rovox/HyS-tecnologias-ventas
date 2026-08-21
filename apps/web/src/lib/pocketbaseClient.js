@@ -9,7 +9,7 @@ import mockAdapter from '@/api/mockAdapter.js';
 import { isMockMode } from '@/api/config.js';
 
 if (!isMockMode) {
-  console.warn('[dataClient] VITE_API_MODE=api is not wired yet. Falling back to mock adapter.');
+  console.warn('[dataClient] VITE_API_MODE=api: clientes, cotizaciones y métricas van por HTTP. El resto de pantallas sigue en el adaptador mock.');
 }
 
 const pocketbaseClient = mockAdapter;

@@ -8,9 +8,9 @@ alwaysApply: true
 - Solve the current request. Do not add layers, abstractions, or features “just in case”.
 - Before creating a file, look for the same flow (modal, service, mock). Reuse it.
 - One domain, one owner: quotations in `quotationsService` + `NewQuotationForm`; clients in `clientsService` + `ClientFormModal`. Do not copy CRUD across modules.
-- Business logic lives in `apps/web/src/services/*` (future NestJS HTTP), not duplicated in JSX.
-- Prefer existing `apps/web/src/components/ui` and current forms. Avoid long files; split by domain instead of a new library.
+- Business logic lives in `apps/web/src/services/*` (mock or NestJS HTTP via `VITE_API_MODE`).
+- Prefer existing `apps/web/src/components/ui` and current forms. Avoid long files.
 - Docs: English. UI copy and code comments: Spanish.
 - Do not reintroduce quotation line-items, PocketBase at runtime, or npm — the repo is pnpm + mock/API.
-- Backend target is NestJS + MySQL on Hostinger. Model first (`apps/api/agent.md`). No finance module yet.
+- Backend: NestJS + MySQL in `apps/api`. Default UI is mock. No finance module.
 - If you change a business flow, update only that section under `docs/operations/` (new ops docs in English).

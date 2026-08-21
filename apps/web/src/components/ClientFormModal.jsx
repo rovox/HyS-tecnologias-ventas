@@ -23,7 +23,7 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
   
   const [formData, setFormData] = useState({
     nombre: '',
-    tipo: 'Seguridad Electrónica',
+    tipo: '',
     contacto: '',
     email: '',
     telefono: '',
@@ -36,7 +36,7 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
       if (initialData) {
         setFormData({
           nombre: initialData.nombre || '',
-          tipo: normalizeClientTipo(initialData.tipo),
+          tipo: initialData.tipo ? normalizeClientTipo(initialData.tipo) : '',
           contacto: initialData.contacto || '',
           email: initialData.email || '',
           telefono: initialData.telefono || '',
@@ -46,7 +46,7 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
       } else {
         setFormData({
           nombre: '',
-          tipo: 'Seguridad Electrónica',
+          tipo: '',
           contacto: '',
           email: '',
           telefono: '',
@@ -71,12 +71,16 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
     }
 
     try {
+      const payload = {
+        ...formData,
+        tipo: (formData.tipo || '').trim(),
+      };
       let saved;
       if (initialData?.id) {
-        saved = await updateClient(initialData.id, formData);
+        saved = await updateClient(initialData.id, payload);
         toast.success('Cliente actualizado exitosamente');
       } else {
-        saved = await createClient(formData);
+        saved = await createClient(payload);
         toast.success('Cliente registrado exitosamente');
       }
       onSuccess?.(saved);
@@ -87,101 +91,119 @@ const ClientFormModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl bg-background rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-extrabold tracking-tight">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        className={[
+          'sm:max-w-xl bg-background rounded-2xl p-0 gap-0',
+          'flex flex-col overflow-hidden',
+          'w-[calc(100%-1.25rem)] max-h-[min(92dvh,920px)]',
+        ].join(' ')}
+      >
+        <DialogHeader className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 pr-12 text-left">
+          <DialogTitle className="text-lg sm:text-xl font-extrabold tracking-tight">
             {initialData?.id ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
           </DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-5 mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="nombre">Nombre / Razón Social <span className="text-destructive">*</span></Label>
-              <Input 
-                id="nombre" name="nombre" 
-                value={formData.nombre} onChange={handleChange} 
-                className="bg-card font-medium" 
-                placeholder="Ej. Comercializadora ABC"
-                required 
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="tipo">Tipo de Cliente <span className="text-destructive">*</span></Label>
-              <Select value={formData.tipo} onValueChange={(val) => setFormData(prev => ({...prev, tipo: val}))} disabled={loading}>
-                <SelectTrigger className="bg-card font-medium">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_TYPE_LABELS.map((label) => (
-                    <SelectItem key={label} value={label}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="contacto">Persona de Contacto</Label>
-              <Input 
-                id="contacto" name="contacto" 
-                value={formData.contacto} onChange={handleChange} 
-                className="bg-card" 
-                placeholder="Nombre de contacto"
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="telefono">Teléfono</Label>
-              <Input 
-                id="telefono" name="telefono" 
-                value={formData.telefono} onChange={handleChange} 
-                className="bg-card" 
-                placeholder="Ej. +591 70000000"
-                disabled={loading}
-              />
-            </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input 
-                id="email" name="email" type="email"
-                value={formData.email} onChange={handleChange} 
-                className="bg-card" 
-                placeholder="correo@ejemplo.com"
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="direccion">Dirección</Label>
-              <Input 
-                id="direccion" name="direccion" 
-                value={formData.direccion} onChange={handleChange} 
-                className="bg-card" 
-                placeholder="Dirección completa"
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="observaciones">Observaciones</Label>
-              <Textarea 
-                id="observaciones" name="observaciones" 
-                value={formData.observaciones} onChange={handleChange} 
-                className="bg-card min-h-[80px]" 
-                placeholder="Detalles adicionales sobre el cliente..."
-                disabled={loading}
-              />
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="nombre">Nombre / Razón Social <span className="text-destructive">*</span></Label>
+                <Input
+                  id="nombre" name="nombre"
+                  value={formData.nombre} onChange={handleChange}
+                  className="bg-card font-medium min-h-11"
+                  placeholder="Ej. Comercializadora ABC"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="tipo">Referencia opcional (categoría)</Label>
+                <Select
+                  value={formData.tipo || undefined}
+                  onValueChange={(val) => setFormData((prev) => ({ ...prev, tipo: val }))}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="bg-card font-medium min-h-11">
+                    <SelectValue placeholder="Sin categoría fija (recomendado)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CLIENT_TYPE_LABELS.map((label) => (
+                      <SelectItem key={label} value={label}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Un cliente puede tener cotizaciones y trabajos en varias categorías. No hace falta fijar un tipo aquí.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="contacto">Persona de Contacto</Label>
+                <Input
+                  id="contacto" name="contacto"
+                  value={formData.contacto} onChange={handleChange}
+                  className="bg-card min-h-11"
+                  placeholder="Nombre de contacto"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="telefono">Teléfono</Label>
+                <Input
+                  id="telefono" name="telefono"
+                  value={formData.telefono} onChange={handleChange}
+                  className="bg-card min-h-11"
+                  placeholder="Ej. +591 70000000"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="email">Correo Electrónico</Label>
+                <Input
+                  id="email" name="email" type="email"
+                  value={formData.email} onChange={handleChange}
+                  className="bg-card min-h-11"
+                  placeholder="correo@ejemplo.com"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="direccion">Dirección</Label>
+                <Input
+                  id="direccion" name="direccion"
+                  value={formData.direccion} onChange={handleChange}
+                  className="bg-card min-h-11"
+                  placeholder="Dirección completa"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="observaciones">Observaciones</Label>
+                <Textarea
+                  id="observaciones" name="observaciones"
+                  value={formData.observaciones} onChange={handleChange}
+                  className="bg-card min-h-[64px] max-h-32 resize-y"
+                  rows={2}
+                  placeholder="Detalles adicionales sobre el cliente..."
+                  disabled={loading}
+                />
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="pt-4 border-t border-border mt-4">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={loading} className="font-bold">Cancelar</Button>
-            <Button type="submit" disabled={loading} className="font-bold px-6">
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-background px-4 sm:px-6 py-3 sm:py-4">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={loading} className="font-bold min-h-11">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="font-bold px-6 min-h-11">
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {initialData?.id ? 'Guardar Cambios' : 'Registrar Cliente'}
             </Button>

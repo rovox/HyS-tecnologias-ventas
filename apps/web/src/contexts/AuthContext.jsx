@@ -17,14 +17,18 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, options = {}) => {
     try {
-      const result = await authService.login(email, password);
+      const result = await authService.login(email, password, options);
       if (result.user?.active === false) {
         authService.logout();
         return { success: false, error: 'Cuenta desactivada. Contacta al administrador.' };
       }
-      return { success: true, user: result.user };
+      if (result.success && result.user) {
+        setCurrentUser(result.user);
+        return { success: true, user: result.user };
+      }
+      return { success: false, error: result.error || 'No se pudo iniciar sesión.' };
     } catch (error) {
       const status = error?.status;
       if (status === 400) {
@@ -51,10 +55,10 @@ export const AuthProvider = ({ children }) => {
   const value = {
     currentUser,
     userRole: currentUser?.role,
-    department: currentUser?.department,
+    department: currentUser?.department || currentUser?.sucursalId,
     login,
     logout,
-    isAuthenticated: mockAdapter.authStore.isValid,
+    isAuthenticated: Boolean(currentUser) && currentUser.active !== false,
     initialLoading,
     isMockAuth: isMockMode,
     isAdmin,

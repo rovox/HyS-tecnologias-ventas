@@ -17,6 +17,7 @@ export const mockUsers = [
     name: 'Julio',
     role: ROLES.ADMIN,
     department: 'suc_central',
+    sucursalId: 'suc_central',
     phone: '70000001',
     active: true,
     avatar: '',
@@ -29,7 +30,8 @@ export const mockUsers = [
     password: DEMO_PASSWORD,
     name: 'Dennis',
     role: ROLES.VENTAS,
-    department: 'suc_norte',
+    department: 'suc_central',
+    sucursalId: 'suc_central',
     phone: '70000002',
     active: true,
     avatar: '',
@@ -42,7 +44,8 @@ export const mockUsers = [
     password: DEMO_PASSWORD,
     name: 'Wilson',
     role: ROLES.VENTAS,
-    department: 'suc_sur',
+    department: 'suc_punata',
+    sucursalId: 'suc_punata',
     phone: '70000005',
     active: true,
     avatar: '',
@@ -55,7 +58,8 @@ export const mockUsers = [
     password: DEMO_PASSWORD,
     name: 'Vanesa',
     role: ROLES.VENTAS,
-    department: 'suc_cocha',
+    department: 'suc_quillacollo',
+    sucursalId: 'suc_quillacollo',
     phone: '70000006',
     active: true,
     avatar: '',
@@ -69,6 +73,7 @@ export const mockUsers = [
     name: 'Elias',
     role: ROLES.TEC,
     department: 'suc_central',
+    sucursalId: 'suc_central',
     phone: '70000003',
     active: true,
     avatar: '',
@@ -82,6 +87,7 @@ export const mockUsers = [
     name: 'Elena Rojas',
     role: ROLES.CONT,
     department: 'suc_central',
+    sucursalId: 'suc_central',
     phone: '70000004',
     active: true,
     avatar: '',
@@ -94,15 +100,12 @@ export const mockSucursales = [
   { id: 'suc_central', nombre: 'Central', codigo: 'LPZ-C', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
   { id: 'suc_quillacollo', nombre: 'Quillacollo', codigo: 'CBB-Q', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
   { id: 'suc_punata', nombre: 'Punata', codigo: 'CBB-P', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
-  { id: 'suc_norte', nombre: 'Norte El Alto', codigo: 'EAT-N', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
-  { id: 'suc_sur', nombre: 'Sur Calacoto', codigo: 'LPZ-S', activa: true, created: '2026-01-01 00:00:00', updated: '2026-01-01 00:00:00' },
-  { id: 'suc_cocha', nombre: 'Cochabamba', codigo: 'CBB-1', activa: true, created: '2026-03-01 00:00:00', updated: '2026-03-01 00:00:00' },
 ];
 
 export const mockTecnicos = [
   { id: 'tec_elias', nombre: 'Elias', user_id: 'usr_tec', sucursal_id: 'suc_central', created: '2026-01-15 00:00:00', updated: '2026-01-15 00:00:00' },
-  { id: 'tec_diego', nombre: 'Diego Mamani', user_id: '', sucursal_id: 'suc_norte', created: '2026-02-01 00:00:00', updated: '2026-02-01 00:00:00' },
-  { id: 'tec_sofia', nombre: 'Sofía Choque', user_id: '', sucursal_id: 'suc_sur', created: '2026-02-10 00:00:00', updated: '2026-02-10 00:00:00' },
+  { id: 'tec_diego', nombre: 'Diego Mamani', user_id: '', sucursal_id: 'suc_quillacollo', created: '2026-02-01 00:00:00', updated: '2026-02-01 00:00:00' },
+  { id: 'tec_sofia', nombre: 'Sofía Choque', user_id: '', sucursal_id: 'suc_punata', created: '2026-02-10 00:00:00', updated: '2026-02-10 00:00:00' },
 ];
 
 export const mockConfiguration = [
@@ -126,6 +129,7 @@ export const mockSalespersonGoals = [
 ];
 
 export const mockBranchGoals = [
-  { id: 'bg_central', branch_name: 'Central La Paz', sucursal_id: 'suc_central', monthly_goal: 20000, annual_goal: 240000, created_by: 'usr_admin', created: '2026-01-01 00:00:00', updated: '2026-08-01 00:00:00' },
-  { id: 'bg_norte', branch_name: 'Norte El Alto', sucursal_id: 'suc_norte', monthly_goal: 10000, annual_goal: 120000, created_by: 'usr_admin', created: '2026-01-01 00:00:00', updated: '2026-08-01 00:00:00' },
+  { id: 'bg_central', branch_name: 'Central', sucursal_id: 'suc_central', monthly_goal: 20000, annual_goal: 240000, created_by: 'usr_admin', created: '2026-01-01 00:00:00', updated: '2026-08-01 00:00:00' },
+  { id: 'bg_punata', branch_name: 'Punata', sucursal_id: 'suc_punata', monthly_goal: 10000, annual_goal: 120000, created_by: 'usr_admin', created: '2026-01-01 00:00:00', updated: '2026-08-01 00:00:00' },
+  { id: 'bg_quillacollo', branch_name: 'Quillacollo', sucursal_id: 'suc_quillacollo', monthly_goal: 10000, annual_goal: 120000, created_by: 'usr_admin', created: '2026-01-01 00:00:00', updated: '2026-08-01 00:00:00' },
 ];
