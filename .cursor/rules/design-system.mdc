@@ -1,0 +1,16 @@
+---
+description: Tokens y patrones visuales de DESIGN.md para UI React.
+globs: apps/web/src/**/*.{jsx,js,css}
+alwaysApply: false
+---
+
+# DESIGN.md
+
+Fuente de verdad: `DESIGN.md`. No inventes hex sueltos.
+
+- Primary / botones normales: `bg-primary` (navy `#002B5B`).
+- CTA Guardar / confirmar: `variant="action"` (`#75fd00`, texto navy). No `#7CFF00` suelto.
+- Cards: `bg-card` + `border-border` + radio `rounded-2xl` en widgets, `rounded-md` en inputs.
+- Números: `tabular-nums`. Labels: peso 600, contenido 400.
+- Mobile: stack 1 col. Desktop (`lg+`): grid 12 col / tabla densa. Contenedor máx. 1440px (`.content-container`).
+- Chips de estado: fondo poco saturado, texto saturado (`QUOTATION_STATUS_CLASS`).

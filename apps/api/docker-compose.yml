@@ -1,0 +1,15 @@
+# MySQL local for the sales NestJS service. Hostinger production uses its own MySQL.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: hys_sales
+      MYSQL_USER: hys
+      MYSQL_PASSWORD: hys
+    ports:
+      - "3307:3306"
+    volumes:
+      - hys_sales_mysql:/var/lib/mysql
+volumes:
+  hys_sales_mysql:

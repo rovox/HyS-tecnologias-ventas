@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Lock, Mail, Users, ShieldCheck, TrendingUp, Calendar, ArrowRight, Eye, EyeOff, Wifi, Activity, Cpu } from 'lucide-react';
+import { Lock, Mail, Users, ShieldCheck, TrendingUp, ArrowRight, Eye, EyeOff, Wifi, Cpu } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import { toast } from 'sonner';
-import pb from '@/lib/pocketbaseClient.js';
-import { format, addDays, startOfToday, isSameDay } from 'date-fns';
-import { es } from 'date-fns/locale';
+import authService from '@/services/auth/index.js';
+import { DEMO_PASSWORD } from '@/mocks/users.js';
+import { isMockMode } from '@/api/http.js';
 
-const COMPANY_PHOTOS = [
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/5e09f49c87c76724184c3a96b506ae4e.jpg',
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/e91a9d2218785f03ece7241c60f26054.jpg',
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/678b128cd24307a62ce8ce01addea550.jpg',
-  'https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/6912031f86c0fa93a97dc23aabe18170.jpg',
+const COMPANY_PHOTOS = ['/branding/login-bg.svg'];
+
+const API_DEMO_HINTS = [
+  { email: 'dennis.ventas@demo.hs.local', name: 'Dennis', password: 'dennis', role: 'Ventas' },
+  { email: 'julio.admin@demo.hs.local', name: 'Julio', password: 'julio', role: 'Admin' },
+  { email: 'elias.ops@demo.hs.local', name: 'Elias', password: 'elias', role: 'Técnico' },
 ];
-
-
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -29,35 +27,9 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [schedules, setSchedules] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const demoAccounts = isMockMode ? authService.listDemoAccounts() : API_DEMO_HINTS;
 
-  const today = startOfToday();
-  const tomorrow = addDays(today, 1);
-  const dayAfter = addDays(today, 2);
-
-  useEffect(() => {
-    const fetchPublicData = async () => {
-      try {
-        const todayStr = format(today, 'yyyy-MM-dd');
-        const endDateStr = format(addDays(today, 3), 'yyyy-MM-dd');
-        const scheds = await pb.collection('schedules').getFullList({
-          filter: `fecha_programada >= "${todayStr}" && fecha_programada < "${endDateStr}"`,
-          sort: 'fecha_programada',
-          $autoCancel: false
-        });
-        setSchedules(scheds);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingData(false);
-      }
-    };
-    fetchPublicData();
-  }, []);
-
-  // Cycle background photo
   useEffect(() => {
     const t = setInterval(() => setPhotoIndex(i => (i + 1) % COMPANY_PHOTOS.length), 5000);
     return () => clearInterval(t);
@@ -66,7 +38,7 @@ const LoginPage = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setIsLoading(true);
-    const result = await login(email, password);
+    const result = await login(email, password, { remember });
     if (result.success) {
       toast.success('Acceso autorizado');
       navigate('/dashboard');
@@ -74,68 +46,6 @@ const LoginPage = () => {
       toast.error(result.error);
     }
     setIsLoading(false);
-  };
-
-  const isTerminado = estado => {
-    const e = (estado || '').toLowerCase();
-    return e.includes('termin') || e.includes('complet') || e.includes('pagad');
-  };
-
-  const renderScheduleColumn = (date, title) => {
-    let daySchedules = schedules
-      .filter(s => isSameDay(new Date(`${s.fecha_programada}`.slice(0, 10) + 'T00:00:00'), date))
-      .map(s => ({
-        cliente: s.cliente || 'Sin cliente',
-        descripcion: s.descripcion_trabajo,
-        estado: s.estado === 'completado' ? 'terminado' : 'programado',
-      }));
-
-
-    return (
-      <div key={title} className="flex flex-col">
-        {/* Column header */}
-        <div className="flex items-center justify-between mb-2.5 px-1">
-          <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[#11D4B1]">{title}</span>
-          <span className="text-[10px] font-semibold text-[#8DA4B8] tabular-nums">
-            {format(date, 'dd MMM', { locale: es })}
-          </span>
-        </div>
-        <div className="space-y-2 flex-1">
-          {loadingData ? (
-            Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="h-14 w-full rounded-xl bg-white/[0.04] animate-pulse border border-white/[0.05]" />
-            ))
-          ) : daySchedules.length > 0 ? (
-            daySchedules.slice(0, 2).map((job, i) => (
-              <div
-                key={i}
-                className="group relative flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border transition-all duration-200"
-                style={{
-                  background: 'rgba(7,38,58,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  borderColor: isTerminado(job.estado) ? 'rgba(17,212,177,0.18)' : 'rgba(255,255,255,0.07)',
-                }}
-              >
-                {/* Left accent bar */}
-                <div className={`absolute left-0 top-2 bottom-2 w-[3px] rounded-full ${isTerminado(job.estado) ? 'bg-[#11D4B1]' : 'bg-sky-400/60'}`} />
-                <div className="min-w-0 pl-1">
-                  <p className="font-bold text-[11.5px] text-[#E8F0F7] line-clamp-1">{job.cliente}</p>
-                  <p className="text-[10px] text-[#8DA4B8] line-clamp-1 mt-0.5">{job.descripcion}</p>
-                </div>
-                <div className={`shrink-0 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-md ${isTerminado(job.estado) ? 'bg-[#11D4B1]/12 text-[#11D4B1] border border-[#11D4B1]/20' : 'bg-sky-500/10 text-sky-300 border border-sky-400/15'}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${isTerminado(job.estado) ? 'bg-[#11D4B1]' : 'bg-sky-400 animate-pulse'}`} />
-                  {isTerminado(job.estado) ? 'Listo' : 'Prog.'}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center h-14 rounded-xl border border-dashed border-white/[0.08] text-[10.5px] text-[#8DA4B8]/60">
-              Sin trabajos programados
-            </div>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -218,7 +128,7 @@ const LoginPage = () => {
               <div className="relative shrink-0">
                 <div className="absolute -inset-2 rounded-3xl blur-xl opacity-40" style={{ background: 'rgba(17,212,177,0.35)' }} />
                 <img
-                  src="https://horizons-cdn.hostinger.com/953104e8-38fd-49dd-9e9d-05691d6b9e35/293556251_3188912498016330_4232731385862456813_n-a0Gkd.jpg"
+                  src="/branding/hyslogo.jpg"
                   alt="H&S Tecnologías"
                   className="relative h-[72px] w-[72px] rounded-2xl object-contain p-2"
                   style={{
@@ -279,41 +189,15 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* BOTTOM: Schedule block */}
             <div className="rounded-2xl p-5 sm:p-6" style={{
               background: 'rgba(3,14,23,0.72)',
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(17,212,177,0.12)',
-              boxShadow: '0 0 40px -10px rgba(17,212,177,0.12), inset 0 1px 0 rgba(255,255,255,0.04)',
             }}>
-              {/* Header row */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-7 w-7 rounded-lg flex items-center justify-center"
-                    style={{ background: 'rgba(17,212,177,0.12)', border: '1px solid rgba(17,212,177,0.25)' }}>
-                    <Calendar className="h-3.5 w-3.5" style={{ color: '#11D4B1' }} />
-                  </div>
-                  <div>
-                    <h3 className="text-[12.5px] font-black uppercase tracking-[0.12em]" style={{ color: '#E8F0F7' }}>
-                      Programación General <span style={{ color: '#11D4B1' }}>(72h)</span>
-                    </h3>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: '#11D4B1' }}>
-                  <Activity className="h-3 w-3" />
-                  <span>En vivo</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#11D4B1] animate-pulse" />
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div className="h-px mb-5" style={{ background: 'linear-gradient(90deg, rgba(17,212,177,0.3), rgba(17,212,177,0.05), transparent)' }} />
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {renderScheduleColumn(today, 'Hoy')}
-                {renderScheduleColumn(tomorrow, 'Mañana')}
-                {renderScheduleColumn(dayAfter, 'Pasado')}
-              </div>
+              <h3 className="text-sm font-bold" style={{ color: '#E8F0F7' }}>Operación comercial</h3>
+              <p className="text-xs mt-2 leading-relaxed" style={{ color: '#9BBAD0' }}>
+                Cotizaciones, clientes, relevamientos y tareas. Un solo administrador; cada vendedor ve su sucursal.
+              </p>
             </div>
           </div>
         </div>
@@ -379,6 +263,30 @@ const LoginPage = () => {
                     <div className="h-px flex-1 w-10" style={{ background: 'linear-gradient(90deg, rgba(17,212,177,0.5), transparent)' }} />
                   </div>
                   <p className="text-[11.5px] font-medium mt-2" style={{ color: '#6B8499' }}>Plataforma H&amp;S Tecnologías</p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[#11D4B1]">
+                    {isMockMode ? 'POC · autenticación mock' : 'Demo local · API Nest'}
+                  </p>
+                  <p className="text-[11px] text-[#8DA4B8]">
+                    {isMockMode
+                      ? <>Datos ficticios. Contraseña compartida: <span className="font-mono text-white">{DEMO_PASSWORD}</span></>
+                      : <>Cada usuario tiene su propia clave (nombre en minúsculas). Seed local únicamente.</>}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {demoAccounts.map((account) => (
+                      <button
+                        key={account.email}
+                        type="button"
+                        onClick={() => { setEmail(account.email); setPassword(account.password); }}
+                        className="text-left text-[11px] rounded-lg px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[#d6e8f5]"
+                      >
+                        <span className="block font-bold truncate">{account.name}</span>
+                        <span className="block opacity-70 truncate">{(account.role || '').split('/')[0]}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
@@ -447,8 +355,10 @@ const LoginPage = () => {
                           return;
                         }
                         try {
-                          await pb.collection('users').requestPasswordReset(email);
-                          toast.success('Correo de restablecimiento enviado. Revisá tu bandeja.');
+                          await authService.requestPasswordReset(email);
+                          toast.success(isMockMode
+                            ? 'POC mock: no se envía correo real. Usá las cuentas de demostración.'
+                            : 'Si el correo existe, el administrador gestionará el restablecimiento.');
                         } catch (err) {
                           toast.error('No se pudo enviar el correo. Contactá al administrador.');
                         }

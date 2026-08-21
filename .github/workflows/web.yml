@@ -1,0 +1,50 @@
+name: web
+
+on:
+  push:
+    branches: [migration/frontend-poc]
+  pull_request:
+    branches: [migration/frontend-poc]
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm --filter web build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+
+      - name: Commit dist for Hostinger
+        if: github.event_name == 'push' && github.ref == 'refs/heads/migration/frontend-poc'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A apps/web/dist
+          if git diff --staged --quiet; then
+            echo "dist unchanged"
+            exit 0
+          fi
+          git commit -m "chore: refresh web dist [skip ci]"
+          git push

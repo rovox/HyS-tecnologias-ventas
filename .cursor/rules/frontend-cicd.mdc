@@ -1,0 +1,26 @@
+---
+description: Frontend CI/CD — GitHub compiles Vite; Hostinger only publishes committed dist.
+alwaysApply: true
+---
+
+# Frontend CI/CD (Vite SPA)
+
+Hostinger Cloud Startup **cannot** run `vite build` (esbuild on a `noexec` disk). The live site is whatever sits in `apps/web/dist` on `migration/frontend-poc`.
+
+## Split that works today
+
+- **Local:** `pnpm dev:web` only. Do not commit `apps/web/dist` from a laptop.
+- **CI (compiler):** `.github/workflows/web.yml` on `ubuntu-latest` — `pnpm lint`, `vite build`, then commits `apps/web/dist` with `[skip ci]` so the workflow does not loop.
+- **CD (publisher):** Hostinger Git, root `apps/web`, Framework **Other**, Node 22, pnpm. Build command **empty**. After `pnpm install` it copies `dist/`. A good log is `Done … using pnpm v11.21.0` with **no** `$ vite build`.
+
+Wait for **two** Hostinger deploys after a UI push: first is the source commit (old bundle), second is the bot `chore: refresh web dist` (new bundle). Then hard-refresh.
+
+## Do not
+
+- Switch hPanel Framework to Vite, or run `vite build` on Hostinger (`EACCES`).
+- Pin pnpm 10.x — Corepack on the host is 11.21.0 (`packageManager` + `pm-on-fail=ignore`).
+- Treat `pnpm install` on Hostinger as a compile. It only installs so the platform is happy.
+- Change `VITE_*` in hPanel expecting a live change — Vite bakes env at **Actions** build time (`.env.production`).
+- Rewrite the SPA or add another component library. Short files, reuse `components/ui`.
+
+Rollback: revert the source commit (or the dist commit) and push. Do not force-push `main`.

@@ -1,56 +1,63 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout.jsx';
 import { Helmet } from 'react-helmet';
-import pb from '@/lib/pocketbaseClient.js';
-import { BookOpen, UploadCloud, FileText, Download, Search, Loader2, Plus, Pencil, Trash2, Settings, X } from 'lucide-react';
+import { BookOpen, Download, Search, Calculator, ArrowRight, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useNavigate } from 'react-router-dom';
+import quotationsService from '@/services/quotations/index.js';
+import clientsService from '@/services/clients/index.js';
+import categoriesService from '@/services/categories/index.js';
+import authService from '@/services/auth/index.js';
+import {
+  QUOTATION_FLOW,
+  QUOTATION_MAIN_CATEGORIES,
+  QUOTATION_STATUS_LABEL,
+  QUOTATION_STATUS_CLASS,
+  formatQuotationTitle,
+} from '@/mocks/quotations.js';
+import { ROLES } from '@/mocks/users.js';
+import { canWriteQuotations } from '@/config/nav.js';
+import NewQuotationForm from '@/components/NewQuotationForm.jsx';
 
 const QuotationsLibraryPage = () => {
-  const { currentUser, isAdmin } = useAuth();
-  const admin = isAdmin();
+  const { currentUser, userRole } = useAuth();
+  const navigate = useNavigate();
 
   const [quotations, setQuotations] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [categories, setCategories] = useState(QUOTATION_MAIN_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState('all');
   const [search, setSearch] = useState('');
+  const [commercialOpen, setCommercialOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [newCategoryLabel, setNewCategoryLabel] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
 
-  // Upload modal
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ titulo: '', categoria: '', observacion: '' });
-  const [file, setFile] = useState(null);
-  const [editTarget, setEditTarget] = useState(null);
-
-  // Category manager
-  const [showCatMgr, setShowCatMgr] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [editCat, setEditCat] = useState(null);
-  const [deleteCatTarget, setDeleteCatTarget] = useState(null);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await pb.collection('quotation_categories').getFullList({ sort: 'orden,nombre', requestKey: 'qcat-list' });
-      setCategories(res);
-    } catch { setCategories([]); }
-  }, []);
-
-  const fetchQuotes = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const records = await pb.collection('quotations').getFullList({ sort: '-created', requestKey: 'quot-list' });
-      setQuotations(records);
+      const [quotes, cli, usersRes, cats] = await Promise.all([
+        quotationsService.getAll(),
+        clientsService.getAll(),
+        authService.listUsers().catch(() => []),
+        categoriesService.getAll().catch(() => QUOTATION_MAIN_CATEGORIES),
+      ]);
+      setQuotations(quotes);
+      setClients(cli);
+      setVendors((usersRes || []).filter((u) => u.role === ROLES.VENTAS || u.role === ROLES.ADMIN));
+      setCategories((cats || []).length ? cats : QUOTATION_MAIN_CATEGORIES);
     } catch {
       toast.error('Error al cargar cotizaciones');
     } finally {
@@ -58,291 +65,272 @@ const QuotationsLibraryPage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchCategories();
-    fetchQuotes();
-  }, [fetchCategories, fetchQuotes]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const filteredQuotes = quotations.filter(q => {
-    const matchCat = selectedCat === 'all' || q.categoria === selectedCat;
-    const matchSearch = (q.titulo || '').toLowerCase().includes(search.toLowerCase());
+  const filteredQuotes = quotations.filter((quote) => {
+    const matchCat = selectedCat === 'all'
+      || quote.categoria === selectedCat
+      || quote.categoria_id === selectedCat;
+    const matchSearch = `${quote.titulo || ''} ${quote.numero || ''} ${quote.cliente_nombre || ''}`.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const openUpload = (quote = null) => {
-    if (quote) {
-      setEditTarget(quote);
-      setFormData({ titulo: quote.titulo || '', categoria: quote.categoria || '', observacion: quote.observacion || '' });
-    } else {
-      setEditTarget(null);
-      setFormData({ titulo: '', categoria: categories[0]?.nombre || '', observacion: '' });
-    }
-    setFile(null);
-    setIsUploadOpen(true);
-  };
-
-  const handleUpload = async (e) => {
+  const createCategory = async (e) => {
     e.preventDefault();
-    if (!formData.titulo) return toast.error('El título es obligatorio');
-    if (!editTarget && !file) return toast.error('Debes adjuntar un archivo');
-    setIsSubmitting(true);
+    setSavingCategory(true);
     try {
-      const data = new FormData();
-      data.append('titulo', formData.titulo);
-      data.append('categoria', formData.categoria);
-      data.append('observacion', formData.observacion || '');
-      data.append('uploaded_by', currentUser?.name || '');
-      if (file) data.append('archivo', file);
-      if (editTarget) {
-        await pb.collection('quotations').update(editTarget.id, data, { requestKey: 'quot-update' });
-        toast.success('Cotización actualizada');
-      } else {
-        await pb.collection('quotations').create(data, { requestKey: 'quot-create' });
-        toast.success('Cotización subida correctamente');
-      }
-      setIsUploadOpen(false);
-      fetchQuotes();
-    } catch { toast.error('Error al guardar cotización'); }
-    finally { setIsSubmitting(false); }
+      const created = await categoriesService.create(newCategoryLabel);
+      setCategories((prev) => {
+        const next = [...prev.filter((row) => row.id !== created.id), created];
+        return next.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.label).localeCompare(String(b.label)));
+      });
+      setSelectedCat(created.label);
+      setNewCategoryLabel('');
+      setCategoryOpen(false);
+      toast.success(`Categoría «${created.label}» creada`);
+    } catch (err) {
+      toast.error(err.message || 'No se pudo crear la categoría');
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+  const handleDownload = async (quote) => {
+    try {
+      await quotationsService.openAttachment(quote);
+    } catch (err) {
+      toast.error(err.message || 'No hay archivo adjunto');
+    }
   };
 
-  const handleDelete = async (quote) => {
-    if (!confirm(`¿Eliminar "${quote.titulo}"?`)) return;
+  const changeStatus = async (quote, estado) => {
     try {
-      await pb.collection('quotations').delete(quote.id, { requestKey: `quot-del-${quote.id}` });
-      toast.success('Cotización eliminada');
-      fetchQuotes();
-    } catch { toast.error('Error al eliminar'); }
+      await quotationsService.updateStatus(quote.id, estado);
+      toast.success(`Estado: ${QUOTATION_STATUS_LABEL[estado]}`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
-  const handleDownload = (quote) => {
-    if (!quote.archivo) return toast.error('No hay archivo adjunto');
-    window.open(pb.files.getUrl(quote, quote.archivo), '_blank');
+  const convertQuote = async (quote) => {
+    try {
+      const result = await quotationsService.convertToSchedule(quote.id, {
+        sucursal_id: quote.sucursal_id || clients.find((row) => row.id === quote.cliente_id)?.sucursal_id,
+        vendedor_responsable_id: quote.vendedor_id || currentUser?.id,
+      });
+      toast.success(result.alreadyConverted ? 'La venta ya existía' : `Trabajo ${result.schedule.id} creado`);
+      fetchAll();
+      navigate('/schedule');
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
-  // Category CRUD
-  const createCat = async () => {
-    if (!newCatName.trim()) return;
-    try {
-      await pb.collection('quotation_categories').create({ nombre: newCatName.trim(), orden: categories.length + 1 }, { requestKey: 'qcat-create' });
-      setNewCatName('');
-      fetchCategories();
-      toast.success('Categoría creada');
-    } catch { toast.error('Error al crear categoría'); }
-  };
-
-  const saveCat = async () => {
-    if (!editCat?.nombre?.trim()) return;
-    try {
-      await pb.collection('quotation_categories').update(editCat.id, { nombre: editCat.nombre }, { requestKey: `qcat-upd-${editCat.id}` });
-      setEditCat(null);
-      fetchCategories();
-      toast.success('Categoría actualizada');
-    } catch { toast.error('Error al actualizar categoría'); }
-  };
-
-  const deleteCat = async () => {
-    if (!deleteCatTarget) return;
-    try {
-      await pb.collection('quotation_categories').delete(deleteCatTarget.id, { requestKey: `qcat-del-${deleteCatTarget.id}` });
-      setDeleteCatTarget(null);
-      fetchCategories();
-      if (selectedCat === deleteCatTarget.nombre) setSelectedCat('all');
-      toast.success('Categoría eliminada');
-    } catch { toast.error('Error al eliminar categoría'); }
+  const QuoteActions = ({ quote }) => {
+    const next = QUOTATION_FLOW[quote.estado] || [];
+    return (
+      <div className="flex flex-wrap gap-2">
+        {(quote.archivo || quote.archivo_pdf_url) && (
+          <Button size="sm" variant="outline" onClick={() => handleDownload(quote)}>
+            <Download className="h-3.5 w-3.5 mr-1" /> PDF
+          </Button>
+        )}
+        {next.map((estado) => (
+          <Button key={estado} size="sm" variant="secondary" className="font-semibold" onClick={() => changeStatus(quote, estado)}>
+            {QUOTATION_STATUS_LABEL[estado]}
+          </Button>
+        ))}
+        {quote.estado === 'aceptado' && (
+          <Button size="sm" variant="action" className="font-semibold" onClick={() => convertQuote(quote)}>
+            Crear venta / trabajo <ArrowRight className="h-3.5 w-3.5 ml-1" />
+          </Button>
+        )}
+        {quote.schedule_id && (
+          <Button size="sm" variant="outline" onClick={() => navigate('/schedule')}>Ver cronograma</Button>
+        )}
+      </div>
+    );
   };
 
   return (
     <Layout>
       <Helmet>
-        <title>Biblioteca de Cotizaciones - H&S Tecnologías</title>
-        <meta name="description" content="Documentos técnicos y cotizaciones de referencia" />
+        <title>Cotizaciones - H&S Tecnologías</title>
+        <meta name="description" content="Registro de cotizaciones comerciales" />
       </Helmet>
 
-      <div className="content-container space-y-6 py-6 w-full max-w-none">
-        {/* Header */}
+      <div className="content-container space-y-6 py-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Biblioteca de Cotizaciones</h1>
-            <p className="text-muted-foreground font-medium">Documentos técnicos y cotizaciones de referencia</p>
+            <h1 className="text-2xl md:text-[32px] font-bold tracking-tight text-foreground">Cotizaciones</h1>
+            <p className="text-muted-foreground mt-1">
+              Registro comercial: borrador, enviado, aceptado o rechazado. Los registros no se eliminan.
+            </p>
           </div>
-          <div className="flex gap-2">
-            {admin && (
-              <Button variant="outline" className="font-bold gap-2" onClick={() => setShowCatMgr(true)}>
-                <Settings className="h-4 w-4" /> Categorías
-              </Button>
-            )}
-            <Button onClick={() => openUpload()} className="gap-2 font-bold">
-              <UploadCloud className="h-4 w-4" /> Subir Cotización
+          {canWriteQuotations(userRole) && (
+            <Button variant="action" onClick={() => setCommercialOpen(true)} className="gap-2 min-h-11">
+              <Calculator className="h-4 w-4" /> Nueva cotización
             </Button>
-          </div>
+          )}
         </div>
 
-        {/* Filters */}
-        <Card className="p-4 shadow-sm flex flex-col md:flex-row gap-4 border">
-          <div className="relative flex-1 max-w-sm">
+        <Card className="p-4 shadow-sm flex flex-col gap-4 border">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar por título..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar código, título o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <div className="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
-            <Button size="sm" variant={selectedCat === 'all' ? 'default' : 'outline'} className="whitespace-nowrap font-bold" onClick={() => setSelectedCat('all')}>
-              Todas
-            </Button>
-            {categories.map(cat => (
-              <Button key={cat.id} size="sm" variant={selectedCat === cat.nombre ? 'default' : 'outline'} className="whitespace-nowrap font-bold" onClick={() => setSelectedCat(cat.nombre)}>
-                {cat.nombre}
+          <div className="flex overflow-x-auto gap-2 pb-1 items-center">
+            <Button size="sm" variant={selectedCat === 'all' ? 'default' : 'outline'} className="whitespace-nowrap font-semibold" onClick={() => setSelectedCat('all')}>Todas</Button>
+            {categories.map((row) => (
+              <Button
+                key={row.id}
+                size="sm"
+                variant={selectedCat === row.label || selectedCat === row.id ? 'default' : 'outline'}
+                className="whitespace-nowrap font-semibold"
+                onClick={() => setSelectedCat(row.label)}
+              >
+                {row.label}
               </Button>
             ))}
+            {canWriteQuotations(userRole) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="whitespace-nowrap font-semibold shrink-0 gap-1"
+                onClick={() => setCategoryOpen(true)}
+                aria-label="Nueva categoría"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Categoría
+              </Button>
+            )}
           </div>
         </Card>
 
-        {/* Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
-          {loading ? (
-            Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="aspect-[3/4] w-full rounded-xl" />)
-          ) : filteredQuotes.length > 0 ? (
-            filteredQuotes.map(quote => (
-              <Card key={quote.id} className="overflow-hidden flex flex-col group border shadow-sm hover:shadow-lg transition-all duration-300">
-                <div className="aspect-[4/3] bg-muted relative border-b overflow-hidden">
-                  {quote.imagen_preview ? (
-                    <img src={pb.files.getUrl(quote, quote.imagen_preview)} alt={quote.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-background/50">
-                      <FileText className="h-16 w-16 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2">
-                    <Badge className="text-[10px] font-bold bg-background/90 text-foreground border">{quote.categoria || 'Sin categoría'}</Badge>
+        <div className="grid grid-cols-1 gap-4 lg:hidden">
+          {loading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl" />)
+            : filteredQuotes.length > 0 ? filteredQuotes.map((quote) => (
+              <Card key={quote.id} className="p-4 border shadow-sm flex flex-col gap-3 rounded-2xl">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-base font-bold tracking-tight truncate">{formatQuotationTitle(quote)}</p>
+                    {quote.cliente_nombre && <p className="text-sm font-medium text-muted-foreground truncate">{quote.cliente_nombre}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {[quote.categoria, quote.subcategoria, quote.sucursal_nombre].filter(Boolean).join(' · ')}
+                    </p>
                   </div>
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full" onClick={() => handleDownload(quote)} title="Descargar">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    {admin && (
-                      <>
-                        <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full" onClick={() => openUpload(quote)} title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="destructive" className="h-9 w-9 rounded-full" onClick={() => handleDelete(quote)} title="Eliminar">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  <Badge className={`text-[10px] font-bold shrink-0 ${QUOTATION_STATUS_CLASS[quote.estado] || ''}`}>
+                    {QUOTATION_STATUS_LABEL[quote.estado] || quote.estado}
+                  </Badge>
                 </div>
-                <div className="p-3 flex flex-col flex-1">
-                  <h3 className="font-bold text-sm leading-snug line-clamp-2 flex-1" title={quote.titulo}>{quote.titulo}</h3>
-                  {quote.observacion && <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{quote.observacion}</p>}
-                  <div className="mt-2 pt-2 border-t text-[11px] text-muted-foreground flex justify-between items-center font-medium">
-                    <span className="truncate pr-2">{quote.uploaded_by || 'Sistema'}</span>
-                    <span className="shrink-0">{format(new Date(quote.created), 'dd MMM yyyy', { locale: es })}</span>
-                  </div>
-                </div>
+                <p className="text-lg font-bold tabular-nums">Bs {Number(quote.total || 0).toLocaleString('es-BO')}</p>
+                <QuoteActions quote={quote} />
               </Card>
-            ))
-          ) : (
-            <div className="col-span-full py-20 text-center">
+            )) : (
+              <div className="py-16 text-center">
+                <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-xl font-bold">No se encontraron resultados</h3>
+              </div>
+            )}
+        </div>
+
+        <div className="hidden lg:block table-container">
+          {loading ? <Skeleton className="h-64 w-full" /> : filteredQuotes.length === 0 ? (
+            <div className="py-16 text-center">
               <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <h3 className="text-xl font-bold">No se encontraron resultados</h3>
-              <p className="text-muted-foreground mt-1 font-medium">Ajusta los filtros o sube una cotización.</p>
             </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="table-header h-14">
+                  <th className="table-cell">Código / título</th>
+                  <th className="table-cell">Cliente</th>
+                  <th className="table-cell">Categoría</th>
+                  <th className="table-cell">Sucursal</th>
+                  <th className="table-cell text-right">Monto</th>
+                  <th className="table-cell">Estado</th>
+                  <th className="table-cell">Vendedor</th>
+                  <th className="table-cell">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuotes.map((quote) => (
+                  <tr key={quote.id} className="table-row h-14">
+                    <td className="table-cell font-semibold max-w-[280px]">
+                      <div className="truncate">{formatQuotationTitle(quote)}</div>
+                      <div className="text-[11px] text-muted-foreground font-normal">
+                        {quote.created ? format(new Date(String(quote.created).replace(' ', 'T')), 'dd MMM yyyy', { locale: es }) : ''}
+                      </div>
+                    </td>
+                    <td className="table-cell font-medium">{quote.cliente_nombre || '—'}</td>
+                    <td className="table-cell text-muted-foreground">
+                      {[quote.categoria, quote.subcategoria].filter(Boolean).join(' · ') || '—'}
+                    </td>
+                    <td className="table-cell">{quote.sucursal_nombre || '—'}</td>
+                    <td className="table-cell text-right tabular-nums font-semibold">
+                      Bs {Number(quote.total || 0).toLocaleString('es-BO')}
+                    </td>
+                    <td className="table-cell">
+                      <Badge className={`text-[10px] font-bold ${QUOTATION_STATUS_CLASS[quote.estado] || ''}`}>
+                        {QUOTATION_STATUS_LABEL[quote.estado] || quote.estado}
+                      </Badge>
+                    </td>
+                    <td className="table-cell text-xs text-muted-foreground">
+                      {quote.vendedores?.length
+                        ? quote.vendedores.map((v) => `${v.nombre} (${v.comision_pct}%)`).join(', ')
+                        : quote.vendedor_nombre || '—'}
+                    </td>
+                    <td className="table-cell"><QuoteActions quote={quote} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
 
-      {/* Upload / Edit Modal */}
-      <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <DialogContent>
+      <NewQuotationForm
+        open={commercialOpen}
+        onOpenChange={setCommercialOpen}
+        quotations={quotations}
+        clients={clients}
+        vendors={vendors}
+        categories={categories}
+        currentUser={currentUser}
+        onSaved={fetchAll}
+        onClientCreated={(created) => {
+          if (created) setClients((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+        }}
+      />
+
+      <Dialog open={categoryOpen} onOpenChange={setCategoryOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editTarget ? 'Editar Cotización' : 'Subir Cotización'}</DialogTitle>
+            <DialogTitle>Nueva categoría</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleUpload} className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold">Título *</label>
-              <Input required value={formData.titulo} onChange={e => setFormData({ ...formData, titulo: e.target.value })} />
+          <form onSubmit={createCategory} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-cat">Nombre</Label>
+              <Input
+                id="new-cat"
+                value={newCategoryLabel}
+                onChange={(e) => setNewCategoryLabel(e.target.value)}
+                placeholder="Ej. Mantenimiento"
+                autoFocus
+                required
+                minLength={2}
+              />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold">Categoría *</label>
-              <Select value={formData.categoria} onValueChange={v => setFormData({ ...formData, categoria: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map(c => <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold">Observación (opcional)</label>
-              <Textarea value={formData.observacion} onChange={e => setFormData({ ...formData, observacion: e.target.value })} rows={2} placeholder="Descripción breve del documento..." />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold">Archivo {editTarget ? '(dejar vacío para mantener actual)' : '*'}</label>
-              <Input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files[0])} className="cursor-pointer" />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsUploadOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {editTarget ? 'Guardar cambios' : 'Subir archivo'}
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setCategoryOpen(false)}>Cancelar</Button>
+              <Button type="submit" variant="action" disabled={savingCategory}>
+                {savingCategory ? 'Guardando…' : 'Crear'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Category Manager Modal */}
-      {admin && (
-        <Dialog open={showCatMgr} onOpenChange={setShowCatMgr}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><Settings className="h-5 w-5" /> Administrar Categorías</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-2">
-              {/* Add new */}
-              <div className="flex gap-2">
-                <Input placeholder="Nueva categoría..." value={newCatName} onChange={e => setNewCatName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), createCat())} />
-                <Button onClick={createCat} className="font-bold shrink-0"><Plus className="h-4 w-4 mr-1" /> Crear</Button>
-              </div>
-              {/* List */}
-              <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
-                {categories.map(cat => (
-                  <div key={cat.id} className="flex items-center gap-2 p-2 rounded-lg border bg-card">
-                    {editCat?.id === cat.id ? (
-                      <>
-                        <Input className="flex-1 h-8" value={editCat.nombre} onChange={e => setEditCat({ ...editCat, nombre: e.target.value })}
-                          onKeyDown={e => e.key === 'Enter' && saveCat()} autoFocus />
-                        <Button size="sm" className="h-8 font-bold" onClick={saveCat}>Guardar</Button>
-                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditCat(null)}><X className="h-3.5 w-3.5" /></Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex-1 font-medium text-sm">{cat.nombre}</span>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditCat({ ...cat })}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteCatTarget(cat)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </>
-                    )}
-                  </div>
-                ))}
-                {categories.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Sin categorías. Crea una arriba.</p>}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Delete category confirmation */}
-      {deleteCatTarget && (
-        <Dialog open onOpenChange={() => setDeleteCatTarget(null)}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle className="text-destructive">Eliminar categoría</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">¿Eliminar la categoría <strong>{deleteCatTarget.nombre}</strong>? Las cotizaciones con esta categoría no se eliminarán pero quedarán sin categoría.</p>
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setDeleteCatTarget(null)}>Cancelar</Button>
-              <Button variant="destructive" onClick={deleteCat}>Eliminar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </Layout>
   );
 };

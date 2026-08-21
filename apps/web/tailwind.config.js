@@ -25,10 +25,15 @@ module.exports = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          container: "hsl(var(--primary-container))",
+          fixed: "hsl(var(--primary-fixed))",
         },
+        "on-primary-fixed": "hsl(var(--on-primary-fixed))",
+        "outline-variant": "hsl(var(--outline-variant))",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+          container: "hsl(var(--secondary-container))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

@@ -1,0 +1,24 @@
+---
+description: Sales NestJS API — Prisma domain, quotation states, PDF storage, no library.
+globs: apps/api/**,apps/web/src/services/{quotations,clients,reports,auth,surveys,tasks,schedules,goals}/**
+alwaysApply: false
+---
+
+# Sales API (`apps/api`)
+
+One NestJS + **Prisma** + MySQL microservice. Do not add TypeORM. Do not create a second Nest app.
+
+## Domain
+
+Sucursales (exactly **Central, Punata, Quillacollo**), users, clients, quotations + `QuotationSeller` commission %, relevamientos (require `cotizacionId`), monthly `SellerGoal`, **Schedule** cronograma, tasks, metrics. Sales/jobs/payments stay frozen (admin-only writes).
+
+## Quotations
+
+- States: `borrador` → `enviado` → `aceptado` | `rechazado`. No `convertida` badge. No biblioteca / `kind: library`.
+- Sole seller commission = 100%. Several sellers: percentages must sum to 100.
+- PDF: multipart to disk (`UPLOAD_DIR`), URL in `archivoPdfUrl`. Never store filename-only.
+- **No DELETE** on quotations. Status changes only.
+
+## Frontend contract
+
+Owners: `quotationsService` + `NewQuotationForm`; relevamientos in `surveysService`; cronograma in `schedulesService`; tasks in `tasksService`. `VITE_API_MODE=mock` until the Hostinger API is healthy.
