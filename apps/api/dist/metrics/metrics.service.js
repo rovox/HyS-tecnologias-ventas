@@ -1,0 +1,306 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MetricsService = void 0;
+const common_1 = require("@nestjs/common");
+const prisma_service_1 = require("../prisma/prisma.service");
+const roles_1 = require("../auth/roles");
+const CATEGORY_LABELS = {
+    seguridad_electronica: 'Seguridad Electrónica',
+    insumos_tecnologicos: 'Tecnología',
+    proyectos: 'Proyectos',
+};
+function emptyBucket(id, nombre) {
+    return {
+        id,
+        nombre,
+        cotizaciones: 0,
+        ventas: 0,
+        relevamientos: 0,
+        montoCotizaciones: 0,
+        montoVentas: 0,
+        metaBs: 0,
+        cotizacionesItems: [],
+        ventasItems: [],
+        relevamientosItems: [],
+    };
+}
+function pickTop(entries) {
+    if (!entries.length)
+        return null;
+    return entries.reduce((best, row) => (row.total > best.total ? row : best));
+}
+function categoryInsights(quotes) {
+    const catSuc = new Map();
+    const vendCat = new Map();
+    for (const quote of quotes) {
+        if (quote.estado === 'rechazado')
+            continue;
+        const catId = CATEGORY_LABELS[quote.categoriaId] ? quote.categoriaId : quote.categoriaId || 'otros';
+        const catLabel = CATEGORY_LABELS[catId] || quote.categoria || catId;
+        const sucId = quote.sucursalId || 'sin_sucursal';
+        const sucLabel = quote.sucursal?.nombre || quote.sucursalNombre || sucId;
+        const vendId = quote.vendedorId || 'sin_vendedor';
+        const vendLabel = quote.vendedor?.name || vendId;
+        const weight = 1 + (Array.isArray(quote.relevamientos) ? quote.relevamientos.length : 0);
+        if (!catSuc.has(catId))
+            catSuc.set(catId, new Map());
+        const sucMap = catSuc.get(catId);
+        const sucRow = sucMap.get(sucId) || { label: sucLabel, total: 0 };
+        sucRow.total += weight;
+        sucMap.set(sucId, sucRow);
+        if (!vendCat.has(vendId))
+            vendCat.set(vendId, { nombre: vendLabel, cats: new Map() });
+        const vend = vendCat.get(vendId);
+        const catRow = vend.cats.get(catId) || { label: catLabel, total: 0 };
+        catRow.total += weight;
+        vend.cats.set(catId, catRow);
+    }
+    const topSucursalPorCategoria = [...catSuc.entries()]
+        .map(([catId, sucMap]) => {
+        const top = pickTop([...sucMap.entries()].map(([key, row]) => ({ key, label: row.label, total: row.total })));
+        if (!top || top.total <= 0)
+            return null;
+        return {
+            categoriaId: catId,
+            categoria: CATEGORY_LABELS[catId] || catId,
+            sucursal: top.label,
+            total: top.total,
+        };
+    })
+        .filter(Boolean);
+    const topCategoriaPorVendedor = [...vendCat.entries()]
+        .map(([vendedorId, row]) => {
+        const top = pickTop([...row.cats.entries()].map(([key, cat]) => ({ key, label: cat.label, total: cat.total })));
+        if (!top || top.total <= 0)
+            return null;
+        return {
+            vendedorId,
+            vendedor: row.nombre,
+            categoria: top.label,
+            total: top.total,
+        };
+    })
+        .filter(Boolean)
+        .sort((a, b) => (b?.total || 0) - (a?.total || 0));
+    return { topSucursalPorCategoria, topCategoriaPorVendedor };
+}
+let MetricsService = class MetricsService {
+    prisma;
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    monthRange(month) {
+        const prefix = month || new Date().toISOString().slice(0, 7);
+        const start = new Date(`${prefix}-01T00:00:00.000Z`);
+        const end = new Date(start);
+        end.setUTCMonth(end.getUTCMonth() + 1);
+        return { prefix, start, end };
+    }
+    async sales(userId, month) {
+        const { prefix, start, end } = this.monthRange(month);
+        const quotes = await this.prisma.quotation.findMany({
+            where: {
+                createdAt: { gte: start, lt: end },
+                ...(userId ? { vendedorId: userId } : {}),
+            },
+            include: { sale: true },
+        });
+        const open = quotes.filter((row) => row.estado !== 'rechazado' && row.estado !== 'borrador');
+        const sold = quotes.filter((row) => row.estado === 'aceptado' || Boolean(row.sale));
+        const quotationsTotal = open.reduce((sum, row) => sum + Number(row.monto), 0);
+        const salesTotal = sold.reduce((sum, row) => sum + Number(row.monto), 0);
+        const goals = await this.prisma.sellerGoal.findMany({
+            where: {
+                mes: start,
+                ...(userId ? { usuarioId: userId } : {}),
+            },
+        });
+        const goalBs = goals.reduce((sum, row) => sum + Number(row.metaMonto), 0);
+        return {
+            month: prefix,
+            quotationsTotal,
+            salesTotal,
+            goalBs,
+            remainingBs: Math.max(0, goalBs - salesTotal),
+        };
+    }
+    async activity(userId, month) {
+        const { prefix, start, end } = this.monthRange(month);
+        const quotes = await this.prisma.quotation.findMany({
+            where: {
+                createdAt: { gte: start, lt: end },
+                ...(userId ? { vendedorId: userId } : {}),
+            },
+            include: { sucursal: true, vendedor: true, relevamientos: true, sale: true },
+        });
+        const byVendedorMap = new Map();
+        const bySucursalMap = new Map();
+        const byCategoriaMap = new Map();
+        for (const key of Object.keys(CATEGORY_LABELS)) {
+            byCategoriaMap.set(key, emptyBucket(key, CATEGORY_LABELS[key]));
+        }
+        const bump = (bucket, quote) => {
+            const amount = Number(quote.monto);
+            const item = {
+                id: quote.id,
+                numero: quote.numero || '',
+                titulo: quote.titulo || '',
+                monto: amount,
+            };
+            if (quote.estado !== 'rechazado') {
+                bucket.cotizaciones += 1;
+                bucket.montoCotizaciones += amount;
+                bucket.cotizacionesItems.push(item);
+            }
+            if (quote.estado === 'aceptado' || quote.sale) {
+                bucket.ventas += 1;
+                bucket.montoVentas += amount;
+                bucket.ventasItems.push(item);
+            }
+            for (const rel of quote.relevamientos) {
+                const fotos = Array.isArray(rel.fotosUrl) ? rel.fotosUrl : [];
+                bucket.relevamientos += 1;
+                bucket.relevamientosItems.push({
+                    id: rel.id,
+                    lugar: rel.lugar || 'Relevamiento',
+                    titulo: rel.lugar || 'Relevamiento',
+                    monto: amount,
+                    fecha: rel.fecha ? new Date(rel.fecha).toISOString().slice(0, 10) : null,
+                    fotosCount: fotos.length,
+                    hasFotos: fotos.length > 0,
+                });
+            }
+        };
+        for (const quote of quotes) {
+            const vendor = byVendedorMap.get(quote.vendedorId) || emptyBucket(quote.vendedorId, quote.vendedor?.name || '');
+            bump(vendor, quote);
+            byVendedorMap.set(quote.vendedorId, vendor);
+            const sucursal = bySucursalMap.get(quote.sucursalId)
+                || emptyBucket(quote.sucursalId, quote.sucursal?.nombre || quote.sucursalNombre);
+            bump(sucursal, quote);
+            bySucursalMap.set(quote.sucursalId, sucursal);
+            const catId = CATEGORY_LABELS[quote.categoriaId] ? quote.categoriaId : quote.categoriaId || 'otros';
+            const cat = byCategoriaMap.get(catId) || emptyBucket(catId, CATEGORY_LABELS[catId] || quote.categoria || catId);
+            bump(cat, quote);
+            byCategoriaMap.set(catId, cat);
+        }
+        const goals = await this.prisma.sellerGoal.findMany({
+            where: { mes: start, ...(userId ? { usuarioId: userId } : {}) },
+            include: { usuario: { select: { id: true, sucursalId: true } } },
+        });
+        const goalBs = goals.reduce((sum, row) => sum + Number(row.metaMonto), 0);
+        const goalByUser = new Map(goals.map((row) => [row.usuarioId, Number(row.metaMonto)]));
+        const goalBySucursal = new Map();
+        for (const row of goals) {
+            const suc = row.usuario?.sucursalId;
+            if (!suc)
+                continue;
+            goalBySucursal.set(suc, (goalBySucursal.get(suc) || 0) + Number(row.metaMonto));
+        }
+        for (const [id, bucket] of byVendedorMap) {
+            bucket.metaBs = goalByUser.get(id) || 0;
+        }
+        for (const [id, bucket] of bySucursalMap) {
+            bucket.metaBs = goalBySucursal.get(id) || 0;
+        }
+        const scheduleWhereExtra = userId ? { OR: [{ vendedorId: userId }, { tecnicoId: userId }] } : {};
+        const schedules = await this.prisma.schedule.findMany({
+            where: {
+                fechaProgramada: { gte: start, lt: end },
+                ...scheduleWhereExtra,
+            },
+        });
+        const byEstado = schedules.reduce((acc, row) => {
+            acc[row.estado] = (acc[row.estado] || 0) + 1;
+            return acc;
+        }, {});
+        return {
+            month: prefix,
+            goalBs,
+            byVendedor: [...byVendedorMap.values()],
+            bySucursal: [...bySucursalMap.values()],
+            byCategoria: [...byCategoriaMap.values()],
+            categoryInsights: categoryInsights(quotes),
+            schedules: {
+                total: schedules.length,
+                byEstado,
+                montoTotal: schedules.reduce((sum, row) => sum + Number(row.monto), 0),
+            },
+        };
+    }
+    async feed(user) {
+        const quoteFilter = (0, roles_1.quotationWhere)(user);
+        const [quotes, relevamientos, tasks, schedules] = await Promise.all([
+            this.prisma.quotation.findMany({
+                where: quoteFilter.id === '__none__' ? { id: '__none__' } : quoteFilter,
+                include: { cliente: true },
+                orderBy: { createdAt: 'desc' },
+                take: 20,
+            }),
+            this.prisma.relevamiento.findMany({
+                where: (0, roles_1.relevamientoWhere)(user),
+                include: { cliente: true },
+                orderBy: { createdAt: 'desc' },
+                take: 20,
+            }),
+            this.prisma.task.findMany({
+                where: (0, roles_1.taskWhere)(user),
+                orderBy: { updatedAt: 'desc' },
+                take: 20,
+                include: { creador: { select: { name: true } }, asignado: { select: { name: true } } },
+            }),
+            this.prisma.schedule.findMany({
+                where: (0, roles_1.scheduleWhere)(user),
+                include: { cliente: true },
+                orderBy: { updatedAt: 'desc' },
+                take: 20,
+            }),
+        ]);
+        const events = [
+            ...quotes.map((row) => ({
+                type: 'cotizacion',
+                id: row.id,
+                at: row.createdAt,
+                titulo: `${row.numero} · ${row.titulo}`,
+                detalle: `${row.cliente?.nombre || ''} · ${row.estado}`,
+            })),
+            ...relevamientos.map((row) => ({
+                type: 'relevamiento',
+                id: row.id,
+                at: row.createdAt,
+                titulo: row.lugar,
+                detalle: row.cliente?.nombre || '',
+            })),
+            ...tasks.map((row) => ({
+                type: 'tarea',
+                id: row.id,
+                at: row.updatedAt,
+                titulo: row.titulo,
+                detalle: `${row.estado} · ${row.asignado?.name || row.creador?.name || ''}`,
+            })),
+            ...schedules.map((row) => ({
+                type: 'cronograma',
+                id: row.id,
+                at: row.updatedAt,
+                titulo: row.descripcionTrabajo.slice(0, 80),
+                detalle: `${row.cliente?.nombre || ''} · ${row.estado}`,
+            })),
+        ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+        return events.slice(0, 40);
+    }
+};
+exports.MetricsService = MetricsService;
+exports.MetricsService = MetricsService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+], MetricsService);
+//# sourceMappingURL=metrics.service.js.map
