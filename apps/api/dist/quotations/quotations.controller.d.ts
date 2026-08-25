@@ -81,8 +81,8 @@ export declare class QuotationsController {
                 saleId: string;
             }[];
             payments: {
-                id: string;
                 at: Date;
+                id: string;
                 monto: import("@prisma/client/runtime/library").Decimal;
                 saleId: string;
                 metodo: string;
@@ -291,8 +291,8 @@ export declare class QuotationsController {
                     saleId: string;
                 }[];
                 payments: {
-                    id: string;
                     at: Date;
+                    id: string;
                     monto: import("@prisma/client/runtime/library").Decimal;
                     saleId: string;
                     metodo: string;
@@ -361,8 +361,8 @@ export declare class QuotationsController {
                 saleId: string;
             }[];
             payments: {
-                id: string;
                 at: Date;
+                id: string;
                 monto: import("@prisma/client/runtime/library").Decimal;
                 saleId: string;
                 metodo: string;

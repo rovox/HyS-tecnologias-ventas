@@ -66,8 +66,8 @@ export declare class AuthService {
         userAgent: string | null;
     })[]>;
     sessionActivity(actor: User, sessionId: string): Promise<{
-        id: string;
         at: Date;
+        id: string;
         sessionId: string;
         userId: string;
         action: string;
