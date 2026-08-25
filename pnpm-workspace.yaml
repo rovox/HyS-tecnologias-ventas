@@ -15,5 +15,9 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
   unrs-resolver: false
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
 packageImportMethod: copy
 confirmModulesPurge: false

@@ -81,6 +81,75 @@ If you lose the DB password: hPanel → Databases → change password, then upda
 
 Do **not** run `prisma migrate deploy` or `prisma seed` on the host. `postinstall` in `apps/api` runs `prisma generate` only (allowed). Import SQL in phpMyAdmin — see [hostinger-db-master.sql](./hostinger-db-master.sql) for greenfield.
 
+## hPanel — env, DB reassignment, and upload folder
+
+Complete this on **lime-chamois-337700** before expecting `/api/health` to succeed.
+
+### 1. Reassign MySQL (no new database)
+
+The sales DB already exists (`u656468476_hys_sales`). **Do not create a second MySQL.**
+
+1. hPanel → **Databases** → **Management**.
+2. Edit `u656468476_hys_sales` → assign website **lime-chamois-337700.hostingersite.com** (was white-goat; reassignment is labels only — same physical DB).
+
+### 2. MySQL password → `DATABASE_URL`
+
+Hostinger does **not** show the DB password again after create.
+
+1. Databases → user `u656468476_hys_api` → **Change password** → save in a password manager.
+2. Prefer alphanumeric + `-` `_` (avoid `@`, `#`, `/` or URL-encode special chars).
+3. Build one line (no spaces):
+
+```text
+mysql://u656468476_hys_api:YOUR_NEW_PASSWORD@localhost:3306/u656468476_hys_sales
+```
+
+### 3. Environment variables (exact keys — UPPERCASE)
+
+Delete lowercase keys such as `cors_origin` / `upload_dir`. Nest reads **only** these names:
+
+| Key | Example / how to get |
+|-----|----------------------|
+| `DATABASE_URL` | `mysql://u656468476_hys_api:<PASSWORD>@localhost:3306/u656468476_hys_sales` |
+| `JWT_SECRET` | `openssl rand -hex 32` in any terminal (not from Hostinger) |
+| `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` |
+| `UPLOAD_DIR` | `/home/u656468476/hys-uploads/quotations` |
+
+`PORT` is assigned by Hostinger — do not override unless support says so.
+
+### 4. Upload folder (File Manager)
+
+The **house** icon = `/home/u656468476`. Create directly under home:
+
+```text
+/home/u656468476/hys-uploads/quotations
+```
+
+Do **not** nest another `u656468476` folder inside home (wrong path: `/home/u656468476/u656468476/hys-uploads/...`).
+
+### 5. Node app settings (lime-chamois)
+
+| Setting | Value |
+|---------|--------|
+| Branch | `migration/backend-api` |
+| Root | `apps/api` |
+| Framework | **Other** |
+| Build | **empty** |
+| Entry / start | `start-api.mjs` (or `dist/main.js`) |
+
+Save → **Redeploy** after each Git push that changes `postinstall`, `dist`, or Prisma config.
+
+### 6. Verify
+
+```bash
+curl -sS https://lime-chamois-337700.hostingersite.com/api/health
+curl -sS https://lime-chamois-337700.hostingersite.com/api/health/db
+```
+
+Expect JSON with `"ok":true`. `/api/health/db` must show `"db":true` before flipping the SPA to `VITE_API_MODE=api`.
+
+**ERP admin** (from bootstrap SQL, not MySQL): `admin@hstecnologias.com` / `HsAdmin2026!`
+
 ## Node Web App — you do not zip-upload only backend files
 
 Hostinger clones the **same GitHub repo** and sets **Root directory = `apps/api`**. You do not manually upload a subset of files.
@@ -103,9 +172,11 @@ The monorepo still contains `apps/web`, but the Node app **ignores** it because 
 | Root | `apps/api` |
 | Package manager | pnpm |
 | Build | **empty** (do not run `nest build` on the host) |
-| Start / entry file | `dist/main.js` or `node dist/main.js` (required — empty = Hostinger 404/503) |
+| Start / entry file | `start-api.mjs` (preferred) or `dist/main.js` |
 
-**pnpm on Hostinger:** root [`package.json`](../../package.json) sets `pnpm.onlyBuiltDependencies` for Prisma so install does not fail with `ERR_PNPM_IGNORED_BUILDS`. If install fails, redeploy after the latest `migration/backend-api` push.
+**Entry file:** use [`apps/api/start-api.mjs`](../../apps/api/start-api.mjs) — same launcher pattern as white-goat `serve-dist.mjs`. Hostinger runs it with Node and starts `dist/main.js`. Nest binds `0.0.0.0` on `PORT`.
+
+**pnpm on Hostinger:** [`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) `allowBuilds` + `onlyBuiltDependencies` for Prisma; `apps/api` `postinstall` runs `prisma generate`. Redeploy after push if install fails with `ERR_PNPM_IGNORED_BUILDS`.
 
 **File Manager (UPLOAD_DIR):** the house icon = `/home/u656468476`. Create `hys-uploads/quotations` directly under home — not inside an extra `u656468476` folder.
 
