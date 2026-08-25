@@ -220,7 +220,7 @@ Regenerate the baseline after new Prisma migrations (concat folders in name orde
 1. hPanel → **Websites** → **Add website** → **Node.js web app** (not WordPress, not “empty” PHP).
 2. Use a **new free Hostinger subdomain** (or custom domain). Do **not** overwrite white-goat.
 3. Connect the **same GitHub repo**, branch `migration/backend-api`.
-4. Apply the settings table above (Framework **Other**, root `apps/api`, empty build, `node dist/main.js`).
+4. Apply the settings table above (Framework **Other**, root `apps/api`, empty build, entry `start-api.mjs`).
 5. In **Environment variables**, set `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR` (API cannot set these).
 6. Deploy / restart. Create folder for `UPLOAD_DIR` outside the git checkout if needed.
 7. Gate: `GET https://<api-host>/api/health` then `/api/health/db`.
