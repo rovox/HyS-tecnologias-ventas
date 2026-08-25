@@ -51,19 +51,24 @@ export class ClientsService {
             sale: { select: { id: true, status: true } },
           },
         },
+        schedules: {
+          select: { id: true, estado: true },
+        },
       },
     });
 
     const quoteIds = rows.flatMap((row) => row.quotations.map((q) => q.id));
+    const scheduleIds = rows.flatMap((row) => row.schedules.map((s) => s.id));
     const saleIds = rows.flatMap((row) =>
       row.quotations.map((q) => q.sale?.id).filter(Boolean) as string[],
     );
-    const tasks = quoteIds.length || saleIds.length
+    const tasks = quoteIds.length || saleIds.length || scheduleIds.length
       ? await this.prisma.task.findMany({
           where: {
             OR: [
               ...(quoteIds.length ? [{ cotizacionId: { in: quoteIds } }] : []),
               ...(saleIds.length ? [{ scheduleId: { in: saleIds } }] : []),
+              ...(scheduleIds.length ? [{ scheduleId: { in: scheduleIds } }] : []),
             ],
           },
           orderBy: { updatedAt: 'desc' },
@@ -84,20 +89,28 @@ export class ClientsService {
       const openSales = row.quotations.filter((q) => q.sale?.status === 'abierta').length;
       const openQuotes = row.quotations.filter((q) => q.estado === 'borrador' || q.estado === 'enviado').length;
       const ids = new Set(row.quotations.map((q) => q.id));
-      const sids = new Set(row.quotations.map((q) => q.sale?.id).filter(Boolean));
+      const sids = new Set([
+        ...row.quotations.map((q) => q.sale?.id).filter(Boolean) as string[],
+        ...row.schedules.map((s) => s.id),
+      ]);
       const clientTasks = tasks.filter(
         (t) => (t.cotizacionId && ids.has(t.cotizacionId)) || (t.scheduleId && sids.has(t.scheduleId)),
       );
       const esActivo =
         (row.lastActivityAt && row.lastActivityAt >= hace90)
         || openQuotes > 0
-        || openSales > 0;
-      const { quotations: _q, ...client } = row;
+        || openSales > 0
+        || row.schedules.some((s) => s.estado !== 'terminado' && s.estado !== 'cancelado');
+      const esClienteContratado =
+        row.quotations.some((q) => q.estado === 'aceptado')
+        || row.schedules.some((s) => s.estado !== 'cancelado');
+      const { quotations: _q, schedules: _s, ...client } = row;
       return {
         ...client,
         esActivo,
+        esClienteContratado,
         cotizacionesCount: row.quotations.length,
-        trabajosEnProceso: openSales,
+        trabajosEnProceso: row.schedules.filter((s) => s.estado !== 'terminado' && s.estado !== 'cancelado').length,
         tareasCount: clientTasks.length,
         tareasRecientes: clientTasks.slice(0, 3).map((t) => ({
           id: t.id,

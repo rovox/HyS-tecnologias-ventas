@@ -13,6 +13,17 @@ import ConfigurationPage from '@/pages/ConfigurationPage.jsx';
 import ActivityWallPage from '@/pages/ActivityWallPage.jsx';
 import QuotationsLibraryPage from '@/pages/QuotationsLibraryPage.jsx';
 import ScheduleWorkPage from '@/pages/ScheduleWorkPage.jsx';
+import PedidosInternosPage from '@/pages/PedidosInternosPage.jsx';
+import PedidoInternoDetailPage from '@/pages/PedidoInternoDetailPage.jsx';
+import GastosOperativosPage from '@/pages/GastosOperativosPage.jsx';
+import VehicleControlPage from '@/pages/VehicleControlPage.jsx';
+import VehicleDetailPage from '@/pages/VehicleDetailPage.jsx';
+import VehiclesPage from '@/pages/VehiclesPage.jsx';
+import MaintenancePage from '@/pages/MaintenancePage.jsx';
+import MarketingPage from '@/pages/MarketingPage.jsx';
+import CampaignPage from '@/pages/CampaignPage.jsx';
+import AccountingPage from '@/pages/AccountingPage.jsx';
+import FinanzasPage from '@/pages/FinanzasPage.jsx';
 import { routeRoles } from '@/config/nav.js';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -89,19 +100,70 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/pedidos-internos" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/pedidos-internos/:id" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/orders" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/vehicle-control" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/vehicle-control/:id" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/maintenance" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/marketing" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/campaigns" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/accounting" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/finanzas" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/gastos-operativos" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/vehicles" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/vehicles/:id" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/pedidos-internos" element={
+            <ProtectedRoute allowedRoles={routeRoles.pedidos}>
+              <PedidosInternosPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/pedidos-internos/:id" element={
+            <ProtectedRoute allowedRoles={routeRoles.pedidos}>
+              <PedidoInternoDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/orders" element={<Navigate to="/pedidos-internos" replace />} />
+
+          <Route path="/vehicle-control" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <VehicleControlPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/vehicle-control/:id" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <VehicleDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/vehicles" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <VehiclesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/vehicles/:id" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <VehicleDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/maintenance" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <MaintenancePage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/marketing" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <MarketingPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/campaigns" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <CampaignPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/accounting" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <AccountingPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/finanzas" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <FinanzasPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/gastos-operativos" element={
+            <ProtectedRoute allowedRoles={routeRoles.frozen}>
+              <GastosOperativosPage />
+            </ProtectedRoute>
+          } />
           <Route path="/reports/admin" element={<Navigate to="/reports" replace />} />
 
           <Route path="*" element={

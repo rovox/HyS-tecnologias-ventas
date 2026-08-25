@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx';
 import { toast } from 'sonner';
-import { MapPin, Clock, User, Plus, ExternalLink, Search, Eye, Wrench, ClipboardList, AlertTriangle, Trash2, Shield, RotateCcw } from 'lucide-react';
+import { MapPin, Clock, User, Plus, ExternalLink, Search, Eye, Wrench, ClipboardList, Trash2, Shield, RotateCcw } from 'lucide-react';
 import VisitaFormModal from '@/components/VisitaFormModal.jsx';
 
 const fmtDate = (d) => {
@@ -21,8 +21,6 @@ const fmtDate = (d) => {
     return `${day}/${m}/${y}`;
   } catch { return String(d); }
 };
-
-const fmtTime = (h) => h ? String(h).slice(0, 5) : '';
 
 const openMaps = (mapsLink, lugar) => {
   if (mapsLink?.trim()) {
@@ -92,8 +90,9 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
         </DialogHeader>
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 gap-3">
-            <div><span className="text-muted-foreground font-semibold">Fecha:</span> <span className="font-bold">{fmtDate(visita.fecha)}</span></div>
-            <div><span className="text-muted-foreground font-semibold">Hora:</span> <span className="font-bold">{fmtTime(visita.hora) || '—'}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Atención:</span> <span className="font-bold">{fmtDate(visita.fecha_inicio || visita.fecha)}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Fin:</span> <span className="font-bold">{fmtDate(visita.fecha_fin) || '—'}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Vendedor:</span> <span className="font-bold">{visita.vendedor_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Técnico:</span> <span className="font-bold">{visita.tecnico_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Sucursal:</span> <span className="font-bold">{visita.sucursal_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Prioridad:</span> <span className={`font-bold capitalize ${PRIORIDAD_COLORS[visita.prioridad] || ''}`}>{visita.prioridad || '—'}</span></div>
@@ -192,7 +191,7 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
 
 const ScheduleSurveysPage = () => {
   const { currentUser, isAdmin, isVentas, isContadora, isSeguridad } = useAuth();
-  const canEdit = isAdmin() || isVentas() || isContadora();
+  const canEdit = isAdmin() || isVentas() || isContadora() || isSeguridad();
   const canDelete = isAdmin();
 
   const [visitas, setVisitas] = useState([]);
@@ -309,7 +308,7 @@ const ScheduleSurveysPage = () => {
         <meta name="description" content="Bandeja operativa de visitas técnicas, relevamientos y asistencias" />
       </Helmet>
 
-      <div className="content-container py-6 pb-24 space-y-4">
+      <div className="content-container py-6 space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -427,16 +426,16 @@ const ScheduleSurveysPage = () => {
               const urgente = v.prioridad === 'urgente' || v.prioridad === 'alta';
 
               return (
-                <div key={v.id} className={`bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all space-y-3 ${urgente ? 'border-orange-300 dark:border-orange-700' : ''}`}>
+                <div key={v.id} className="bg-card border rounded-xl p-3 shadow-sm hover:shadow-sm transition-all space-y-2 text-sm">
                   {/* Top row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="font-extrabold text-foreground text-base leading-tight block truncate">{v.cliente_nombre || '—'}</span>
+                      <span className="font-semibold text-foreground text-sm leading-tight block truncate">{v.cliente_nombre || '—'}</span>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {isAsistencia
-                          ? <Wrench className="h-3 w-3 text-blue-500 shrink-0" />
-                          : <ClipboardList className="h-3 w-3 text-green-500 shrink-0" />}
-                        <span className={`text-xs font-bold ${isAsistencia ? 'text-blue-600' : 'text-green-600'}`}>{v.tipo_visita}</span>
+                          ? <Wrench className="h-3 w-3 text-muted-foreground shrink-0" />
+                          : <ClipboardList className="h-3 w-3 text-muted-foreground shrink-0" />}
+                        <span className="text-[11px] font-medium text-muted-foreground">{v.tipo_visita}</span>
                         {isAsistencia && v.estado_garantia && (
                           <span className={`text-[10px] font-bold ${garantiaColor}`}>• {v.estado_garantia}</span>
                         )}
@@ -458,11 +457,21 @@ const ScheduleSurveysPage = () => {
                         <span className="truncate">{v.lugar}</span>
                       </div>
                     )}
-                    {v.tecnico_nombre && (
+                    {(v.fecha || v.fecha_inicio || v.fecha_fin) && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          Atención: {fmtDate(v.fecha_inicio || v.fecha)}
+                          {v.fecha_fin ? ` · Fin: ${fmtDate(v.fecha_fin)}` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {(v.vendedor_nombre || v.tecnico_nombre) && (
                       <div className="flex items-center gap-1.5">
                         <User className="h-3.5 w-3.5 shrink-0" />
-                        <span>{v.tecnico_nombre}</span>
-                        {v.fecha && <span className="text-muted-foreground/60">• {fmtDate(v.fecha)}{v.hora ? ` ${fmtTime(v.hora)}` : ''}</span>}
+                        <span>
+                          {[v.vendedor_nombre && `Vendedor: ${v.vendedor_nombre}`, v.tecnico_nombre && `Téc: ${v.tecnico_nombre}`].filter(Boolean).join(' · ')}
+                        </span>
                       </div>
                     )}
 
@@ -488,10 +497,7 @@ const ScheduleSurveysPage = () => {
                       </div>
                     )}
                     {urgente && (
-                      <div className={`flex items-center gap-1.5 font-bold ${PRIORIDAD_COLORS[v.prioridad]}`}>
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        <span className="capitalize">Prioridad {v.prioridad}</span>
-                      </div>
+                      <p className="text-[11px] text-muted-foreground capitalize">Prioridad {v.prioridad}</p>
                     )}
                   </div>
 

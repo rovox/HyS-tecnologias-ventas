@@ -6,7 +6,9 @@ The live `/dashboard` is commercial (quotations, sales, monthly goal, surveys). 
 
 Sees **own** quotations, sales and goal. Charts: grouped bars for quotations (navy), sales (green), relevamientos (blue), plus a monthly goal point. Category chart for Seguridad electrónica, Tecnología and Proyectos.
 
-Shortcuts: `/quotations`, `/clientes`, `/surveys`. **Tareas**: floating button (not sidebar). **Actividad**: header toggle overlay (calendar + feed), not a separate route. Cronograma jobs come from Nest `/api/schedules` when `VITE_API_MODE=api`.
+**Histogram hover:** each bar cluster tooltip lists **per-record** items (`cotizacionesItems`, `ventasItems`, `relevamientosItems`) with monto when available, plus the bucket total. Relevamiento monto comes from the linked quotation when present.
+
+Shortcuts: `/quotations`, `/clientes`, `/surveys`, `/pedidos-internos`. **Tareas operativas**: floating button. **Tareas de cotización** (borrador rápido / reprogramar / fecha de envío): band on `/quotations`. **Actividad**: header overlay.
 
 ## Technician (`SEGURIDAD ELECTRÓNICA`)
 
@@ -14,7 +16,7 @@ Dashboard shortcuts to relevamientos and tasks. No quotation metrics. Can update
 
 ## Accountant (`Contadora`)
 
-Read-only commercial metrics and reports. Cannot create or accept quotations. No tasks / schedule mutations.
+Read commercial metrics and reports. On `/quotations` may **edit** quotations (same view access). Cannot create schedule jobs. No tasks FAB / schedule mutations beyond quote edits.
 
 ## Administrator (`ADMINISTRADOR`)
 

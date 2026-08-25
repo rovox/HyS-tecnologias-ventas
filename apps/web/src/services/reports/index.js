@@ -5,7 +5,19 @@ import { ROLES } from '@/mocks/users.js';
 import { QUOTATION_MAIN_CATEGORIES } from '@/mocks/quotations.js';
 
 function emptyBucket(id, nombre) {
-  return { id, nombre, cotizaciones: 0, ventas: 0, relevamientos: 0, montoCotizaciones: 0, montoVentas: 0 };
+  return {
+    id,
+    nombre,
+    cotizaciones: 0,
+    ventas: 0,
+    relevamientos: 0,
+    montoCotizaciones: 0,
+    montoVentas: 0,
+    metaBs: 0,
+    cotizacionesItems: [],
+    ventasItems: [],
+    relevamientosItems: [],
+  };
 }
 
 function pickTop(entries) {
@@ -194,13 +206,21 @@ export const reportsService = {
 
     const bump = (bucket, quote) => {
       const amount = Number(quote.total ?? quote.monto) || 0;
+      const item = {
+        id: quote.id,
+        numero: quote.numero || '',
+        titulo: quote.titulo || '',
+        monto: amount,
+      };
       if (quote.estado !== 'rechazado') {
         bucket.cotizaciones += 1;
         bucket.montoCotizaciones += amount;
+        bucket.cotizacionesItems.push(item);
       }
       if (quote.estado === 'aceptado' || quote.schedule_id) {
         bucket.ventas += 1;
         bucket.montoVentas += amount;
+        bucket.ventasItems.push(item);
       }
     };
 
@@ -218,20 +238,62 @@ export const reportsService = {
       bump(cat, quote);
       byCategoriaMap.set(catId, cat);
     }
+    const goals = store.list('salesperson_goals');
+    const branchGoals = store.list('branch_goals') || [];
+    const goalByUser = new Map(goals.map((row) => [row.user_id, Number(row.monthly_goal) || 0]));
+    const goalBySucursal = new Map(branchGoals.map((row) => [row.sucursal_id, Number(row.monthly_goal) || 0]));
+    const goalBs = scopedId
+      ? (goalByUser.get(scopedId) || 0)
+      : goals.reduce((sum, row) => sum + (Number(row.monthly_goal) || 0), 0);
+
+    const users = store.list('users') || [];
+    const sucursalOf = (userId) => users.find((u) => u.id === userId)?.sucursalId
+      || users.find((u) => u.id === userId)?.sucursal_id
+      || null;
+
+    // Si no hay meta de sucursal, sumar metas de vendedores de esa sucursal
+    if (goalBySucursal.size === 0) {
+      for (const [userId, amount] of goalByUser) {
+        const suc = sucursalOf(userId);
+        if (!suc) continue;
+        goalBySucursal.set(suc, (goalBySucursal.get(suc) || 0) + amount);
+      }
+    }
+
     visits.forEach((row) => {
       if (scopedId && row.created_by !== scopedId && row.usuario_id !== scopedId) return;
-      const sucursal = bySucursalMap.get(row.sucursal_id);
-      if (sucursal) sucursal.relevamientos += 1;
-      const vendor = byVendedorMap.get(row.created_by || row.usuario_id);
-      if (vendor) vendor.relevamientos += 1;
+      const when = String(row.fecha || row.created || '');
+      if (when && !when.startsWith(prefix)) return;
       const quote = store.findById('quotations', row.cotizacion_id || row.cotizacionId);
+      const fotos = row.fotografias || row.fotosUrl || [];
+      const fotosCount = Array.isArray(fotos) ? fotos.length : 0;
+      const relItem = {
+        id: row.id,
+        lugar: row.lugar || row.tipo_visita || 'Relevamiento',
+        titulo: row.lugar || row.tipo_visita || 'Relevamiento',
+        monto: quote ? Number(quote.total ?? quote.monto) || 0 : null,
+        fecha: row.fecha || row.created || null,
+        fotosCount,
+        hasFotos: fotosCount > 0,
+      };
+      const pushRel = (bucket) => {
+        if (!bucket) return;
+        bucket.relevamientos += 1;
+        bucket.relevamientosItems.push(relItem);
+      };
+      pushRel(bySucursalMap.get(row.sucursal_id));
+      pushRel(byVendedorMap.get(row.created_by || row.usuario_id || row.tecnico_id));
       const catId = quote?.categoria_id;
-      if (catId && byCategoriaMap.has(catId)) byCategoriaMap.get(catId).relevamientos += 1;
+      if (catId && byCategoriaMap.has(catId)) pushRel(byCategoriaMap.get(catId));
     });
-    const goals = store.list('salesperson_goals');
-    const goalBs = scopedId
-      ? Number(goals.find((row) => row.user_id === scopedId)?.monthly_goal) || 0
-      : goals.reduce((sum, row) => sum + (Number(row.monthly_goal) || 0), 0);
+
+    for (const [id, bucket] of byVendedorMap) {
+      bucket.metaBs = goalByUser.get(id) || 0;
+    }
+    for (const [id, bucket] of bySucursalMap) {
+      bucket.metaBs = goalBySucursal.get(id) || 0;
+    }
+
     const scopedQuotes = quotes.filter((q) => !scopedId || q.vendedor_id === scopedId);
     const scopedVisits = visits.filter((row) => {
       if (scopedId && row.created_by !== scopedId && row.usuario_id !== scopedId) return false;

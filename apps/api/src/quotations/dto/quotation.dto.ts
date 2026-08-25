@@ -1,6 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
 export class VendorDto {
   @ApiProperty()
@@ -21,41 +33,48 @@ export class VendorDto {
 }
 
 export class CreateQuotationDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  titulo: string;
+  titulo?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  clienteId: string;
+  @Transform(emptyToUndef)
+  clienteId?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  categoria: string;
+  categoria?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  categoriaId: string;
+  categoriaId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   subcategoria?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  sucursalId: string;
+  sucursalId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   sucursalNombre?: string;
 
-  @ApiProperty({ minimum: 0.01 })
+  @ApiPropertyOptional({ minimum: 0 })
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(0.01)
-  monto: number;
+  @Min(0)
+  monto?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -72,11 +91,110 @@ export class CreateQuotationDto {
   @IsIn(['borrador', 'enviado'])
   estado?: string;
 
-  @ApiProperty({ type: [VendorDto] })
+  @ApiPropertyOptional({ type: [VendorDto] })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => VendorDto)
-  vendedores: VendorDto[];
+  vendedores?: VendorDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  tieneLicitacion?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  licitacionNumero?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  licitacionEntidad?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  @Transform(emptyToUndef)
+  plazoFinal?: string;
+}
+
+export class UpdateQuotationDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  titulo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  categoria?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  categoriaId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  subcategoria?: string;
+
+  @ApiPropertyOptional({ minimum: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  monto?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  clienteId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  @Transform(emptyToUndef)
+  fechaEnvio?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  observacion?: string;
+
+  @ApiPropertyOptional({ type: [VendorDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VendorDto)
+  vendedores?: VendorDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  tieneLicitacion?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  licitacionNumero?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  licitacionEntidad?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  @Transform(emptyToUndef)
+  plazoFinal?: string;
 }
 
 export class StatusDto {
@@ -89,4 +207,10 @@ export class StatusDto {
   @IsOptional()
   @IsString()
   motivoRechazo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  @Transform(emptyToUndef)
+  fechaEnvio?: string;
 }

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -17,7 +18,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../auth/current-user.decorator';
 import { ROLES } from '../auth/roles';
 import { Roles, RolesGuard } from '../auth/roles.guard';
-import { CreateQuotationDto, StatusDto } from './dto/quotation.dto';
+import { CreateQuotationDto, StatusDto, UpdateQuotationDto } from './dto/quotation.dto';
 import { QuotationsService } from './quotations.service';
 
 @ApiTags('quotations')
@@ -52,6 +53,19 @@ export class QuotationsController {
     return this.quotations.create(dto, user, sessionId);
   }
 
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS)
+  @ApiOperation({ summary: 'Update quotation (encargado, licitación, plazo)' })
+  patch(
+    @Param('id') id: string,
+    @Body() dto: UpdateQuotationDto,
+    @CurrentUser() user: User,
+    @CurrentSessionId() sessionId?: string,
+  ) {
+    return this.quotations.update(id, dto, user, sessionId);
+  }
+
   @Post(':id/status')
   @UseGuards(RolesGuard)
   @Roles(ROLES.ADMIN, ROLES.VENTAS)
@@ -62,7 +76,7 @@ export class QuotationsController {
     @CurrentUser() user: User,
     @CurrentSessionId() sessionId?: string,
   ) {
-    return this.quotations.updateStatus(id, dto.estado, user, sessionId, dto.motivoRechazo);
+    return this.quotations.updateStatus(id, dto.estado, user, sessionId, dto.motivoRechazo, dto.fechaEnvio);
   }
 
   @Post(':id/accept')
@@ -85,11 +99,12 @@ export class QuotationsController {
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 15 * 1024 * 1024 } }))
   files(
     @Param('id') id: string,
+    @Query('kind') kind: string | undefined,
     @UploadedFile() file: { buffer?: Buffer; path?: string; originalname?: string },
     @CurrentUser() user: User,
     @CurrentSessionId() sessionId?: string,
   ) {
-    return this.quotations.attachFile(id, file, user, sessionId);
+    return this.quotations.attachFile(id, file, user, sessionId, kind || 'pdf');
   }
 }
 

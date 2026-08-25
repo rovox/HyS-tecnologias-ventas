@@ -28,7 +28,7 @@ const DashboardPage = () => {
   return (
     <Layout>
       <Helmet><title>Dashboard - H&S Tecnologías</title></Helmet>
-      <div className="space-y-4 pb-10">
+      <div className="content-container space-y-6 py-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
             Hola, {currentUser?.name || 'equipo'}

@@ -1,19 +1,27 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
 export class CreateTaskDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Si falta, se toma de la primera línea de descripcion' })
+  @IsOptional()
   @IsString()
-  titulo: string;
+  @Transform(emptyToUndef)
+  titulo?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   @Transform(emptyToUndef)
   descripcion?: string;
+
+  @ApiPropertyOptional({ enum: ['operativa', 'cotizacion'] })
+  @IsOptional()
+  @IsIn(['operativa', 'cotizacion'])
+  @Transform(emptyToUndef)
+  tipo?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -32,6 +40,12 @@ export class CreateTaskDto {
   @IsString()
   @Transform(emptyToUndef)
   prioridad?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  prioridadMotivo?: string;
 
   @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
   @IsOptional()
@@ -88,6 +102,12 @@ export class UpdateTaskDto {
   @IsString()
   @Transform(emptyToUndef)
   prioridad?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  prioridadMotivo?: string;
 
   @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
   @IsOptional()

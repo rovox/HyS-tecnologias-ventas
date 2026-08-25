@@ -42,8 +42,39 @@ const createEmptyCommercial = (user) => ({
   cliente_query: '',
   monto: '',
   observacion: '',
+  tiene_licitacion: false,
+  plazo_final: '',
   vendedores: user ? [emptyVendorRow(user, 100)] : [emptyVendorRow(null, 100)],
 });
+
+const quoteToForm = (quote, currentUser, pseudoCategories = []) => {
+  const categoriaId = quote.categoria_id || '';
+  const pseudoLabels = pseudoCategories.map((p) => p.label);
+  const subs = [...(QUOTATION_SUBCATEGORIES[categoriaId] || []), ...pseudoLabels];
+  const usesCustom = categoriaId === EQUIPOS_TECNOLOGIA_ID;
+  const subValue = quote.subcategoria || '';
+  const inList = subs.includes(subValue);
+  return {
+    titulo_resumen: quote.titulo || '',
+    categoria_id: categoriaId,
+    subcategoria: usesCustom ? (inList ? subValue : '') : (subValue || ''),
+    subcategoria_custom: usesCustom ? (inList ? '' : (subValue || quote.subcategoria_custom || '')) : '',
+    sucursal_id: quote.sucursal_id || QUOTATION_SUCURSALES[0]?.id || '',
+    cliente_id: quote.cliente_id || '',
+    cliente_query: quote.cliente_nombre || '',
+    monto: String(quote.monto ?? quote.total ?? ''),
+    observacion: quote.observacion || '',
+    tiene_licitacion: Boolean(quote.tiene_licitacion),
+    plazo_final: quote.plazo_final ? String(quote.plazo_final).slice(0, 10) : '',
+    vendedores: quote.vendedores?.length
+      ? quote.vendedores.map((v) => ({
+        user_id: v.user_id,
+        nombre: v.nombre,
+        comision_pct: Number(v.comision_pct) || 0,
+      }))
+      : (currentUser ? [emptyVendorRow(currentUser, 100)] : [emptyVendorRow(null, 100)]),
+  };
+};
 
 const NewQuotationForm = ({
   open,
@@ -51,23 +82,33 @@ const NewQuotationForm = ({
   quotations = [],
   clients = [],
   vendors = [],
-  categories = QUOTATION_MAIN_CATEGORIES,
+  categories: _categories = QUOTATION_MAIN_CATEGORIES,
+  pseudoCategories = [],
   currentUser,
   onSaved,
   onClientCreated,
+  editQuote = null,
 }) => {
   const [form, setForm] = useState(() => createEmptyCommercial(currentUser));
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [licitacionFiles, setLicitacionFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [searchHits, setSearchHits] = useState([]);
 
-  const categoryOptions = (categories?.length ? categories : QUOTATION_MAIN_CATEGORIES).map((row) => ({
+  const categoryOptions = QUOTATION_MAIN_CATEGORIES.map((row) => ({
     id: row.id,
     label: row.label || row.nombre,
   }));
 
-  const nextNumero = peekNextQuotationNumero(quotations);
+  const subOptions = useMemo(() => {
+    const builtIn = QUOTATION_SUBCATEGORIES[form.categoria_id] || [];
+    const pseudo = pseudoCategories.map((p) => p.label);
+    return [...new Set([...builtIn, ...pseudo])];
+  }, [form.categoria_id, pseudoCategories]);
+
+  const nextNumero = editQuote?.numero || peekNextQuotationNumero(quotations);
+  const isLocked = editQuote && (editQuote.estado === 'aceptado' || editQuote.estado === 'rechazado');
   const vendorOptions = useMemo(() => {
     const list = [...vendors];
     if (currentUser && !list.some((v) => v.id === currentUser.id)) {
@@ -80,6 +121,17 @@ const NewQuotationForm = ({
     [c.nombre, c.telefono, c.email, c.contacto]
       .some((v) => String(v || '').toLowerCase().includes((form.cliente_query || '').toLowerCase())),
   );
+
+  useEffect(() => {
+    if (!open) return;
+    if (editQuote) {
+      setForm(quoteToForm(editQuote, currentUser, pseudoCategories));
+    } else {
+      setForm(createEmptyCommercial(currentUser));
+    }
+    setAttachedFiles([]);
+    setLicitacionFiles([]);
+  }, [open, editQuote, currentUser, pseudoCategories]);
 
   useEffect(() => {
     const q = (form.cliente_query || '').trim();
@@ -97,12 +149,13 @@ const NewQuotationForm = ({
     .filter((row) => row.user_id)
     .map((row) => row.nombre || vendorOptions.find((v) => v.id === row.user_id)?.name || 'Vendedor')
     .join(', ') || currentUser?.name || 'sin asignar';
-  const subOptions = QUOTATION_SUBCATEGORIES[form.categoria_id] || [];
-  const usesCustomSub = form.categoria_id === EQUIPOS_TECNOLOGIA_ID || (form.categoria_id && subOptions.length === 0);
+  const usesCustomSub = form.categoria_id === EQUIPOS_TECNOLOGIA_ID;
+  const hasSubSelect = form.categoria_id && subOptions.length > 0;
 
   const reset = () => {
     setForm(createEmptyCommercial(currentUser));
     setAttachedFiles([]);
+    setLicitacionFiles([]);
   };
 
   const handleOpenChange = (next) => {
@@ -111,11 +164,13 @@ const NewQuotationForm = ({
   };
 
   const setCategory = (categoriaId) => {
-    const subs = QUOTATION_SUBCATEGORIES[categoriaId] || [];
+    const builtIn = QUOTATION_SUBCATEGORIES[categoriaId] || [];
+    const pseudo = pseudoCategories.map((p) => p.label);
+    const subs = [...new Set([...builtIn, ...pseudo])];
     setForm({
       ...form,
       categoria_id: categoriaId,
-      subcategoria: subs[0] || '',
+      subcategoria: categoriaId === EQUIPOS_TECNOLOGIA_ID ? '' : (subs[0] || ''),
       subcategoria_custom: '',
     });
   };
@@ -130,14 +185,16 @@ const NewQuotationForm = ({
   const handleSubmit = async (e, asEnviado = false) => {
     e.preventDefault();
     if (!form.titulo_resumen.trim()) return toast.error('Ingresa el título / resumen de la cotización');
-    if (!form.cliente_id) return toast.error('Selecciona o registra un cliente');
+    if (!isLocked && !form.cliente_id) return toast.error('Selecciona o registra un cliente');
     if (!form.categoria_id) return toast.error('Selecciona una categoría');
     if (!form.sucursal_id) return toast.error('Selecciona una sucursal');
-    if (!usesCustomSub && !form.subcategoria) return toast.error('Selecciona una subcategoría');
+    if (!usesCustomSub && hasSubSelect && !form.subcategoria) return toast.error('Selecciona una subcategoría');
 
     const monto = Number(form.monto);
-    if (!monto || monto <= 0) return toast.error('Ingresa el monto de la cotización');
-    if (asEnviado && attachedFiles.length === 0) return toast.error('Adjunta el PDF para enviar la cotización');
+    if (!isLocked && (!monto || monto <= 0)) return toast.error('Ingresa el monto de la cotización');
+    if (asEnviado && attachedFiles.length === 0 && !editQuote?.archivo && !editQuote?.archivo_pdf_url) {
+      return toast.error('Adjunta el PDF para enviar la cotización');
+    }
 
     const activeVendors = form.vendedores.filter((row) => row.user_id);
     if (activeVendors.length === 0) return toast.error('Selecciona al menos un vendedor');
@@ -153,10 +210,10 @@ const NewQuotationForm = ({
       const client = clients.find((row) => row.id === form.cliente_id);
       const categoriaLabel = categoryOptions.find((row) => row.id === form.categoria_id)?.label || '';
       const sucursal = QUOTATION_SUCURSALES.find((row) => row.id === form.sucursal_id);
-      const subcategoria = usesCustomSub ? form.subcategoria_custom.trim() : form.subcategoria;
-
-      await quotationsService.create({
-        kind: 'commercial',
+      const subcategoria = usesCustomSub
+        ? (form.subcategoria_custom.trim() || form.subcategoria)
+        : form.subcategoria;
+      const payload = {
         titulo: form.titulo_resumen.trim(),
         categoria: categoriaLabel,
         categoria_id: form.categoria_id,
@@ -164,10 +221,12 @@ const NewQuotationForm = ({
         subcategoria_custom: form.subcategoria_custom.trim(),
         sucursal_id: form.sucursal_id,
         sucursal_nombre: sucursal?.nombre || '',
-        cliente_id: form.cliente_id,
-        cliente_nombre: client?.nombre || form.cliente_query,
         observacion: form.observacion,
-        monto,
+        tiene_licitacion: Boolean(
+          licitacionFiles.length > 0
+          || (Array.isArray(editQuote?.licitacion_archivos) && editQuote.licitacion_archivos.length > 0),
+        ),
+        plazo_final: form.plazo_final || null,
         vendedores: activeVendors.map((row) => {
           const vendor = vendorOptions.find((u) => u.id === row.user_id);
           return {
@@ -176,13 +235,41 @@ const NewQuotationForm = ({
             comision_pct: Number(row.comision_pct) || 0,
           };
         }),
-        uploaded_by: currentUser?.name,
-        estado: asEnviado ? 'enviado' : 'borrador',
-        archivo: pdfFile?.name || '',
-        imagen_preview: imageFile?.name || '',
-      }, attachedFiles);
+      };
 
-      toast.success(asEnviado ? 'Cotización enviada al cliente' : 'Borrador guardado');
+      if (!isLocked) {
+        payload.cliente_id = form.cliente_id;
+        payload.cliente_nombre = client?.nombre || form.cliente_query;
+        payload.monto = monto;
+      }
+
+      if (editQuote) {
+        await quotationsService.update(editQuote.id, payload);
+        for (const file of attachedFiles) {
+          await quotationsService.attachFile(editQuote.id, file);
+        }
+        for (const file of licitacionFiles) {
+          await quotationsService.attachFile(editQuote.id, file, 'licitacion');
+        }
+        if (asEnviado && editQuote.estado === 'borrador') {
+          await quotationsService.updateStatus(editQuote.id, 'enviado');
+        }
+        toast.success(asEnviado ? 'Cotización enviada al cliente' : 'Cotización actualizada');
+      } else {
+        await quotationsService.create({
+          kind: 'commercial',
+          ...payload,
+          uploaded_by: currentUser?.name,
+          estado: asEnviado ? 'enviado' : 'borrador',
+          archivo: pdfFile?.name || '',
+          imagen_preview: imageFile?.name || '',
+        }, [
+          ...attachedFiles,
+          ...licitacionFiles.map((file) => Object.assign(file, { _kind: 'licitacion' })),
+        ]);
+        toast.success(asEnviado ? 'Cotización enviada al cliente' : 'Borrador guardado');
+      }
+
       reset();
       onOpenChange(false);
       onSaved?.();
@@ -206,7 +293,9 @@ const NewQuotationForm = ({
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <DialogTitle className="text-base sm:text-lg font-bold flex-1 text-center pr-8">Nueva Cotización</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg font-bold flex-1 text-center pr-8">
+              {editQuote ? 'Editar cotización' : 'Nueva cotización'}
+            </DialogTitle>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-y-auto bg-background">
@@ -254,13 +343,17 @@ const NewQuotationForm = ({
                         value={form.cliente_query}
                         onChange={(e) => setForm({ ...form, cliente_query: e.target.value, cliente_id: '' })}
                         className="h-11 min-w-0 flex-1"
+                        readOnly={isLocked}
+                        disabled={isLocked}
                       />
+                      {!isLocked && (
                       <Button type="button" variant="outline" className="font-semibold min-h-11 shrink-0" onClick={() => setClientModalOpen(true)}>
                         <Plus className="h-4 w-4 mr-1" /> Nuevo
                       </Button>
+                      )}
                     </div>
                   </div>
-                  {form.cliente_query && !form.cliente_id && (
+                  {form.cliente_query && !form.cliente_id && !isLocked && (
                     <div className="rounded-xl border bg-background max-h-36 overflow-y-auto">
                       {filteredClients.length > 0 ? filteredClients.slice(0, 8).map((client) => (
                         <button
@@ -301,16 +394,39 @@ const NewQuotationForm = ({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">
-                      Subcategoría {usesCustomSub ? '(opcional)' : '*'}
+                      Subcategoría {usesCustomSub || !hasSubSelect ? '(opcional)' : '*'}
                     </Label>
                     {usesCustomSub ? (
-                      <Input
-                        placeholder="Ej. laptop, panel solar, impresora"
-                        className="h-11"
-                        value={form.subcategoria_custom}
-                        onChange={(e) => setForm({ ...form, subcategoria_custom: e.target.value })}
-                      />
-                    ) : (
+                      <div className="space-y-2">
+                        {subOptions.length > 0 && (
+                          <Select
+                            value={form.subcategoria || 'none'}
+                            onValueChange={(v) => {
+                              if (v === 'none') {
+                                setForm({ ...form, subcategoria: '' });
+                                return;
+                              }
+                              setForm({ ...form, subcategoria: v, subcategoria_custom: '' });
+                            }}
+                            disabled={!form.categoria_id}
+                          >
+                            <SelectTrigger className="h-11"><SelectValue placeholder="Subcategoría rápida…" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Personalizado…</SelectItem>
+                              {subOptions.map((sub) => (
+                                <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Input
+                          placeholder="Ej. laptop, panel solar, impresora"
+                          className="h-11"
+                          value={form.subcategoria_custom}
+                          onChange={(e) => setForm({ ...form, subcategoria_custom: e.target.value, subcategoria: '' })}
+                        />
+                      </div>
+                    ) : hasSubSelect ? (
                       <Select
                         value={form.subcategoria || 'none'}
                         onValueChange={(v) => v !== 'none' && setForm({ ...form, subcategoria: v })}
@@ -324,6 +440,14 @@ const NewQuotationForm = ({
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : (
+                      <Input
+                        placeholder="Opcional"
+                        className="h-11"
+                        value={form.subcategoria}
+                        onChange={(e) => setForm({ ...form, subcategoria: e.target.value })}
+                        disabled={!form.categoria_id}
+                      />
                     )}
                   </div>
                 </div>
@@ -355,11 +479,13 @@ const NewQuotationForm = ({
                         type="number"
                         min="0"
                         step="0.01"
-                        required
+                        required={!isLocked}
                         placeholder="0.00"
                         className="h-11 pl-10 text-base font-semibold tabular-nums"
                         value={form.monto}
                         onChange={(e) => setForm({ ...form, monto: e.target.value })}
+                        readOnly={isLocked}
+                        disabled={isLocked}
                       />
                     </div>
                   </div>
@@ -452,6 +578,62 @@ const NewQuotationForm = ({
                 </div>
               </details>
 
+              <FormSection title="Plazo y documento de licitación" className="md:col-span-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold">Plazo final</Label>
+                    <Input
+                      type="date"
+                      className="h-11"
+                      value={form.plazo_final}
+                      onChange={(e) => setForm({ ...form, plazo_final: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">Se muestra en el cronograma y genera alerta si vence.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold">Documento de licitación (opcional)</Label>
+                    <label className="flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-outline-variant px-3 py-4 cursor-pointer hover:bg-muted/40 min-h-[5.5rem]">
+                      <UploadCloud className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center px-1">
+                        Pliego, bases u otros PDF/imágenes
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf,image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={(e) => setLicitacionFiles(Array.from(e.target.files || []))}
+                      />
+                    </label>
+                  </div>
+                </div>
+                {(licitacionFiles.length > 0
+                  || (editQuote && Array.isArray(editQuote.licitacion_archivos) && editQuote.licitacion_archivos.length > 0)) && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 space-y-1">
+                    <p className="text-xs font-semibold text-foreground">
+                      Cotización asociada a una licitación
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Se marca automáticamente al adjuntar documento en esta sección.
+                    </p>
+                    {licitacionFiles.length > 0 && (
+                      <ul className="text-xs text-muted-foreground space-y-0.5 pt-0.5">
+                        {licitacionFiles.map((f) => (
+                          <li key={f.name} className="truncate font-medium">· {f.name}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {editQuote?.licitacion_archivos?.length > 0 && licitacionFiles.length === 0 && (
+                      <ul className="text-xs text-muted-foreground space-y-0.5 pt-0.5">
+                        {editQuote.licitacion_archivos.map((f, i) => (
+                          <li key={f.url || f.name || i} className="truncate font-medium">· {f.name || 'Documento adjunto'}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </FormSection>
+
               <FormSection title="Detalles adicionales" className="md:col-span-12">
                 <div className="space-y-3">
                   <div className="space-y-1.5">
@@ -497,12 +679,14 @@ const NewQuotationForm = ({
             <div className="sticky bottom-0 p-3 sm:p-4 border-t bg-card/95 backdrop-blur shrink-0 flex flex-col sm:flex-row gap-2">
               <Button type="submit" variant="outline" size="lg" disabled={saving} className="flex-1 min-h-11 h-11 text-sm sm:text-base">
                 {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
-                Guardar borrador
+                {editQuote ? 'Guardar cambios' : 'Guardar borrador'}
               </Button>
+              {!editQuote || editQuote.estado === 'borrador' ? (
               <Button type="button" variant="action" size="lg" disabled={saving} className="flex-1 min-h-11 h-11 text-sm sm:text-base" onClick={(e) => handleSubmit(e, true)}>
                 {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Receipt className="h-5 w-5 mr-2" />}
                 Enviar
               </Button>
+              ) : null}
             </div>
           </form>
         </DialogContent>

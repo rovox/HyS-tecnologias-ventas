@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
-import TasksFloatingPanel from './TasksFloatingPanel.jsx';
 import ActivityOverlay from './ActivityOverlay.jsx';
 import { isMockMode } from '@/api/config.js';
 
@@ -15,6 +14,12 @@ const Layout = ({ children }) => {
 
   const closeActivity = useCallback(() => {
     setActivityOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const open = () => setActivityOpen(true);
+    window.addEventListener('hs-open-activity', open);
+    return () => window.removeEventListener('hs-open-activity', open);
   }, []);
 
   return (
@@ -32,12 +37,11 @@ const Layout = ({ children }) => {
             ? 'POC frontend · datos en este navegador · sin conexión a NestJS'
             : 'Modo API · sesión JWT contra NestJS'}
         </div>
-        <main className="flex-1 p-4 md:px-8 md:py-6 w-full min-w-0 max-w-[1440px]">
+        <main className="flex-1 w-full min-w-0 pb-8">
           {children}
         </main>
       </div>
       <ActivityOverlay open={activityOpen} onClose={closeActivity} />
-      <TasksFloatingPanel />
     </div>
   );
 };

@@ -46,7 +46,7 @@ const ActivityOverlay = ({ open, onClose }) => {
 
   return (
     <div
-      className="fixed inset-x-0 top-16 bottom-0 z-40 flex flex-col lg:left-[260px]"
+      className="fixed inset-x-0 bottom-0 z-[40] flex flex-col lg:left-[260px] top-[var(--header-offset)]"
       role="dialog"
       aria-modal="true"
       aria-label="Cronograma y actividad"

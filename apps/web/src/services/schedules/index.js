@@ -85,11 +85,21 @@ export const schedulesService = {
           from: filters.from,
           to: filters.to,
           tecnicoId: filters.tecnicoId,
+          quotationId: filters.quotationId || filters.quotation_id,
+          clienteId: filters.clienteId || filters.cliente_id,
         },
       });
       return (rows || []).map(mapApiSchedule);
     }
-    const records = store.list('schedules', { sort: '-fecha_programada' });
+    let records = store.list('schedules', { sort: '-fecha_programada' });
+    if (filters.quotationId || filters.quotation_id) {
+      const qid = filters.quotationId || filters.quotation_id;
+      records = records.filter((row) => row.quotation_id === qid || row.quotationId === qid);
+    }
+    if (filters.clienteId || filters.cliente_id) {
+      const cid = filters.clienteId || filters.cliente_id;
+      records = records.filter((row) => row.cliente_id === cid || row.clienteId === cid);
+    }
     const clients = store.list('clientes');
     const clientsMap = Object.fromEntries(clients.map((row) => [row.id, row]));
     return records.map((row) => normalize(row, clientsMap));

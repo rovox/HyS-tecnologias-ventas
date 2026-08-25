@@ -1,25 +1,27 @@
 ---
-description: Sales API CI/CD — GitHub compiles Nest; Hostinger Node Web App + MySQL, not the SPA instance.
+description: Sales API CI/CD — GitHub compiles Nest; Hostinger Cloud Startup Node Web App + MySQL. Never VPS.
 alwaysApply: true
 ---
 
 # Backend CI/CD (NestJS sales API)
 
-The API is a **separate** Hostinger Node Web App + its own MySQL. Never run Nest on the static SPA instance (`noexec` / esbuild). See `docs/deployment/hostinger-api.md`.
+The API is a **separate** Hostinger Cloud Startup **Node.js Web App** + dedicated MySQL. Never run Nest on the static SPA instance (`noexec` / esbuild). See `docs/deployment/hostinger-api.md`.
+
+**Do not use a VPS.** Stay on Cloud Startup. Prisma uses a JS MariaDB driver adapter so the native query engine is not required at runtime. Apply schema SQL in phpMyAdmin; do not run `prisma migrate deploy` on the host.
 
 ## Split
 
 - **Local:** `pnpm dev:api` against `apps/api/docker-compose.yml` MySQL.
-- **CI:** `.github/workflows/api.yml` — `prisma generate` + `nest build` on `ubuntu-latest`.
-- **CD:** Hostinger Node app starts `node dist/main.js`. `prisma migrate deploy` against Hostinger MySQL. Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
+- **CI:** `.github/workflows/api.yml` on `migration/backend-api` — `prisma generate` + `nest build` on `ubuntu-latest`, then commit `apps/api/dist`.
+- **CD:** Hostinger Node app, Framework **Other**, empty build, start `node dist/main.js`. Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
 
-`UPLOAD_DIR` must sit **outside** the git checkout (redeploys wipe `apps/api`). PDFs are not committed.
+`UPLOAD_DIR` must sit **outside** the git checkout (redeploys wipe `apps/api`). PDFs are not committed. Never `prisma seed` on Hostinger.
 
 ## Do not
 
 - Deploy this API on the Vite/SPA Web App.
-- Run `vite build` or esbuild on the API host.
-- Flip production `VITE_API_MODE=api` until `GET /api/health` succeeds.
-- Treat Prisma query engine as optional — if the Node disk is `noexec`, use a VPS.
+- Run `vite build`, `nest build`, or Prisma CLI on the host.
+- Flip production `VITE_API_MODE=api` until `GET /api/health` and `GET /api/health/db` succeed.
+- Move the API to a VPS.
 
 SPA publish stays `.cursor/rules/frontend-cicd.mdc`.

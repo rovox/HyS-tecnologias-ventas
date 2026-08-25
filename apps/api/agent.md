@@ -9,7 +9,7 @@ First NestJS microservice: **sales** (this package). MySQL only. pnpm workspace 
 - AuthGuard requires JWT **with** `sessionId`; ended sessions → 401
 - No public signup. Seed creates demo users with simple per-user passwords. **Never seed on Hostinger/production.**
 - No client DELETE. Never `prisma db push` — use migrations.
-- PDFs: `UPLOAD_DIR` (local default `./uploads`). Hostinger: path outside git.
+- PDFs: `UPLOAD_DIR` (local default `./uploads`). Hostinger: path outside git. Cloud Startup only — never VPS. Runtime Prisma uses MariaDB driver adapter. Apply migrations via phpMyAdmin, never seed on Hostinger.
 
 ## Domain
 

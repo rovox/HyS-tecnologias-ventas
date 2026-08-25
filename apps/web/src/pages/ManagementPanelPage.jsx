@@ -137,7 +137,7 @@ const ManagementPanelPage = () => {
         <title>Management Panel - H&S</title>
       </Helmet>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <div className="content-container py-6 space-y-8">
         <header>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
             <LayoutDashboard className="h-10 w-10 text-primary" />

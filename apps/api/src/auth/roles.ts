@@ -60,10 +60,7 @@ export function scheduleWhere(user: User) {
 }
 
 export function quotationWhere(user: User) {
-  if (isAdmin(user) || isCont(user)) return {};
-  if (isVentas(user)) {
-    return { OR: [{ vendedorId: user.id }, { sellers: { some: { userId: user.id } } }] };
-  }
+  if (isAdmin(user) || isVentas(user)) return {};
   return { id: '__none__' };
 }
 
@@ -93,11 +90,20 @@ export function relevamientoWhere(user: User, cotizacionId?: string) {
   return { id: '__none__' };
 }
 
-export function taskWhere(user: User) {
-  if (isAdmin(user)) return {};
-  if (isVentas(user) && user.sucursalId) return { sucursalId: user.sucursalId };
+export function taskWhere(user: User, tipo?: string) {
+  if (isAdmin(user)) return tipo ? { tipo } : {};
+  if (isVentas(user)) {
+    if (tipo === 'cotizacion') return { tipo: 'cotizacion' };
+    const sucursal = user.sucursalId ? { sucursalId: user.sucursalId } : {};
+    if (tipo) return { tipo, ...sucursal };
+    return {
+      OR: [{ tipo: 'cotizacion' }, { AND: [{ NOT: { tipo: 'cotizacion' } }, sucursal] }],
+    };
+  }
   if (isTec(user)) {
-    return { OR: [{ asignadoId: user.id }, { creadorId: user.id }] };
+    if (tipo === 'cotizacion') return { id: '__none__' };
+    const own = { OR: [{ asignadoId: user.id }, { creadorId: user.id }] };
+    return tipo ? { AND: [own, { tipo }] } : own;
   }
   return { id: '__none__' };
 }

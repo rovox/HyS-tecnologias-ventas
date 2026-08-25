@@ -16,7 +16,7 @@ export class SchedulesController {
   constructor(private readonly schedules: SchedulesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List cronograma trabajos (filters: estado, sucursalId, from, to, tecnicoId)' })
+  @ApiOperation({ summary: 'List cronograma trabajos (filters: estado, sucursalId, from, to, tecnicoId, quotationId, clienteId)' })
   list(
     @CurrentUser() user: User,
     @Query('estado') estado?: string,
@@ -24,8 +24,10 @@ export class SchedulesController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tecnicoId') tecnicoId?: string,
+    @Query('quotationId') quotationId?: string,
+    @Query('clienteId') clienteId?: string,
   ) {
-    return this.schedules.list(user, { estado, sucursalId, from, to, tecnicoId });
+    return this.schedules.list(user, { estado, sucursalId, from, to, tecnicoId, quotationId, clienteId });
   }
 
   @Get(':id')

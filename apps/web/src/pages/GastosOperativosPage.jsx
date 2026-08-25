@@ -292,78 +292,159 @@ const GastosOperativosPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="overflow-x-auto rounded-xl border shadow-sm bg-card">
-            <table className="w-full text-sm text-left whitespace-nowrap min-w-[900px]">
-              <thead className="bg-muted/50 text-muted-foreground font-bold uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="px-5 py-4">Fecha</th>
-                  <th className="px-5 py-4">Persona</th>
-                  <th className="px-5 py-4">Concepto</th>
-                  <th className="px-5 py-4">Sucursal</th>
-                  <th className="px-5 py-4">Comprobante</th>
-                  <th className="px-5 py-4">Estado</th>
-                  <th className="px-5 py-4 text-right">Monto</th>
-                  {canApprove && <th className="px-5 py-4 text-right">Acciones</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {loading ? (
-                  <tr><td colSpan="8" className="px-5 py-4"><Skeleton className="h-8 w-full"/></td></tr>
-                ) : gastos.length > 0 ? (
-                  gastos.map(g => (
-                    <tr key={g.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-5 py-3 font-medium flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground"/>
-                        {fmtFecha(g.fecha)}
-                      </td>
-                      <td className="px-5 py-3 font-bold">{g.persona_nombre || '—'}</td>
-                      <td className="px-5 py-3 max-w-[200px] truncate" title={g.concepto}>{g.concepto}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{g.sucursal || '—'}</td>
-                      <td className="px-5 py-3">
-                        {g.comprobante ? (
-                          <a href={pb.files.getURL(g, g.comprobante)} target="_blank" rel="noopener noreferrer" className="text-primary inline-flex items-center gap-1 font-bold hover:underline">
-                            <ImageIcon className="h-4 w-4"/> Ver
-                          </a>
-                        ) : <span className="text-muted-foreground text-xs">Sin comprobante</span>}
-                      </td>
-                      <td className="px-5 py-3">{getEstadoBadge(g.estado)}</td>
-                      <td className="px-5 py-3 text-right font-black tabular-nums">Bs. {(g.monto || 0).toFixed(2)}</td>
-                      {canApprove && (
-                        <td className="px-5 py-3 text-right">
-                          {(!g.estado || g.estado === 'Pendiente') ? (
-                            <div className="flex justify-end gap-1">
-                              <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold text-xs h-7 px-2" onClick={() => openApprovalModal(g)}>
-                                <CheckCircle2 className="h-3 w-3 mr-1"/> Devolver
-                              </Button>
-                              <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 font-bold text-xs h-7 px-2" onClick={() => handleReject(g.id)}>
-                                <XCircle className="h-3 w-3 mr-1"/> Rechazar
-                              </Button>
-                              {isAdmin() && (
-                                <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-50 h-7 px-2" onClick={() => handleDelete(g.id)}>
-                                  <Trash2 className="h-3 w-3"/>
-                                </Button>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex justify-end gap-1 items-center">
-                              <span className="text-xs text-muted-foreground">{g.estado === 'Devuelto' ? '✓ Pagado' : 'Cerrado'}</span>
-                              {isAdmin() && (
-                                <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-50 h-7 px-2 ml-1" onClick={() => handleDelete(g.id)}>
-                                  <Trash2 className="h-3 w-3"/>
-                                </Button>
-                              )}
-                            </div>
-                          )}
+          <>
+            <div className="hidden lg:block data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Persona</th>
+                    <th>Concepto</th>
+                    <th>Sucursal</th>
+                    <th>Comprobante</th>
+                    <th>Estado</th>
+                    <th className="text-right">Monto</th>
+                    {canApprove && <th className="col-sticky text-right">Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={canApprove ? 8 : 7}><Skeleton className="h-8 w-full"/></td></tr>
+                  ) : gastos.length > 0 ? (
+                    gastos.map(g => (
+                      <tr key={g.id}>
+                        <td className="font-medium whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-muted-foreground"/>
+                            {fmtFecha(g.fecha)}
+                          </span>
                         </td>
-                      )}
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="8" className="px-5 py-12 text-center text-muted-foreground font-medium">No hay gastos operativos registrados.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                        <td className="font-semibold max-w-[8rem] truncate" title={g.persona_nombre || ''}>
+                          {g.persona_nombre || '—'}
+                        </td>
+                        <td className="max-w-[12rem]">
+                          <span className="truncate block" title={g.concepto}>{g.concepto}</span>
+                        </td>
+                        <td className="text-muted-foreground max-w-[7rem] truncate">{g.sucursal || '—'}</td>
+                        <td>
+                          {g.comprobante ? (
+                            <a href={pb.files.getURL(g, g.comprobante)} target="_blank" rel="noopener noreferrer" className="text-primary inline-flex items-center gap-1 font-semibold hover:underline text-xs">
+                              <ImageIcon className="h-3 w-3"/> Ver
+                            </a>
+                          ) : <span className="text-muted-foreground text-[10px]">Sin comprobante</span>}
+                        </td>
+                        <td>{getEstadoBadge(g.estado)}</td>
+                        <td className="text-right font-bold tabular-nums whitespace-nowrap">Bs. {Number(g.monto ?? 0).toFixed(2)}</td>
+                        {canApprove && (
+                          <td className="col-sticky text-right">
+                            {(!g.estado || g.estado === 'Pendiente') ? (
+                              <div className="flex justify-end gap-1 items-center">
+                                <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-semibold text-[10px] h-7 px-2" onClick={() => openApprovalModal(g)}>
+                                  <CheckCircle2 className="h-3 w-3 mr-0.5"/> Devolver
+                                </Button>
+                                <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 font-semibold text-[10px] h-7 px-2" onClick={() => handleReject(g.id)}>
+                                  <XCircle className="h-3 w-3 mr-0.5"/> Rechazar
+                                </Button>
+                                {isAdmin() && (
+                                  <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-50 h-7 w-7 p-0" onClick={() => handleDelete(g.id)}>
+                                    <Trash2 className="h-3 w-3"/>
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex justify-end gap-1 items-center">
+                                <span className="text-[10px] text-muted-foreground">{g.estado === 'Devuelto' ? '✓ Pagado' : 'Cerrado'}</span>
+                                {isAdmin() && (
+                                  <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-50 h-7 w-7 p-0" onClick={() => handleDelete(g.id)}>
+                                    <Trash2 className="h-3 w-3"/>
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={canApprove ? 8 : 7} className="py-12 text-center text-muted-foreground font-medium">No hay gastos operativos registrados.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="lg:hidden overflow-x-auto rounded-xl border shadow-sm bg-card">
+              <table className="w-full text-sm text-left whitespace-nowrap min-w-[900px]">
+                <thead className="bg-muted/50 text-muted-foreground font-bold uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th className="px-5 py-4">Fecha</th>
+                    <th className="px-5 py-4">Persona</th>
+                    <th className="px-5 py-4">Concepto</th>
+                    <th className="px-5 py-4">Sucursal</th>
+                    <th className="px-5 py-4">Comprobante</th>
+                    <th className="px-5 py-4">Estado</th>
+                    <th className="px-5 py-4 text-right">Monto</th>
+                    {canApprove && <th className="px-5 py-4 text-right">Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {loading ? (
+                    <tr><td colSpan="8" className="px-5 py-4"><Skeleton className="h-8 w-full"/></td></tr>
+                  ) : gastos.length > 0 ? (
+                    gastos.map(g => (
+                      <tr key={g.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-3 font-medium flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground"/>
+                          {fmtFecha(g.fecha)}
+                        </td>
+                        <td className="px-5 py-3 font-bold">{g.persona_nombre || '—'}</td>
+                        <td className="px-5 py-3 max-w-[200px] truncate" title={g.concepto}>{g.concepto}</td>
+                        <td className="px-5 py-3 text-muted-foreground">{g.sucursal || '—'}</td>
+                        <td className="px-5 py-3">
+                          {g.comprobante ? (
+                            <a href={pb.files.getURL(g, g.comprobante)} target="_blank" rel="noopener noreferrer" className="text-primary inline-flex items-center gap-1 font-bold hover:underline">
+                              <ImageIcon className="h-4 w-4"/> Ver
+                            </a>
+                          ) : <span className="text-muted-foreground text-xs">Sin comprobante</span>}
+                        </td>
+                        <td className="px-5 py-3">{getEstadoBadge(g.estado)}</td>
+                        <td className="px-5 py-3 text-right font-black tabular-nums">Bs. {(g.monto || 0).toFixed(2)}</td>
+                        {canApprove && (
+                          <td className="px-5 py-3 text-right">
+                            {(!g.estado || g.estado === 'Pendiente') ? (
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold text-xs h-7 px-2" onClick={() => openApprovalModal(g)}>
+                                  <CheckCircle2 className="h-3 w-3 mr-1"/> Devolver
+                                </Button>
+                                <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 font-bold text-xs h-7 px-2" onClick={() => handleReject(g.id)}>
+                                  <XCircle className="h-3 w-3 mr-1"/> Rechazar
+                                </Button>
+                                {isAdmin() && (
+                                  <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-50 h-7 px-2" onClick={() => handleDelete(g.id)}>
+                                    <Trash2 className="h-3 w-3"/>
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex justify-end gap-1 items-center">
+                                <span className="text-xs text-muted-foreground">{g.estado === 'Devuelto' ? '✓ Pagado' : 'Cerrado'}</span>
+                                {isAdmin() && (
+                                  <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-50 h-7 px-2 ml-1" onClick={() => handleDelete(g.id)}>
+                                    <Trash2 className="h-3 w-3"/>
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="8" className="px-5 py-12 text-center text-muted-foreground font-medium">No hay gastos operativos registrados.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

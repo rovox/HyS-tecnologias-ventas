@@ -10,6 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command.jsx';
 import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import authService from '@/services/auth/index.js';
+import { surveysService } from '@/services/surveys/index.js';
+import { ROLES } from '@/mocks/users.js';
 import { toast } from 'sonner';
 import { Check, ChevronsUpDown, Search, UserPlus, Loader2 } from 'lucide-react';
 
@@ -91,9 +94,11 @@ const SearchableSelect = ({ items, value, onSelect, placeholder, displayFn, keyF
 };
 
 const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, userRole } = useAuth();
+  const defaultTipo = userRole === ROLES.TEC ? 'Asistencia' : 'Relevamiento';
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState([]);
+  const [vendedores, setVendedores] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
   const [sucursales, setSucursales] = useState([]);
   const [trabajosAll, setTrabajosAll] = useState([]);
@@ -106,11 +111,14 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
 
   const [form, setForm] = useState({
     cliente_id: '',
-    tipo_visita: 'Asistencia',
+    tipo_visita: defaultTipo,
     sucursal_id: '',
     lugar: '',
     google_maps_link: '',
+    vendedor_id: '',
     tecnico_id: '',
+    fecha_inicio: new Date().toISOString().split('T')[0],
+    fecha_fin: '',
     fecha: new Date().toISOString().split('T')[0],
     hora: '',
     prioridad: 'media',
@@ -147,20 +155,31 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
 
   useEffect(() => {
     if (initialData && initialData.id) {
-      setForm(prev => ({ ...prev, ...initialData }));
+      const fi = initialData.fecha_inicio || initialData.fecha;
+      setForm(prev => ({
+        ...prev,
+        ...initialData,
+        fecha_inicio: fi ? String(fi).split(' ')[0].split('T')[0] : prev.fecha_inicio,
+        fecha_fin: initialData.fecha_fin ? String(initialData.fecha_fin).split(' ')[0].split('T')[0] : '',
+        fecha: fi ? String(fi).split(' ')[0].split('T')[0] : prev.fecha,
+      }));
+    } else if (isOpen && !initialData?.id) {
+      setForm(prev => ({ ...prev, tipo_visita: defaultTipo }));
     }
-  }, [initialData?.id]);
+  }, [initialData?.id, isOpen, defaultTipo]);
 
   useEffect(() => {
     const load = async () => {
-      const [c, t, s, tr] = await Promise.all([
+      const [c, users, s, tr] = await Promise.all([
         pb.collection('clientes').getFullList({ sort: 'nombre', requestKey: 'vfm-clientes' }).catch(() => []),
-        pb.collection('tecnicos').getFullList({ sort: 'nombre', requestKey: 'vfm-tecnicos' }).catch(() => []),
+        authService.listUsers().catch(() => []),
         pb.collection('sucursales').getFullList({ filter: 'activa = true', sort: 'nombre', requestKey: 'vfm-sucursales' }).catch(() => []),
         pb.collection('schedules').getFullList({ sort: '-fecha_programada', fields: 'id,lugar,cliente_id,fecha_programada,google_maps_link,sucursal,sucursal_nombre,tipo', requestKey: 'vfm-trabajos' }).catch(() => []),
       ]);
       setClientes(c);
-      setTecnicos(t);
+      const active = (users || []).filter((u) => u.active !== false);
+      setVendedores(active.filter((u) => u.role === ROLES.VENTAS || u.role === ROLES.ADMIN));
+      setTecnicos(active.filter((u) => u.role === ROLES.TEC));
       setSucursales(s);
       setTrabajosAll(tr);
     };
@@ -266,13 +285,19 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
     setLoading(true);
     try {
       const clienteObj = clientes.find(c => c.id === form.cliente_id);
+      const vendedorObj = vendedores.find(v => v.id === form.vendedor_id);
       const tecnicoObj = tecnicos.find(t => t.id === form.tecnico_id);
       const sucursalObj = sucursales.find(s => s.id === form.sucursal_id);
+      const fechaInicio = form.fecha_inicio || form.fecha;
 
       const data = {
         ...form,
+        fecha: fechaInicio,
+        fecha_inicio: fechaInicio,
+        fecha_fin: form.fecha_fin || null,
         cliente_nombre: clienteObj?.nombre || '',
-        tecnico_nombre: tecnicoObj?.nombre || '',
+        vendedor_nombre: vendedorObj?.name || '',
+        tecnico_nombre: tecnicoObj?.name || '',
         sucursal_nombre: sucursalObj?.nombre || '',
         cantidad_estimada: form.cantidad_estimada ? Number(form.cantidad_estimada) : null,
         monto_cobrado: form.monto_cobrado ? Number(form.monto_cobrado) : null,
@@ -281,10 +306,10 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
       };
 
       if (initialData?.id) {
-        await pb.collection('visitas_tecnicas').update(initialData.id, data);
+        await surveysService.update(initialData.id, data);
         toast.success('Visita actualizada');
       } else {
-        await pb.collection('visitas_tecnicas').create(data);
+        await surveysService.create(data);
         toast.success('Visita registrada');
       }
       onSave();
@@ -298,6 +323,7 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
   const esNuevo = !initialData?.id;
   const esAsistencia = form.tipo_visita === 'Asistencia' && !esNuevo;
   const esRelevamiento = form.tipo_visita === 'Relevamiento' && !esNuevo;
+  const userItems = (items) => items.map((u) => ({ id: u.id, nombre: u.name }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -345,9 +371,21 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
               </Select>
             </div>
             <div className="space-y-1">
+              <Label>Vendedor</Label>
+              <SearchableSelect
+                items={userItems(vendedores)}
+                value={form.vendedor_id}
+                onSelect={v => set('vendedor_id', v)}
+                placeholder="Buscar vendedor..."
+                displayFn={t => t.nombre}
+                keyFn={t => t.id}
+                searchFn={(t, q) => (t.nombre || '').toLowerCase().includes(q)}
+              />
+            </div>
+            <div className="space-y-1">
               <Label>Técnico asignado</Label>
               <SearchableSelect
-                items={tecnicos}
+                items={userItems(tecnicos)}
                 value={form.tecnico_id}
                 onSelect={v => set('tecnico_id', v)}
                 placeholder="Buscar técnico..."
@@ -357,8 +395,12 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
               />
             </div>
             <div className="space-y-1">
-              <Label>Fecha *</Label>
-              <Input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} required />
+              <Label>Fecha inicio (atención) *</Label>
+              <Input type="date" value={form.fecha_inicio} onChange={e => { set('fecha_inicio', e.target.value); set('fecha', e.target.value); }} required />
+            </div>
+            <div className="space-y-1">
+              <Label>Fecha fin (finalización)</Label>
+              <Input type="date" value={form.fecha_fin || ''} onChange={e => set('fecha_fin', e.target.value)} />
             </div>
             {!esNuevo && (<div className="space-y-1">
               <Label>Hora aproximada</Label>

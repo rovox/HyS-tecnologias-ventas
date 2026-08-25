@@ -1,7 +1,9 @@
 # Flujo — Pedidos internos
 
 Módulo: `/pedidos-internos`  
-Solicitan: **Técnicos**, ventas · Aprueban: **Admin**, ventas
+Solicitan: **Técnicos**, ventas · Aprueban: **Admin**, ventas  
+
+**Acceso SPA:** Admin y **Ventas** (`routeRoles.pedidos`). El menú operativo de Ventas incluye Pedidos Internos. Técnicos no ven el ítem en esta fase (pueden seguir solicitando vía flujos congelados si aplica).
 
 ---
 

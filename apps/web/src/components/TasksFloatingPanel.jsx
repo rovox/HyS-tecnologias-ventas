@@ -15,6 +15,8 @@ import { canAccessTasks } from '@/config/nav.js';
 import { tasksService } from '@/services/tasks/index.js';
 import quotationsService from '@/services/quotations/index.js';
 import { schedulesService } from '@/services/schedules/index.js';
+import authService from '@/services/auth/index.js';
+import { deadlineChipClass, deadlineLabel, deadlineTone } from '@/lib/deadline.js';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Input } from '@/components/ui/input.jsx';
@@ -43,9 +45,11 @@ const emptyForm = () => ({
   horario: '',
   cotizacionId: '',
   scheduleId: '',
+  asignadoId: '',
 });
 
 function TaskCard({ task, onOpen, onAdvance }) {
+  const tone = deadlineTone(task.plazo);
   return (
     <div
       role="button"
@@ -67,11 +71,15 @@ function TaskCard({ task, onOpen, onAdvance }) {
         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.descripcion}</p>
       ) : null}
       <div className="flex flex-wrap gap-1.5 mt-2 text-[11px] text-muted-foreground">
-        {task.creador_nombre || task.creador?.name ? (
-          <span>Creó: {task.creador_nombre || task.creador?.name}</span>
-        ) : null}
+        <span>Creó: {task.creador_nombre || task.creador?.name || '—'}</span>
+        <span>· Encargado: {task.asignado_nombre || task.asignado?.name || 'Sin asignar'}</span>
         {task.plazo ? <span>· {String(task.plazo).slice(0, 10)}{task.horario ? ` ${task.horario}` : ''}</span> : null}
       </div>
+      {tone === 'overdue' || tone === 'soon' ? (
+        <Badge className={`mt-2 text-[10px] font-bold ${deadlineChipClass(tone)}`}>
+          {deadlineLabel(tone)}
+        </Badge>
+      ) : null}
       {task.estado !== 'completada' && onAdvance ? (
         <div className="mt-2" onClick={(e) => e.stopPropagation()}>
           <Button
@@ -100,6 +108,7 @@ const TasksFloatingPanel = () => {
   const [rows, setRows] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -107,14 +116,16 @@ const TasksFloatingPanel = () => {
 
   const load = useCallback(async () => {
     try {
-      const [tasks, q, s] = await Promise.all([
+      const [tasks, q, s, people] = await Promise.all([
         tasksService.getAll(),
         quotationsService.getAll().catch(() => []),
         schedulesService.getAll().catch(() => []),
+        authService.listUsers().catch(() => []),
       ]);
       setRows(tasks || []);
       setQuotes(q || []);
       setJobs(Array.isArray(s) ? s : []);
+      setUsers((people || []).filter((u) => u.active !== false));
     } catch {
       setRows([]);
     }
@@ -150,12 +161,15 @@ const TasksFloatingPanel = () => {
     try {
       const quote = quotes.find((q) => q.id === form.cotizacionId);
       const job = jobs.find((j) => j.id === form.scheduleId);
+      const assignee = users.find((u) => u.id === form.asignadoId);
       await tasksService.create({
         titulo: form.titulo.trim(),
         descripcion: form.descripcion,
         prioridad: form.prioridad,
         plazo: form.plazo || null,
         horario: form.horario || null,
+        asignadoId: form.asignadoId || null,
+        asignado_nombre: assignee?.name || '',
         cotizacionId: form.cotizacionId || null,
         cotizacion_numero: quote?.numero || '',
         scheduleId: form.scheduleId || null,
@@ -263,6 +277,18 @@ const TasksFloatingPanel = () => {
                   value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
                 />
+                <div className="space-y-1">
+                  <Label className="text-[11px]">Encargado</Label>
+                  <Select value={form.asignadoId || 'none'} onValueChange={(v) => setForm({ ...form, asignadoId: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="min-h-10"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {users.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-[11px]">Plazo</Label>
@@ -328,14 +354,43 @@ const TasksFloatingPanel = () => {
               {detail.descripcion ? <p className="text-muted-foreground">{detail.descripcion}</p> : null}
               <ul className="space-y-1.5 text-xs text-muted-foreground">
                 <li>Creó: <span className="text-foreground font-medium">{detail.creador_nombre || detail.creador?.name || '—'}</span></li>
-                {(detail.asignado_nombre || detail.asignado?.name) ? (
-                  <li>Asignado: <span className="text-foreground font-medium">{detail.asignado_nombre || detail.asignado?.name}</span></li>
-                ) : null}
+                <li className="space-y-1">
+                  Encargado:
+                  <Select
+                    value={detail.asignadoId || 'none'}
+                    onValueChange={async (v) => {
+                      const assignee = users.find((u) => u.id === v);
+                      try {
+                        const updated = await tasksService.update(detail.id, {
+                          asignadoId: v === 'none' ? '' : v,
+                          asignado_nombre: assignee?.name || '',
+                        });
+                        setDetail({ ...detail, ...updated, asignadoId: v === 'none' ? null : v, asignado_nombre: assignee?.name || '' });
+                        await load();
+                      } catch {
+                        toast.error('No se pudo cambiar el encargado');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="mt-1 min-h-10"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {users.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </li>
                 {detail.plazo ? (
                   <li className="flex items-center gap-1">
                     <Clock3 className="h-3.5 w-3.5" />
                     Plazo {String(detail.plazo).slice(0, 10)}
                     {detail.horario ? ` · ${detail.horario}` : ''}
+                    {deadlineTone(detail.plazo) !== 'none' && deadlineTone(detail.plazo) !== 'ok' ? (
+                      <Badge className={`ml-1 text-[10px] ${deadlineChipClass(deadlineTone(detail.plazo))}`}>
+                        {deadlineLabel(deadlineTone(detail.plazo))}
+                      </Badge>
+                    ) : null}
                   </li>
                 ) : null}
                 {(detail.cotizacion_numero || detail.cotizacionId) ? (

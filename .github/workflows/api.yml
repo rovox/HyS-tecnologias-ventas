@@ -1,0 +1,82 @@
+name: api
+
+on:
+  push:
+    branches: [migration/backend-api]
+  pull_request:
+    branches: [migration/backend-api]
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uci -pci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter api prisma:generate
+        env:
+          DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
+
+      - run: pnpm --filter api build
+
+      - name: Unit + E2E
+        run: |
+          pnpm --filter api prisma:deploy
+          pnpm --filter api prisma:seed
+          pnpm --filter api test
+          pnpm --filter api test:e2e
+        env:
+          DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
+          JWT_SECRET: ci-test-secret
+          CORS_ORIGIN: http://localhost:3000
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-dist
+          path: apps/api/dist
+
+      - name: Commit dist for Hostinger
+        if: github.event_name == 'push' && github.ref == 'refs/heads/migration/backend-api'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A apps/api/dist
+          if git diff --staged --quiet; then
+            echo "dist unchanged"
+            exit 0
+          fi
+          git commit -m "chore: refresh api dist [skip ci]"
+          git push
+
+      - name: Hostinger note
+        run: echo "Compile on GitHub only. Hostinger Node app runs node dist/main.js. Apply SQL migrations in phpMyAdmin. Do not prisma migrate deploy or seed on the host. Do not flip VITE_API_MODE=api until GET /api/health and /api/health/db succeed."

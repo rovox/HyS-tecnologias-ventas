@@ -1,9 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { assertCanMutateQuotes } from '../auth/roles';
-import { CreateCategoryDto } from './dto/category.dto';
+import { CreateCategoryDto, PatchCategoryDto } from './dto/category.dto';
 
 function slugify(label: string) {
   return label
@@ -50,5 +50,25 @@ export class CategoriesService {
     });
     await this.activity.log(user.id, sessionId, 'category.create', 'quotation_category', row.id);
     return row;
+  }
+
+  async deactivate(id: string, dto: PatchCategoryDto, user: User, sessionId?: string) {
+    assertCanMutateQuotes(user);
+    const row = await this.prisma.quotationCategory.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException('Categoría no encontrada');
+    if (dto.active === false || dto.active === undefined) {
+      const updated = await this.prisma.quotationCategory.update({
+        where: { id },
+        data: { active: false },
+      });
+      await this.activity.log(user.id, sessionId, 'category.deactivate', 'quotation_category', id);
+      return updated;
+    }
+    const updated = await this.prisma.quotationCategory.update({
+      where: { id },
+      data: { active: dto.active },
+    });
+    await this.activity.log(user.id, sessionId, 'category.update', 'quotation_category', id);
+    return updated;
   }
 }

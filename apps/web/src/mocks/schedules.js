@@ -148,7 +148,10 @@ export const mockVisitas = [
     area_revisar: 'Salón de ventas',
     requiere_cotizacion: false,
     cotizacion_id: 'quo_andina',
-    fotografias: [],
+    fotografias: [
+      { name: 'entrada.jpg', url: '/mock/entrada.jpg' },
+      { name: 'salon.jpg', url: '/mock/salon.jpg' },
+    ],
     created_by: 'usr_ventas',
     updated_by: 'usr_tec',
     created: '2026-08-10 11:00:00',
