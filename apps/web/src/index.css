@@ -40,6 +40,10 @@
     --action: 92 100% 50%;
     --action-foreground: 94 100% 16%;
 
+    --client-contracted-bg: 214 80% 96%;
+    --client-contracted-border: 214 70% 72%;
+    --client-contracted-fg: 214 100% 18%;
+
     --outline-variant: 228 10% 79%;
 
     --warning: 35 100% 50%;
@@ -78,6 +82,13 @@
     --state-canceled-fg: 0 0% 100%;
 
     --content-padding: clamp(1rem, 3vw, 2rem);
+    --header-height: 4rem;
+    --banner-height: 2.25rem;
+    --header-offset: calc(var(--header-height) + var(--banner-height));
+    --z-overlay: 40;
+    --z-fab: 45;
+    --z-chrome: 50;
+    --z-toast: 100;
   }
 
   .dark {
@@ -239,4 +250,30 @@
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Tablas densas desktop: tipografía 12px, acciones sticky */
+.data-table-wrap {
+  @apply w-full overflow-x-auto rounded-2xl border border-border bg-card;
+}
+.data-table {
+  @apply w-full text-xs border-collapse min-w-[720px];
+}
+.data-table thead th {
+  @apply text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted/40 px-2 py-2.5 text-left whitespace-nowrap;
+}
+.data-table tbody td {
+  @apply px-2 py-2 align-middle border-t border-border text-xs;
+}
+.data-table .col-sticky {
+  @apply sticky right-0 z-10 bg-card shadow-[-6px_0_10px_rgba(0,43,91,0.06)];
+}
+.data-table thead th.col-sticky {
+  @apply bg-muted/40;
+}
+.data-table .cell-title {
+  @apply font-semibold text-foreground truncate max-w-[14rem] block;
+}
+.data-table .cell-meta {
+  @apply text-[10px] text-muted-foreground font-normal truncate max-w-[14rem] block;
 }

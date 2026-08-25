@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { ROLES } from '../auth/roles';
 
@@ -44,8 +44,18 @@ describe('TasksService', () => {
           titulo: 'Demo',
           cotizacionId: null,
           scheduleId: null,
+          tipo: 'operativa',
         }),
       }),
     );
+  });
+
+  it('rejects claim when already assigned', async () => {
+    prisma.task.findFirst.mockResolvedValue({
+      id: 't1',
+      asignadoId: 'usr_other',
+      creadorId: 'usr_ventas',
+    });
+    await expect(service.claim('t1', ventas, 'sess')).rejects.toBeInstanceOf(ConflictException);
   });
 });

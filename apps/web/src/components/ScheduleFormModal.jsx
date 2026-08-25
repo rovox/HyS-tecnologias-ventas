@@ -15,6 +15,8 @@ import { useSucursalesList } from '@/hooks/useSucursalesList.js';
 import { useSchedules } from '@/hooks/useSchedules.js';
 import LocationPickerModal from '@/components/LocationPickerModal.jsx';
 import pb from '@/lib/pocketbaseClient.js';
+import clientsService from '@/services/clients/index.js';
+import { surveysService } from '@/services/surveys/index.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
@@ -75,12 +77,9 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const fetchVisitas = async (tipo) => {
     setVisitasLoading(true);
     try {
+      const records = await surveysService.getAll();
       const tipoVisita = tipo === 'asistencia' ? 'Asistencia' : 'Relevamiento';
-      const records = await pb.collection('visitas_tecnicas').getFullList({
-        filter: pb.filter('tipo_visita = {:t}', { t: tipoVisita }),
-        sort: '-fecha', $autoCancel: false
-      });
-      setVisitasList(records);
+      setVisitasList((records || []).filter((row) => (row.tipo_visita || 'Relevamiento') === tipoVisita));
     } catch (e) { setVisitasList([]); } finally { setVisitasLoading(false); }
   };
 
@@ -94,7 +93,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const fetchClients = async () => {
     setClientsLoading(true);
     try {
-      const records = await pb.collection('clientes').getFullList({ sort: 'nombre', $autoCancel: false });
+      const records = await clientsService.getAll();
       setClientsList(records);
     } catch (e) {
       toast.error('Error al cargar la lista de clientes');
@@ -346,6 +345,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     if (formData.sucursal_id) data.append('sucursal_id', formData.sucursal_id);
     if (formData.vendedor_responsable_id) data.append('vendedor_responsable_id', formData.vendedor_responsable_id);
     if (formData.tecnico_responsable_id) data.append('tecnico_responsable_id', formData.tecnico_responsable_id);
+    if (initialData?.quotation_id) data.append('quotation_id', initialData.quotation_id);
     // Persist vendedor_id + vendedor_nombre for Cronograma/Finanzas/Dashboard/Reportes
     const vendedorObj = vendors?.find(v => v.id === formData.vendedor_responsable_id);
     data.append('vendedor_id', formData.vendedor_responsable_id || '');
@@ -475,10 +475,10 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 
           {!initialData && (
             <div className="flex gap-1 p-1 bg-muted rounded-xl border border-border">
-              {[{k:'trabajo',l:'Trabajo'},{k:'asistencia',l:'Asistencia'},{k:'relevamiento',l:'Relevamiento'}].map(({k,l}) => (
+              {[{k:'trabajo',l:'Trabajo',primary:true},{k:'asistencia',l:'Asistencia',primary:false},{k:'relevamiento',l:'Relevamiento',primary:false}].map(({k,l,primary}) => (
                 <button key={k} type="button"
                   onClick={() => { setTipoEntrada(k); setSelectedVisitaId(''); setSelectedVisita(null); if (k !== 'trabajo') fetchVisitas(k); }}
-                  className={`flex-1 px-3 py-2 rounded-lg font-bold text-sm transition-all ${tipoEntrada===k ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`flex-1 px-3 py-2 rounded-lg font-bold text-sm transition-all ${tipoEntrada===k ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'} ${!primary ? 'opacity-70 text-xs' : ''}`}
                 >{l}</button>
               ))}
             </div>

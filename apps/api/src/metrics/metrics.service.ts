@@ -18,6 +18,18 @@ function emptyBucket(id: string, nombre: string) {
     relevamientos: 0,
     montoCotizaciones: 0,
     montoVentas: 0,
+    metaBs: 0,
+    cotizacionesItems: [] as Array<{ id: string; numero: string; titulo: string; monto: number }>,
+    ventasItems: [] as Array<{ id: string; numero: string; titulo: string; monto: number }>,
+    relevamientosItems: [] as Array<{
+      id: string;
+      lugar: string;
+      titulo: string;
+      monto: number | null;
+      fecha: string | null;
+      fotosCount: number;
+      hasFotos: boolean;
+    }>,
   };
 }
 
@@ -163,15 +175,35 @@ export class MetricsService {
 
     const bump = (bucket: ReturnType<typeof emptyBucket>, quote: (typeof quotes)[0]) => {
       const amount = Number(quote.monto);
+      const item = {
+        id: quote.id,
+        numero: quote.numero || '',
+        titulo: quote.titulo || '',
+        monto: amount,
+      };
       if (quote.estado !== 'rechazado') {
         bucket.cotizaciones += 1;
         bucket.montoCotizaciones += amount;
+        bucket.cotizacionesItems.push(item);
       }
       if (quote.estado === 'aceptado' || quote.sale) {
         bucket.ventas += 1;
         bucket.montoVentas += amount;
+        bucket.ventasItems.push(item);
       }
-      bucket.relevamientos += quote.relevamientos.length;
+      for (const rel of quote.relevamientos) {
+        const fotos = Array.isArray(rel.fotosUrl) ? rel.fotosUrl : [];
+        bucket.relevamientos += 1;
+        bucket.relevamientosItems.push({
+          id: rel.id,
+          lugar: rel.lugar || 'Relevamiento',
+          titulo: rel.lugar || 'Relevamiento',
+          monto: amount,
+          fecha: rel.fecha ? new Date(rel.fecha).toISOString().slice(0, 10) : null,
+          fotosCount: fotos.length,
+          hasFotos: fotos.length > 0,
+        });
+      }
     };
 
     for (const quote of quotes) {
@@ -192,8 +224,22 @@ export class MetricsService {
 
     const goals = await this.prisma.sellerGoal.findMany({
       where: { mes: start, ...(userId ? { usuarioId: userId } : {}) },
+      include: { usuario: { select: { id: true, sucursalId: true } } },
     });
     const goalBs = goals.reduce((sum, row) => sum + Number(row.metaMonto), 0);
+    const goalByUser = new Map(goals.map((row) => [row.usuarioId, Number(row.metaMonto)]));
+    const goalBySucursal = new Map<string, number>();
+    for (const row of goals) {
+      const suc = row.usuario?.sucursalId;
+      if (!suc) continue;
+      goalBySucursal.set(suc, (goalBySucursal.get(suc) || 0) + Number(row.metaMonto));
+    }
+    for (const [id, bucket] of byVendedorMap) {
+      bucket.metaBs = goalByUser.get(id) || 0;
+    }
+    for (const [id, bucket] of bySucursalMap) {
+      bucket.metaBs = goalBySucursal.get(id) || 0;
+    }
 
     const scheduleWhereExtra = userId ? { OR: [{ vendedorId: userId }, { tecnicoId: userId }] } : {};
     const schedules = await this.prisma.schedule.findMany({

@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
 import { Button } from '@/components/ui/button.jsx';
-import { Plus, CalendarPlus as CalendarIcon } from 'lucide-react';
-import { format, addMonths, startOfMonth, endOfMonth, addDays, startOfWeek, endOfWeek, parseISO } from 'date-fns';
-
-const parseJobDate = (dateStr) => {
-  if (!dateStr) return null;
-  const clean = String(dateStr).split(' ')[0].split('T')[0];
-  return parseISO(clean);
-};
+import { Plus } from 'lucide-react';
+import { format, addMonths, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { toast } from 'sonner';
@@ -17,10 +10,14 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useTecnicosList } from '@/hooks/useTecnicosList.js';
 import { useSchedules } from '@/hooks/useSchedules.js';
 import { tasksService } from '@/services/tasks/index.js';
+import quotationsService from '@/services/quotations/index.js';
+import { surveysService } from '@/services/surveys/index.js';
+import authService from '@/services/auth/index.js';
 import { ROLES } from '@/mocks/users.js';
 import ScheduleFormModal from './ScheduleFormModal.jsx';
 import ScheduleWeeklyView from './ScheduleWeeklyView.jsx';
 import ScheduleMonthlyView from './ScheduleMonthlyView.jsx';
+import CronogramaQuickModal from './CronogramaQuickModal.jsx';
 
 const ScheduleView = ({ types = [], title, embedded = false }) => {
   const { userRole } = useAuth();
@@ -33,20 +30,23 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
   
   const [schedules, setSchedules] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [quotations, setQuotations] = useState([]);
+  const [visits, setVisits] = useState([]);
   const [usersMap, setUsersMap] = useState({});
   const [tecnicosMap, setTecnicosMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
+  const [quickDay, setQuickDay] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const users = await pb.collection('users').getFullList({ $autoCancel: false });
+        const users = await authService.listUsers();
         const map = {};
-        users.forEach(u => map[u.id] = u.name);
+        (users || []).forEach((u) => { map[u.id] = u.name; });
         setUsersMap(map);
       } catch (err) {
         console.warn('Failed to fetch users map:', err);
@@ -65,15 +65,19 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
 
   const loadSchedules = async () => {
     setLoading(true);
-    const [data, taskRows] = await Promise.all([
+    const [data, taskRows, quoteRows, visitRows] = await Promise.all([
       getSchedules(),
       tasksService.getAll().catch(() => []),
+      quotationsService.getAll().catch(() => []),
+      surveysService.getAll().catch(() => []),
     ]);
     const filteredData = types.length > 0 
       ? data.filter(s => types.includes(s.tipo_trabajo) || s.tipo_entrada === 'asistencia' || s.tipo_entrada === 'relevamiento')
       : data;
     setSchedules(filteredData);
     setTasks((taskRows || []).filter((t) => t.plazo && t.estado !== 'completada'));
+    setQuotations(quoteRows || []);
+    setVisits(visitRows || []);
     setLoading(false);
     setRefreshKey(prev => prev + 1);
   };
@@ -93,8 +97,11 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
     }
   };
 
-  const handleOpenCreate = () => {
-    setEditingJob(null);
+  const handleOpenCreate = (dateStr, quoteId) => {
+    const seed = {};
+    if (dateStr) seed.fecha_programada = dateStr;
+    if (quoteId) seed.quotation_id = quoteId;
+    setEditingJob(Object.keys(seed).length ? seed : null);
     setIsModalOpen(true);
   };
 
@@ -126,35 +133,6 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
     return format(currentDate, "MMMM 'de' yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase());
   };
 
-  const getSchedulesInView = () => {
-    if (viewMode === 'weekly') {
-      const wStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-      const wEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-      return schedules.filter(s => {
-        const d = parseJobDate(s.fecha_programada);
-        return d && d >= wStart && d <= wEnd;
-      });
-    } else {
-      const mStart = startOfMonth(currentDate);
-      const mEnd = endOfMonth(currentDate);
-      return schedules.filter(s => {
-        const d = parseJobDate(s.fecha_programada);
-        return d && d >= mStart && d <= mEnd;
-      });
-    }
-  };
-
-  const schedulesInView = getSchedulesInView();
-  const tasksInView = (() => {
-    if (viewMode !== 'weekly') return tasks;
-    const wStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const wEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-    return tasks.filter((t) => {
-      const d = parseJobDate(t.plazo);
-      return d && d >= wStart && d <= wEnd;
-    });
-  })();
-
   return (
     <div className={cn(
       'space-y-4 flex flex-col relative w-full max-w-full overflow-x-hidden',
@@ -181,7 +159,7 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
           </div>
           
           {canCreate && (
-            <Button className="ml-auto xl:ml-2 gap-2 bg-primary text-primary-foreground font-bold shadow-md hover:bg-primary/90" onClick={handleOpenCreate}>
+            <Button className="ml-auto xl:ml-2 gap-2 bg-primary text-primary-foreground font-bold shadow-md hover:bg-primary/90" onClick={() => handleOpenCreate()}>
               <Plus className="h-4 w-4" /> Nuevo Trabajo
             </Button>
           )}
@@ -201,28 +179,18 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
               ))}
             </div>
           </div>
-        ) : schedulesInView.length === 0 && tasksInView.length === 0 && viewMode === 'weekly' ? (
-          <div className="flex flex-col items-center justify-center h-full w-full p-12 text-center text-muted-foreground bg-muted/20">
-            <CalendarIcon className="h-16 w-16 mb-4 text-primary/20" />
-            <h3 className="text-xl font-bold text-foreground mb-2">No hay trabajos programados</h3>
-            <p className="max-w-sm mb-6">No se encontraron registros para esta semana.</p>
-            {canCreate && (
-              <Button onClick={handleOpenCreate} className="font-bold bg-primary/10 text-primary hover:bg-primary/20 border-0">
-                <Plus className="h-4 w-4 mr-2" /> Programar Trabajo
-              </Button>
-            )}
-          </div>
         ) : (
           viewMode === 'weekly' ? (
             <ScheduleWeeklyView 
-              schedules={schedules} 
-              tasks={tasks}
               currentDate={currentDate} 
               onJobClick={handleOpenEdit} 
-              onDateChange={handleDateChange}
               usersMap={usersMap}
               tecnicosMap={tecnicosMap}
               refreshKey={refreshKey}
+              tasks={tasks}
+              quotations={quotations}
+              visits={visits}
+              onDayAdd={canCreate ? (day) => setQuickDay(day) : undefined}
             />
           ) : (
             <ScheduleMonthlyView 
@@ -243,6 +211,17 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
           onClose={() => setIsModalOpen(false)}
           onSave={loadSchedules}
           initialData={editingJob}
+        />
+      )}
+      {canCreate && (
+        <CronogramaQuickModal
+          open={Boolean(quickDay)}
+          onOpenChange={(next) => { if (!next) setQuickDay(null); }}
+          date={quickDay}
+          quotations={quotations}
+          visits={visits}
+          onWork={(day, quoteId) => handleOpenCreate(day, quoteId)}
+          onSaved={loadSchedules}
         />
       )}
     </div>

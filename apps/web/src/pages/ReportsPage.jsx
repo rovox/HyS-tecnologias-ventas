@@ -227,7 +227,7 @@ const ReportsPage = () => {
         <meta name="description" content="Reportes integrales de ventas, operaciones y contabilidad" />
       </Helmet>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 space-y-6">
+      <div className="content-container py-6 space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">

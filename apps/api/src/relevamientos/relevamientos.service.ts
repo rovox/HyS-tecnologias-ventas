@@ -3,7 +3,7 @@ import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
-import { isCont, isTec, relevamientoWhere } from '../auth/roles';
+import { isCont, isTec, isVentas, relevamientoWhere } from '../auth/roles';
 
 @Injectable()
 export class RelevamientosService {
@@ -34,12 +34,18 @@ export class RelevamientosService {
     if (isCont(user)) throw new ForbiddenException('Sin acceso a relevamientos');
     const quote = await this.prisma.quotation.findUnique({ where: { id: dto.cotizacionId } });
     if (!quote) throw new BadRequestException('La cotización es obligatoria');
+    if (!quote.clienteId) throw new BadRequestException('Asigna un cliente a la cotización antes del relevamiento');
+    const defaultTipo = isTec(user) && !isVentas(user) ? 'asistencia' : 'relevamiento';
     const row = await this.prisma.relevamiento.create({
       data: {
         usuarioId: user.id,
         clienteId: quote.clienteId,
         sucursalId: quote.sucursalId,
         fecha: new Date(dto.fecha),
+        fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : null,
+        tipoVisita: dto.tipoVisita || defaultTipo,
+        vendedorId: dto.vendedorId || (isVentas(user) ? user.id : null),
+        tecnicoId: dto.tecnicoId || (isTec(user) ? user.id : null),
         lugar: dto.lugar.trim(),
         notas: dto.notas || null,
         fotosUrl: dto.fotosUrl === undefined ? undefined : (dto.fotosUrl as object),
@@ -52,14 +58,15 @@ export class RelevamientosService {
   }
 
   async update(id: string, dto: Partial<UpsertRelevamientoDto>, user: User, sessionId?: string) {
-    const current = await this.get(id, user);
-    if (isTec(user) && current.usuarioId !== user.id) {
-      throw new ForbiddenException('Solo puedes editar tus relevamientos');
-    }
+    await this.get(id, user);
     const row = await this.prisma.relevamiento.update({
       where: { id },
       data: {
         ...(dto.fecha ? { fecha: new Date(dto.fecha) } : {}),
+        ...(dto.fechaFin !== undefined ? { fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : null } : {}),
+        ...(dto.tipoVisita ? { tipoVisita: dto.tipoVisita } : {}),
+        ...(dto.vendedorId !== undefined ? { vendedorId: dto.vendedorId || null } : {}),
+        ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
         ...(dto.lugar ? { lugar: dto.lugar.trim() } : {}),
         ...(dto.notas !== undefined ? { notas: dto.notas } : {}),
         ...(dto.fotosUrl !== undefined ? { fotosUrl: dto.fotosUrl as object } : {}),

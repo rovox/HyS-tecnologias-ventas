@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
-import { Search, Plus, Edit2, Eye, Building2, Phone, Mail } from 'lucide-react';
+import { Search, Plus, Building2, Phone, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useClients } from '@/hooks/useClients.js';
 import { canWriteClients } from '@/config/nav.js';
 import ClientFormModal from '@/components/ClientFormModal.jsx';
+import RowActions from '@/components/RowActions.jsx';
 import { Checkbox } from '@/components/ui/checkbox';
 
 function fmtDate(value) {
@@ -63,7 +64,7 @@ const ClientsPage = () => {
     <Layout>
       <Helmet><title>Directorio de Clientes - H&S</title></Helmet>
 
-      <div className="content-container py-6 pb-24 space-y-5">
+      <div className="content-container py-6 space-y-5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
@@ -112,7 +113,11 @@ const ClientsPage = () => {
             ) : filteredClients.map((c) => (
               <div
                 key={c.id}
-                className="p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between hover:bg-muted/20 transition-colors min-w-0"
+                className={`p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between hover:bg-muted/20 transition-colors min-w-0 ${
+                  c.esClienteContratado
+                    ? 'bg-[hsl(var(--client-contracted-bg))] border-l-4 border-[hsl(var(--client-contracted-border))]'
+                    : ''
+                }`}
               >
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
@@ -129,6 +134,11 @@ const ClientsPage = () => {
                     >
                       {c.esActivo ? 'Activo' : 'Inactivo'}
                     </Badge>
+                    {c.esClienteContratado ? (
+                      <Badge className="text-[10px] font-semibold shrink-0 bg-[hsl(var(--client-contracted-fg))] text-white border-0">
+                        Contratado
+                      </Badge>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -164,28 +174,13 @@ const ClientsPage = () => {
                   ) : null}
                 </div>
 
-                <div className="flex gap-2 shrink-0 self-stretch sm:self-start">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="min-h-10 flex-1 sm:flex-none"
-                    onClick={() => navigate(`/clientes/${c.id}`)}
-                    title="Ver actividad"
-                  >
-                    <Eye className="h-4 w-4 mr-1.5" /> Ver
-                  </Button>
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="min-h-10"
-                      onClick={() => { setSelectedClient(c); setIsFormOpen(true); }}
-                      title="Editar datos"
-                    >
-                      <Edit2 className="h-4 w-4 mr-1.5" /> Editar
-                    </Button>
-                  )}
-                </div>
+                <RowActions
+                  onView={() => navigate(`/clientes/${c.id}`)}
+                  onEdit={() => { setSelectedClient(c); setIsFormOpen(true); }}
+                  canEdit={canEdit}
+                  viewTitle="Ver actividad"
+                  editTitle="Editar datos"
+                />
               </div>
             ))}
           </div>

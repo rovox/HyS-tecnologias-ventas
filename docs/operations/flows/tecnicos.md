@@ -21,8 +21,8 @@ Rol en el sistema: ejecución en campo, visitas técnicas, solicitud de material
 |------|---------|
 | `/dashboard` | Carga de trabajo hoy/semana |
 | `/schedule` | Calendario de instalaciones — **vista principal** |
-| `/surveys` | Bandeja de visitas/relevamientos/asistencias |
-| `/pedidos-internos` | Solicitud de materiales |
+| `/surveys` | Bandeja de visitas/relevamientos/asistencias (puede editar ambos tipos; UI prioriza Asistencia) |
+| `/pedidos-internos` | Solicitud de materiales (ruta puede existir; menú operativo de pedidos es Ventas+Admin en esta fase) |
 | `/clientes` | Consulta de datos de sitio |
 | `/gastos-operativos` | Gastos de campo (si aplica) |
 

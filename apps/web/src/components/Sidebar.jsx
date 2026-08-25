@@ -1,13 +1,35 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, Menu } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronDown, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { menuSections } from '@/config/nav.js';
+import { getMenuSections } from '@/config/nav.js';
 import { cn } from '@/lib/utils.js';
+
+function itemKey(item) {
+  return item.to || item.action || item.label;
+}
+
+function isChildActive(item, pathname) {
+  return (item.children || []).some((child) => child.to && pathname.startsWith(child.to));
+}
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const { userRole, logout, currentUser } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const menuSections = getMenuSections(userRole);
+
+  const initiallyOpen = useMemo(() => {
+    const keys = {};
+    menuSections.forEach((section) => {
+      section.items.forEach((item) => {
+        if (item.children && isChildActive(item, pathname)) keys[itemKey(item)] = true;
+      });
+    });
+    return keys;
+  }, [menuSections, pathname]);
+
+  const [openGroups, setOpenGroups] = useState(initiallyOpen);
 
   const closeSidebar = () => {
     if (typeof setIsOpen === 'function') setIsOpen(false);
@@ -21,6 +43,23 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     logout();
     navigate('/login');
   };
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const openActivity = () => {
+    window.dispatchEvent(new CustomEvent('hs-open-activity'));
+    handleLinkClick();
+  };
+
+  const linkClass = ({ isActive }) =>
+    cn(
+      'flex items-center gap-3 px-3 min-h-11 rounded-xl text-sm font-semibold transition-colors',
+      isActive
+        ? 'bg-primary-container text-white'
+        : 'text-primary-foreground/80 hover:text-white hover:bg-white/10',
+    );
 
   return (
     <>
@@ -72,24 +111,80 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                   {section.title}
                 </div>
                 <div className="space-y-1">
-                  {visibleItems.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={handleLinkClick}
-                      className={({ isActive }) =>
-                        cn(
-                          'flex items-center gap-3 px-3 min-h-11 rounded-xl text-sm font-semibold transition-colors',
-                          isActive
-                            ? 'bg-primary-container text-white'
-                            : 'text-primary-foreground/80 hover:text-white hover:bg-white/10',
-                        )
-                      }
-                    >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </NavLink>
-                  ))}
+                  {visibleItems.map((item) => {
+                    const key = itemKey(item);
+                    if (item.children?.length) {
+                      const childVisible = item.children.filter((child) => child.allowedRoles.includes(userRole));
+                      if (childVisible.length === 0) return null;
+                      const expanded = Boolean(openGroups[key]) || isChildActive(item, pathname);
+                      return (
+                        <div key={key}>
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(key)}
+                            className={cn(
+                              'w-full flex items-center gap-3 px-3 min-h-11 rounded-xl text-sm font-semibold transition-colors',
+                              expanded
+                                ? 'text-white bg-white/10'
+                                : 'text-primary-foreground/80 hover:text-white hover:bg-white/10',
+                            )}
+                            aria-expanded={expanded}
+                          >
+                            {item.icon ? <item.icon className="h-5 w-5 shrink-0" /> : null}
+                            <span className="truncate flex-1 text-left">{item.label}</span>
+                            <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', expanded && 'rotate-180')} />
+                          </button>
+                          {expanded ? (
+                            <div className="mt-1 ml-4 pl-3 border-l border-white/15 space-y-1">
+                              {childVisible.map((child) => (
+                                <NavLink
+                                  key={child.to}
+                                  to={child.to}
+                                  onClick={handleLinkClick}
+                                  className={({ isActive }) =>
+                                    cn(
+                                      'flex items-center px-3 min-h-10 rounded-lg text-sm font-medium transition-colors',
+                                      isActive
+                                        ? 'bg-primary-container text-white'
+                                        : 'text-primary-foreground/75 hover:text-white hover:bg-white/10',
+                                    )
+                                  }
+                                >
+                                  <span className="truncate">{child.label}</span>
+                                </NavLink>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    }
+
+                    if (item.action === 'open-activity') {
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={openActivity}
+                          className="w-full flex items-center gap-3 px-3 min-h-11 rounded-xl text-sm font-semibold text-primary-foreground/80 hover:text-white hover:bg-white/10 transition-colors"
+                        >
+                          {item.icon ? <item.icon className="h-5 w-5 shrink-0" /> : null}
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={handleLinkClick}
+                        className={linkClass}
+                      >
+                        {item.icon ? <item.icon className="h-5 w-5 shrink-0" /> : null}
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    );
+                  })}
                 </div>
               </div>
             );

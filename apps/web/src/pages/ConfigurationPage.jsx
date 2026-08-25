@@ -300,7 +300,7 @@ const ConfigurationPage = () => {
         <title>Configuración General - H&S</title>
       </Helmet>
       
-      <div className="content-container space-y-8 py-6 pb-20 w-full max-w-none">
+      <div className="content-container space-y-8 py-6 w-full">
         <div className="w-full">
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
             <Settings className="h-8 w-8 text-blue-600" /> Configuración General

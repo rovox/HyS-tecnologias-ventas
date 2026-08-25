@@ -3,6 +3,7 @@ import { apiClient, authToken, isMockMode, mapClient } from '@/api/http.js';
 import mockAdapter from '@/api/mockAdapter.js';
 import { ROLES } from '@/mocks/users.js';
 import { sucursalOf } from '@/config/nav.js';
+import { isActiveClient, isClienteContratado } from '@/lib/clientStatus.js';
 
 function scopeClients(rows) {
   const me = mockAdapter.authStore.record;
@@ -11,18 +12,6 @@ function scopeClients(rows) {
   const suc = sucursalOf(me);
   if (!suc) return rows;
   return rows.filter((row) => (row.sucursal_id || row.sucursalId) === suc);
-}
-
-function isActiveClient(client, quotes, jobs) {
-  const hace90 = Date.now() - 90 * 24 * 60 * 60 * 1000;
-  if (client.lastActivityAt && new Date(client.lastActivityAt).getTime() >= hace90) return true;
-  const mine = quotes.filter((row) => row.cliente_id === client.id || row.clienteId === client.id);
-  if (mine.some((row) => row.estado === 'borrador' || row.estado === 'enviado')) return true;
-  return jobs.some((job) =>
-    (job.cliente_id === client.id || job.clienteId === client.id)
-    && job.estado !== 'terminado'
-    && job.estado !== 'cancelado',
-  );
 }
 
 export const clientsService = {
@@ -71,6 +60,7 @@ export const clientsService = {
           at: task.plazo || task.updated || task.created,
         })),
         esActivo: isActiveClient(client, quotes, schedules),
+        esClienteContratado: isClienteContratado(client.id, clientQuotes, clientJobs),
       };
     });
   },
@@ -110,6 +100,8 @@ export const clientsService = {
         titulo: row.descripcion_trabajo || row.lugar || 'Venta',
         detalle: row.estado,
         monto: Number(row.monto || 0),
+        adelanto: Number(row.adelanto || 0),
+        saldo: Number(row.saldo ?? Math.max(0, Number(row.monto || 0) - Number(row.adelanto || 0))),
       })),
     ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
     return { client, events };
@@ -123,10 +115,18 @@ export const clientsService = {
     const client = store.findById('clientes', id);
     if (!client) return null;
     const schedules = store.list('schedules', { filter: `cliente_id="${id}"`, sort: '-fecha_programada' });
+    const quotes = store.list('quotations').filter((row) => row.cliente_id === id || row.clienteId === id);
     const open = schedules.filter((job) => job.estado !== 'terminado' && job.estado !== 'cancelado');
     const monto_total = open.reduce((sum, job) => sum + (job.monto || 0), 0);
     const adelanto_total = open.reduce((sum, job) => sum + (job.adelanto || 0), 0);
-    return { ...client, monto_total, adelanto_total, saldo_total: monto_total - adelanto_total, schedules };
+    return {
+      ...client,
+      monto_total,
+      adelanto_total,
+      saldo_total: monto_total - adelanto_total,
+      schedules,
+      esClienteContratado: isClienteContratado(id, quotes, schedules),
+    };
   },
 
   async create(data) {

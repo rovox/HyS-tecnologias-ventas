@@ -1,6 +1,6 @@
 ---
-description: Tasks floating panel and Nest Schedule cronograma rules.
-globs: apps/api/src/{tasks,schedules}/**/*,apps/web/src/**/{Tasks*,Schedule*,ActivityOverlay*,*schedules*,*tasks*}
+description: Tasks floating panel, quotation-task pool, and Nest Schedule cronograma rules.
+globs: apps/api/src/{tasks,schedules}/**/*,apps/web/src/**/{Tasks*,Schedule*,ActivityOverlay*,*schedules*,*tasks*,QuotationTask*}
 alwaysApply: false
 ---
 
@@ -8,8 +8,9 @@ alwaysApply: false
 
 ## Tasks
 
-- States: `pendiente` → `en_proceso` → `completada` (hide completed after 24h).
-- UI: `TasksFloatingPanel` only — not in sidebar.
+- States: `pendiente` → `en_proceso` → `completada` (hide completed after 24h; quotation band hides completed immediately).
+- Operative UI: `TasksFloatingPanel` — not in sidebar.
+- **Quotation tasks:** `QuotationTasksBand` + `QuotationTaskCreateModal` on `/quotations`. `tipo=cotizacion`. Description is the only required create field; client is optional. Click opens the linked draft. `POST /tasks/:id/claim` for the pool (Ventas + Admin, any sucursal).
 - Optional links: `plazo`, `horario`, `cotizacionId`, `scheduleId` (empty/null must not 400).
 - API owner: `apps/api` TasksModule + `apps/web/src/services/tasks`.
 - Contadora: no task access. Toast errors; never crash the panel.

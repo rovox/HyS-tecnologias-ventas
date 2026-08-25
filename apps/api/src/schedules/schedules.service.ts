@@ -39,7 +39,15 @@ export class SchedulesService {
 
   list(
     user: User,
-    filters: { estado?: string; sucursalId?: string; from?: string; to?: string; tecnicoId?: string } = {},
+    filters: {
+      estado?: string;
+      sucursalId?: string;
+      from?: string;
+      to?: string;
+      tecnicoId?: string;
+      quotationId?: string;
+      clienteId?: string;
+    } = {},
   ) {
     return this.prisma.schedule.findMany({
       where: {
@@ -47,6 +55,8 @@ export class SchedulesService {
         ...(filters.estado ? { estado: filters.estado } : {}),
         ...(filters.sucursalId ? { sucursalId: filters.sucursalId } : {}),
         ...(filters.tecnicoId ? { tecnicoId: filters.tecnicoId } : {}),
+        ...(filters.quotationId ? { quotationId: filters.quotationId } : {}),
+        ...(filters.clienteId ? { clienteId: filters.clienteId } : {}),
         ...(filters.from || filters.to
           ? {
               fechaProgramada: {

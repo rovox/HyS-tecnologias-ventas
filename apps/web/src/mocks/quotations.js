@@ -12,7 +12,7 @@ export const QUOTATION_STATUS_LABEL = {
 };
 
 export const QUOTATION_STATUS_CLASS = {
-  borrador: 'bg-slate-100 text-slate-700',
+  borrador: 'bg-slate-200 text-slate-800 ring-1 ring-slate-400/80',
   enviado: 'bg-blue-100 text-blue-700',
   aceptado: 'bg-emerald-100 text-emerald-800',
   rechazado: 'bg-red-100 text-red-700',
@@ -174,7 +174,10 @@ export const mockQuotations = [
     subtotal: 7650,
     total: 7650,
     observacion: 'Borrador interno',
-    estado: 'borrador',
+    tiene_licitacion: false,
+    licitacion_numero: '',
+    licitacion_entidad: '',
+    plazo_final: '2026-08-26',
     archivo: '',
     imagen_preview: '',
     uploaded_by: 'Vanesa',

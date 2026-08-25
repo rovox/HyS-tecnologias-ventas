@@ -1,10 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import type { Prisma, User } from '@prisma/client';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
-import { CreateQuotationDto } from './dto/quotation.dto';
+import { CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
 import { assertCanMutateQuotes, isCont, isTec, quotationWhere } from '../auth/roles';
 
 const FLOW: Record<string, string[]> = {
@@ -52,7 +52,7 @@ export class QuotationsService {
   }
 
   list(filters: { estado?: string; vendedorId?: string; sucursalId?: string }, user: User) {
-    if (isTec(user)) throw new ForbiddenException('Sin acceso a cotizaciones');
+    if (isTec(user) || isCont(user)) throw new ForbiddenException('Sin acceso a cotizaciones');
     return this.prisma.quotation.findMany({
       where: {
         ...quotationWhere(user),
@@ -76,34 +76,45 @@ export class QuotationsService {
 
   async create(dto: CreateQuotationDto, user: User, sessionId?: string) {
     assertCanMutateQuotes(user);
-    const client = await this.prisma.client.findUnique({ where: { id: dto.clienteId } });
-    if (!client) throw new BadRequestException('Cliente no encontrado');
-    const sucursal = await this.requireSucursal(dto.sucursalId);
-    const vendors = dto.vendedores.filter((row) => row.userId);
-    if (vendors.length === 0) throw new BadRequestException('Selecciona al menos un vendedor');
-    this.assertCommission(vendors);
+    if (dto.clienteId) {
+      const client = await this.prisma.client.findUnique({ where: { id: dto.clienteId } });
+      if (!client) throw new BadRequestException('Cliente no encontrado');
+    }
+    const sucursalId = dto.sucursalId || user.sucursalId;
+    if (!sucursalId) throw new BadRequestException('Sucursal no válida');
+    const sucursal = await this.requireSucursal(sucursalId);
+    const vendors = (dto.vendedores || []).filter((row) => row.userId);
+    const resolvedVendors = vendors.length
+      ? vendors
+      : [{ userId: user.id, nombre: user.name, commissionPct: 100 }];
+    this.assertCommission(resolvedVendors);
     const numero = await this.nextNumero();
-    const primary = vendors[0];
+    const primary = resolvedVendors[0];
+    const titulo = (dto.titulo?.trim() || (dto.observacion || '').trim().split(/\n/)[0] || 'Tarea de cotización').slice(0, 200);
     const quote = await this.prisma.quotation.create({
       data: {
         numero,
-        titulo: dto.titulo.trim(),
-        categoria: dto.categoria,
-        categoriaId: dto.categoriaId,
+        titulo,
+        categoria: dto.categoria || 'Sin categoría',
+        categoriaId: dto.categoriaId || '',
         subcategoria: dto.subcategoria || '',
         sucursalId: sucursal.id,
         sucursalNombre: sucursal.nombre,
-        clienteId: dto.clienteId,
+        clienteId: dto.clienteId || null,
         estado: 'borrador',
-        monto: dto.monto,
+        monto: dto.monto ?? 1,
         observacion: dto.observacion || '',
         archivo: dto.archivo || '',
+        tieneLicitacion: Boolean(dto.tieneLicitacion),
+        licitacionNumero: dto.licitacionNumero || null,
+        licitacionEntidad: dto.licitacionEntidad || null,
+        plazoFinal: dto.plazoFinal ? new Date(dto.plazoFinal) : null,
         vendedorId: primary.userId,
         sellers: {
-          create: vendors.map((row) => ({
+          create: resolvedVendors.map((row) => ({
             userId: row.userId,
             nombre: row.nombre || '',
-            commissionPct: row.commissionPct ?? (vendors.length === 1 ? 100 : 0),
+            commissionPct: row.commissionPct ?? (resolvedVendors.length === 1 ? 100 : 0),
           })),
         },
       },
@@ -114,7 +125,7 @@ export class QuotationsService {
     return quote;
   }
 
-  async updateStatus(id: string, estado: string, user: User, sessionId?: string, motivoRechazo?: string) {
+  async updateStatus(id: string, estado: string, user: User, sessionId?: string, motivoRechazo?: string, fechaEnvio?: string) {
     assertCanMutateQuotes(user);
     const current = await this.get(id, user);
     const allowed = FLOW[current.estado] || [];
@@ -132,6 +143,7 @@ export class QuotationsService {
       data: {
         estado,
         ...(estado === 'rechazado' ? { motivoRechazo: motivoRechazo || current.motivoRechazo } : {}),
+        ...(fechaEnvio ? { fechaEnvio: new Date(fechaEnvio) } : {}),
       },
     });
     await this.prisma.touchClientActivity(current.clienteId);
@@ -139,9 +151,65 @@ export class QuotationsService {
     return quote;
   }
 
-  async attachFile(id: string, file: { buffer?: Buffer; path?: string; originalname?: string }, user: User, sessionId?: string) {
+  async update(id: string, dto: UpdateQuotationDto, user: User, sessionId?: string) {
     assertCanMutateQuotes(user);
-    await this.get(id, user);
+    const current = await this.get(id, user);
+    const vendors = dto.vendedores?.filter((row) => row.userId);
+    if (vendors) {
+      if (vendors.length === 0) throw new BadRequestException('Selecciona al menos un vendedor');
+      this.assertCommission(vendors);
+    }
+    if (dto.clienteId && dto.clienteId !== current.clienteId) {
+      if (current.estado === 'aceptado' || current.estado === 'rechazado') {
+        throw new BadRequestException('No se puede cambiar el cliente de una cotización cerrada');
+      }
+      const client = await this.prisma.client.findUnique({ where: { id: dto.clienteId } });
+      if (!client) throw new BadRequestException('Cliente no encontrado');
+    }
+    if (dto.monto !== undefined && (current.estado === 'aceptado' || current.estado === 'rechazado')) {
+      throw new BadRequestException('No se puede cambiar el monto de una cotización cerrada');
+    }
+    const quote = await this.prisma.$transaction(async (tx) => {
+      if (vendors) {
+        await tx.quotationSeller.deleteMany({ where: { quotationId: id } });
+        await tx.quotationSeller.createMany({
+          data: vendors.map((row) => ({
+            quotationId: id,
+            userId: row.userId,
+            nombre: row.nombre || '',
+            commissionPct: row.commissionPct ?? (vendors.length === 1 ? 100 : 0),
+          })),
+        });
+      }
+      return tx.quotation.update({
+        where: { id },
+        data: {
+          ...(dto.titulo !== undefined ? { titulo: dto.titulo.trim() } : {}),
+          ...(dto.categoria !== undefined ? { categoria: dto.categoria } : {}),
+          ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId } : {}),
+          ...(dto.subcategoria !== undefined ? { subcategoria: dto.subcategoria || '' } : {}),
+          ...(dto.monto !== undefined ? { monto: dto.monto } : {}),
+          ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId } : {}),
+          ...(dto.fechaEnvio !== undefined ? { fechaEnvio: dto.fechaEnvio ? new Date(dto.fechaEnvio) : null } : {}),
+          ...(dto.observacion !== undefined ? { observacion: dto.observacion } : {}),
+          ...(dto.tieneLicitacion !== undefined ? { tieneLicitacion: dto.tieneLicitacion } : {}),
+          ...(dto.licitacionNumero !== undefined ? { licitacionNumero: dto.licitacionNumero || null } : {}),
+          ...(dto.licitacionEntidad !== undefined ? { licitacionEntidad: dto.licitacionEntidad || null } : {}),
+          ...(dto.plazoFinal !== undefined ? { plazoFinal: dto.plazoFinal ? new Date(dto.plazoFinal) : null } : {}),
+          ...(vendors ? { vendedorId: vendors[0].userId } : {}),
+        },
+        include: { sellers: true, cliente: true, sucursal: true },
+      });
+    });
+    const finalClientId = dto.clienteId || current.clienteId;
+    await this.prisma.touchClientActivity(finalClientId);
+    await this.activity.log(user.id, sessionId, 'quotation.update', 'quotation', id);
+    return quote;
+  }
+
+  async attachFile(id: string, file: { buffer?: Buffer; path?: string; originalname?: string }, user: User, sessionId?: string, kind = 'pdf') {
+    assertCanMutateQuotes(user);
+    const quote = await this.get(id, user);
     const bytes = file?.buffer?.length ? file.buffer : file?.path ? await fs.readFile(file.path) : null;
     if (!bytes?.length) throw new BadRequestException('Archivo vacío');
     const ext = path.extname(file.originalname || '').toLowerCase() || '.bin';
@@ -152,12 +220,32 @@ export class QuotationsService {
     const full = path.join(dir, stored);
     await fs.writeFile(full, bytes);
     const archivoPdfUrl = `/api/files/quotations/${stored}`;
-    const quote = await this.prisma.quotation.update({
+    const isDocPack = kind === 'licitacion' || kind === 'prerequisito';
+    const existing = Array.isArray(quote.licitacionArchivos)
+      ? (quote.licitacionArchivos as { name?: string; url?: string; kind?: string }[])
+      : [];
+    const updated = await this.prisma.quotation.update({
       where: { id },
-      data: { archivo: file.originalname || stored, archivoPdfUrl },
+      data: isDocPack
+        ? {
+            ...(kind === 'licitacion' ? { tieneLicitacion: true } : {}),
+            licitacionArchivos: [...existing, {
+              name: file.originalname || stored,
+              url: archivoPdfUrl,
+              kind,
+            }] as Prisma.InputJsonValue,
+          }
+        : { archivo: file.originalname || stored, archivoPdfUrl },
+      include: { sellers: true, cliente: true, sucursal: true },
     });
-    await this.activity.log(user.id, sessionId, 'quotation.file', 'quotation', id);
-    return quote;
+    await this.activity.log(
+      user.id,
+      sessionId,
+      kind === 'licitacion' ? 'quotation.licitacion-file' : kind === 'prerequisito' ? 'quotation.prerequisito-file' : 'quotation.file',
+      'quotation',
+      id,
+    );
+    return updated;
   }
 
   async filePath(name: string, user: User) {
@@ -169,7 +257,11 @@ export class QuotationsService {
         OR: [{ archivoPdfUrl: { contains: safe } }, { archivo: safe }],
       },
     });
-    if (!quote) throw new ForbiddenException('Sin acceso a este archivo');
+    const licensed = quote || (await this.prisma.quotation.findMany({
+      where: quotationWhere(user),
+      select: { id: true, licitacionArchivos: true },
+    })).find((row) => JSON.stringify(row.licitacionArchivos || '').includes(safe));
+    if (!licensed) throw new ForbiddenException('Sin acceso a este archivo');
     try {
       await fs.access(full);
     } catch {

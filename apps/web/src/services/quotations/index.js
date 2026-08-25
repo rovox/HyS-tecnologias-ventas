@@ -47,11 +47,7 @@ export const quotationsService = {
     const me = mockAdapter.authStore.record;
     return store.list('quotations', { sort: '-created' }).filter((row) => {
       if (row.kind === 'library') return false;
-      if (me?.role === ROLES.VENTAS) {
-        const mine = row.vendedor_id === me.id
-          || (Array.isArray(row.vendedores) && row.vendedores.some((v) => v.user_id === me.id));
-        return mine;
-      }
+      if (me?.role === ROLES.TEC) return false;
       return true;
     });
   },
@@ -72,32 +68,46 @@ export const quotationsService = {
     if (!isMockMode) {
       const row = await apiClient.post('quotations', {
         titulo: data.titulo,
-        clienteId: data.cliente_id,
+        ...(data.cliente_id ? { clienteId: data.cliente_id } : {}),
         categoria: data.categoria,
         categoriaId: data.categoria_id,
         subcategoria: data.subcategoria,
         sucursalId: data.sucursal_id,
         sucursalNombre: data.sucursal_nombre,
-        monto: Number(data.monto ?? data.total),
+        monto: Number(data.monto ?? data.total ?? 1),
         observacion: data.observacion,
         vendedores: vendorPayload(data),
+        tieneLicitacion: Boolean(data.tiene_licitacion),
+        licitacionNumero: data.licitacion_numero || undefined,
+        licitacionEntidad: data.licitacion_entidad || undefined,
+        plazoFinal: data.plazo_final || undefined,
       }, { token: authToken() });
       let quote = mapQuote(row);
-      for (const file of files) {
+      const pdfFiles = files.filter((f) => f._kind !== 'licitacion');
+      const licitacionFiles = files.filter((f) => f._kind === 'licitacion');
+      for (const file of pdfFiles) {
         quote = await this.attachFile(quote.id, file);
+      }
+      for (const file of licitacionFiles) {
+        quote = await this.attachFile(quote.id, file, 'licitacion');
       }
       if (data.estado === 'enviado') {
         quote = await this.updateStatus(quote.id, 'enviado');
       }
       return quote;
     }
+    const me = mockAdapter.authStore.record;
     const vendedores = normalizeVendedores(data);
-    const primaryVendor = vendedores[0];
-    const first = files[0];
+    const resolvedVendors = vendedores.length
+      ? vendedores
+      : (me ? [{ user_id: me.id, nombre: me.name, comision_pct: 100 }] : []);
+    const primaryVendor = resolvedVendors[0];
+    const first = files.find((f) => f._kind !== 'licitacion' && f._kind !== 'prerequisito') || files[0];
+    const licitacionFiles = files.filter((f) => f._kind === 'licitacion' || f._kind === 'prerequisito');
     const payload = withTotals({
       ...data,
       kind: 'commercial',
-      vendedores,
+      vendedores: resolvedVendors,
       vendedor_id: primaryVendor?.user_id || data.vendedor_id || '',
       vendedor_nombre: primaryVendor?.nombre || data.vendedor_nombre || '',
       estado: data.estado === 'enviado' ? 'enviado' : 'borrador',
@@ -105,17 +115,38 @@ export const quotationsService = {
       fecha: data.fecha || new Date().toISOString().slice(0, 10),
       archivo: first?.name || data.archivo || '',
       archivo_pdf_url: first ? URL.createObjectURL(first) : '',
+      tiene_licitacion: Boolean(data.tiene_licitacion),
+      licitacion_numero: data.licitacion_numero || '',
+      licitacion_entidad: data.licitacion_entidad || '',
+      plazo_final: data.plazo_final || null,
+      licitacion_archivos: licitacionFiles.map((file) => ({
+        name: file.name,
+        url: URL.createObjectURL(file),
+        kind: file._kind || 'licitacion',
+      })),
     });
     const created = store.insert('quotations', payload);
-    store.touchClientActivity(created.cliente_id);
+    if (created.cliente_id) store.touchClientActivity(created.cliente_id);
     return created;
   },
 
-  async attachFile(id, file) {
+  async attachFile(id, file, kind = 'pdf') {
     if (!isMockMode) {
       const body = new FormData();
       body.append('file', file);
-      return mapQuote(await apiClient.post(`quotations/${id}/files`, body, { token: authToken() }));
+      const docKind = kind === 'licitacion' || kind === 'prerequisito' ? kind : undefined;
+      return mapQuote(await apiClient.post(`quotations/${id}/files`, body, {
+        token: authToken(),
+        query: docKind ? { kind: docKind } : undefined,
+      }));
+    }
+    if (kind === 'licitacion' || kind === 'prerequisito') {
+      const current = store.findById('quotations', id);
+      const prev = Array.isArray(current?.licitacion_archivos) ? current.licitacion_archivos : [];
+      return store.update('quotations', id, {
+        ...(kind === 'licitacion' ? { tiene_licitacion: true } : {}),
+        licitacion_archivos: [...prev, { name: file.name, url: URL.createObjectURL(file), kind }],
+      });
     }
     return store.update('quotations', id, {
       archivo: file.name,
@@ -124,9 +155,34 @@ export const quotationsService = {
   },
 
   async update(id, data) {
+    if (!isMockMode) {
+      return mapQuote(await apiClient.patch(`quotations/${id}`, {
+      ...(data.titulo !== undefined ? { titulo: data.titulo } : {}),
+      ...(data.categoria !== undefined ? { categoria: data.categoria } : {}),
+      ...(data.categoriaId !== undefined || data.categoria_id !== undefined ? { categoriaId: data.categoriaId || data.categoria_id } : {}),
+      ...(data.subcategoria !== undefined ? { subcategoria: data.subcategoria } : {}),
+      ...(data.monto !== undefined ? { monto: Number(data.monto) } : {}),
+      ...(data.clienteId !== undefined || data.cliente_id !== undefined ? { clienteId: data.clienteId || data.cliente_id } : {}),
+      ...(data.fechaEnvio !== undefined || data.fecha_envio !== undefined ? { fechaEnvio: data.fechaEnvio || data.fecha_envio } : {}),
+      ...(data.observacion !== undefined ? { observacion: data.observacion } : {}),
+      ...(data.vendedores ? { vendedores: vendorPayload(data) } : {}),
+      ...(data.tiene_licitacion !== undefined ? { tieneLicitacion: Boolean(data.tiene_licitacion) } : {}),
+      ...(data.licitacion_numero !== undefined ? { licitacionNumero: data.licitacion_numero } : {}),
+      ...(data.licitacion_entidad !== undefined ? { licitacionEntidad: data.licitacion_entidad } : {}),
+      ...(data.plazo_final !== undefined ? { plazoFinal: data.plazo_final || null } : {}),
+    }, { token: authToken() }));
+    }
     const current = store.findById('quotations', id);
     if (!current) throw new Error('Cotización no encontrada');
-    return store.update('quotations', id, withTotals({ ...current, ...data }));
+    const vendedores = data.vendedores ? normalizeVendedores(data) : current.vendedores;
+    const primary = vendedores?.[0];
+    return store.update('quotations', id, withTotals({
+      ...current,
+      ...data,
+      vendedores,
+      vendedor_id: primary?.user_id || data.vendedor_id || current.vendedor_id,
+      vendedor_nombre: primary?.nombre || data.vendedor_nombre || current.vendedor_nombre,
+    }));
   },
 
   async updateStatus(id, estado, extra = {}) {
@@ -145,6 +201,7 @@ export const quotationsService = {
     const updated = store.update('quotations', id, {
       estado,
       ...(extra.motivoRechazo ? { motivo_rechazo: extra.motivoRechazo } : {}),
+      ...(extra.fecha_envio || extra.fechaEnvio ? { fecha_envio: extra.fecha_envio || extra.fechaEnvio } : {}),
     });
     if (estado === 'aceptado' || estado === 'enviado') store.touchClientActivity(current.cliente_id);
     return updated;

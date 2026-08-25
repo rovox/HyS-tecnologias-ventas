@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../auth/current-user.decorator';
+import { ROLES } from '../auth/roles';
+import { Roles, RolesGuard } from '../auth/roles.guard';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import { TasksService } from './tasks.service';
 
@@ -15,8 +17,8 @@ export class TasksController {
 
   @Get()
   @ApiOperation({ summary: 'List tasks visible to the user' })
-  list(@CurrentUser() user: User) {
-    return this.tasks.list(user);
+  list(@CurrentUser() user: User, @Query('tipo') tipo?: string) {
+    return this.tasks.list(user, tipo);
   }
 
   @Get(':id')
@@ -29,6 +31,14 @@ export class TasksController {
   @ApiOperation({ summary: 'Create task' })
   create(@Body() dto: CreateTaskDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.tasks.create(dto, user, sessionId);
+  }
+
+  @Post(':id/claim')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS)
+  @ApiOperation({ summary: 'Claim an unassigned quotation task' })
+  claim(@Param('id') id: string, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.tasks.claim(id, user, sessionId);
   }
 
   @Patch(':id')

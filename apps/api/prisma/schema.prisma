@@ -42,6 +42,7 @@ model User {
   relevamientos    Relevamiento[]
   createdTasks     Task[]         @relation("TaskCreator")
   assignedTasks    Task[]         @relation("TaskAssignee")
+  designatedTasks  Task[]         @relation("TaskAssignedBy")
   schedulesVendedor Schedule[]    @relation("ScheduleVendedor")
   schedulesTecnico  Schedule[]    @relation("ScheduleTecnico")
 
@@ -116,20 +117,27 @@ model Quotation {
   sucursalId     String
   sucursal       Sucursal           @relation(fields: [sucursalId], references: [id])
   sucursalNombre String             @default("")
-  clienteId      String
-  cliente        Client             @relation(fields: [clienteId], references: [id])
+  clienteId      String?
+  cliente        Client?            @relation(fields: [clienteId], references: [id])
   estado         String             @default("borrador")
   motivoRechazo  String?            @db.Text
   monto          Decimal            @db.Decimal(12, 2)
-  observacion    String             @default("") @db.Text
-  archivo        String             @default("")
-  archivoPdfUrl  String             @default("")
-  vendedorId     String
+  observacion         String             @default("") @db.Text
+  archivo             String             @default("")
+  archivoPdfUrl       String             @default("")
+  tieneLicitacion     Boolean            @default(false)
+  licitacionNumero    String?            @db.VarChar(120)
+  licitacionEntidad   String?            @db.VarChar(200)
+  plazoFinal          DateTime?
+  fechaEnvio          DateTime?
+  licitacionArchivos  Json?
+  vendedorId          String
   vendedor       User               @relation("VendorQuotations", fields: [vendedorId], references: [id])
   sellers        QuotationSeller[]
   sale           Sale?
   relevamientos  Relevamiento[]
   schedules      Schedule[]
+  tasks          Task[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -160,6 +168,10 @@ model Relevamiento {
   sucursalId   String
   sucursal     Sucursal  @relation(fields: [sucursalId], references: [id])
   fecha        DateTime  @db.Date
+  fechaFin     DateTime? @db.Date
+  tipoVisita   String    @default("relevamiento") @db.VarChar(32)
+  vendedorId   String?
+  tecnicoId    String?
   lugar        String    @db.VarChar(200)
   notas        String?   @db.Text
   fotosUrl     Json?
@@ -171,6 +183,8 @@ model Relevamiento {
   @@index([cotizacionId])
   @@index([usuarioId])
   @@index([sucursalId, fecha])
+  @@index([vendedorId])
+  @@index([tecnicoId])
   @@map("relevamientos")
 }
 
@@ -267,26 +281,32 @@ model Schedule {
 }
 
 model Task {
-  id           String    @id @default(uuid())
-  titulo       String    @db.VarChar(200)
-  descripcion  String?   @db.Text
-  sucursalId   String
-  sucursal     Sucursal  @relation(fields: [sucursalId], references: [id])
-  creadorId    String
-  creador      User      @relation("TaskCreator", fields: [creadorId], references: [id])
-  asignadoId   String?
-  asignado     User?     @relation("TaskAssignee", fields: [asignadoId], references: [id])
-  estado       String    @default("pendiente")
-  prioridad    String    @default("media")
-  plazo        DateTime?
-  cotizacionId String?
-  scheduleId   String?
-  schedule     Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  horario      String?   @db.VarChar(16)
-  archivosUrl  Json?
-  completedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id              String     @id @default(uuid())
+  titulo          String     @db.VarChar(200)
+  descripcion     String?    @db.Text
+  tipo            String     @default("operativa") @db.VarChar(32)
+  sucursalId      String
+  sucursal        Sucursal   @relation(fields: [sucursalId], references: [id])
+  creadorId       String
+  creador         User       @relation("TaskCreator", fields: [creadorId], references: [id])
+  asignadoId      String?
+  asignado        User?      @relation("TaskAssignee", fields: [asignadoId], references: [id])
+  asignadoPorId   String?
+  asignadoPor     User?      @relation("TaskAssignedBy", fields: [asignadoPorId], references: [id])
+  asignadoAt      DateTime?
+  estado          String     @default("pendiente")
+  prioridad       String     @default("media")
+  prioridadMotivo String?    @db.Text
+  plazo           DateTime?
+  cotizacionId    String?
+  quotation       Quotation? @relation(fields: [cotizacionId], references: [id], onDelete: SetNull)
+  scheduleId      String?
+  schedule        Schedule?  @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  horario         String?    @db.VarChar(16)
+  archivosUrl     Json?
+  completedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   @@index([sucursalId, estado])
   @@index([asignadoId])
@@ -295,6 +315,8 @@ model Task {
   @@index([plazo])
   @@index([cotizacionId])
   @@index([scheduleId])
+  @@index([tipo, asignadoId])
+  @@index([tipo, estado])
   @@map("tasks")
 }
 

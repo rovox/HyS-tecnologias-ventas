@@ -20,12 +20,12 @@ Rol en el sistema: origen comercial de trabajos para técnicos, finanzas y opera
 | Ruta | Función |
 |------|---------|
 | `/dashboard` | KPIs personales y de equipo (metas, conversión) |
-| `/clientes` | CRM — alta y seguimiento |
-| `/surveys` | Relevamientos y asistencias |
-| `/quotations` | Cotizaciones comerciales y biblioteca |
-| `/schedule` | Cronograma de instalaciones/proyectos |
-| `/marketing` | Campañas y ROI |
-| `/activity-wall` | Comunicación interna |
+| `/clientes` | CRM — alta y seguimiento; **Contratado** si hay cotización aceptada o trabajo |
+| `/surveys` | Relevamientos y asistencias (ambos tipos editables; UI prioriza Relevamiento) |
+| `/quotations` | Cotizaciones (editables; banda **Tareas de cotización**; filtros de categoría) |
+| `/pedidos-internos` | Pedidos de materiales (menú Ventas + Admin) |
+| `/schedule` | Cronograma — programar existentes / vincular cotización |
+| `/activity-wall` | Redirige; actividad = overlay del header |
 
 ---
 

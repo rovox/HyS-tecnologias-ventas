@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
-import { Package, Plus, Search, Eye, Edit2, Trash2, Calendar, AlertCircle, Boxes, Loader2 } from 'lucide-react';
+import { Package, Plus, Search, Trash2, Calendar, AlertCircle, Boxes, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -14,6 +14,7 @@ import { useInternalOrders } from '@/hooks/useInternalOrders.js';
 import PedidoInternoFormModal from '@/components/PedidoInternoFormModal.jsx';
 import EntregaPedidoModal from '@/components/EntregaPedidoModal.jsx';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.jsx';
+import RowActions from '@/components/RowActions.jsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import pb from '@/lib/pocketbaseClient.js';
@@ -123,7 +124,11 @@ const PedidosInternosPage = () => {
     }
   };
 
-  const formatMaterialLine = (item) => `${item.material_nombre} x${item.cantidad}${item.unidad && item.unidad !== 'unidades' ? item.unidad : ''}`;
+  const formatMaterialLine = (item) => {
+    const nombre = item.nombre || item.name || item.descripcion || item.material || item.material_nombre || 'Ítem';
+    const unidad = item.unidad && item.unidad !== 'unidades' ? item.unidad : '';
+    return `${nombre} x${item.cantidad}${unidad}`;
+  };
 
   const getMaterialesSummary = (pedidoId) => {
     const items = materialesMap[pedidoId] || [];
@@ -263,41 +268,31 @@ const PedidosInternosPage = () => {
           </Select>
         </div>
 
-        {/* Tabla */}
-        <div className="table-container overflow-x-hidden">
-          <table className="w-full text-sm text-left table-fixed">
-            <colgroup>
-              <col className="w-[16%]" />
-              <col className="w-[10%]" />
-              <col className="w-[16%]" />
-              <col className="w-[22%]" />
-              <col className="w-[11%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[7%]" />
-            </colgroup>
-            <thead className="table-header">
+        {/* Tabla desktop */}
+        <div className="hidden lg:block data-table-wrap">
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-4 py-4 rounded-tl-xl">Solicitante</th>
-                <th className="px-4 py-4">Para</th>
-                <th className="px-4 py-4">Trabajo/Sucursal</th>
-                <th className="px-4 py-4">Materiales</th>
-                <th className="px-4 py-4">Estado</th>
-                <th className="px-4 py-4">Prioridad</th>
-                <th className="px-4 py-4">Entrega Est.</th>
-                <th className="px-4 py-4 text-right rounded-tr-xl">Acciones</th>
+                <th>Solicitante</th>
+                <th>Para</th>
+                <th>Trabajo/Sucursal</th>
+                <th>Materiales</th>
+                <th>Estado</th>
+                <th>Prioridad</th>
+                <th>Entrega Est.</th>
+                <th className="col-sticky text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="table-row">
-                    <td className="px-4 py-4" colSpan="8"><Skeleton className="h-8 w-full rounded-md" /></td>
+                  <tr key={i}>
+                    <td colSpan="8"><Skeleton className="h-8 w-full rounded-md" /></td>
                   </tr>
                 ))
               ) : pedidosError ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-24 text-center">
+                  <td colSpan="8" className="py-24 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <AlertCircle className="h-12 w-12 mb-4 opacity-30 text-destructive" />
                       <p className="text-lg font-bold text-destructive">{pedidosError}</p>
@@ -310,59 +305,59 @@ const PedidosInternosPage = () => {
                   const { tipo, relacion } = getRelacionLabel(p);
                   const puedeEditarEstado = canChangeEstado(p) && p.estado !== 'cancelado';
                   const { count, top } = getMaterialesSummary(p.id);
+                  const canEditPedido = isAdmin || currentUser.id === p.responsable_id;
                   return (
-                    <tr key={p.id} className="table-row group align-top">
-                      <td className="table-cell font-medium">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-[10px] font-black shrink-0 uppercase">
+                    <tr key={p.id} className="group align-top">
+                      <td className="font-medium max-w-[10rem]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="h-5 w-5 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-[9px] font-black shrink-0 uppercase">
                             {usersMap[p.responsable_id]?.charAt(0) || 'U'}
                           </div>
                           <div className="min-w-0">
                             <span className="block truncate">{usersMap[p.responsable_id] || 'No asignado'}</span>
-                            <span className="block text-[10px] text-muted-foreground/70 font-normal truncate">{p.numero_pedido}</span>
+                            <span className="cell-meta">{p.numero_pedido}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="table-cell">
-                        <Badge variant="outline" className="font-bold text-[10px] uppercase shadow-none">
+                      <td>
+                        <Badge variant="outline" className="font-bold text-[9px] uppercase shadow-none">
                           {tipo}
                         </Badge>
                       </td>
-                      <td className="table-cell text-muted-foreground truncate" title={relacion}>
+                      <td className="text-muted-foreground max-w-[9rem] truncate" title={relacion}>
                         {relacion}
                       </td>
-                      <td className="table-cell text-xs text-foreground/90">
+                      <td className="max-w-[12rem]">
                         {count === 0 ? (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Boxes className="h-3.5 w-3.5 shrink-0" />
-                            <span>Sin materiales</span>
-                          </div>
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <Boxes className="h-3 w-3 shrink-0" /> Sin materiales
+                          </span>
                         ) : (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-bold text-foreground flex items-center gap-1.5">
-                              <Boxes className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              {count} material{count !== 1 ? 'es' : ''} solicitado{count !== 1 ? 's' : ''}
+                          <div className="min-w-0">
+                            <span className="font-semibold flex items-center gap-1 truncate">
+                              <Boxes className="h-3 w-3 text-muted-foreground shrink-0" />
+                              {count} ítem{count !== 1 ? 's' : ''}
                             </span>
-                            <span className="text-muted-foreground truncate" title={top.join(', ')}>{top.join(', ')}</span>
+                            <span className="cell-meta truncate block" title={top.join(', ')}>{top.join(', ')}</span>
                             <button
                               type="button"
                               onClick={() => setMaterialesDialogPedido(p)}
-                              className="text-[11px] font-bold text-primary hover:underline self-start mt-0.5"
+                              className="text-[10px] font-bold text-primary hover:underline mt-0.5"
                             >
                               Ver detalle
                             </button>
                           </div>
                         )}
                       </td>
-                      <td className="table-cell">
+                      <td>
                         {puedeEditarEstado ? (
                           <Select
                             value={p.estado}
                             onValueChange={(val) => handleEstadoChange(p, val)}
                             disabled={updatingEstadoId === p.id}
                           >
-                            <SelectTrigger className={`h-8 w-full font-extrabold uppercase tracking-wider text-[10px] px-2.5 border-transparent shadow-none ${getStatusClass(p.estado)}`}>
-                              {updatingEstadoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SelectValue />}
+                            <SelectTrigger className={`h-7 w-full font-bold uppercase text-[9px] px-1.5 border-transparent shadow-none ${getStatusClass(p.estado)}`}>
+                              {updatingEstadoId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <SelectValue />}
                             </SelectTrigger>
                             <SelectContent>
                               {ESTADOS_CAMBIO.map(e => (
@@ -374,35 +369,35 @@ const PedidosInternosPage = () => {
                             </SelectContent>
                           </Select>
                         ) : (
-                          <Badge variant="outline" className={`font-extrabold uppercase tracking-wider text-[10px] px-2.5 py-1 shadow-none border-transparent ${getStatusClass(p.estado)}`}>
+                          <Badge variant="outline" className={`font-bold uppercase text-[9px] px-1.5 py-0.5 shadow-none border-transparent ${getStatusClass(p.estado)}`}>
                             {ESTADO_LABELS[p.estado] || p.estado}
                           </Badge>
                         )}
                       </td>
-                      <td className="table-cell">
-                        <span className={`font-bold flex items-center gap-1.5 ${getPriorityClass(p.prioridad)}`}>
-                          <AlertCircle className="h-3.5 w-3.5 shrink-0"/> {p.prioridad}
+                      <td>
+                        <span className={`font-bold flex items-center gap-1 ${getPriorityClass(p.prioridad)}`}>
+                          <AlertCircle className="h-3 w-3 shrink-0"/> {p.prioridad}
                         </span>
                       </td>
-                      <td className="table-cell font-bold text-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="truncate">{p.fecha_entrega_estimada ? format(new Date(p.fecha_entrega_estimada), "dd MMM", { locale: es }) : 'N/A'}</span>
+                      <td className="font-semibold whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                          {p.fecha_entrega_estimada ? format(new Date(p.fecha_entrega_estimada), "dd MMM", { locale: es }) : 'N/A'}
                         </div>
                       </td>
-                      <td className="table-cell text-right">
+                      <td className="col-sticky text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleNavigateDetail(p.id)} className="h-8 w-8 text-primary hover:bg-primary/10" title="Ver Detalle">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {(isAdmin || currentUser.id === p.responsable_id) && (
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenForm(p, false)} className="h-8 w-8 text-foreground hover:bg-muted" title="Editar">
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <RowActions
+                            onView={() => handleNavigateDetail(p.id)}
+                            onEdit={canEditPedido ? () => handleOpenForm(p, false) : undefined}
+                            canEdit={canEditPedido}
+                            viewLabel="Ver"
+                            editLabel="Editar"
+                            className="gap-1 [&_button]:min-h-8 [&_button]:h-8 [&_button]:px-2 [&_button]:text-xs"
+                          />
                           {isAdmin && (
                             <Button variant="ghost" size="icon" onClick={() => { setSelectedPedido(p); setIsDeleteOpen(true); }} className="h-8 w-8 text-destructive hover:bg-destructive/10" title="Eliminar">
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
@@ -412,7 +407,7 @@ const PedidosInternosPage = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-24 text-center">
+                  <td colSpan="8" className="py-24 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Package className="h-12 w-12 mb-4 opacity-20" />
                       <p className="text-lg font-bold">No hay pedidos internos</p>
@@ -423,6 +418,88 @@ const PedidosInternosPage = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Cards móvil */}
+        <div className="lg:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)
+          ) : pedidosError ? (
+            <div className="py-16 text-center text-destructive font-bold">{pedidosError}</div>
+          ) : pedidos.length > 0 ? (
+            pedidos.map((p) => {
+              const { tipo, relacion } = getRelacionLabel(p);
+              const puedeEditarEstado = canChangeEstado(p) && p.estado !== 'cancelado';
+              const { count, top } = getMaterialesSummary(p.id);
+              const canEditPedido = isAdmin || currentUser.id === p.responsable_id;
+              return (
+                <div key={p.id} className="rounded-2xl border bg-card p-4 shadow-sm space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold truncate">{usersMap[p.responsable_id] || 'No asignado'}</p>
+                      <p className="text-xs text-muted-foreground">{p.numero_pedido}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase shrink-0">{tipo}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{relacion}</p>
+                  <div className="text-xs">
+                    {count === 0 ? (
+                      <span className="text-muted-foreground">Sin materiales</span>
+                    ) : (
+                      <>
+                        <span className="font-semibold">{count} material{count !== 1 ? 'es' : ''}</span>
+                        <p className="text-muted-foreground truncate">{top.join(', ')}</p>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {puedeEditarEstado ? (
+                      <Select value={p.estado} onValueChange={(val) => handleEstadoChange(p, val)} disabled={updatingEstadoId === p.id}>
+                        <SelectTrigger className={`h-8 font-bold uppercase text-[10px] ${getStatusClass(p.estado)}`}>
+                          {updatingEstadoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SelectValue />}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ESTADOS_CAMBIO.map((e) => (
+                            <SelectItem key={e} value={e}>{ESTADO_LABELS[e]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className={`text-[10px] font-bold ${getStatusClass(p.estado)}`}>
+                        {ESTADO_LABELS[p.estado] || p.estado}
+                      </Badge>
+                    )}
+                    <span className={`text-xs font-bold ${getPriorityClass(p.prioridad)}`}>{p.prioridad}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-xs font-semibold flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      {p.fecha_entrega_estimada ? format(new Date(p.fecha_entrega_estimada), 'dd MMM', { locale: es }) : 'N/A'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <RowActions
+                        onView={() => handleNavigateDetail(p.id)}
+                        onEdit={canEditPedido ? () => handleOpenForm(p, false) : undefined}
+                        canEdit={canEditPedido}
+                        viewLabel="Ver"
+                        editLabel="Editar"
+                      />
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedPedido(p); setIsDeleteOpen(true); }} className="h-10 w-10 text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-16 text-center text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
+              <p className="font-bold">No hay pedidos internos</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -438,7 +515,9 @@ const PedidosInternosPage = () => {
             {(materialesMap[materialesDialogPedido?.id] || []).map((item, idx) => (
               <div key={item.id || idx} className="px-1 py-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-bold text-sm text-foreground truncate">{item.material_nombre}</p>
+                  <p className="font-bold text-sm text-foreground truncate">
+                    {item.nombre || item.name || item.descripcion || item.material || item.material_nombre || 'Ítem'}
+                  </p>
                   {item.observaciones_item && (
                     <p className="text-xs text-muted-foreground italic mt-0.5">{item.observaciones_item}</p>
                   )}

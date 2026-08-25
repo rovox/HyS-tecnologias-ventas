@@ -121,13 +121,17 @@ const ClientDetailPage = () => {
         <meta name="description" content={`Historial completo del cliente ${clientData.nombre}`} />
       </Helmet>
       
-      <div className="content-container py-6 pb-24 space-y-6 max-w-7xl">
+      <div className="content-container py-6 space-y-6">
         <Button variant="ghost" onClick={() => navigate('/clientes')} className="pl-0 text-muted-foreground hover:text-foreground font-bold">
           <ArrowLeft className="h-4 w-4 mr-2" /> Volver a Clientes
         </Button>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-2xl p-4 ${
+          clientData.esClienteContratado
+            ? 'bg-[hsl(var(--client-contracted-bg))] border border-[hsl(var(--client-contracted-border))]'
+            : ''
+        }`}>
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{clientData.nombre}</h1>
@@ -136,13 +140,18 @@ const ClientDetailPage = () => {
                   Ref. {clientData.tipo}
                 </Badge>
               ) : null}
+              {clientData.esClienteContratado ? (
+                <Badge className="text-[10px] font-bold bg-[hsl(var(--client-contracted-fg))] text-white border-0">
+                  Contratado
+                </Badge>
+              ) : null}
             </div>
             {clientData.contacto && <p className="text-muted-foreground font-medium text-lg">Contacto: {clientData.contacto}</p>}
             <p className="text-xs text-muted-foreground mt-1">Directorio oficial — solo se editan datos generales, no se elimina.</p>
           </div>
           {canEdit && (
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" onClick={() => setIsFormOpen(true)} className="font-bold">
+              <Button variant="action" onClick={() => setIsFormOpen(true)} className="font-bold">
                 <Edit2 className="h-4 w-4 mr-2" /> Editar Cliente
               </Button>
             </div>
@@ -236,6 +245,13 @@ const ClientDetailPage = () => {
                       <div key={`${event.type}-${event.id}`} className="p-4">
                         <p className="text-sm font-semibold">{event.titulo}</p>
                         <p className="text-xs text-muted-foreground mt-1 capitalize">{event.type} · {event.detalle}</p>
+                        {event.type === 'venta' && (
+                          <p className="text-xs tabular-nums text-muted-foreground mt-1">
+                            Monto Bs {Number(event.monto ?? 0).toFixed(0)}
+                            {' · '}Adel. Bs {Number(event.adelanto ?? 0).toFixed(0)}
+                            {' · '}Saldo Bs {Number(event.saldo ?? 0).toFixed(0)}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground">{event.at ? new Date(event.at).toLocaleString('es-BO') : ''}</p>
                       </div>
                     ))}
@@ -267,6 +283,7 @@ const ClientDetailPage = () => {
                           <th className="px-4 py-3">Vendedor</th>
                           <th className="px-4 py-3">Técnico</th>
                           <th className="px-4 py-3 text-right">Monto</th>
+                          <th className="px-4 py-3 text-right">Adelanto</th>
                           <th className="px-4 py-3 text-right">Saldo</th>
                           <th className="px-4 py-3">Garantía hasta</th>
                         </tr>
@@ -288,15 +305,16 @@ const ClientDetailPage = () => {
                               <td className="px-4 py-3 text-xs">{fmtDate(s.fecha_programada)}</td>
                               <td className="px-4 py-3 text-xs">{s.vendedor_nombre || s.vendedor || '—'}</td>
                               <td className="px-4 py-3 text-xs">{s.tecnico_nombre || s.tecnico || '—'}</td>
-                              <td className="px-4 py-3 text-right tabular-nums">Bs {(s.monto||0).toFixed(0)}</td>
+                              <td className="px-4 py-3 text-right tabular-nums">Bs {Number(s.monto ?? 0).toFixed(0)}</td>
+                              <td className="px-4 py-3 text-right tabular-nums text-blue-600">Bs {Number(s.adelanto ?? 0).toFixed(0)}</td>
                               <td className={cn("px-4 py-3 text-right font-black tabular-nums", saldo > 0 ? 'text-destructive' : 'text-emerald-600')}>
-                                Bs {saldo.toFixed(0)}
+                                Bs {Number(saldo ?? 0).toFixed(0)}
                               </td>
                               <td className="px-4 py-3 text-xs">{gh ? fmtDate(gh.toISOString()) : '—'}</td>
                             </tr>
                           );
                         }) : (
-                          <tr><td colSpan="11" className="px-4 py-12 text-center text-muted-foreground">
+                          <tr><td colSpan="12" className="px-4 py-12 text-center text-muted-foreground">
                             <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-20" />
                             <p className="font-bold">No hay trabajos registrados.</p>
                           </td></tr>
