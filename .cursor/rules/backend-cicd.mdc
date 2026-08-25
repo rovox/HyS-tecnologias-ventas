@@ -13,7 +13,7 @@ The API is a **separate** Hostinger Cloud Startup **Node.js Web App** + dedicate
 
 - **Local:** `pnpm dev:api` against `apps/api/docker-compose.yml` MySQL.
 - **CI:** `.github/workflows/api.yml` on `migration/backend-api` — `prisma generate` + `nest build` on `ubuntu-latest`, then commit `apps/api/dist`.
-- **CD:** Hostinger Node app (`lime-chamois-337700.hostingersite.com`), Framework **Other**, empty build, **start / entry** `node dist/main.js`. Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
+- **CD:** Hostinger Node app (`lime-chamois-337700.hostingersite.com`), Framework **Other**, empty build, **start / entry** `start-api.mjs` (or `dist/main.js`). Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
 
 `UPLOAD_DIR` must sit **outside** the git checkout (redeploys wipe `apps/api`). PDFs are not committed. Never `prisma seed` / `migrate deploy` on Hostinger.
 
@@ -25,6 +25,6 @@ The API is a **separate** Hostinger Cloud Startup **Node.js Web App** + dedicate
 - Run `vite build` or `nest build` on the host.
 - Flip production `VITE_API_MODE=api` until `GET /api/health` and `GET /api/health/db` succeed.
 - Move the API to a VPS.
-- Leave Hostinger **entry/start** empty — without `node dist/main.js` the site returns Hostinger’s 404 HTML.
+- Leave Hostinger **entry/start** empty — without `start-api.mjs` or `dist/main.js` the site returns Hostinger’s 404 HTML.
 
 SPA publish stays `.cursor/rules/frontend-cicd.mdc`.
