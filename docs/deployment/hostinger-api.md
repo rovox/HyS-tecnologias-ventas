@@ -2,24 +2,98 @@
 
 Separate **Node.js Web App** + dedicated **MySQL** on the same Cloud Startup plan (up to 10 apps). Do not run this service on the static SPA instance. Frontend publish: [hostinger-frontend.md](./hostinger-frontend.md).
 
-**Never use a VPS.** MySQL is localhost-only; the API must stay on this Cloud Startup. Free remote Node hosts cannot reach Hostinger MySQL.
+**Never use a VPS.** MySQL is localhost-only from the Node app; the API must stay on this Cloud Startup. Free remote Node hosts cannot reach Hostinger MySQL.
 
 App name suggestion: `hys-sales-api`. Package: `apps/api`. Global prefix: `/api`. Branch: `migration/backend-api`.
+
+## How the pieces fit (white-goat independent)
+
+```text
+Browser  →  white-goat SPA (static dist, often mock today)
+                │
+                │  later: HTTPS + JWT  (VITE_API_MODE=api)
+                ▼
+         Nest Node Web App  (second Hostinger website)
+                │
+                │  DATABASE_URL @ localhost
+                ▼
+         MySQL u656468476_hys_sales   ←── not the WordPress DB
+```
+
+| Piece | Role |
+|-------|------|
+| `hstecnologias.com` WordPress | Marketing site. Own DB. Untouched. |
+| `white-goat-213580.hostingersite.com` SPA | ERP UI. Publishes `apps/web/dist` only. |
+| Nest Node app | REST API in `apps/api`. Reads/writes sales data. |
+| `u656468476_hys_sales` MySQL | Only data store for Nest. |
+
+Creating the database via Hostinger API/hPanel only provisions an empty MySQL schema + DB user on the shared Cloud Startup account. It does **not** install Nest, change white-goat, or touch WordPress.
+
+## Create MySQL from hPanel UI (yes, fully supported)
+
+Same result as the API call we already used. Prefer UI if you want to see the password on screen and copy it once.
+
+1. Log in to [hPanel](https://hpanel.hostinger.com).
+2. Open the **Cloud Startup** hosting account (same plan as white-goat / `hstecnologias.com`).
+3. Go to **Databases** → **Management** (or **MySQL Databases**).
+4. **Create new database**:
+   - Database name: `hys_sales` (Hostinger prefixes → `u656468476_hys_sales`).
+   - Create / choose a **new database user** (e.g. `hys_api` → `u656468476_hys_api`).
+   - Set a **strong password** and save it offline (this is the only time Hostinger shows it clearly).
+   - Assign the database to website **white-goat-…** (or leave unassigned until the Nest site exists). Do **not** reuse the WordPress DB.
+5. Confirm the new DB appears in the list next to the WordPress one (`u656468476_J6Jww`).
+6. Open **phpMyAdmin** for `u656468476_hys_sales` (button next to the DB).
+
+Optional: **Remote MySQL** only if you need laptop access; the Nest app on the same plan uses `localhost` and does not need remote access.
+
+### What we already did via API
+
+`hosting_createAccountDatabaseV1` created `u656468476_hys_sales` + user `u656468476_hys_api`, assigned to white-goat. Password was generated at that moment — same secret you would type in step 4 of the UI flow. If lost: **Databases → Change password**, then update Nest `DATABASE_URL`.
+
+## MySQL credentials — what the password is for
+
+| Field | Value |
+|-------|--------|
+| Database | `u656468476_hys_sales` |
+| DB user | `u656468476_hys_api` |
+| Password | Random secret generated at create time (password manager / hPanel notes — **never commit to git**) |
+| Assigned site | `white-goat-213580.hostingersite.com` (logical link in hPanel; Nest still runs as its own Node website) |
+
+That password is **only** the MySQL login for the Nest process. It is not:
+
+- the SPA login,
+- the admin ERP password (`admin@hstecnologias.com` from [hostinger-bootstrap.sql](./hostinger-bootstrap.sql)),
+- or the GitHub / Hostinger panel password.
+
+Nest reads it from env as part of `DATABASE_URL`:
+
+```text
+mysql://u656468476_hys_api:<PASSWORD>@localhost:3306/u656468476_hys_sales
+```
+
+On the Node app, use **`localhost`** (same machine). The public `srv….hstgr.io` host is for remote tools (phpMyAdmin / laptop) if remote access is enabled — not required for the API on Cloud Startup.
+
+If you lose the DB password: hPanel → Databases → change password, then update `DATABASE_URL` on the Node app and restart.
 
 ## Prisma on `noexec`
 
 `nest build` emits JavaScript. GitHub Actions compiles and commits `apps/api/dist`. Runtime uses `@prisma/adapter-mariadb` (JS driver), not the native query engine.
 
-Do **not** run `prisma migrate deploy` or `prisma generate` on the host. Import SQL from `apps/api/prisma/migrations/` in **phpMyAdmin**, in folder-name order.
+Do **not** run `prisma migrate deploy` or `prisma seed` on the host. `postinstall` in `apps/api` runs `prisma generate` only (allowed). Import SQL in phpMyAdmin — see [hostinger-db-master.sql](./hostinger-db-master.sql) for greenfield.
 
-## hPanel MySQL
+## Node Web App — you do not zip-upload only backend files
 
-- Database: `hys_sales`
-- `DATABASE_URL=mysql://USER:PASS@localhost:3306/hys_sales` (internal Hostinger host, not your laptop)
+Hostinger clones the **same GitHub repo** and sets **Root directory = `apps/api`**. You do not manually upload a subset of files.
 
-## Node Web App
+What happens:
 
-In hPanel: **Websites → Add Website → Node.js web app** → same GitHub repo, branch `migration/backend-api`.
+1. GitHub branch `migration/backend-api` already has Nest source + committed `apps/api/dist` (CI).
+2. hPanel Node app points at that branch, root `apps/api`.
+3. Hostinger runs `pnpm install` (so `node_modules` exists) with **empty Build**.
+4. Start command: `node dist/main.js` — runs the prebuilt Nest JS, listens on `PORT`, serves `/api/...`.
+5. Env vars in hPanel inject `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
+
+The monorepo still contains `apps/web`, but the Node app **ignores** it because root is `apps/api`. white-goat remains a **separate** website that only publishes the SPA.
 
 | Setting | Value |
 |---------|--------|
@@ -28,30 +102,67 @@ In hPanel: **Websites → Add Website → Node.js web app** → same GitHub repo
 | Node | 22 |
 | Root | `apps/api` |
 | Package manager | pnpm |
-| Build | **empty** |
-| Start | `node dist/main.js` |
+| Build | **empty** (do not run `nest build` on the host) |
+| Start / entry file | `dist/main.js` or `node dist/main.js` (required — empty = Hostinger 404/503) |
+
+**pnpm on Hostinger:** root [`package.json`](../../package.json) sets `pnpm.onlyBuiltDependencies` for Prisma so install does not fail with `ERR_PNPM_IGNORED_BUILDS`. If install fails, redeploy after the latest `migration/backend-api` push.
+
+**File Manager (UPLOAD_DIR):** the house icon = `/home/u656468476`. Create `hys-uploads/quotations` directly under home — not inside an extra `u656468476` folder.
+
+**MySQL password lost:** hPanel → Databases → user `u656468476_hys_api` → **Change password** → rebuild `DATABASE_URL`. Reassign DB to **lime-chamois** (not white-goat) for clarity.
 
 Environment:
 
 ```
-DATABASE_URL=mysql://...
+DATABASE_URL=mysql://u656468476_hys_api:<PASSWORD>@localhost:3306/u656468476_hys_sales
 JWT_SECRET=<long random>
 PORT=<host-assigned>
-CORS_ORIGIN=https://<spa-host>
-UPLOAD_DIR=/home/<user>/hys-uploads/quotations
+CORS_ORIGIN=https://white-goat-213580.hostingersite.com
+UPLOAD_DIR=/home/u656468476/hys-uploads/quotations
 ```
 
 `UPLOAD_DIR` must be **outside** the git checkout. Redeploys wipe `apps/api`.
 
-## First boot
+## phpMyAdmin — import schema
 
-1. Create MySQL `hys_sales` (not the WordPress database).
-2. phpMyAdmin: import each `migration.sql` in timestamp order (including `20260825160000_quotation_task_pool`).
-3. phpMyAdmin: import [hostinger-bootstrap.sql](./hostinger-bootstrap.sql) (3 sucursales + one `ADMINISTRADOR`). **Do not** `prisma:seed`.
-4. Wait for CI commit `chore: refresh api dist [skip ci]`, then redeploy.
-5. Gate: `GET /api/health` then `GET /api/health/db`.
+Hostinger has **no API to run SQL imports**. Do this in the UI. **Do not** run `prisma migrate deploy` or `prisma db seed` on the host.
 
-SPA origin for this ERP: `https://white-goat-213580.hostingersite.com` (independent of `hstecnologias.com` WordPress). Set `CORS_ORIGIN` to that origin.
+**Empty database (greenfield)** — one import:
+
+1. [hostinger-db-master.sql](./hostinger-db-master.sql) (all migrations + bootstrap in one file).
+
+Or split: [hostinger-schema-baseline.sql](./hostinger-schema-baseline.sql) then [hostinger-bootstrap.sql](./hostinger-bootstrap.sql).
+
+Regenerate the baseline after new Prisma migrations (concat folders in name order). Do not squash Prisma migration folders in git — see `.cursor/rules/prisma-migrations-hostinger.mdc`.
+
+**Existing DB** — import only the **new** `migration.sql` folder(s), then skip a full baseline re-import.
+
+**Manual ordered import** (same as baseline contents):
+
+| Order | Folder / file |
+|------:|---------------|
+| 1–11 | Each `apps/api/prisma/migrations/*/migration.sql` in folder-name order |
+| 12 | `docs/deployment/hostinger-bootstrap.sql` |
+
+## Create Nest Node app from hPanel UI
+
+1. hPanel → **Websites** → **Add website** → **Node.js web app** (not WordPress, not “empty” PHP).
+2. Use a **new free Hostinger subdomain** (or custom domain). Do **not** overwrite white-goat.
+3. Connect the **same GitHub repo**, branch `migration/backend-api`.
+4. Apply the settings table above (Framework **Other**, root `apps/api`, empty build, `node dist/main.js`).
+5. In **Environment variables**, set `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR` (API cannot set these).
+6. Deploy / restart. Create folder for `UPLOAD_DIR` outside the git checkout if needed.
+7. Gate: `GET https://<api-host>/api/health` then `/api/health/db`.
+
+Live Nest app (Git deploy): `https://lime-chamois-337700.hostingersite.com` (root `apps/api`, branch `migration/backend-api`). SPA stays `https://white-goat-213580.hostingersite.com`.
+
+## First boot (checklist)
+
+1. MySQL `u656468476_hys_sales` created (UI or API) — independent of WordPress. **Done.**
+2. phpMyAdmin: schema (+ bootstrap) — **Done** if you already imported.
+3. Node.js website + env (`DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`) — hPanel.
+4. Wait for CI `chore: refresh api dist [skip ci]` if `dist` is missing, then redeploy.
+5. Gate: `GET https://lime-chamois-337700.hostingersite.com/api/health` then `/api/health/db`.
 
 ## SPA after health check
 
@@ -62,6 +173,6 @@ VITE_API_MODE=api
 VITE_API_URL=https://<api-host>/api
 ```
 
-CORS must allow the SPA origin. Auth is Bearer JWT.
+CORS must allow the SPA origin. Auth is Bearer JWT (ERP user password ≠ MySQL password).
 
 This API syncs sucursales, users/sessions, clients, quotations (cliente optional on quick tasks), commission %, PDFs / licitación / prerrequisitos, relevamientos, seller goals, activity metrics, schedules, and quotation-task pool (`tipo=cotizacion` + `POST /tasks/:id/claim`). Not synced: finance, vehicles, internal orders, marketing.
