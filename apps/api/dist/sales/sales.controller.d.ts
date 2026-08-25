@@ -40,8 +40,8 @@ export declare class SalesController {
             saleId: string;
         }[];
         payments: {
-            id: string;
             at: Date;
+            id: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             saleId: string;
             metodo: string;
@@ -92,8 +92,8 @@ export declare class SalesController {
             saleId: string;
         }[];
         payments: {
-            id: string;
             at: Date;
+            id: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             saleId: string;
             metodo: string;
@@ -122,8 +122,8 @@ export declare class SalesController {
         saleId: string;
     }>;
     addPayment(id: string, dto: CreatePaymentDto, user: User, sessionId?: string): Promise<{
-        id: string;
         at: Date;
+        id: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         saleId: string;
         metodo: string;

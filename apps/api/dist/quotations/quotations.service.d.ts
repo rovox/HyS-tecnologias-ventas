@@ -90,8 +90,8 @@ export declare class QuotationsService {
                 saleId: string;
             }[];
             payments: {
-                id: string;
                 at: Date;
+                id: string;
                 monto: Prisma.Decimal;
                 saleId: string;
                 metodo: string;
@@ -358,8 +358,8 @@ export declare class QuotationsService {
                     saleId: string;
                 }[];
                 payments: {
-                    id: string;
                     at: Date;
+                    id: string;
                     monto: Prisma.Decimal;
                     saleId: string;
                     metodo: string;
@@ -428,8 +428,8 @@ export declare class QuotationsService {
                 saleId: string;
             }[];
             payments: {
-                id: string;
                 at: Date;
+                id: string;
                 monto: Prisma.Decimal;
                 saleId: string;
                 metodo: string;

@@ -19,8 +19,8 @@ export declare class SessionsController {
         userAgent: string | null;
     })[]>;
     activity(user: User, id: string): Promise<{
-        id: string;
         at: Date;
+        id: string;
         sessionId: string;
         userId: string;
         action: string;
