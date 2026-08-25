@@ -14,18 +14,32 @@ const common_1 = require("@nestjs/common");
 const adapter_mariadb_1 = require("@prisma/adapter-mariadb");
 const client_1 = require("@prisma/client");
 function mariaAdapter() {
-    const url = process.env.DATABASE_URL;
-    if (!url)
-        return undefined;
+    const url = process.env.DATABASE_URL?.trim();
+    if (!url) {
+        console.error('[Prisma] DATABASE_URL no está definida — revisa las variables en hPanel (clave en MAYÚSCULAS).');
+        return new adapter_mariadb_1.PrismaMariaDb({
+            host: '127.0.0.1',
+            port: 3306,
+            user: '__unset__',
+            password: '',
+            database: '__unset__',
+        });
+    }
     return new adapter_mariadb_1.PrismaMariaDb(url);
 }
 let PrismaService = class PrismaService extends client_1.PrismaClient {
     constructor() {
-        const adapter = mariaAdapter();
-        super(adapter ? { adapter } : undefined);
+        super({ adapter: mariaAdapter() });
     }
     async onModuleInit() {
-        await this.$connect();
+        if (!process.env.DATABASE_URL?.trim())
+            return;
+        try {
+            await this.$connect();
+        }
+        catch (err) {
+            console.error('[Prisma] $connect falló al arrancar:', err);
+        }
     }
     async onModuleDestroy() {
         await this.$disconnect();

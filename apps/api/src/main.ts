@@ -30,4 +30,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('[Nest] bootstrap falló:', err);
+  process.exit(1);
+});
