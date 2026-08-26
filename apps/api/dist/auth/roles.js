@@ -5,6 +5,7 @@ exports.isAdmin = isAdmin;
 exports.isVentas = isVentas;
 exports.isTec = isTec;
 exports.isCont = isCont;
+exports.isNone = isNone;
 exports.assertAdmin = assertAdmin;
 exports.assertCanMutateQuotes = assertCanMutateQuotes;
 exports.assertCanMutateClients = assertCanMutateClients;
@@ -23,6 +24,7 @@ exports.ROLES = {
     VENTAS: 'VENTAS / ADMINISTRACIÓN',
     TEC: 'SEGURIDAD ELECTRÓNICA',
     CONT: 'Contadora',
+    NONE: 'SIN ACCESO',
 };
 function isAdmin(user) {
     return user?.role === exports.ROLES.ADMIN;
@@ -35,6 +37,9 @@ function isTec(user) {
 }
 function isCont(user) {
     return user?.role === exports.ROLES.CONT;
+}
+function isNone(user) {
+    return user?.role === exports.ROLES.NONE;
 }
 function assertAdmin(user) {
     if (!isAdmin(user))
@@ -61,27 +66,33 @@ function assertCanCreateSchedules(user) {
     }
 }
 function scheduleWhere(user) {
-    if (isAdmin(user) || isCont(user))
+    if (isNone(user))
+        return { id: '__none__' };
+    if (isAdmin(user) || isCont(user) || isVentas(user))
         return {};
-    if (isVentas(user) && user.sucursalId)
-        return { sucursalId: user.sucursalId };
     if (isTec(user))
         return { tecnicoId: user.id };
     return { id: '__none__' };
 }
 function quotationWhere(user) {
+    if (isNone(user))
+        return { id: '__none__' };
     if (isAdmin(user) || isVentas(user))
         return {};
     return { id: '__none__' };
 }
 function clientWhere(user) {
-    if (isAdmin(user) || isCont(user))
+    if (isNone(user))
+        return { id: '__none__' };
+    if (isAdmin(user) || isCont(user) || isVentas(user))
         return {};
-    if (user.sucursalId)
-        return { sucursalId: user.sucursalId };
-    return {};
+    if (isTec(user))
+        return {};
+    return { id: '__none__' };
 }
 function saleWhere(user) {
+    if (isNone(user))
+        return { id: '__none__' };
     if (isAdmin(user) || isCont(user))
         return {};
     if (isVentas(user)) {
@@ -93,28 +104,21 @@ function saleWhere(user) {
 }
 function relevamientoWhere(user, cotizacionId) {
     const base = cotizacionId ? { cotizacionId } : {};
-    if (isAdmin(user))
+    if (isNone(user))
+        return { id: '__none__' };
+    if (isAdmin(user) || isVentas(user))
         return base;
-    if (isVentas(user)) {
-        return { ...base, ...(user.sucursalId ? { sucursalId: user.sucursalId } : {}) };
-    }
     if (isTec(user))
         return { ...base, usuarioId: user.id };
     return { id: '__none__' };
 }
 function taskWhere(user, tipo) {
+    if (isNone(user))
+        return { id: '__none__' };
     if (isAdmin(user))
         return tipo ? { tipo } : {};
-    if (isVentas(user)) {
-        if (tipo === 'cotizacion')
-            return { tipo: 'cotizacion' };
-        const sucursal = user.sucursalId ? { sucursalId: user.sucursalId } : {};
-        if (tipo)
-            return { tipo, ...sucursal };
-        return {
-            OR: [{ tipo: 'cotizacion' }, { AND: [{ NOT: { tipo: 'cotizacion' } }, sucursal] }],
-        };
-    }
+    if (isVentas(user))
+        return tipo ? { tipo } : {};
     if (isTec(user)) {
         if (tipo === 'cotizacion')
             return { id: '__none__' };
@@ -124,6 +128,8 @@ function taskWhere(user, tipo) {
     return { id: '__none__' };
 }
 function metricsUserId(user, requested) {
+    if (isNone(user))
+        return user.id;
     if (isAdmin(user))
         return requested;
     if (isVentas(user))
