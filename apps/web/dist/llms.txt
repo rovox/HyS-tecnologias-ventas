@@ -1,0 +1,35 @@
+## Pages
+- [- Detalles](/vehicledetail): No description available
+- [- H&S](/clientdetail): No description available
+- [- H&S Tecnologías](/schedules): No description available
+- [- Pedidos Internos](/pedidointernodetail): No description available
+- [Acceso - H&S Tecnologías](/login): Acceso operativo a la plataforma de gestión H&S Tecnologías.
+- [Actividad Interna - H&S Tecnologías](/activitymodule): No description available
+- [Campañas - H&S Tecnologías](/campaign): No description available
+- [Configuración General - H&S](/configuration): No description available
+- [Control Vehicular](/vehiclecontrol): No description available
+- [Control Vehicular - H&S](/vehicles): No description available
+- [Costos Operativos - H&S](/accounting): No description available
+- [Cotizaciones - H&S Tecnologías](/quotationslibrary): Biblioteca de documentos y cotizaciones comerciales POC
+- [Cronograma - H&S Tecnologías](/schedulework): No description available
+- [Cronograma de Trabajos - H&S Tecnologías](/jobs): Gestión de trabajos de instalación y mantenimiento
+- [Detalle de Campaña - H&S Tecnologías](/campaigndetail): Detalles de la campaña de marketing
+- [Detalle de Relevamiento - H&S Tecnologías](/surveydetail): Detalles del relevamiento y asistencia técnica
+- [Detalle de Trabajo - H&S Tecnologías](/jobdetail): Detalles del trabajo de instalación y mantenimiento
+- [Directorio de Clientes - H&S](/clients): No description available
+- [Finanzas y Contabilidad - H&S](/finanzas): No description available
+- [Gastos Operativos - H&S](/gastosoperativos): No description available
+- [H&S Dashboard - H&S Tecnologías](/dashboard): No description available
+- [H&S Tecnologías - Sistemas de Seguridad Empresarial](/home): Soluciones integrales de seguridad para empresas. Instalación, mantenimiento y monitoreo de sistemas de videovigilancia, control de acceso y alarmas.
+- [Management Panel - H&S](/managementpanel): No description available
+- [Mantenimientos Internos - H&S Tecnologías](/maintenance): No description available
+- [Marketing - H&S Tecnologías](/marketing): Hub de marketing, campañas y materiales
+- [Métricas de Marketing - H&S](/marketingreports): No description available
+- [Muro de Actividad - H&S Tecnologías](/activitywall): Feed interno del equipo, avisos y actualizaciones de proyecto
+- [Pedidos de Mercadería - H&S Tecnologías](/merchandiseorders): No description available
+- [Pedidos Internos - H&S Tecnologías](/pedidosinternos): No description available
+- [Portal Público - H&S Tecnologías](/publicdashboard): No description available
+- [Proyectos - H&S Tecnologías](/scheduleprojects): No description available
+- [Relevamientos y Asistencias - H&S Tecnologías](/surveys): Gestión de relevamientos técnicos y asistencias
+- [Reportes - H&S Tecnologías](/reports): Reportes integrales de ventas, operaciones y contabilidad
+- [Seguridad Electrónica - H&S Tecnologías](/schedulesecurity): No description available

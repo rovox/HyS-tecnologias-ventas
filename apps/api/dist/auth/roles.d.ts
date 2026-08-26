@@ -4,46 +4,44 @@ export declare const ROLES: {
     readonly VENTAS: "VENTAS / ADMINISTRACIÓN";
     readonly TEC: "SEGURIDAD ELECTRÓNICA";
     readonly CONT: "Contadora";
+    readonly NONE: "SIN ACCESO";
 };
 export declare function isAdmin(user?: User | null): boolean;
 export declare function isVentas(user?: User | null): boolean;
 export declare function isTec(user?: User | null): boolean;
 export declare function isCont(user?: User | null): boolean;
+export declare function isNone(user?: User | null): boolean;
 export declare function assertAdmin(user: User): void;
 export declare function assertCanMutateQuotes(user: User): void;
 export declare function assertCanMutateClients(user: User): void;
 export declare function assertCanMutateSchedules(user: User): void;
 export declare function assertCanCreateSchedules(user: User): void;
 export declare function scheduleWhere(user: User): {
-    sucursalId?: undefined;
+    id: string;
     tecnicoId?: undefined;
-    id?: undefined;
 } | {
-    sucursalId: string;
-    tecnicoId?: undefined;
     id?: undefined;
+    tecnicoId?: undefined;
 } | {
     tecnicoId: string;
-    sucursalId?: undefined;
     id?: undefined;
-} | {
-    id: string;
-    sucursalId?: undefined;
-    tecnicoId?: undefined;
 };
 export declare function quotationWhere(user: User): {
-    id?: undefined;
-} | {
     id: string;
+} | {
+    id?: undefined;
 };
 export declare function clientWhere(user: User): {
-    sucursalId?: undefined;
+    id: string;
 } | {
-    sucursalId: string;
+    id?: undefined;
 };
 export declare function saleWhere(user: User): {
+    id: string;
     quotation?: undefined;
+} | {
     id?: undefined;
+    quotation?: undefined;
 } | {
     quotation: {
         OR: ({
@@ -59,15 +57,14 @@ export declare function saleWhere(user: User): {
         })[];
     };
     id?: undefined;
-} | {
-    id: string;
-    quotation?: undefined;
 };
 export declare function relevamientoWhere(user: User, cotizacionId?: string): {
     cotizacionId: string;
 } | {
     cotizacionId?: undefined;
 } | {
+    id: string;
+} | {
     usuarioId: string;
     cotizacionId: string;
     id?: undefined;
@@ -75,8 +72,6 @@ export declare function relevamientoWhere(user: User, cotizacionId?: string): {
     usuarioId: string;
     cotizacionId?: undefined;
     id?: undefined;
-} | {
-    id: string;
 };
 export declare function taskWhere(user: User, tipo?: string): {
     OR: ({
@@ -87,44 +82,16 @@ export declare function taskWhere(user: User, tipo?: string): {
         asignadoId?: undefined;
     })[];
 } | {
-    tipo: string;
-    OR?: undefined;
-    id?: undefined;
-    AND?: undefined;
-} | {
-    tipo?: undefined;
-    OR?: undefined;
-    id?: undefined;
-    AND?: undefined;
-} | {
-    sucursalId: string;
-    tipo: string;
-    OR?: undefined;
-    id?: undefined;
-    AND?: undefined;
-} | {
-    OR: ({
-        tipo: string;
-        AND?: undefined;
-    } | {
-        AND: ({
-            sucursalId: string;
-        } | {
-            sucursalId?: undefined;
-        } | {
-            NOT: {
-                tipo: string;
-            };
-        })[];
-        tipo?: undefined;
-    })[];
-    tipo?: undefined;
-    id?: undefined;
-    AND?: undefined;
-} | {
     id: string;
     tipo?: undefined;
-    OR?: undefined;
+    AND?: undefined;
+} | {
+    tipo: string;
+    id?: undefined;
+    AND?: undefined;
+} | {
+    id?: undefined;
+    tipo?: undefined;
     AND?: undefined;
 } | {
     AND: ({
@@ -138,8 +105,7 @@ export declare function taskWhere(user: User, tipo?: string): {
     } | {
         tipo: string;
     })[];
-    tipo?: undefined;
-    OR?: undefined;
     id?: undefined;
+    tipo?: undefined;
 };
 export declare function metricsUserId(user: User, requested?: string): string | undefined;
