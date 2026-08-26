@@ -1,8 +1,8 @@
 /**
  * Frontend API configuration.
  *
- * POC: VITE_API_MODE=mock (in-memory repositories, no PocketBase, no NestJS).
- * Future: VITE_API_MODE=api + VITE_API_URL pointing at NestJS REST.
+ * Production Hostinger: VITE_API_MODE=api + absolute VITE_API_URL to lime-chamois.
+ * Local default: VITE_API_MODE=mock (in-memory repositories).
  *
  * Never put secrets in VITE_* variables — they are embedded in the browser bundle.
  */

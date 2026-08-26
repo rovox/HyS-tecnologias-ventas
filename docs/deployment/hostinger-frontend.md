@@ -3,10 +3,11 @@
 Use the **existing private GitHub repository**. Do not create another repo.
 
 - Remote: the `origin` already configured on this machine (`HyS-tecnologias-ventas`)
-- Branch to deploy for this milestone: `migration/frontend-poc`
+- Branch to deploy for go-live: **`migration/backend-api`** (Nest-era UI + `VITE_API_MODE=api`)
+- Keep `migration/frontend-poc` only as a mock rollback branch
 - Do not deploy `main` until this branch is reviewed and merged
 
-This document describes **Option A: frontend-only** (Vite static + mock services). NestJS is not part of this deploy.
+This document describes the SPA publish path (Vite static). Nest runs as a **separate** Hostinger Node app — see [hostinger-api.md](./hostinger-api.md).
 
 ## Why Hostinger does not *build* the app
 
@@ -38,10 +39,10 @@ The GitHub connection is **CD** (every push deploys the committed `dist/`). Host
 
 ## Publishing `dist/`
 
-Push **source** to `migration/frontend-poc`. Actions compiles. Hostinger’s first deploy of that push may still have the previous bundle; wait for the follow-up commit `chore: refresh web dist [skip ci]`, then hard-refresh the site.
+Push **source** to `migration/backend-api`. Actions compiles. Hostinger’s first deploy of that push may still have the previous bundle; wait for the follow-up commit `chore: refresh web dist [skip ci]`, then hard-refresh the site.
 
 ```bash
-git push origin migration/frontend-poc
+git push origin migration/backend-api
 ```
 
 Do not `git add apps/web/dist` locally. Preview locally with `pnpm build:web` + `pnpm start:web` if needed.
@@ -53,7 +54,7 @@ Do not `git add apps/web/dist` locally. Preview locally with `pnpm build:web` + 
 | Setting | Recommended value | Verify in hPanel |
 |---------|-------------------|------------------|
 | Source | Import Git repository → existing private repo | Already-connected GitHub account |
-| Branch | `migration/frontend-poc` | Defaults to `main` — **change it** |
+| Branch | `migration/backend-api` | Defaults to `main` — **change it** (was `migration/frontend-poc` for the mock POC) |
 | Framework preset | **Other** (not Vite) | Vite preset runs `vite build` → `EACCES` |
 | Node.js version | **22** | Only for `pnpm install` + verify |
 | Root directory | `apps/web` | Required |
@@ -76,11 +77,11 @@ Do **not** delete `pnpm-lock.yaml`, prune the pnpm store, or pin `esbuild@^0.24.
 ## Environment variables
 
 ```
-VITE_API_MODE=mock
-VITE_API_URL=/api
+VITE_API_MODE=api
+VITE_API_URL=https://lime-chamois-337700.hostingersite.com/api
 ```
 
-These are already in `apps/web/.env.production` and are applied when **GitHub Actions** runs `vite build`. Changing them in hPanel does **nothing** until the next Actions build.
+These are in `apps/web/.env.production` and are applied when **GitHub Actions** runs `vite build`. Changing them in hPanel does **nothing** until the next Actions build. Relative `/api` will **not** reach Nest (cross-origin SPA ↔ API).
 
 ## Domain
 
@@ -104,10 +105,10 @@ If a nested URL 404s, check `public_html/.htaccess` in File Manager.
 
 ## GitHub auto-deploy
 
-Push source to `migration/frontend-poc`. Do not include a local `dist/` refresh.
+Push source to `migration/backend-api`. Do not include a local `dist/` refresh. `web.yml` only runs when `apps/web/**` (or lockfile / workflow) changes.
 
 ```bash
-git push origin migration/frontend-poc
+git push origin migration/backend-api
 ```
 
 Logs:
@@ -118,9 +119,11 @@ Logs:
 
 A Hostinger log that still says `configured to use 10.14.0 of pnpm` or `$ vite build` is a bad deploy.
 
+After go-live, login with the Nest bootstrap admin (`admin@hstecnologias.com`) — not mock `*.demo.hs.local`. Rotate that password immediately.
+
 ## Rollback
 
-1. In GitHub, note the previous good commit on `migration/frontend-poc`.
+1. In hPanel, point the SPA Git branch back to `migration/frontend-poc` (mock) **or** note the previous good commit on `migration/backend-api`.
 2. Revert with a new commit (`git revert`). Do not force-push unless requested.
 3. Push; Hostinger republishes that commit’s `dist/`.
 
@@ -128,17 +131,14 @@ Do not move the `horizons-original` tag. Do not force-push `main`.
 
 ## Option A vs later architecture
 
-**This POC:** Option A — GitHub Actions compiles `apps/web/dist` and commits it. Hostinger hosts those files; it does not compile.
+**Go-live:** GitHub Actions compiles `apps/web/dist` (with `VITE_API_MODE=api`) and commits it. Hostinger publishes those files; Nest runs on lime-chamois. Hostinger still must not run esbuild.
 
-**Later:** Option B — NestJS (MySQL) serves `/api`. **CI** stays GitHub Actions. **CD** stays Hostinger publishing static files (and a separate Node app for the API). Hostinger still should not run esbuild.
+## Checklist after Nest flip
 
-**Option C** (two Web Apps) is allowed by Cloud Startup but not needed for the mock POC.
-
-## Checklist after first deploy
-
-- [ ] Login with `julio.admin@demo.hs.local` / `Demo1234!`
-- [ ] Banner “POC frontend · datos ficticios”
-- [ ] `/quotations` commercial flow
-- [ ] Browser network tab: **no** requests to `/hcgi/platform`
+- [ ] hPanel SPA branch = `migration/backend-api`
+- [ ] Login with Nest admin (not mock demo accounts); rotate password
+- [ ] Network tab: requests to `lime-chamois-…/api/…` with Bearer JWT
+- [ ] No “datos ficticios” mock banner
+- [ ] `/quotations`, tasks band, cronograma work
 - [ ] Nested route refresh works
-- [ ] Logos load from `/branding/logo.svg` (not Horizons CDN)
+- [ ] Logos load from `/branding/logo.svg`

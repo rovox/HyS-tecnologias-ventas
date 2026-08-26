@@ -1,6 +1,6 @@
 # API vs frontend coverage (sales)
 
-English ops note for Hostinger go-live. SPA production stays `VITE_API_MODE=mock` until `/api/health` and `/api/health/db` succeed.
+English ops note for Hostinger go-live. Health gates (`/api/health` + `/api/health/db`) succeeded; SPA production is `VITE_API_MODE=api` against lime-chamois.
 
 ## In schema and Nest (this branch)
 
@@ -25,5 +25,5 @@ Finance, vehicles, internal orders, marketing, quotation biblioteca (`kind: libr
 ## Hostinger phases
 
 - **A (repo):** `migration/backend-api`, CI commits `apps/api/dist`, MariaDB adapter, phpMyAdmin SQL, no VPS, no seed.
-- **B (manual):** Node health + DB health.
-- **C:** First admin (deferred), then `VITE_API_MODE=api`. SPA band UX can ship on mock first.
+- **B (manual):** Node health + DB health — **done**.
+- **C (go-live):** SPA Git branch `migration/backend-api`, Actions builds with `VITE_API_MODE=api` and `VITE_API_URL=https://lime-chamois-337700.hostingersite.com/api`. Login uses Nest bootstrap admin (rotate password after first login). Swagger stays off unless `ENABLE_SWAGGER=1`.

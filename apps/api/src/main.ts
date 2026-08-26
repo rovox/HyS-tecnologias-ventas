@@ -7,8 +7,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
-  const origin = process.env.CORS_ORIGIN;
-  app.enableCors({ origin: origin ? origin.split(',') : true, credentials: true });
+
+  const originRaw = (process.env.CORS_ORIGIN || '').trim();
+  if (!originRaw) {
+    throw new Error(
+      'CORS_ORIGIN debe estar definido (origen HTTPS del SPA, p. ej. https://white-goat-213580.hostingersite.com).',
+    );
+  }
+  const origins = originRaw.split(',').map((o) => o.trim()).filter(Boolean);
+  app.enableCors({ origin: origins.length === 1 ? origins[0] : origins, credentials: true });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -17,14 +25,16 @@ async function bootstrap() {
     }),
   );
 
-  const swagger = new DocumentBuilder()
-    .setTitle('H&S Sales API')
-    .setDescription('Sales microservice: auth, clients, quotations, tasks, relevamientos, goals, metrics.')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swagger);
-  SwaggerModule.setup('api/docs', app, document);
+  if (process.env.ENABLE_SWAGGER === '1') {
+    const swagger = new DocumentBuilder()
+      .setTitle('H&S Sales API')
+      .setDescription('Sales microservice: auth, clients, quotations, tasks, relevamientos, goals, metrics.')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swagger);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = Number(process.env.PORT) || 3001;
   await app.listen(port, '0.0.0.0');

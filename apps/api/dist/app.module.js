@@ -33,10 +33,16 @@ exports.AppModule = AppModule = __decorate([
             jwt_1.JwtModule.registerAsync({
                 global: true,
                 inject: [config_1.ConfigService],
-                useFactory: (config) => ({
-                    secret: config.get('JWT_SECRET') || 'cambiar-en-hostinger',
-                    signOptions: { expiresIn: '8h' },
-                }),
+                useFactory: (config) => {
+                    const secret = (config.get('JWT_SECRET') || '').trim();
+                    if (!secret || secret === 'cambiar-en-hostinger') {
+                        throw new Error('JWT_SECRET debe estar definido en el entorno (hPanel). No se permite el valor por defecto.');
+                    }
+                    return {
+                        secret,
+                        signOptions: { expiresIn: '8h' },
+                    };
+                },
             }),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,

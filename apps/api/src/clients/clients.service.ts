@@ -217,6 +217,11 @@ export class ClientsService {
       });
       if (dup) throw new BadRequestException('Ya existe otro cliente registrado con ese nombre.');
     }
+    if (dto.sucursalId !== undefined && !isAdmin(user)) {
+      if (user.sucursalId && dto.sucursalId !== user.sucursalId) {
+        throw new ForbiddenException('Solo puedes asignar clientes de tu sucursal');
+      }
+    }
     const client = await this.prisma.client.update({
       where: { id },
       data: {
