@@ -8,10 +8,12 @@ import { Textarea } from '@/components/ui/textarea.jsx';
 import { Switch } from '@/components/ui/switch.jsx';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.jsx';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command.jsx';
-import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import authService from '@/services/auth/index.js';
 import { surveysService } from '@/services/surveys/index.js';
+import clientsService from '@/services/clients/index.js';
+import schedulesService from '@/services/schedules/index.js';
+import { apiClient, authToken, isMockMode } from '@/api/http.js';
 import { ROLES } from '@/mocks/users.js';
 import { toast } from 'sonner';
 import { Check, ChevronsUpDown, Search, UserPlus, Loader2 } from 'lucide-react';
@@ -171,17 +173,29 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
   useEffect(() => {
     const load = async () => {
       const [c, users, s, tr] = await Promise.all([
-        pb.collection('clientes').getFullList({ sort: 'nombre', requestKey: 'vfm-clientes' }).catch(() => []),
+        clientsService.getAll().catch(() => []),
         authService.listUsers().catch(() => []),
-        pb.collection('sucursales').getFullList({ filter: 'activa = true', sort: 'nombre', requestKey: 'vfm-sucursales' }).catch(() => []),
-        pb.collection('schedules').getFullList({ sort: '-fecha_programada', fields: 'id,lugar,cliente_id,fecha_programada,google_maps_link,sucursal,sucursal_nombre,tipo', requestKey: 'vfm-trabajos' }).catch(() => []),
+        (isMockMode
+          ? import('@/lib/pocketbaseClient.js').then(({ default: pb }) =>
+              pb.collection('sucursales').getFullList({ filter: 'activa = true', sort: 'nombre', requestKey: 'vfm-sucursales' }),
+            )
+          : apiClient.get('sucursales', { token: authToken() })
+        ).catch(() => []),
+        schedulesService.getAll({}).catch(() => []),
       ]);
-      setClientes(c);
+      setClientes(c || []);
       const active = (users || []).filter((u) => u.active !== false);
       setVendedores(active.filter((u) => u.role === ROLES.VENTAS || u.role === ROLES.ADMIN));
       setTecnicos(active.filter((u) => u.role === ROLES.TEC));
-      setSucursales(s);
-      setTrabajosAll(tr);
+      setSucursales(s || []);
+      setTrabajosAll(
+        (tr || []).map((row) => ({
+          ...row,
+          cliente_id: row.cliente_id || row.clienteId,
+          fecha_programada: row.fecha_programada || row.fechaProgramada,
+          google_maps_link: row.google_maps_link || row.mapsLink || row.maps_link,
+        })),
+      );
     };
     if (isOpen) load();
   }, [isOpen]);
@@ -226,15 +240,8 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
         lugar: trabajo.lugar || prev.lugar,
         google_maps_link: trabajo.google_maps_link || prev.google_maps_link,
       }));
-      // Load equipos installed for this trabajo
-      try {
-        const equipos = await pb.collection('equipos_instalados').getFullList({
-          filter: `trabajo_id="${trabajoId}"`,
-          fields: 'id,equipo_nombre,marca_modelo,cantidad',
-          requestKey: 'vfm-equipos',
-        });
-        setEquiposByTrabajo(equipos);
-      } catch { setEquiposByTrabajo([]); }
+      // equipos_instalados no existe en Nest; solo mock local
+      setEquiposByTrabajo([]);
     }
   };
 
@@ -250,27 +257,25 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
     }
     setCreatingClient(true);
     try {
-      // Check duplicate by exact name
-      const existing = await pb.collection('clientes').getList(1, 1, {
-        filter: `nombre = "${newClient.nombre.trim()}"`,
-        requestKey: 'vfm-dup',
-      });
-      if (existing.items.length > 0) {
+      const nombre = newClient.nombre.trim();
+      const existing = (clientes || []).find(
+        (row) => String(row.nombre || '').trim().toLowerCase() === nombre.toLowerCase(),
+      );
+      if (existing) {
         toast.error('Ya existe un cliente con ese nombre');
         return;
       }
-      const record = await pb.collection('clientes').create({
-        nombre: newClient.nombre.trim(),
+      const record = await clientsService.create({
+        nombre,
         telefono: newClient.telefono || '',
         email: newClient.email || '',
         direccion: newClient.direccion || '',
         tipo: 'Seguridad Electrónica',
-        created_by: currentUser?.id || '',
-      }, { requestKey: 'vfm-create-client' });
-      // Refresh client list and auto-select
-      const refreshed = await pb.collection('clientes').getFullList({ sort: 'nombre', requestKey: 'vfm-clientes-refresh' }).catch(() => []);
+        sucursal_id: form.sucursal_id || currentUser?.sucursalId || currentUser?.department || 'suc_central',
+      });
+      const refreshed = await clientsService.getAll().catch(() => []);
       setClientes(refreshed);
-      setForm(prev => ({ ...prev, cliente_id: record.id, lugar: prev.lugar || newClient.direccion || '' }));
+      setForm((prev) => ({ ...prev, cliente_id: record.id, lugar: prev.lugar || newClient.direccion || '' }));
       setShowNewClientModal(false);
       toast.success('Cliente creado correctamente');
     } catch (err) {

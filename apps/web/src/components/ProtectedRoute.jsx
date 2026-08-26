@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Skeleton } from '@/components/ui/skeleton';
 import mockAdapter from '@/api/mockAdapter.js';
+import { ROLES } from '@/mocks/users.js';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, userRole, initialLoading } = useAuth();
@@ -23,6 +24,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!authed) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (role === ROLES.NONE) {
+    if (location.pathname === '/sin-acceso') {
+      return children;
+    }
+    return <Navigate to="/sin-acceso" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {

@@ -23,9 +23,22 @@ const types = {
   '.ico': 'image/x-icon',
 };
 
+function cacheControl(file) {
+  const base = path.basename(file);
+  if (base === 'index.html') return 'no-cache';
+  // Vite hashed assets: index-XXXX.js / .css
+  if (/-[A-Za-z0-9_]{6,}\.(js|css)$/.test(base) || /\.(woff2|svg|png|jpg|webp|ico)$/.test(base)) {
+    return 'public, max-age=31536000, immutable';
+  }
+  return 'public, max-age=3600';
+}
+
 function send(res, file, status = 200) {
   const ext = path.extname(file);
-  res.writeHead(status, { 'Content-Type': types[ext] || 'application/octet-stream' });
+  res.writeHead(status, {
+    'Content-Type': types[ext] || 'application/octet-stream',
+    'Cache-Control': cacheControl(file),
+  });
   fs.createReadStream(file).pipe(res);
 }
 

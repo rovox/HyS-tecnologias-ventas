@@ -5,6 +5,7 @@ export const ROLES = {
   VENTAS: 'VENTAS / ADMINISTRACIÓN',
   TEC: 'SEGURIDAD ELECTRÓNICA',
   CONT: 'Contadora',
+  NONE: 'SIN ACCESO',
 };
 
 export const DEMO_PASSWORD = 'Demo1234!';
