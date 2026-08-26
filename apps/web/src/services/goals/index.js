@@ -56,7 +56,8 @@ export const goalsService = {
 
   async createSellerGoal({ name, monthlyGoal }) {
     if (!isMockMode) {
-      throw new Error('En modo API las metas se editan sobre usuarios existentes.');
+      console.warn('createSellerGoal no aplica en API; edita metas de usuarios existentes.');
+      return null;
     }
     const nombre = String(name || '').trim();
     if (!nombre) throw new Error('El nombre es obligatorio');
@@ -71,7 +72,8 @@ export const goalsService = {
 
   async removeSellerGoal(id) {
     if (!isMockMode) {
-      throw new Error('En modo API no se eliminan metas; edita el monto a 0 si no aplica.');
+      console.warn('removeSellerGoal no aplica en API; pon meta en 0 si no corresponde.', id);
+      return null;
     }
     return store.remove('salesperson_goals', id);
   },

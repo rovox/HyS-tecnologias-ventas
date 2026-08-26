@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,17 @@ import { Lock, Mail, Users, ShieldCheck, TrendingUp, ArrowRight, Eye, EyeOff, Wi
 import { Helmet } from 'react-helmet';
 import { toast } from 'sonner';
 import authService from '@/services/auth/index.js';
-import { DEMO_PASSWORD } from '@/mocks/users.js';
+import { DEMO_PASSWORD, ROLES } from '@/mocks/users.js';
 import { isMockMode } from '@/api/http.js';
 
-const COMPANY_PHOTOS = ['/branding/login-bg.svg'];
-
-const API_DEMO_HINTS = [
-  { email: 'dennis.ventas@demo.hs.local', name: 'Dennis', password: 'dennis', role: 'Ventas' },
-  { email: 'julio.admin@demo.hs.local', name: 'Julio', password: 'julio', role: 'Admin' },
-  { email: 'elias.ops@demo.hs.local', name: 'Elias', password: 'elias', role: 'Técnico' },
+/** Chips en producción: solo rellenan el correo (cada usuario tiene su propia clave). */
+const API_ACCOUNT_CHIPS = [
+  { email: 'julio@hscontrol.com', name: 'Julio', role: 'Admin' },
+  { email: 'mavel@hscontrol.com', name: 'Mavel', role: 'Admin' },
+  { email: 'vanessa@hscontrol.com', name: 'Vanessa', role: 'Ventas' },
+  { email: 'wilson@hscontrol.com', name: 'Wilson', role: 'Ventas' },
+  { email: 'stephany@hscontrol.com', name: 'Stephany', role: 'Finanzas' },
+  { email: 'marcelo@hscontrol.com', name: 'Marcelo', role: 'Sin acceso' },
 ];
 
 const LoginPage = () => {
@@ -27,21 +29,29 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const demoAccounts = isMockMode ? authService.listDemoAccounts() : API_DEMO_HINTS;
 
-  useEffect(() => {
-    const t = setInterval(() => setPhotoIndex(i => (i + 1) % COMPANY_PHOTOS.length), 5000);
-    return () => clearInterval(t);
-  }, []);
+  const accountChips = isMockMode
+    ? authService.listDemoAccounts().map((a) => ({
+        email: a.email,
+        name: a.name,
+        role: a.role,
+        password: a.password || DEMO_PASSWORD,
+      }))
+    : API_ACCOUNT_CHIPS;
 
-  const handleSubmit = async e => {
+  const fillAccount = (account) => {
+    setEmail(account.email);
+    if (isMockMode && account.password) setPassword(account.password);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     const result = await login(email, password, { remember });
     if (result.success) {
       toast.success('Acceso autorizado');
-      navigate('/dashboard');
+      const role = result.user?.role;
+      navigate(role === ROLES.NONE ? '/sin-acceso' : '/dashboard');
     } else {
       toast.error(result.error);
     }
@@ -56,15 +66,6 @@ const LoginPage = () => {
       </Helmet>
 
       <style>{`
-        @keyframes hs-scan {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100vh); }
-        }
-        @keyframes hs-fade-photo {
-          0%, 100% { opacity: 0; }
-          15%, 85% { opacity: 1; }
-        }
-        .hs-photo-active { animation: hs-fade-photo 5s ease-in-out forwards; }
         .hs-input-dark {
           background: rgba(4,28,44,0.85) !important;
           border-color: rgba(17,212,177,0.15) !important;
@@ -87,174 +88,141 @@ const LoginPage = () => {
 
       <div className="min-h-screen w-full flex flex-col lg:flex-row" style={{ background: '#030E17' }}>
 
-        {/* ── LEFT PANEL ── */}
-        <div className="relative w-full lg:w-[62%] min-h-[50vh] lg:min-h-[100dvh] overflow-hidden">
-
-          {/* Cycling background photos */}
-          {COMPANY_PHOTOS.map((src, idx) => (
-            <img
-              key={src}
-              src={src}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
-              style={{ opacity: idx === photoIndex ? 1 : 0 }}
-            />
-          ))}
-
-          {/* Layered overlays for depth + readability */}
+        {/* Hero decorativo: solo desktop (form first en móvil) */}
+        <div className="relative hidden lg:flex lg:w-[62%] min-h-[100dvh] overflow-hidden">
+          <img
+            src="/branding/login-bg.svg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover"
+            width="1200"
+            height="800"
+            decoding="async"
+          />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(3,14,23,0.92) 0%, rgba(7,38,58,0.75) 50%, rgba(3,14,23,0.88) 100%)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(2,8,14,0.97) 0%, rgba(2,8,14,0.5) 35%, transparent 65%)' }} />
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 50% at 10% 15%, rgba(17,212,177,0.09), transparent)' }} />
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 40% 40% at 80% 80%, rgba(0,80,160,0.12), transparent)' }} />
-
-          {/* Tech grid overlay */}
           <div className="absolute inset-0 opacity-[0.04]" style={{
             backgroundImage: 'linear-gradient(rgba(17,212,177,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(17,212,177,0.6) 1px, transparent 1px)',
-            backgroundSize: '48px 48px'
+            backgroundSize: '48px 48px',
           }} />
 
-          {/* Scan line */}
-          <div className="absolute inset-x-0 h-[1px] opacity-[0.12] pointer-events-none" style={{
-            background: 'linear-gradient(90deg, transparent, rgba(17,212,177,0.8), transparent)',
-            animation: 'hs-scan 7s linear infinite',
-          }} />
-
-          {/* Content */}
-          <div className="relative z-10 flex flex-col justify-between min-h-[50vh] lg:min-h-[100dvh] p-6 sm:p-10 lg:p-12 xl:p-14">
-
-            {/* TOP: Logo + Brand */}
+          <div className="relative z-10 flex flex-col justify-between min-h-[100dvh] p-10 xl:p-14">
             <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                <div className="absolute -inset-2 rounded-3xl blur-xl opacity-40" style={{ background: 'rgba(17,212,177,0.35)' }} />
-                <img
-                  src="/branding/hyslogo.jpg"
-                  alt="H&S Tecnologías"
-                  className="relative h-[72px] w-[72px] rounded-2xl object-contain p-2"
-                  style={{
-                    background: 'rgba(7,38,58,0.7)',
-                    border: '1px solid rgba(17,212,177,0.3)',
-                    boxShadow: '0 0 28px -4px rgba(17,212,177,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
-                  }}
-                />
-              </div>
+              <img
+                src="/branding/hyslogo.jpg"
+                alt="H&S Tecnologías"
+                width="72"
+                height="72"
+                className="relative h-[72px] w-[72px] rounded-2xl object-contain p-2"
+                style={{
+                  background: 'rgba(7,38,58,0.7)',
+                  border: '1px solid rgba(17,212,177,0.3)',
+                  boxShadow: '0 0 28px -4px rgba(17,212,177,0.4)',
+                }}
+              />
               <div>
-                <p className="font-black leading-none tracking-tight" style={{ fontSize: 'clamp(1.4rem,2.5vw,2rem)', color: '#E8F0F7' }}>
+                <p className="font-black leading-none tracking-tight text-[2rem]" style={{ color: '#E8F0F7' }}>
                   H&amp;S <span style={{ color: '#11D4B1' }}>Tecnologías</span>
                 </p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <div className="h-px w-6" style={{ background: 'linear-gradient(90deg, #11D4B1, transparent)' }} />
-                  <p className="text-[10.5px] font-bold tracking-[0.2em] uppercase" style={{ color: '#11D4B1' }}>Tecnología con Garantía</p>
-                </div>
+                <p className="text-[10.5px] font-bold tracking-[0.2em] uppercase mt-1.5" style={{ color: '#11D4B1' }}>
+                  Tecnología con Garantía
+                </p>
               </div>
             </div>
 
-            {/* MIDDLE: Headline + stats strip */}
-            <div className="mt-auto mb-auto py-8 lg:py-0 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5 text-[10.5px] font-bold uppercase tracking-[0.15em]"
-                style={{ background: 'rgba(17,212,177,0.08)', border: '1px solid rgba(17,212,177,0.2)', color: '#11D4B1' }}>
+            <div className="max-w-2xl py-8">
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5 text-[10.5px] font-bold uppercase tracking-[0.15em]"
+                style={{ background: 'rgba(17,212,177,0.08)', border: '1px solid rgba(17,212,177,0.2)', color: '#11D4B1' }}
+              >
                 <Cpu className="h-3 w-3" />
                 Plataforma Operativa Integrada
               </div>
-
-              <h1 className="font-black leading-[1.08] tracking-tight mb-5" style={{ fontSize: 'clamp(2rem,4vw,3.4rem)', color: '#E8F0F7', textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
-                Somos <span style={{ color: '#11D4B1', textShadow: '0 0 30px rgba(17,212,177,0.35)' }}>familia</span>,
-                <br />somos <span style={{ color: '#11D4B1', textShadow: '0 0 30px rgba(17,212,177,0.35)' }}>H&amp;S</span>.
+              <h1 className="font-black leading-[1.08] tracking-tight mb-5 text-[3rem]" style={{ color: '#E8F0F7' }}>
+                Somos <span style={{ color: '#11D4B1' }}>familia</span>,
+                <br />somos <span style={{ color: '#11D4B1' }}>H&amp;S</span>.
               </h1>
-
-              <p className="text-sm leading-relaxed mb-8 pl-4" style={{
-                color: '#9BBAD0',
-                borderLeft: '2px solid rgba(17,212,177,0.5)',
-                maxWidth: '36rem'
-              }}>
+              <p className="text-sm leading-relaxed mb-8 pl-4" style={{ color: '#9BBAD0', borderLeft: '2px solid rgba(17,212,177,0.5)' }}>
                 Por muy alta que sea una montaña,{' '}
                 <span style={{ color: '#C8D9E6' }}>siempre hay un camino hacia la cima.</span>
               </p>
-
-              {/* Stats strip */}
-              <div className="flex items-center gap-5 sm:gap-7">
+              <div className="flex items-center gap-7">
                 {[
-                  { icon: Users, label: 'Trabajo en equipo', val: '' },
-                  { icon: ShieldCheck, label: 'Seguridad operativa', val: '' },
-                  { icon: TrendingUp, label: 'Resultados reales', val: '' },
+                  { icon: Users, label: 'Trabajo en equipo' },
+                  { icon: ShieldCheck, label: 'Seguridad operativa' },
+                  { icon: TrendingUp, label: 'Resultados reales' },
                 ].map(({ icon: Icon, label }) => (
                   <div key={label} className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(17,212,177,0.1)', border: '1px solid rgba(17,212,177,0.22)', boxShadow: '0 0 14px -4px rgba(17,212,177,0.25)' }}>
+                    <div
+                      className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(17,212,177,0.1)', border: '1px solid rgba(17,212,177,0.22)' }}
+                    >
                       <Icon className="h-4 w-4" style={{ color: '#11D4B1' }} strokeWidth={2.2} />
                     </div>
-                    <span className="text-xs font-semibold leading-tight" style={{ color: '#C8D9E6' }}>{label}</span>
+                    <span className="text-xs font-semibold" style={{ color: '#C8D9E6' }}>{label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-2xl p-5 sm:p-6" style={{
-              background: 'rgba(3,14,23,0.72)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(17,212,177,0.12)',
-            }}>
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: 'rgba(3,14,23,0.72)', border: '1px solid rgba(17,212,177,0.12)' }}
+            >
               <h3 className="text-sm font-bold" style={{ color: '#E8F0F7' }}>Operación comercial</h3>
               <p className="text-xs mt-2 leading-relaxed" style={{ color: '#9BBAD0' }}>
-                Cotizaciones, clientes, relevamientos y tareas. Un solo administrador; cada vendedor ve su sucursal.
+                Cotizaciones, clientes, relevamientos y tareas.
               </p>
             </div>
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── */}
-        <div className="relative w-full lg:w-[38%] min-h-[55vh] lg:min-h-[100dvh] flex items-center justify-center px-5 py-10 sm:px-8 lg:px-10"
-          style={{ background: 'linear-gradient(160deg, #030E17 0%, #041C2C 60%, #030E17 100%)' }}>
-
-          {/* BG accents */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div style={{ position: 'absolute', top: '15%', right: '-5%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(17,212,177,0.07) 0%, transparent 70%)' }} />
-            <div style={{ position: 'absolute', bottom: '10%', left: '-5%', width: 250, height: 250, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,60,140,0.12) 0%, transparent 70%)' }} />
-            {/* Decorative corner lines */}
-            <svg className="absolute top-8 right-8 opacity-20" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              <path d="M60 0 L60 20 M60 0 L40 0" stroke="#11D4B1" strokeWidth="1.5" />
-            </svg>
-            <svg className="absolute bottom-8 left-8 opacity-20" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              <path d="M0 60 L0 40 M0 60 L20 60" stroke="#11D4B1" strokeWidth="1.5" />
-            </svg>
-          </div>
-
+        {/* Formulario: primero en el DOM → above-the-fold en móvil */}
+        <div
+          className="relative w-full lg:w-[38%] min-h-[100dvh] flex items-center justify-center px-4 py-6 sm:px-8 lg:px-10"
+          style={{ background: 'linear-gradient(160deg, #030E17 0%, #041C2C 60%, #030E17 100%)' }}
+        >
           <div className="relative w-full max-w-[28rem]">
-            {/* Outer glow ring */}
-            <div className="absolute -inset-px rounded-3xl opacity-60 pointer-events-none" style={{
-              background: 'linear-gradient(135deg, rgba(17,212,177,0.2) 0%, transparent 50%, rgba(17,212,177,0.08) 100%)',
-              filter: 'blur(1px)',
-            }} />
+            {/* Brand compacto solo móvil */}
+            <div className="flex lg:hidden items-center gap-3 mb-5 px-1">
+              <img
+                src="/branding/hyslogo.jpg"
+                alt=""
+                width="40"
+                height="40"
+                className="h-10 w-10 rounded-xl object-contain p-1"
+                style={{ background: 'rgba(7,38,58,0.7)', border: '1px solid rgba(17,212,177,0.3)' }}
+              />
+              <p className="font-black text-lg tracking-tight" style={{ color: '#E8F0F7' }}>
+                H&amp;S <span style={{ color: '#11D4B1' }}>Tecnologías</span>
+              </p>
+            </div>
 
-            <div className="relative rounded-3xl overflow-hidden" style={{
-              background: 'linear-gradient(160deg, rgba(7,38,58,0.85) 0%, rgba(4,28,44,0.92) 100%)',
-              backdropFilter: 'blur(24px)',
-              border: '1px solid rgba(17,212,177,0.15)',
-              boxShadow: '0 30px 60px -15px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 1px 0 rgba(255,255,255,0.06) inset',
-            }}>
-              {/* Card top accent bar */}
-              <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(17,212,177,0.7) 40%, rgba(17,212,177,0.3) 70%, transparent)' }} />
+            <div
+              className="relative rounded-2xl sm:rounded-3xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(160deg, rgba(7,38,58,0.85) 0%, rgba(4,28,44,0.92) 100%)',
+                border: '1px solid rgba(17,212,177,0.15)',
+                boxShadow: '0 30px 60px -15px rgba(0,0,0,0.7)',
+              }}
+            >
+              <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(17,212,177,0.7) 40%, transparent)' }} />
 
-              <div className="p-8 sm:p-10">
-                {/* Lock icon header */}
-                <div className="flex flex-col items-center text-center mb-9">
-                  <div className="relative mb-5">
-                    {/* Outer ring */}
-                    <div className="absolute -inset-3 rounded-full hs-ring-pulse" style={{
-                      border: '1px solid rgba(17,212,177,0.2)',
-                    }} />
-                    {/* Glow blob */}
-                    <div className="absolute inset-0 rounded-full blur-2xl opacity-50" style={{ background: 'rgba(17,212,177,0.4)' }} />
-                    <div className="relative h-[72px] w-[72px] rounded-full flex items-center justify-center" style={{
-                      background: 'linear-gradient(135deg, rgba(17,212,177,0.15) 0%, rgba(4,28,44,0.9) 100%)',
-                      border: '1.5px solid rgba(17,212,177,0.45)',
-                      boxShadow: '0 0 30px -4px rgba(17,212,177,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    }}>
-                      <Lock className="h-7 w-7" style={{ color: '#11D4B1' }} strokeWidth={1.8} />
+              <div className="p-5 sm:p-8 lg:p-10">
+                <div className="flex flex-col items-center text-center mb-6 sm:mb-9">
+                  <div className="relative mb-4 sm:mb-5">
+                    <div className="absolute -inset-3 rounded-full hs-ring-pulse hidden sm:block" style={{ border: '1px solid rgba(17,212,177,0.2)' }} />
+                    <div
+                      className="relative h-14 w-14 sm:h-[72px] sm:w-[72px] rounded-full flex items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(17,212,177,0.15) 0%, rgba(4,28,44,0.9) 100%)',
+                        border: '1.5px solid rgba(17,212,177,0.45)',
+                      }}
+                    >
+                      <Lock className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: '#11D4B1' }} strokeWidth={1.8} />
                     </div>
                   </div>
-
-                  <h2 className="text-[1.6rem] font-black tracking-tight" style={{ color: '#E8F0F7' }}>
+                  <h2 className="text-xl sm:text-[1.6rem] font-black tracking-tight" style={{ color: '#E8F0F7' }}>
                     Acceso Operativo
                   </h2>
                   <div className="flex items-center gap-2 mt-2">
@@ -262,35 +230,30 @@ const LoginPage = () => {
                     <Wifi className="h-3 w-3" style={{ color: 'rgba(17,212,177,0.6)' }} />
                     <div className="h-px flex-1 w-10" style={{ background: 'linear-gradient(90deg, rgba(17,212,177,0.5), transparent)' }} />
                   </div>
-                  <p className="text-[11.5px] font-medium mt-2" style={{ color: '#6B8499' }}>Plataforma H&amp;S Tecnologías</p>
+                  <p className="text-[11px] font-medium mt-2" style={{ color: '#6B8499' }}>Plataforma H&amp;S Tecnologías</p>
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-[#11D4B1]">
-                    {isMockMode ? 'POC · autenticación mock' : 'Demo local · API Nest'}
+                {isMockMode && (
+                  <p className="text-[11px] text-[#8DA4B8] mb-3">
+                    POC mock. Contraseña: <span className="font-mono text-white">{DEMO_PASSWORD}</span>
                   </p>
-                  <p className="text-[11px] text-[#8DA4B8]">
-                    {isMockMode
-                      ? <>Datos ficticios. Contraseña compartida: <span className="font-mono text-white">{DEMO_PASSWORD}</span></>
-                      : <>Cada usuario tiene su propia clave (nombre en minúsculas). Seed local únicamente.</>}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {demoAccounts.map((account) => (
-                      <button
-                        key={account.email}
-                        type="button"
-                        onClick={() => { setEmail(account.email); setPassword(account.password); }}
-                        className="text-left text-[11px] rounded-lg px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[#d6e8f5]"
-                      >
-                        <span className="block font-bold truncate">{account.name}</span>
-                        <span className="block opacity-70 truncate">{(account.role || '').split('/')[0]}</span>
-                      </button>
-                    ))}
-                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 mb-5">
+                  {accountChips.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => fillAccount(account)}
+                      className="text-left text-[11px] rounded-lg px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[#d6e8f5] min-h-11"
+                    >
+                      <span className="block font-bold truncate">{account.name}</span>
+                      <span className="block opacity-70 truncate">{String(account.role || '').split('/')[0]}</span>
+                    </button>
+                  ))}
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* Email */}
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-xs font-bold uppercase tracking-[0.1em]" style={{ color: '#7EA4BC' }}>
                       Correo electrónico
@@ -300,16 +263,16 @@ const LoginPage = () => {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="usuario@hs.local"
+                        placeholder="correo@empresa.com"
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="h-12 pl-10 rounded-xl hs-input-dark border focus-visible:ring-0"
+                        autoComplete="username"
+                        className="h-11 sm:h-12 pl-10 rounded-xl hs-input-dark border focus-visible:ring-0"
                       />
                     </div>
                   </div>
 
-                  {/* Password */}
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-xs font-bold uppercase tracking-[0.1em]" style={{ color: '#7EA4BC' }}>
                       Contraseña
@@ -321,31 +284,31 @@ const LoginPage = () => {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={password}
-                        onChange={e => setPassword(e.target.value)}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="h-12 pl-10 pr-11 rounded-xl hs-input-dark border focus-visible:ring-0"
+                        autoComplete="current-password"
+                        className="h-11 sm:h-12 pl-10 pr-11 rounded-xl hs-input-dark border focus-visible:ring-0"
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword(v => !v)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2"
                         style={{ color: 'rgba(141,164,184,0.5)' }}
                         aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4 hover:text-[#11D4B1]" /> : <Eye className="h-4 w-4 hover:text-[#11D4B1]" />}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
 
-                  {/* Remember + Forgot */}
-                  <div className="flex items-center justify-between pt-1">
-                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none min-h-11">
                       <Checkbox
                         checked={remember}
-                        onCheckedChange={val => setRemember(!!val)}
+                        onCheckedChange={(val) => setRemember(!!val)}
                         className="border-white/15 data-[state=checked]:bg-[#11D4B1] data-[state=checked]:border-[#11D4B1] data-[state=checked]:text-[#041C2C]"
                       />
-                      <span className="text-[12.5px] font-semibold" style={{ color: '#8DA4B8' }}>Recordarme</span>
+                      <span className="text-[12px] font-semibold" style={{ color: '#8DA4B8' }}>Recordarme</span>
                     </label>
                     <button
                       type="button"
@@ -357,33 +320,29 @@ const LoginPage = () => {
                         try {
                           await authService.requestPasswordReset(email);
                           toast.success(isMockMode
-                            ? 'POC mock: no se envía correo real. Usá las cuentas de demostración.'
+                            ? 'POC mock: no se envía correo real.'
                             : 'Si el correo existe, el administrador gestionará el restablecimiento.');
-                        } catch (err) {
-                          toast.error('No se pudo enviar el correo. Contactá al administrador.');
+                        } catch {
+                          toast.error('No se pudo enviar la solicitud. Contactá al administrador.');
                         }
                       }}
-                      className="text-[12.5px] font-bold transition-colors"
+                      className="text-[12px] font-bold min-h-11"
                       style={{ color: 'rgba(17,212,177,0.75)' }}
                     >
                       ¿Olvidaste tu clave?
                     </button>
                   </div>
 
-                  {/* Submit */}
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="relative w-full h-12 rounded-xl font-black text-[14px] overflow-hidden transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                    className="relative w-full h-11 sm:h-12 rounded-xl font-black text-[14px] overflow-hidden transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
                     style={{
                       background: isLoading ? 'rgba(17,212,177,0.6)' : 'linear-gradient(135deg, #11D4B1 0%, #09B99A 60%, #07A88C 100%)',
                       color: '#03111A',
-                      boxShadow: isLoading ? 'none' : '0 0 28px -4px rgba(17,212,177,0.6), 0 4px 12px rgba(0,0,0,0.3)',
-                      letterSpacing: '0.02em',
+                      boxShadow: isLoading ? 'none' : '0 0 28px -4px rgba(17,212,177,0.6)',
                     }}
                   >
-                    {/* Shimmer on hover */}
-                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-700 pointer-events-none" />
                     <span className="relative flex items-center justify-center gap-2">
                       {isLoading ? (
                         <>
@@ -400,13 +359,11 @@ const LoginPage = () => {
                   </button>
                 </form>
 
-                {/* Footer */}
-                <div className="mt-7 pt-5 flex flex-col items-center gap-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="mt-5 sm:mt-7 pt-4 sm:pt-5 flex flex-col items-center gap-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   <div className="flex items-center gap-2" style={{ color: '#8DA4B8' }}>
                     <ShieldCheck className="h-3.5 w-3.5" style={{ color: '#11D4B1' }} />
                     <span className="text-[11px] font-bold uppercase tracking-wide">Sistema seguro y protegido</span>
                   </div>
-                  <p className="text-[10.5px]" style={{ color: 'rgba(141,164,184,0.45)' }}>Tu información está encriptada y protegida.</p>
                 </div>
               </div>
             </div>

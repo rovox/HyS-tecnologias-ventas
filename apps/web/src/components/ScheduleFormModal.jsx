@@ -17,6 +17,7 @@ import LocationPickerModal from '@/components/LocationPickerModal.jsx';
 import pb from '@/lib/pocketbaseClient.js';
 import clientsService from '@/services/clients/index.js';
 import { surveysService } from '@/services/surveys/index.js';
+import { isMockMode } from '@/api/http.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
@@ -358,6 +359,10 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 
     files.forEach(file => data.append('fotografias', file));
 
+    if (!isMockMode && files.length > 0) {
+      toast.message('Las fotos del cronograma no se suben aún en modo API; el trabajo se guardará sin archivos.');
+    }
+
     try {
       let savedRecord;
       if (initialData?.id) {
@@ -367,8 +372,8 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
       }
       const savedJobId = savedRecord?.id || initialData?.id;
 
-      // Handle adelanto — create schedule_payments record (Cobros/Rendición)
-      if (adelanto_recibido > 0 && savedJobId) {
+      // Adelanto en ledger Cobros/Rendición solo en mock (finanzas congelado en API)
+      if (isMockMode && adelanto_recibido > 0 && savedJobId) {
         const authUserId = pb.authStore.record?.id || '';
         const sucursalNombre = sucursales?.find(s => s.id === formData.sucursal_id)?.nombre || '';
         const cobradorId = authUserId;

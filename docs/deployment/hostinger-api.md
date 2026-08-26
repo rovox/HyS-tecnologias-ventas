@@ -208,6 +208,8 @@ Hostinger has **no API to run SQL imports**. Do this in the UI. **Do not** run `
 
 Or split: [hostinger-schema-baseline.sql](./hostinger-schema-baseline.sql) then [hostinger-bootstrap.sql](./hostinger-bootstrap.sql).
 
+**Production users (after bootstrap):** import [hostinger-users-hscontrol.sql](./hostinger-users-hscontrol.sql) in phpMyAdmin. It upserts the 8 `hscontrol.com` accounts and sets `admin@hstecnologias.com` to `active = false`. Never run `prisma db seed` on the host.
+
 Regenerate the baseline after new Prisma migrations (concat folders in name order). Do not squash Prisma migration folders in git — see `.cursor/rules/prisma-migrations-hostinger.mdc`.
 
 **Existing DB** — import only the **new** `migration.sql` folder(s), then skip a full baseline re-import.

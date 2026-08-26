@@ -201,7 +201,18 @@ export const schedulesService = {
   },
 
   async getObservations(trabajo_id) {
-    if (!isMockMode) return [];
+    if (!isMockMode) {
+      const row = await this.getById(trabajo_id);
+      const text = String(row?.observaciones || '').trim();
+      if (!text) return [];
+      return text.split('\n').filter(Boolean).map((observacion, index) => ({
+        id: `${trabajo_id}-obs-${index}`,
+        trabajo_id,
+        observacion,
+        tipo: 'nota',
+        created: row?.updated || row?.updatedAt || null,
+      }));
+    }
     return store.list('schedule_observations', { filter: `trabajo_id="${trabajo_id}"`, sort: '-created' });
   },
 
@@ -228,7 +239,9 @@ export const schedulesService = {
 
   async registerPayment(paymentData) {
     if (!isMockMode) {
-      throw new Error('Pagos de cronograma siguen en dominio congelado (mock/finanzas)');
+      // Ledger de cobros/finanzas congelado: el monto de adelanto ya va en PATCH schedules.
+      console.warn('registerPayment omitido en modo API (finanzas congelado)', paymentData?.trabajo_id || paymentData?.schedule_id);
+      return null;
     }
     const trabajoId = paymentData.trabajo_id || paymentData.schedule_id;
     const job = store.findById('schedules', trabajoId);

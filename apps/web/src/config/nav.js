@@ -110,6 +110,7 @@ export const adminMenuSections = [
 export const menuSections = operationalMenuSections;
 
 export function getMenuSections(role) {
+  if (role === ROLES.NONE) return [];
   return role === ROLES.ADMIN ? adminMenuSections : operationalMenuSections;
 }
 
