@@ -21,10 +21,18 @@ import { HealthController } from './health.controller';
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'cambiar-en-hostinger',
-        signOptions: { expiresIn: '8h' as const },
-      }),
+      useFactory: (config: ConfigService) => {
+        const secret = (config.get<string>('JWT_SECRET') || '').trim();
+        if (!secret || secret === 'cambiar-en-hostinger') {
+          throw new Error(
+            'JWT_SECRET debe estar definido en el entorno (hPanel). No se permite el valor por defecto.',
+          );
+        }
+        return {
+          secret,
+          signOptions: { expiresIn: '8h' as const },
+        };
+      },
     }),
     PrismaModule,
     AuthModule,

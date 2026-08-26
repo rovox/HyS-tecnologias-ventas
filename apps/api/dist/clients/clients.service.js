@@ -216,6 +216,11 @@ let ClientsService = class ClientsService {
             if (dup)
                 throw new common_1.BadRequestException('Ya existe otro cliente registrado con ese nombre.');
         }
+        if (dto.sucursalId !== undefined && !(0, roles_1.isAdmin)(user)) {
+            if (user.sucursalId && dto.sucursalId !== user.sucursalId) {
+                throw new common_1.ForbiddenException('Solo puedes asignar clientes de tu sucursal');
+            }
+        }
         const client = await this.prisma.client.update({
             where: { id },
             data: {

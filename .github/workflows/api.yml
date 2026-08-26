@@ -3,8 +3,20 @@ name: api
 on:
   push:
     branches: [migration/backend-api]
+    paths:
+      - 'apps/api/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/api.yml'
   pull_request:
     branches: [migration/backend-api]
+    paths:
+      - 'apps/api/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/api.yml'
 
 concurrency:
   group: api-${{ github.ref }}
@@ -79,4 +91,4 @@ jobs:
           git push
 
       - name: Hostinger note
-        run: echo "Compile on GitHub only. Hostinger Node app runs node dist/main.js. Apply SQL migrations in phpMyAdmin. Do not prisma migrate deploy or seed on the host. Do not flip VITE_API_MODE=api until GET /api/health and /api/health/db succeed."
+        run: echo "Compile on GitHub only. Hostinger Node app runs node dist/main.js. Apply SQL migrations in phpMyAdmin. Do not prisma migrate deploy or seed on the host. JWT_SECRET and CORS_ORIGIN are required. Swagger needs ENABLE_SWAGGER=1."

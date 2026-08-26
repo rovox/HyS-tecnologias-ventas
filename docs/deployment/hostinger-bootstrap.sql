@@ -2,12 +2,14 @@
 -- Run AFTER importing all apps/api/prisma/migrations/*/migration.sql in folder order.
 -- Do NOT run prisma seed on the host.
 --
--- First admin login (change password after first login):
+-- First admin login (set a strong password offline before import; rotate after first login):
 --   email:    admin@hstecnologias.com
---   password: HsAdmin2026!
+--   password: (the one-time password you hashed into passwordHash below — never commit a live production password)
 --
 -- ADMINISTRADOR is not scoped by sucursalId in the API (sees Central, Punata, Quillacollo).
 -- sucursalId on the user row is only a default for creates.
+--
+-- ON DUPLICATE KEY UPDATE does NOT overwrite passwordHash (avoids resetting a rotated admin).
 
 INSERT INTO `sucursales` (`id`, `nombre`, `createdAt`, `updatedAt`)
 VALUES
@@ -43,7 +45,6 @@ VALUES (
   CURRENT_TIMESTAMP(3)
 )
 ON DUPLICATE KEY UPDATE
-  `passwordHash` = VALUES(`passwordHash`),
   `name` = VALUES(`name`),
   `role` = VALUES(`role`),
   `active` = true,

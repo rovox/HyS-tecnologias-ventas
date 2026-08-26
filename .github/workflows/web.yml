@@ -2,9 +2,21 @@ name: web
 
 on:
   push:
-    branches: [migration/frontend-poc]
+    branches: [migration/frontend-poc, migration/backend-api]
+    paths:
+      - 'apps/web/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/web.yml'
   pull_request:
-    branches: [migration/frontend-poc]
+    branches: [migration/frontend-poc, migration/backend-api]
+    paths:
+      - 'apps/web/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/web.yml'
 
 concurrency:
   group: web-${{ github.ref }}
@@ -37,7 +49,10 @@ jobs:
           path: apps/web/dist
 
       - name: Commit dist for Hostinger
-        if: github.event_name == 'push' && github.ref == 'refs/heads/migration/frontend-poc'
+        if: >-
+          github.event_name == 'push' &&
+          (github.ref == 'refs/heads/migration/frontend-poc' ||
+           github.ref == 'refs/heads/migration/backend-api')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

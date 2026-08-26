@@ -423,12 +423,13 @@ CREATE INDEX `tasks_tipo_estado_idx` ON `tasks`(`tipo`, `estado`);
 -- Run AFTER importing all apps/api/prisma/migrations/*/migration.sql in folder order.
 -- Do NOT run prisma seed on the host.
 --
--- First admin login (change password after first login):
+-- First admin login (rotate after first login; do not re-import on a live DB to reset password):
 --   email:    admin@hstecnologias.com
---   password: HsAdmin2026!
+--   password: use the one-time password that matches passwordHash below; rotate immediately on Hostinger
 --
 -- ADMINISTRADOR is not scoped by sucursalId in the API (sees Central, Punata, Quillacollo).
 -- sucursalId on the user row is only a default for creates.
+-- ON DUPLICATE KEY UPDATE does NOT overwrite passwordHash.
 
 INSERT INTO `sucursales` (`id`, `nombre`, `createdAt`, `updatedAt`)
 VALUES
@@ -464,7 +465,6 @@ VALUES (
   CURRENT_TIMESTAMP(3)
 )
 ON DUPLICATE KEY UPDATE
-  `passwordHash` = VALUES(`passwordHash`),
   `name` = VALUES(`name`),
   `role` = VALUES(`role`),
   `active` = true,

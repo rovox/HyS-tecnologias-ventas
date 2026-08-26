@@ -11,7 +11,7 @@ App name suggestion: `hys-sales-api`. Package: `apps/api`. Global prefix: `/api`
 ```text
 Browser  →  white-goat SPA (static dist, often mock today)
                 │
-                │  later: HTTPS + JWT  (VITE_API_MODE=api)
+                │  HTTPS + JWT  (VITE_API_MODE=api)
                 ▼
          Nest Node Web App  (second Hostinger website)
                 │
@@ -111,9 +111,10 @@ Delete lowercase keys such as `cors_origin` / `upload_dir`. Nest reads **only** 
 | Key | Example / how to get |
 |-----|----------------------|
 | `DATABASE_URL` | `mysql://u656468476_hys_api:<PASSWORD>@localhost:3306/u656468476_hys_sales` |
-| `JWT_SECRET` | `openssl rand -hex 32` in any terminal (not from Hostinger) |
-| `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` |
+| `JWT_SECRET` | `openssl rand -hex 32` — required; Nest **refuses to start** with the old placeholder `cambiar-en-hostinger` |
+| `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` — **required**; missing value aborts bootstrap |
 | `UPLOAD_DIR` | `/home/u656468476/hys-uploads/quotations` |
+| `ENABLE_SWAGGER` | Omit in production. Set `1` only when you intentionally need `/api/docs` |
 
 `PORT` is assigned by Hostinger — do not override unless support says so.
 
@@ -148,7 +149,7 @@ curl -sS https://lime-chamois-337700.hostingersite.com/api/health/db
 
 Expect JSON with `"ok":true`. `/api/health/db` must show `"db":true` before flipping the SPA to `VITE_API_MODE=api`.
 
-**ERP admin** (from bootstrap SQL, not MySQL): `admin@hstecnologias.com` / `HsAdmin2026!`
+**ERP admin** (from bootstrap SQL, not MySQL): `admin@hstecnologias.com` — rotate the one-time bootstrap password immediately after first login. Do not re-import bootstrap on a live DB (it no longer overwrites `passwordHash`, but still avoid it).
 
 ## Node Web App — you do not zip-upload only backend files
 
@@ -186,11 +187,14 @@ Environment:
 
 ```
 DATABASE_URL=mysql://u656468476_hys_api:<PASSWORD>@localhost:3306/u656468476_hys_sales
-JWT_SECRET=<long random>
+JWT_SECRET=<openssl rand -hex 32 — required, no placeholder>
 PORT=<host-assigned>
 CORS_ORIGIN=https://white-goat-213580.hostingersite.com
 UPLOAD_DIR=/home/u656468476/hys-uploads/quotations
+# ENABLE_SWAGGER=1
 ```
+
+Nest fails fast if `JWT_SECRET` or `CORS_ORIGIN` is missing. Swagger (`/api/docs`) is off unless `ENABLE_SWAGGER=1`.
 
 `UPLOAD_DIR` must be **outside** the git checkout. Redeploys wipe `apps/api`.
 
@@ -235,15 +239,73 @@ Live Nest app (Git deploy): `https://lime-chamois-337700.hostingersite.com` (roo
 4. Wait for CI `chore: refresh api dist [skip ci]` if `dist` is missing, then redeploy.
 5. Gate: `GET https://lime-chamois-337700.hostingersite.com/api/health` then `/api/health/db`.
 
+## What `JWT_SECRET` is
+
+`JWT_SECRET` is **not** a login password for people and **not** the MySQL password.
+
+It is a long random key that Nest uses to **sign and verify** JSON Web Tokens after `POST /api/auth/login`:
+
+1. User logs in with ERP email + password (e.g. bootstrap admin).
+2. API checks the password hash in MySQL, then creates a JWT signed with `JWT_SECRET`.
+3. The SPA sends `Authorization: Bearer <token>` on later requests.
+4. `AuthGuard` verifies the signature with the same secret (`apps/api/src/app.module.ts` + `auth.guard.ts`).
+
+| Secret | Purpose |
+|--------|---------|
+| ERP user password | Human login (hashed in DB) |
+| MySQL password inside `DATABASE_URL` | Nest ↔ MySQL only |
+| `JWT_SECRET` | Cryptographic signing of session tokens |
+
+If you change `JWT_SECRET` and Restart, **all existing tokens become invalid** — users must log in again. That is expected after a rotation (e.g. after the secret was pasted in chat). Generate with `openssl rand -hex 32`; never commit it to git.
+
 ## SPA after health check
 
-Keep production `VITE_API_MODE=mock` until both health endpoints succeed. Then rebuild the SPA with:
+Production SPA is flipped via Actions + Hostinger Git branch (not hPanel `VITE_*`):
 
 ```
 VITE_API_MODE=api
-VITE_API_URL=https://<api-host>/api
+VITE_API_URL=https://lime-chamois-337700.hostingersite.com/api
 ```
 
-CORS must allow the SPA origin. Auth is Bearer JWT (ERP user password ≠ MySQL password).
+Point the white-goat website Git branch to **`migration/backend-api`**, wait for `chore: refresh web dist [skip ci]`, then hard-refresh.
+
+CORS must allow the SPA origin. Auth is Bearer JWT (ERP user password ≠ MySQL password ≠ `JWT_SECRET`). Rotate the bootstrap admin password after first Nest login.
 
 This API syncs sucursales, users/sessions, clients, quotations (cliente optional on quick tasks), commission %, PDFs / licitación / prerrequisitos, relevamientos, seller goals, activity metrics, schedules, and quotation-task pool (`tipo=cotizacion` + `POST /tasks/:id/claim`). Not synced: finance, vehicles, internal orders, marketing.
+
+## Incident log — lime-chamois Nest + MySQL (2026-08)
+
+**Outcome (verified):**  
+
+- `GET /api/health` → `{"ok":true,"service":"sales"}`  
+- `GET /api/health/db` → `{"ok":true,"service":"sales","db":true}`  
+
+SPA white-goat uses **`VITE_API_MODE=api`** against lime-chamois once the SPA Git branch is `migration/backend-api` and Actions has refreshed `apps/web/dist`.
+
+### Problems found (in order)
+
+| Symptom | Root cause | Fix |
+|---------|------------|-----|
+| Hostinger HTML **404** | Empty entry / start file | Set entry to `dist/main.js` (or `start-api.mjs`) |
+| Deploy log `ERR_PNPM_IGNORED_BUILDS` + install failed | pnpm 11 blocks Prisma lifecycle scripts unless approved | `allowBuilds` for Prisma in root + [`apps/api/pnpm-workspace.yaml`](../../apps/api/pnpm-workspace.yaml); `postinstall` → `prisma generate`; `strictDepBuilds: false`; push + Redeploy |
+| `/api/health` **503** while install OK | Nest crash / not listening (env, bind, Prisma) | Bind `0.0.0.0`; tolerate bad DB on boot so liveness can respond; ensure UPPERCASE env keys |
+| `/api/` **404** `Cannot GET /api/` | No root route under global prefix | Expected — use `/api/health`, `/api/docs`, etc. |
+| `/api/health` 200 but `/api/health/db` `db:false` | Bad `DATABASE_URL` (password with `$` broke URI / env expansion) | Change MySQL password to alphanumeric; rebuild URL; **Restart** Node after env change |
+| Confusion: “move DB to lime” | Thought a second MySQL was required | Same DB `u656468476_hys_sales`; only reassign website label in hPanel |
+
+### What was done (ops + git)
+
+1. Dedicated MySQL `u656468476_hys_sales` + user `u656468476_hys_api` (not WordPress).
+2. Schema via phpMyAdmin (migrations + bootstrap) — do **not** reimport master SQL if tables already exist.
+3. Node app **lime-chamois-337700** from branch `migration/backend-api`, root `apps/api`, empty build.
+4. Folder `/home/u656468476/hys-uploads/quotations` for `UPLOAD_DIR`.
+5. Four env keys UPPERCASE: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
+6. Git fixes pushed so Hostinger install runs Prisma generate (pnpm 11 `allowBuilds`).
+7. Password + `JWT_SECRET` rotated after exposure in chat; Restart applied env.
+
+### Lessons
+
+- Hostinger Git deploys from GitHub — local laptop changes do nothing until push.
+- Env changes need **Restart**, not only Save.
+- Prefer MySQL passwords without `$ @ # /` inside `DATABASE_URL`, or URL-encode them (`$` → `%24`).
+- Do not paste production secrets into chat; rotate if you did.
