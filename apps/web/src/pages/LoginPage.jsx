@@ -19,6 +19,8 @@ const API_ACCOUNT_CHIPS = [
   { email: 'wilson@hscontrol.com', name: 'Wilson', role: 'Ventas' },
   { email: 'stephany@hscontrol.com', name: 'Stephany', role: 'Finanzas' },
   { email: 'marcelo@hscontrol.com', name: 'Marcelo', role: 'Sin acceso' },
+  { email: 'ronald@hscontrol.com', name: 'Ronald', role: 'Sin acceso' },
+  { email: 'rodrigo@hscontrol.com', name: 'Rodrigo', role: 'Sin acceso' },
 ];
 
 const LoginPage = () => {
