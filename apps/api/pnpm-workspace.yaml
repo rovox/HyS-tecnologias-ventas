@@ -1,0 +1,13 @@
+# If Hostinger installs with root = apps/api and does not see the monorepo parent,
+# this file still approves Prisma lifecycle scripts (pnpm 11 allowBuilds).
+packages:
+  - '.'
+
+allowBuilds:
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  esbuild: false
+  unrs-resolver: false
+strictDepBuilds: false

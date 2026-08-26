@@ -176,7 +176,7 @@ The monorepo still contains `apps/web`, but the Node app **ignores** it because 
 
 **Entry file:** use [`apps/api/start-api.mjs`](../../apps/api/start-api.mjs) — same launcher pattern as white-goat `serve-dist.mjs`. Hostinger runs it with Node and starts `dist/main.js`. Nest binds `0.0.0.0` on `PORT`.
 
-**pnpm on Hostinger:** [`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) `allowBuilds` + `onlyBuiltDependencies` for Prisma; `apps/api` `postinstall` runs `prisma generate`. Redeploy after push if install fails with `ERR_PNPM_IGNORED_BUILDS`.
+**pnpm on Hostinger (pnpm 11):** root and [`apps/api/pnpm-workspace.yaml`](../../apps/api/pnpm-workspace.yaml) must set `allowBuilds` for `prisma` / `@prisma/client` / `@prisma/engines` (`true`) and deny `esbuild` / `@scarf/scarf` / `unrs-resolver`. `strictDepBuilds: false` avoids hard-fail on other ignored scripts. `apps/api` `postinstall` runs `prisma generate`. If the log shows `ERR_PNPM_IGNORED_BUILDS` + `ERROR: Failed to install dependencies`, push those YAML files and Redeploy — Nest never starts, so `/api/health` stays 503.
 
 **File Manager (UPLOAD_DIR):** the house icon = `/home/u656468476`. Create `hys-uploads/quotations` directly under home — not inside an extra `u656468476` folder.
 

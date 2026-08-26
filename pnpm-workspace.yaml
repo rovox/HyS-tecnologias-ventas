@@ -1,13 +1,9 @@
 packages:
   - 'apps/*'
 
-# Hostinger cannot execute esbuild (noexec on hbuilds and /tmp). Skip its postinstall
-# so `pnpm install` succeeds; the SPA is pre-built and committed in apps/web/dist.
-ignoredBuiltDependencies:
-  - esbuild
-# Prisma engines must run postinstall locally and in CI (API). Web on Hostinger does
-# not install apps/api, so these never run on that host.
-# @scarf/scarf is pulled by swagger-ui; deny its telemetry postinstall (no approve-builds needed).
+# Hostinger Cloud Startup uses pnpm 11 (strictDepBuilds). Only allowBuilds is read;
+# legacy onlyBuiltDependencies / ignoredBuiltDependencies are ignored in v11.
+# SPA host never installs apps/api; API host needs Prisma generate on postinstall.
 allowBuilds:
   esbuild: false
   prisma: true
@@ -15,9 +11,7 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
   unrs-resolver: false
-onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - prisma
+# If Hostinger still treats an unlisted package as fatal, warn instead of fail.
+strictDepBuilds: false
 packageImportMethod: copy
 confirmModulesPurge: false
