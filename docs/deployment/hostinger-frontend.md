@@ -66,7 +66,7 @@ Do not `git add apps/web/dist` locally. Preview locally with `pnpm build:web` + 
 
 If Hostinger refuses an empty entry file, set **Entry file** to `serve-dist.mjs` (Node stdlib static server, no native binaries).
 
-`pnpm install` on Hostinger should succeed (esbuild postinstall is ignored in `pnpm-workspace.yaml`). A good log ends with **Done … using pnpm v11.21.0** and does **not** run `$ vite build`. `verify:dist` is optional.
+`pnpm install` on Hostinger should succeed (esbuild postinstall is ignored). [`apps/web/pnpm-workspace.yaml`](../../apps/web/pnpm-workspace.yaml) scopes the install to the SPA only — a good log is **Done … using pnpm v11.21.0**, does **not** run `$ vite build`, and does **not** show `../api postinstall` / Prisma.
 
 A bad log still contains `$ vite build` or `spawn .../esbuild EACCES` — the Framework preset is still Vite.
 

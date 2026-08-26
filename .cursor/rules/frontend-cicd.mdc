@@ -11,7 +11,7 @@ Hostinger Cloud Startup **cannot** run `vite build` (esbuild on a `noexec` disk)
 
 - **Local:** `pnpm dev:web` only. Do not commit `apps/web/dist` from a laptop.
 - **CI (compiler):** `.github/workflows/web.yml` on `ubuntu-latest` — triggers on `migration/backend-api` and `migration/frontend-poc` when `apps/web/**` (or lockfile / workflow) changes. Lint, `vite build`, then commits `apps/web/dist` with `[skip ci]`.
-- **CD (publisher):** Hostinger Git, branch **`migration/backend-api`**, root `apps/web`, Framework **Other**, Node 22, pnpm. Build command **empty**. After `pnpm install` it copies `dist/`. A good log is `Done … using pnpm v11.21.0` with **no** `$ vite build`.
+- **CD (publisher):** Hostinger Git, branch **`migration/backend-api`**, root `apps/web`, Framework **Other**, Node 22, pnpm. Build command **empty**. [`apps/web/pnpm-workspace.yaml`](../../apps/web/pnpm-workspace.yaml) keeps the install scoped to the SPA (no Nest/Prisma). After `pnpm install` Hostinger copies/serves `dist/`. A good log is `Done … using pnpm v11.21.0` with **no** `$ vite build` and **no** `../api postinstall`.
 
 Production env is baked at Actions build time from `apps/web/.env.production` (`VITE_API_MODE=api`, absolute `VITE_API_URL` to lime-chamois). Changing `VITE_*` in hPanel does nothing until the next Actions build.
 
