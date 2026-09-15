@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { tasksService } from '@/services/tasks/index.js';
 import quotationsService from '@/services/quotations/index.js';
-import { surveysService } from '@/services/surveys/index.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import authService from '@/services/auth/index.js';
 import { cn } from '@/lib/utils.js';
@@ -18,10 +17,9 @@ const TABS = [
   { id: 'trabajo', label: 'Trabajo', primary: true },
   { id: 'tarea', label: 'Tarea', primary: true },
   { id: 'cotizacion', label: 'Cotización', primary: true },
-  { id: 'visita', label: 'Visita', primary: false },
 ];
 
-const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], visits = [], onWork, onSaved }) => {
+const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], onWork, onSaved }) => {
   const { currentUser } = useAuth();
   const day = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
   const [tab, setTab] = useState('tarea');
@@ -30,7 +28,6 @@ const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], visit
   const [task, setTask] = useState({ titulo: '', descripcion: '', asignadoId: '', horario: '', cotizacionId: '' });
   const [quoteId, setQuoteId] = useState('');
   const [workQuoteId, setWorkQuoteId] = useState('');
-  const [visitaId, setVisitaId] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -38,7 +35,6 @@ const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], visit
     setTask({ titulo: '', descripcion: '', asignadoId: '', horario: '', cotizacionId: '' });
     setQuoteId('');
     setWorkQuoteId('');
-    setVisitaId('');
     authService.listUsers().then((rows) => setUsers((rows || []).filter((u) => u.active !== false))).catch(() => setUsers([]));
   }, [open, day]);
 
@@ -70,11 +66,6 @@ const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], visit
         if (!quoteId) return toast.error('Elige una cotización');
         await quotationsService.update(quoteId, { plazo_final: day });
         toast.success('Plazo de cotización asignado');
-      }
-      if (tab === 'visita') {
-        if (!visitaId) return toast.error('Elige una visita');
-        await surveysService.update(visitaId, { fecha: day });
-        toast.success('Visita programada');
       }
       onOpenChange(false);
       onSaved?.();
@@ -171,22 +162,6 @@ const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], visit
                   <SelectItem value="none" disabled>Seleccionar…</SelectItem>
                   {openQuotes.map((q) => (
                     <SelectItem key={q.id} value={q.id}>{q.numero} · {q.titulo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-          {tab === 'visita' ? (
-            <div className="space-y-1">
-              <Label className="text-muted-foreground">Asistencia o relevamiento</Label>
-              <Select value={visitaId || 'none'} onValueChange={(v) => setVisitaId(v === 'none' ? '' : v)}>
-                <SelectTrigger className="h-10"><SelectValue placeholder="Seleccionar…" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" disabled>Seleccionar…</SelectItem>
-                  {visits.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.tipo_visita || 'Visita'} · {v.cliente_nombre || v.lugar || v.id}
-                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

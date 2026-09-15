@@ -5,7 +5,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../auth/current-user.decorator';
 import { ROLES } from '../auth/roles';
 import { Roles, RolesGuard } from '../auth/roles.guard';
-import { CreateScheduleDto, ScheduleStatusDto, UpdateScheduleDto } from './dto/schedule.dto';
+import { CreateScheduleDto, CreateSchedulePaymentDto, ScheduleStatusDto, UpdateScheduleDto } from './dto/schedule.dto';
 import { SchedulesService } from './schedules.service';
 
 @ApiTags('schedules')
@@ -28,6 +28,25 @@ export class SchedulesController {
     @Query('clienteId') clienteId?: string,
   ) {
     return this.schedules.list(user, { estado, sucursalId, from, to, tecnicoId, quotationId, clienteId });
+  }
+
+  @Get(':id/payments')
+  @ApiOperation({ summary: 'List payments for a schedule job' })
+  listPayments(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.schedules.listPayments(id, user);
+  }
+
+  @Post(':id/payments')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC)
+  @ApiOperation({ summary: 'Register adelanto, cobro, or extra_asistencia' })
+  registerPayment(
+    @Param('id') id: string,
+    @Body() dto: CreateSchedulePaymentDto,
+    @CurrentUser() user: User,
+    @CurrentSessionId() sessionId?: string,
+  ) {
+    return this.schedules.registerPayment(id, dto, user, sessionId);
   }
 
   @Get(':id')

@@ -51,10 +51,17 @@ const ESTADO_LABELS = {
 };
 
 const PRIORIDAD_COLORS = {
-  baja: 'text-gray-400',
-  media: 'text-blue-500',
-  alta: 'text-orange-500',
-  urgente: 'text-red-600',
+  baja: 'text-gray-500',
+  media: 'text-blue-600',
+  alta: 'text-orange-600',
+  urgente: 'text-red-700',
+};
+
+const PRIORIDAD_CHIP = {
+  baja: 'bg-muted text-muted-foreground border-border',
+  media: 'bg-blue-50 text-blue-800 border-blue-200',
+  alta: 'bg-orange-50 text-orange-800 border-orange-200',
+  urgente: 'bg-red-50 text-red-800 border-red-300 ring-1 ring-red-200',
 };
 
 const TABS = [
@@ -67,17 +74,37 @@ const TABS = [
 
 const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDelete, onDelete }) => {
   const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
   if (!visita) return null;
   const esAsistencia = visita.tipo_visita === 'Asistencia';
+  const fotos = visita.fotografias || visita.fotosUrl || [];
 
   const changeStatus = async (newStatus) => {
     setSaving(true);
     try {
-      await surveysService.update(visita.id, { estado: newStatus });
+      if (newStatus === 'resuelto') {
+        let next = visita;
+        if (photoFile) {
+          next = await surveysService.uploadPhoto(visita.id, photoFile);
+          setPhotoFile(null);
+        }
+        const list = next.fotografias || next.fotosUrl || fotos;
+        if (!list.length) {
+          toast.error('Sube una foto de evidencia para marcar como resuelto');
+          setSaving(false);
+          return;
+        }
+        await surveysService.update(visita.id, { estado: 'resuelto', fotografias: list, fotosUrl: list });
+      } else {
+        await surveysService.update(visita.id, { estado: newStatus });
+      }
       toast.success('Estado actualizado');
       onStatusChange();
-    } catch { toast.error('Error al actualizar'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error(err.message || 'Error al actualizar');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -95,7 +122,11 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
             <div><span className="text-muted-foreground font-semibold">Vendedor:</span> <span className="font-bold">{visita.vendedor_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Técnico:</span> <span className="font-bold">{visita.tecnico_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Sucursal:</span> <span className="font-bold">{visita.sucursal_nombre || '—'}</span></div>
-            <div><span className="text-muted-foreground font-semibold">Prioridad:</span> <span className={`font-bold capitalize ${PRIORIDAD_COLORS[visita.prioridad] || ''}`}>{visita.prioridad || '—'}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Prioridad:</span>{' '}
+              <Badge variant="outline" className={`text-[10px] font-bold capitalize ${PRIORIDAD_CHIP[visita.prioridad] || ''}`}>
+                {visita.prioridad || '—'}
+              </Badge>
+            </div>
             <div>
               <span className="text-muted-foreground font-semibold">Estado:</span>{' '}
               <Badge className={`text-[10px] border capitalize ${ESTADO_COLORS[visita.estado] || ''}`}>{ESTADO_LABELS[visita.estado] || visita.estado || '—'}</Badge>
@@ -160,6 +191,38 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
           )}
           {canEdit && (
             <div className="border-t pt-3 space-y-3">
+              <p className="font-bold text-xs text-muted-foreground uppercase tracking-wide">Evidencia fotográfica</p>
+              <p className="text-[11px] text-muted-foreground">
+                Obligatoria para marcar como resuelto. Fotos actuales: {fotos.length}
+              </p>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+              />
+              {photoFile && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="font-bold text-xs"
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await surveysService.uploadPhoto(visita.id, photoFile);
+                      setPhotoFile(null);
+                      toast.success('Foto subida');
+                      onStatusChange();
+                    } catch (err) {
+                      toast.error(err.message || 'No se pudo subir');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  Subir foto ahora
+                </Button>
+              )}
               <p className="font-bold text-xs text-muted-foreground uppercase tracking-wide">Cambiar estado</p>
               <div className="flex flex-wrap gap-2">
                 {['programado','en_camino','en_atencion','resuelto','pendiente','cancelado'].map(s => (
@@ -226,6 +289,23 @@ const ScheduleSurveysPage = () => {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fecha = params.get('fecha');
+    if (fecha) {
+      setFilterFechaDesde(fecha);
+      setFilterFechaHasta(fecha);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onRt = (e) => {
+      if (e.detail?.entity === 'relevamiento') fetchData();
+    };
+    window.addEventListener('hs-realtime', onRt);
+    return () => window.removeEventListener('hs-realtime', onRt);
+  }, [fetchData]);
 
   // Unique tecnicos and sucursales for filter dropdowns
   const uniqueTecnicos = useMemo(() => {

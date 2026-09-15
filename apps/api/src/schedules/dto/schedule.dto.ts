@@ -173,3 +173,39 @@ export class ScheduleStatusDto {
   @Transform(emptyToUndef)
   fechaFinalizacion?: string;
 }
+
+export class CreateSchedulePaymentDto {
+  @ApiProperty({ enum: ['adelanto', 'cobro', 'extra_asistencia'] })
+  @IsIn(['adelanto', 'cobro', 'extra_asistencia'])
+  tipo: string;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01)
+  monto: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  metodo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  nota?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  relevamientoId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  quotationId?: string;
+}

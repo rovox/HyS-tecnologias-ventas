@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { isAdmin, isCont, isVentas, taskWhere } from '../auth/roles';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { RealtimeService } from '../realtime/realtime.service';
 
 const PRIORIDAD = { alta: 0, media: 1, baja: 2 };
 
@@ -30,6 +31,7 @@ export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async list(user: User, tipo?: string) {
@@ -93,6 +95,7 @@ export class TasksService {
       },
     });
     await this.activity.log(user.id, sessionId, 'task.create', 'task', row.id);
+    this.realtime.emit('task.updated', 'task', row.id, { byUserId: user.id, patch: { estado: 'pendiente' } });
     return this.get(row.id, user);
   }
 
@@ -123,6 +126,10 @@ export class TasksService {
       },
     });
     await this.activity.log(user.id, sessionId, completing ? 'task.complete' : 'task.update', 'task', id);
+    this.realtime.emit('task.updated', 'task', id, {
+      byUserId: user.id,
+      patch: { estado: row.estado, prioridad: row.prioridad },
+    });
     return this.get(id, user);
   }
 
@@ -143,6 +150,10 @@ export class TasksService {
       },
     });
     await this.activity.log(user.id, sessionId, 'task.claim', 'task', id);
+    this.realtime.emit('task.updated', 'task', id, {
+      byUserId: user.id,
+      patch: { asignadoId: user.id },
+    });
     return this.get(id, user);
   }
 }

@@ -29,6 +29,7 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
 
   const [modalView, setModalView] = useState(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [payments, setPayments] = useState([]);
 
   const canEditFull = isAdmin() || isVentas();
 
@@ -48,6 +49,12 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
         vendedorData: data.vendedor_nombre ? { name: data.vendedor_nombre } : null,
         vendedorNombre: data.vendedor_nombre || null,
       });
+      try {
+        const pays = await schedulesService.getPayments(id);
+        setPayments(pays || []);
+      } catch {
+        setPayments([]);
+      }
     } catch (err) {
       console.error('Error loading work details:', err);
       if (err?.status === 404) {
@@ -56,6 +63,7 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
         onClose();
       }
       setTrabajo(null);
+      setPayments([]);
     } finally {
       setLoadingData(false);
     }
@@ -98,6 +106,13 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     // Update local state to reflect new saldo and estado_pago immediately
     const { saldo, estado_pago } = calculateBalance(updatedWork);
     const fullyUpdatedWork = { ...updatedWork, saldo, estado_pago };
+    setTrabajo((prev) => ({ ...prev, ...fullyUpdatedWork }));
+    try {
+      const pays = await schedulesService.getPayments(updatedWork.id || workId);
+      setPayments(pays || []);
+    } catch {
+      /* keep previous */
+    }
     
     setTrabajo(fullyUpdatedWork);
     await loadObservations(workId);
@@ -222,6 +237,9 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
   const costoTotal = parseFloat(trabajo.monto || trabajo.costo_total || 0);
   const adelantoRecibido = parseFloat(trabajo.adelanto || trabajo.adelanto_recibido || 0);
   const saldoActual = parseFloat(trabajo.saldo || 0);
+  const extrasAsistencia = (payments || [])
+    .filter((p) => p.tipo === 'extra_asistencia')
+    .reduce((s, p) => s + Number(p.monto_cobrado ?? p.monto ?? 0), 0);
 
   const formattedDate = trabajo.fecha_programada ? format(parseISO(trabajo.fecha_programada.split(' ')[0]), "d 'de' MMMM, yyyy", { locale: es }) : 'Sin fecha';
   const clienteNombre = trabajo.clienteData?.nombre || trabajo.cliente || 'Sin cliente';
@@ -301,16 +319,22 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
                     <span className="font-medium tabular-nums">${costoTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Adelanto Recibido:</span>
-                    <span className="font-medium tabular-nums text-emerald-600">-${adelantoRecibido.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Adelanto / cobros:</span>
+                    <span className="font-medium tabular-nums text-emerald-600">-${Number(adelantoRecibido ?? 0).toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center pt-3 mt-3 border-t-2 border-slate-200 dark:border-slate-800">
                     <span className="font-bold uppercase text-xs tracking-wider">Saldo Pendiente</span>
                     <span className={`font-black text-lg tabular-nums flex items-center ${saldoActual > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                      ${saldoActual.toFixed(2)}
+                      ${Number(saldoActual ?? 0).toFixed(2)}
                     </span>
                   </div>
+                  {extrasAsistencia > 0 ? (
+                    <div className="flex justify-between items-center text-sm pt-1">
+                      <span className="text-muted-foreground">Extras asistencia (fuera de presupuesto):</span>
+                      <span className="font-medium tabular-nums">${Number(extrasAsistencia).toFixed(2)}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between items-center pt-2">
                     <span className="font-bold uppercase text-xs tracking-wider">Estado de Pago</span>
                     {getPaymentBadge(trabajo.estado_pago)}

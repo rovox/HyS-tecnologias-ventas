@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
 import { assertCanMutateQuotes, isCont, isTec, quotationWhere } from '../auth/roles';
+import { RealtimeService } from '../realtime/realtime.service';
 
 const FLOW: Record<string, string[]> = {
   borrador: ['enviado', 'rechazado'],
@@ -23,6 +24,7 @@ export class QuotationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   private async nextNumero() {
@@ -122,6 +124,10 @@ export class QuotationsService {
     });
     await this.prisma.touchClientActivity(dto.clienteId);
     await this.activity.log(user.id, sessionId, 'quotation.create', 'quotation', quote.id);
+    this.realtime.emit('quotation.updated', 'quotation', quote.id, {
+      byUserId: user.id,
+      patch: { estado: quote.estado },
+    });
     return quote;
   }
 
@@ -148,6 +154,10 @@ export class QuotationsService {
     });
     await this.prisma.touchClientActivity(current.clienteId);
     await this.activity.log(user.id, sessionId, 'quotation.status', 'quotation', id);
+    this.realtime.emit('quotation.updated', 'quotation', id, {
+      byUserId: user.id,
+      patch: { estado },
+    });
     return quote;
   }
 
@@ -204,6 +214,10 @@ export class QuotationsService {
     const finalClientId = dto.clienteId || current.clienteId;
     await this.prisma.touchClientActivity(finalClientId);
     await this.activity.log(user.id, sessionId, 'quotation.update', 'quotation', id);
+    this.realtime.emit('quotation.updated', 'quotation', id, {
+      byUserId: user.id,
+      patch: { estado: quote.estado },
+    });
     return quote;
   }
 

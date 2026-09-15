@@ -4,15 +4,17 @@ English ops note for Hostinger go-live. Health gates (`/api/health` + `/api/heal
 
 ## In schema and Nest (this branch)
 
-Users + JWT sessions, sucursales (Central, Punata, Quillacollo — data migration, not seed), clients (no DELETE), quotations `borrador → enviado → aceptado|rechazado` (cliente optional on quick-create), PDF + `licitacion`/`prerequisito` files, relevamientos, seller goals, metrics, schedules, tasks.
+Users + JWT sessions, sucursales, clients (no DELETE), quotations `borrador → enviado → aceptado|rechazado`, PDF + files, relevamientos (`estado`/`prioridad` + photo upload), seller goals, metrics, schedules + **`schedule_payments`**, tasks, **realtime SSE** (`POST /api/realtime/ticket`, `GET /api/realtime/events`).
 
-**Quotation-task pool:** `Task.tipo=cotizacion`, `prioridadMotivo`, `asignadoAt`/`asignadoPorId`, FK `cotizacionId`. `POST /api/tasks/:id/claim` (409 if taken). Ventas + Admin, any sucursal. Contadora and técnicos do not access quotations or this pool.
+**Quotation-task pool:** `Task.tipo=cotizacion`, claim, band UX opens **task detail** (not edit-quote modal).
 
-Quick create: **description is the only required field**. Title is the first line of that description. Client, plazo, priority, files, and assignee are optional. Completing a task hides it from the band.
+**Payments:** `GET/POST /api/schedules/:id/payments` — tipos `adelanto` \| `cobro` \| `extra_asistencia` (extras do not reduce installation saldo).
+
+**Relevamiento files:** `POST /api/relevamientos/:id/files` → `UPLOAD_DIR/relevamientos`; resolve to `resuelto` requires ≥1 photo.
 
 ## Frontend wired (mock + HTTP)
 
-Clients, quotations + PDF, surveys, schedules, tasks (incl. claim), goals, metrics/activity feed, quotation-task band (`QuotationTasksBand` + `QuotationTaskCreateModal`).
+Clients, quotations + PDF, surveys (+ photo/priority), schedules (calendar jobs + visit indicators), payments, tasks (FAB + claim + detail sheet), goals, metrics/activity feed, quotation-task band, quotation jobs block (money summary), user profile `/usuarios/:id`, realtime refresh hook.
 
 ## Present in API, unused or partial in UI
 

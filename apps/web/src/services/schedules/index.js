@@ -232,22 +232,46 @@ export const schedulesService = {
     });
   },
 
-  async getPayments() {
-    if (!isMockMode) return [];
+  async getPayments(trabajo_id) {
+    if (!isMockMode) {
+      if (!trabajo_id) return [];
+      const rows = await apiClient.get(`schedules/${trabajo_id}/payments`, { token: authToken() });
+      return (rows || []).map((p) => ({
+        ...p,
+        trabajo_id: p.scheduleId || trabajo_id,
+        monto_cobrado: Number(p.monto ?? p.monto_cobrado ?? 0),
+        medio_pago: p.metodo || p.medio_pago || '',
+        tipo: p.tipo,
+        created: p.at || p.createdAt,
+      }));
+    }
+    if (trabajo_id) {
+      return store.list('schedule_payments', { filter: `trabajo_id="${trabajo_id}"`, sort: '-created' });
+    }
     return store.list('schedule_payments', { sort: '-created' });
   },
 
   async registerPayment(paymentData) {
-    if (!isMockMode) {
-      // Ledger de cobros/finanzas congelado: el monto de adelanto ya va en PATCH schedules.
-      console.warn('registerPayment omitido en modo API (finanzas congelado)', paymentData?.trabajo_id || paymentData?.schedule_id);
-      return null;
-    }
     const trabajoId = paymentData.trabajo_id || paymentData.schedule_id;
+    if (!isMockMode) {
+      if (!trabajoId) throw new Error('Trabajo requerido');
+      const tipoRaw = paymentData.tipo || paymentData.tipo_cobro || 'cobro';
+      const tipo = tipoRaw === 'adelanto' ? 'adelanto' : tipoRaw === 'extra_asistencia' ? 'extra_asistencia' : 'cobro';
+      const updated = await apiClient.post(`schedules/${trabajoId}/payments`, {
+        tipo,
+        monto: Number(paymentData.monto_cobrado ?? paymentData.monto ?? 0),
+        metodo: paymentData.medio_pago || paymentData.metodo || '',
+        nota: paymentData.observacion || paymentData.nota || '',
+        relevamientoId: paymentData.relevamiento_id || paymentData.relevamientoId || undefined,
+        quotationId: paymentData.quotation_id || paymentData.quotationId || undefined,
+      }, { token: authToken() });
+      return mapApiSchedule(updated);
+    }
     const job = store.findById('schedules', trabajoId);
     if (!job) throw new Error('Trabajo no encontrado');
     const payment = store.insert('schedule_payments', { ...paymentData, trabajo_id: trabajoId });
-    const cobros = store.list('schedule_payments', { filter: `trabajo_id="${trabajoId}"` });
+    const cobros = store.list('schedule_payments', { filter: `trabajo_id="${trabajoId}"` })
+      .filter((r) => r.tipo !== 'extra_asistencia' && r.tipo_cobro !== 'extra_asistencia');
     const cobrado = cobros.reduce((sum, row) => sum + (Number(row.monto_cobrado) || 0), 0);
     const saldo = Math.max(0, (Number(job.monto) || 0) - cobrado);
     store.update('schedules', trabajoId, { adelanto: cobrado, saldo });

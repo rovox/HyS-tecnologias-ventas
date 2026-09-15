@@ -9,7 +9,6 @@ import {
   CalendarDays,
   Package,
   Receipt,
-  Activity,
   CarFront,
   Megaphone,
   Calculator,
@@ -29,7 +28,10 @@ const REPORT_ROLES = [ROLES.ADMIN, ROLES.CONT];
 const ADMIN_ONLY = [ROLES.ADMIN];
 const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
 
-/** Menú operativo para Ventas / Técnico / Contadora. Tareas = botón flotante. */
+/**
+ * Menú unificado: OPERACIONES primero para todos los roles.
+ * Admin añade extras al final. Tareas = botón flotante (TasksFloatingPanel).
+ */
 export const operationalMenuSections = [
   {
     title: 'PRINCIPAL',
@@ -43,6 +45,7 @@ export const operationalMenuSections = [
       { to: '/quotations', icon: FileStack, label: 'Cotizaciones', allowedRoles: QUOTE_ROLES },
       { to: '/clientes', icon: Building2, label: 'Clientes', allowedRoles: CLIENT_ROLES },
       { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos', allowedRoles: SURVEY_ROLES },
+      { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
     ],
   },
@@ -56,62 +59,34 @@ export const operationalMenuSections = [
   },
 ];
 
-/** Menú legado completo, solo ADMINISTRADOR. */
-export const adminMenuSections = [
+/** Extras solo ADMINISTRADOR (después de OPERACIONES / ADMINISTRACIÓN base). */
+export const adminExtraMenuSections = [
   {
-    title: 'PRINCIPAL',
+    title: 'GESTIÓN ADMIN',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', allowedRoles: ADMIN_ONLY },
-    ],
-  },
-  {
-    title: 'OPERACIONES',
-    items: [
-      {
-        icon: CalendarDays,
-        label: 'Cronogramas',
-        allowedRoles: ADMIN_ONLY,
-        children: [
-          { to: '/schedule', label: 'Instalaciones / Proyectos', allowedRoles: ADMIN_ONLY },
-          { to: '/surveys', label: 'Relevamientos / Asistencias', allowedRoles: ADMIN_ONLY },
-        ],
-      },
-      { to: '/clientes', icon: Building2, label: 'Clientes', allowedRoles: ADMIN_ONLY },
-      { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
       { to: '/gastos-operativos', icon: Receipt, label: 'Gastos Operativos', allowedRoles: ADMIN_ONLY },
-      {
-        icon: Activity,
-        label: 'Muro de Actividad',
-        allowedRoles: ADMIN_ONLY,
-        action: 'open-activity',
-      },
-    ],
-  },
-  {
-    title: 'GESTIÓN',
-    items: [
       { to: '/vehicle-control', icon: CarFront, label: 'Control Vehicular', allowedRoles: ADMIN_ONLY },
       { to: '/marketing', icon: Megaphone, label: 'Marketing', allowedRoles: ADMIN_ONLY },
-      { to: '/quotations', icon: FileStack, label: 'Cotizaciones', allowedRoles: ADMIN_ONLY },
-    ],
-  },
-  {
-    title: 'ADMINISTRACIÓN',
-    items: [
       { to: '/accounting', icon: Calculator, label: 'Costos Operativos', allowedRoles: ADMIN_ONLY },
       { to: '/finanzas', icon: Wallet, label: 'Finanzas y Contabilidad', allowedRoles: ADMIN_ONLY },
-      { to: '/reports', icon: FileText, label: 'Reportes', allowedRoles: ADMIN_ONLY },
-      { to: '/admin/management', icon: ClipboardList, label: 'Panel de Control', allowedRoles: ADMIN_ONLY },
-      { to: '/configuration', icon: Settings, label: 'Configuración', allowedRoles: ADMIN_ONLY },
     ],
   },
+];
+
+/** @deprecated Prefer getMenuSections — kept for imports that still reference admin menu. */
+export const adminMenuSections = [
+  ...operationalMenuSections,
+  ...adminExtraMenuSections,
 ];
 
 export const menuSections = operationalMenuSections;
 
 export function getMenuSections(role) {
   if (role === ROLES.NONE) return [];
-  return role === ROLES.ADMIN ? adminMenuSections : operationalMenuSections;
+  if (role === ROLES.ADMIN) {
+    return [...operationalMenuSections, ...adminExtraMenuSections];
+  }
+  return operationalMenuSections;
 }
 
 export const routeRoles = {
@@ -126,6 +101,7 @@ export const routeRoles = {
   admin: ADMIN_ONLY,
   pedidos: PEDIDOS_ROLES,
   frozen: ADMIN_ONLY,
+  users: ALL_ROLES,
 };
 
 export function canWriteQuotations(role) {

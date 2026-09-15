@@ -13,6 +13,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { TasksModule } from './tasks/tasks.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { CategoriesModule } from './categories/categories.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -46,6 +47,7 @@ import { HealthController } from './health.controller';
     TasksModule,
     SchedulesModule,
     CategoriesModule,
+    RealtimeModule,
   ],
   controllers: [HealthController],
 })

@@ -1,20 +1,25 @@
 import React from 'react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isBefore, startOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { User, Wrench, ClipboardCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge.jsx';
 
 const parseJobDate = (dateStr) => {
   if (!dateStr) return null;
   const clean = String(dateStr).split(' ')[0].split('T')[0];
   return parseISO(clean);
 };
-import { es } from 'date-fns/locale';
-import { User, Wrench } from 'lucide-react';
-import { Badge } from '@/components/ui/badge.jsx';
 
-const ScheduleMonthlyView = ({ schedules, currentDate, onJobClick, onDateChange, usersMap, tecnicosMap }) => {
+const PENDING_VISIT = new Set(['programado', 'en_camino', 'en_atencion', 'pendiente']);
+
+const ScheduleMonthlyView = ({ schedules, visits = [], currentDate, onJobClick, onDateChange, usersMap, tecnicosMap }) => {
+  const navigate = useNavigate();
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const today = startOfDay(new Date());
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
@@ -40,6 +45,7 @@ const ScheduleMonthlyView = ({ schedules, currentDate, onJobClick, onDateChange,
       case 'completado': return 'bg-teal-500 text-white border-transparent';
       case 'por_culminar': return 'bg-amber-500 text-white border-transparent';
       case 'en_proceso': return 'bg-blue-500 text-white border-transparent';
+      case 'cancelado': return 'bg-rose-400 text-white border-transparent';
       default: return 'bg-slate-200 text-slate-700 border-transparent dark:bg-slate-800 dark:text-slate-300';
     }
   };
@@ -60,18 +66,48 @@ const ScheduleMonthlyView = ({ schedules, currentDate, onJobClick, onDateChange,
             const jd = parseJobDate(s.fecha_programada);
             return jd && isSameDay(jd, day);
           });
+          const dayVisitsPending = (visits || []).filter((v) => {
+            const jd = parseJobDate(v.fecha || v.fecha_programada);
+            if (!jd || !isSameDay(jd, day)) return false;
+            const est = v.estado || 'programado';
+            return PENDING_VISIT.has(est);
+          });
           const isCurrentMonth = isSameMonth(day, monthStart);
           const isToday = isSameDay(day, new Date());
+          const isPast = isBefore(startOfDay(day), today);
 
           return (
             <div 
               key={day.toISOString()}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, day)}
-              className={`bg-background flex flex-col p-1.5 sm:p-2 transition-colors relative ${!isCurrentMonth ? 'bg-muted/30' : ''}`}
+              className={`bg-background flex flex-col p-1.5 sm:p-2 transition-colors relative ${!isCurrentMonth ? 'bg-muted/30' : ''} ${isPast && isCurrentMonth ? 'opacity-90' : ''}`}
             >
-              <div className={`text-right text-xs font-bold mb-1.5 p-0.5 rounded ${isToday ? 'text-primary bg-primary/10 inline-block ml-auto px-2' : 'text-foreground/60'}`}>
-                {format(day, 'd')}
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <div className="flex items-center gap-1 min-w-0">
+                  {daySchedules.length > 0 && (
+                    <span className={`text-[10px] font-extrabold tabular-nums px-1.5 py-0.5 rounded-md ${isPast ? 'bg-muted text-muted-foreground' : 'bg-primary/15 text-primary'}`}>
+                      {daySchedules.length}
+                    </span>
+                  )}
+                  {dayVisitsPending.length > 0 && (
+                    <button
+                      type="button"
+                      title={`${dayVisitsPending.length} visita(s) pendiente(s)`}
+                      className="inline-flex items-center gap-0.5 text-amber-700 bg-amber-100 border border-amber-200 rounded-md px-1 py-0.5 hover:bg-amber-200/80"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/surveys?fecha=${format(day, 'yyyy-MM-dd')}`);
+                      }}
+                    >
+                      <ClipboardCheck className="h-3 w-3" />
+                      <span className="text-[9px] font-bold tabular-nums">{dayVisitsPending.length}</span>
+                    </button>
+                  )}
+                </div>
+                <div className={`text-right text-xs font-bold p-0.5 rounded ${isToday ? 'text-primary bg-primary/10 px-2' : isPast ? 'text-muted-foreground' : 'text-foreground/60'}`}>
+                  {format(day, 'd')}
+                </div>
               </div>
               
               <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar min-h-0">
@@ -103,7 +139,7 @@ const ScheduleMonthlyView = ({ schedules, currentDate, onJobClick, onDateChange,
                       </div>
                       
                       <Badge className={`mt-0.5 text-[9px] uppercase font-bold px-1 py-0 truncate justify-center shadow-none ${getStatusColor(job.estado)}`}>
-                        {job.estado.replace('_', ' ')}
+                        {String(job.estado || '').replace('_', ' ')}
                       </Badge>
                     </div>
                   );

@@ -60,10 +60,12 @@ Mapa de entidades, relaciones y puntos de integración. En el POC los datos vive
 | `schedules` | `vendedor_responsable_id` | `users.id` | Ventas que cerró/planificó |
 | `schedules` | `tecnico_responsable_id` | `users.id` | Técnico asignado |
 | `schedules` | `quotation_id` | `quotations.id` | Origen comercial |
-| `schedules` | `tipo_entrada` | — | `trabajo` \| `asistencia` \| `relevamiento` |
+| `schedules` | `tipo` | — | `seguridad` \| `proyectos` (calendar events) |
+| `schedule_payments` | `scheduleId` | `schedules.id` | Adelanto / cobro / extra_asistencia |
+| `schedule_payments` | `tipo` | — | `adelanto`\|`cobro` reduce saldo; `extra_asistencia` does **not** |
 | `pedidos_internos` | `cronograma_id` | `schedules.id` | Materiales para un trabajo |
-| `visitas_tecnicas` | `cliente_id` | `clientes.id` | Visita al cliente |
-| `visitas_tecnicas` | `requiere_cotizacion` | — | Flag → dispara flujo comercial |
+| `relevamientos` | `cotizacionId` | `quotations.id` | Visita ligada a cotización |
+| `relevamientos` | `estado` / `prioridad` | — | Nest tokens; resolve requires photo |
 
 ---
 
@@ -90,11 +92,12 @@ Mapa de entidades, relaciones y puntos de integración. En el POC los datos vive
 3. Admin/ventas aprueba → preparación → entrega
 4. Costo puede reflejarse en `costos_trabajo` / panel admin
 
-### 4. Cronograma → Finanzas
+### 4. Cronograma → Finanzas (ledger Nest)
 
-1. Registro de adelantos y pagos (`schedule_payments`)
-2. Actualización de `saldo` en schedule
-3. Reportes agregan cobrado, CxC, utilidad
+1. `POST /api/schedules/:id/payments` with `tipo` `adelanto` \| `cobro` \| `extra_asistencia`
+2. Nest recalculates `Schedule.adelanto` / `saldo` only from `adelanto`+`cobro`
+3. `extra_asistencia` is stored and shown as “fuera de presupuesto”; it does not reduce installation saldo
+4. Large `/finanzas` UI remains frozen; operational money for jobs uses this Nest ledger
 
 ### 5. Cliente → Historial unificado
 
