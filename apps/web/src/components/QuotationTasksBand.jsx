@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import tasksService from '@/services/tasks/index.js';
 import quotationsService from '@/services/quotations/index.js';
 import { deadlineTone, deadlineLabel, deadlineChipClass } from '@/lib/deadline.js';
@@ -62,6 +64,7 @@ export default function QuotationTasksBand({
   const [loading, setLoading] = useState(true);
   const [designatingId, setDesignatingId] = useState(null);
   const [motivoDraft, setMotivoDraft] = useState({});
+  const [detailTask, setDetailTask] = useState(null);
 
   const loadTasks = useCallback(async () => {
     try {
@@ -90,26 +93,25 @@ export default function QuotationTasksBand({
     return quotations.find((q) => q.id === task.cotizacionId) || null;
   };
 
-  const openDraft = async (task, e) => {
+  const openTaskDetail = (task, e) => {
     e?.stopPropagation?.();
-    if (!onOpenQuote || !task.cotizacionId) return;
-    let quote = resolveQuote(task);
+    setDetailTask(task);
+  };
+
+  const openQuoteFromTask = async () => {
+    if (!detailTask?.cotizacionId || !onOpenQuote) return;
+    let quote = resolveQuote(detailTask);
     if (!quote) {
       try {
-        quote = await quotationsService.getById(task.cotizacionId);
+        quote = await quotationsService.getById(detailTask.cotizacionId);
       } catch { /* ignore */ }
     }
-    if (!quote) {
-      quote = {
-        id: task.cotizacionId,
-        numero: task.cotizacion_numero || '',
-        titulo: task.titulo,
-        estado: 'borrador',
-        observacion: task.descripcion || '',
-        plazo_final: task.plazo || null,
-      };
+    if (quote) {
+      setDetailTask(null);
+      onOpenQuote(quote);
+    } else {
+      toast.error('No se encontró la cotización');
     }
-    onOpenQuote(quote);
   };
 
   const handleClaim = async (task, e) => {
@@ -213,14 +215,14 @@ export default function QuotationTasksBand({
               key={task.id}
               role="button"
               tabIndex={0}
-              onClick={(e) => openDraft(task, e)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openDraft(task, e); }}
+              onClick={(e) => openTaskDetail(task, e)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openTaskDetail(task, e); }}
               className="flex flex-col gap-1.5 rounded-md border border-border/80 bg-card px-2 py-1.5 text-[11px] cursor-pointer hover:border-primary/40 transition-colors"
             >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground line-clamp-2" title={task.descripcion || task.titulo}>
-                    {task.descripcion || task.titulo}
+                    {task.descripcion || task.titulo || 'Sin descripción'}
                   </p>
                   <p className="text-[10px] text-muted-foreground truncate mt-0.5">
                     {task.cotizacion_numero ? <span className="font-mono">{task.cotizacion_numero} · </span> : null}
@@ -341,6 +343,61 @@ export default function QuotationTasksBand({
         currentUser={currentUser}
         onPublished={refreshAll}
       />
+
+      <Dialog open={Boolean(detailTask)} onOpenChange={(o) => { if (!o) setDetailTask(null); }}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-extrabold text-base">Detalle de tarea</DialogTitle>
+          </DialogHeader>
+          {detailTask && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase">Descripción</p>
+                <p className="font-semibold text-foreground whitespace-pre-wrap">
+                  {detailTask.descripcion || detailTask.titulo || '—'}
+                </p>
+              </div>
+              {detailTask.titulo && detailTask.descripcion && detailTask.titulo !== detailTask.descripcion ? (
+                <div>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase">Título</p>
+                  <p>{detailTask.titulo}</p>
+                </div>
+              ) : null}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><span className="text-muted-foreground">Estado</span><p className="font-bold capitalize">{detailTask.estado}</p></div>
+                <div><span className="text-muted-foreground">Prioridad</span><p className="font-bold capitalize">{detailTask.prioridad}</p></div>
+                <div><span className="text-muted-foreground">Plazo</span><p className="font-bold">{formatPlazo(detailTask.plazo) || '—'}</p></div>
+                <div><span className="text-muted-foreground">Asignado</span><p className="font-bold">{detailTask.asignado_nombre || 'Disponible'}</p></div>
+              </div>
+              {detailTask.cotizacionId ? (
+                <p className="text-xs text-muted-foreground">
+                  Cotización: <span className="font-mono font-semibold text-foreground">{detailTask.cotizacion_numero || detailTask.cotizacionId}</span>
+                </p>
+              ) : null}
+              {(() => {
+                const q = resolveQuote(detailTask);
+                const clientId = q?.cliente_id || q?.clienteId;
+                if (!clientId) return null;
+                return (
+                  <Link
+                    to={`/clientes/${clientId}`}
+                    className="text-xs font-bold text-primary hover:underline"
+                    onClick={() => setDetailTask(null)}
+                  >
+                    Ver cliente →
+                  </Link>
+                );
+              })()}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={() => setDetailTask(null)}>Cerrar</Button>
+            {detailTask?.cotizacionId && onOpenQuote ? (
+              <Button type="button" variant="action" onClick={openQuoteFromTask}>Abrir cotización</Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

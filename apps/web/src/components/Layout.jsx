@@ -2,11 +2,15 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import ActivityOverlay from './ActivityOverlay.jsx';
+import TasksFloatingPanel from './TasksFloatingPanel.jsx';
+import { useRealtimeRefresh } from '@/hooks/useRealtimeRefresh.js';
 import { isMockMode } from '@/api/config.js';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+
+  useRealtimeRefresh();
 
   const toggleActivity = useCallback(() => {
     setActivityOpen((open) => !open);
@@ -42,6 +46,7 @@ const Layout = ({ children }) => {
         </main>
       </div>
       <ActivityOverlay open={activityOpen} onClose={closeActivity} />
+      <TasksFloatingPanel />
     </div>
   );
 };

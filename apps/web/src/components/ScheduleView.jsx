@@ -71,9 +71,12 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
       quotationsService.getAll().catch(() => []),
       surveysService.getAll().catch(() => []),
     ]);
-    const filteredData = types.length > 0 
-      ? data.filter(s => types.includes(s.tipo_trabajo) || s.tipo_entrada === 'asistencia' || s.tipo_entrada === 'relevamiento')
-      : data;
+    // Solo trabajos Schedule (seguridad/proyectos). Visitas no son eventos del calendario.
+    const filteredData = (data || []).filter((s) => {
+      if (s.tipo_entrada === 'asistencia' || s.tipo_entrada === 'relevamiento') return false;
+      if (types.length > 0) return types.includes(s.tipo_trabajo || s.type);
+      return true;
+    });
     setSchedules(filteredData);
     setTasks((taskRows || []).filter((t) => t.plazo && t.estado !== 'completada'));
     setQuotations(quoteRows || []);
@@ -84,6 +87,18 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
 
   useEffect(() => {
     loadSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [types.join(',')]);
+
+  useEffect(() => {
+    const onRt = (e) => {
+      const ent = e.detail?.entity;
+      if (ent === 'schedule' || ent === 'relevamiento' || ent === 'payment' || ent === 'task') {
+        loadSchedules();
+      }
+    };
+    window.addEventListener('hs-realtime', onRt);
+    return () => window.removeEventListener('hs-realtime', onRt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [types.join(',')]);
 
@@ -195,6 +210,7 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
           ) : (
             <ScheduleMonthlyView 
               schedules={schedules} 
+              visits={visits}
               currentDate={currentDate} 
               onJobClick={handleOpenEdit} 
               onDateChange={handleDateChange}

@@ -29,6 +29,7 @@ const MarketingPage = lazy(() => import('@/pages/MarketingPage.jsx'));
 const CampaignPage = lazy(() => import('@/pages/CampaignPage.jsx'));
 const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
 const FinanzasPage = lazy(() => import('@/pages/FinanzasPage.jsx'));
+const UserProfilePage = lazy(() => import('@/pages/UserProfilePage.jsx'));
 
 function RouteFallback() {
   return (
@@ -185,6 +186,12 @@ function App() {
                 <GastosOperativosPage />
               </ProtectedRoute>
             } />
+            <Route path="/usuarios/:id" element={
+              <ProtectedRoute allowedRoles={routeRoles.users}>
+                <UserProfilePage />
+              </ProtectedRoute>
+            } />
+
             <Route path="/reports/admin" element={<Navigate to="/reports" replace />} />
 
             <Route path="*" element={

@@ -9,7 +9,22 @@
 | `SEGURIDAD ELECTRÓNICA` | Técnico | Técnicos |
 | `Contadora` | Contadora | Finanzas |
 
-Definidos en `apps/web/src/mocks/users.js` y validados en `ProtectedRoute` + `Sidebar`.
+Definidos in `apps/web/src/config/nav.js` + `ProtectedRoute` + `Sidebar`.
+
+---
+
+## Menú unificado (OPERACIONES primero)
+
+All roles share the same operational spine (`operationalMenuSections`):
+
+| Section | Items |
+|---------|-------|
+| **PRINCIPAL** | Dashboard |
+| **OPERACIONES** | Cotizaciones, Clientes, Relevamientos, **Cronograma**, Pedidos (role-gated) |
+| **ADMINISTRACIÓN** | Reportes (Admin + Contadora) |
+| **ADMIN EXTRA** (Admin only) | Gastos, Costos, Finanzas, Vehicular, Marketing, Panel, Configuración |
+
+Tasks open via `TasksFloatingPanel` (FAB), not the sidebar. Activity opens via header → `ActivityOverlay`.
 
 ---
 
@@ -18,20 +33,17 @@ Definidos en `apps/web/src/mocks/users.js` y validados en `ProtectedRoute` + `Si
 | Módulo | Ruta | Admin | Ventas | Técnicos | Finanzas |
 |--------|------|:-----:|:------:|:--------:|:--------:|
 | Dashboard | `/dashboard` | ✓ | ✓ | ✓ | ✓ |
-| Cronograma instalaciones | `/schedule` | ✓ | ✓ | ✓ | ✓ |
-| Relevamientos/asistencias | `/surveys` | ✓ | ✓ | ✓ | ✓ |
+| Cotizaciones | `/quotations` | ✓ | ✓ | — | ✓* |
 | Clientes | `/clientes` | ✓ | ✓ | ✓ | ✓ |
-| Pedidos internos | `/pedidos-internos` | ✓ | ✓ | ✓ | ✓ |
-| Gastos operativos | `/gastos-operativos` | ✓ | ✓ | ✓ | ✓ |
-| Muro actividad | `/activity-wall` | ✓ | ✓ | ✓ | ✓ |
-| Control vehicular | `/vehicle-control` | ✓ | ✓ | ✓ | ✓ |
-| Marketing | `/marketing` | ✓ | ✓ | ✓ | — |
-| Cotizaciones | `/quotations` | ✓ | ✓ | ✓ | ✓ |
-| Reportes | `/reports` | ✓ | ✓ | — | ✓ |
-| Costos operativos | `/accounting` | ✓ | ✓ | — | ✓ |
-| Finanzas | `/finanzas` | ✓ | ✓ | — | ✓ |
-| Panel de control | `/admin/management` | ✓ | — | — | — |
-| Configuración | `/configuration` | ✓ | — | — | — |
+| Relevamientos | `/surveys` | ✓ | ✓ | ✓ | — |
+| Cronograma | `/schedule` | ✓ | ✓ | ✓ | — |
+| Pedidos internos | `/pedidos-internos` | ✓ | ✓ | ✓ | — |
+| Reportes | `/reports` | ✓ | — | — | ✓ |
+| Finanzas / Costos / Gastos | `/finanzas` etc. | ✓ | — | — | ✓ |
+| Panel / Config | `/admin/management`, `/configuration` | ✓ | — | — | — |
+| Perfil usuario | `/usuarios/:id` | ✓ (all) | own | own | own |
+
+\* Contadora: consultative access where `routeRoles` allows.
 
 ---
 
@@ -39,17 +51,13 @@ Definidos en `apps/web/src/mocks/users.js` y validados en `ProtectedRoute` + `Si
 
 | Acción | Ventas | Admin | Técnicos | Finanzas |
 |--------|:------:|:-----:|:--------:|:--------:|
-| Crear entrada en cronograma | ✓ | ✓ | — | — |
+| Crear trabajo (`Schedule`) | ✓ | ✓ | — | — |
 | Reprogramar fecha | ✓ | ✓ | — | — |
-| Asignar vendedor responsable | ✓ | ✓ | — | — |
-| Asignar técnico | ✓ | ✓ | — | — |
-| Cambiar estado operativo (`programado → en_proceso → terminado`) | ✓ | ✓ | ✓ | — |
-| Registrar pagos en trabajo | ✓ | ✓ | — | ✓ |
+| Cambiar estado operativo | ✓ | ✓ | ✓ | — |
+| Registrar pagos (`adelanto`/`cobro`/`extra_asistencia`) | ✓ | ✓ | ✓ | ✓ |
 | Cancelar trabajo | ✓ | ✓ | ✓ | — |
 
-Regla de negocio: **planificación = ventas/admin**; **ejecución = técnicos** (con ventas/admin habilitados para supervisión).
-
-Implementación: `StateFlowValidator.canUserChangeState` permite ADMINISTRADOR, VENTAS / ADMINISTRACIÓN y SEGURIDAD ELECTRÓNICA.
+**Calendar rule:** day **events** = jobs only. Pending visits = **subtle indicator** → `/surveys?fecha=`.
 
 ---
 
@@ -57,12 +65,11 @@ Implementación: `StateFlowValidator.canUserChangeState` permite ADMINISTRADOR, 
 
 | Acción | Ventas | Técnicos |
 |--------|:------:|:--------:|
-| Crear visita / relevamiento | ✓ | ✓ |
-| Marcar "requiere cotización" | ✓ | ✓ |
-| Agendar relevamiento al cronograma | ✓ | ✓ |
-| Resolver visita en campo | ✓ | ✓ |
+| Crear/editar en `/surveys` | ✓ | ✓ |
+| Resolver (requires ≥1 photo) | ✓ | ✓ |
+| Priority / estado chips | ✓ | ✓ |
 
-**Definición operativa:** un **relevamiento** es la visita presencial al cliente para evaluar necesidades técnicas antes de cotizar. Lo registra quien visita (habitualmente ventas); el técnico puede registrar asistencias y relevamientos técnicos.
+Visits are **not** created from the calendar quick modal.
 
 ---
 
@@ -78,21 +85,6 @@ Flujo de estados: ver [state-machines.md](./state-machines.md).
 
 ---
 
-## Finanzas vs ventas
+## Realtime
 
-- **Ventas** registra operaciones comerciales (cotizaciones, trabajos, adelantos)
-- **Finanzas** consolida movimientos, cajas, costos y reportes contables
-- **Contadora** tiene acceso a reportes y finanzas; no planifica cronograma
-
----
-
-## Administrador — visión transversal
-
-El administrador debe poder:
-
-1. Ver actividad agregada de **todos** los grupos en dashboard y panel de control
-2. Auditar cambios de estado (`/admin/management`)
-3. Configurar metas, sucursales y parámetros globales
-4. Exportar datos maestros (CSV en panel de gestión)
-
-Ver [flows/administrador.md](./flows/administrador.md).
+Authenticated sessions subscribe to `GET /api/realtime/events` (short-lived ticket). Mutations on schedules, relevamientos, tasks, quotations, and payments emit SSE events; the SPA refetches the affected domain without F5.

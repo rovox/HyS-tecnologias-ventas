@@ -44,17 +44,15 @@ Agregación POC: `reportsService.getDashboard()`.
 
 ---
 
-## Flujo de cobranza
+## Ledger Nest vs UI `/finanzas`
 
-```
-Trabajo terminado (schedules.terminado)
-        ↓
-Registro de pago parcial o total (schedule_payments)
-        ↓
-Actualización de saldo
-        ↓
-Reflejo en /finanzas y /reports
-```
+| Surface | Role |
+|---------|------|
+| `GET/POST /api/schedules/:id/payments` | Source of truth for job adelanto/cobro/`extra_asistencia` |
+| Work detail / QuotationJobsBlock | Shows monto, cobrado, saldo, extras (fuera de presupuesto) |
+| `/finanzas` page | **Frozen** — do not refactor for Nest; Contadora workflows stay as-is |
+
+`extra_asistencia` never reduces installation `Schedule.saldo`.
 
 ---
 

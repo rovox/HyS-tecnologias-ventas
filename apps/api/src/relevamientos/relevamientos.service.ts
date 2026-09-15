@@ -1,15 +1,34 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
 import { isCont, isTec, isVentas, relevamientoWhere } from '../auth/roles';
+import { RealtimeService } from '../realtime/realtime.service';
+
+const ESTADOS = ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'];
+
+function uploadDir() {
+  return path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'), 'relevamientos');
+}
+
+function fotosList(fotosUrl: unknown): string[] {
+  if (!fotosUrl) return [];
+  if (Array.isArray(fotosUrl)) return fotosUrl.map(String).filter(Boolean);
+  if (typeof fotosUrl === 'object' && fotosUrl !== null && Array.isArray((fotosUrl as { urls?: unknown }).urls)) {
+    return ((fotosUrl as { urls: unknown[] }).urls || []).map(String).filter(Boolean);
+  }
+  return [];
+}
 
 @Injectable()
 export class RelevamientosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   list(user: User, cotizacionId?: string) {
@@ -44,6 +63,8 @@ export class RelevamientosService {
         fecha: new Date(dto.fecha),
         fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : null,
         tipoVisita: dto.tipoVisita || defaultTipo,
+        estado: dto.estado || 'programado',
+        prioridad: dto.prioridad || 'media',
         vendedorId: dto.vendedorId || (isVentas(user) ? user.id : null),
         tecnicoId: dto.tecnicoId || (isTec(user) ? user.id : null),
         lugar: dto.lugar.trim(),
@@ -54,17 +75,32 @@ export class RelevamientosService {
     });
     await this.prisma.touchClientActivity(quote.clienteId);
     await this.activity.log(user.id, sessionId, 'relevamiento.create', 'relevamiento', row.id);
+    this.realtime.emit('relevamiento.created', 'relevamiento', row.id, {
+      byUserId: user.id,
+      patch: { estado: row.estado, prioridad: row.prioridad, fecha: row.fecha },
+    });
     return row;
   }
 
   async update(id: string, dto: Partial<UpsertRelevamientoDto>, user: User, sessionId?: string) {
-    await this.get(id, user);
+    const current = await this.get(id, user);
+    if (dto.estado && !ESTADOS.includes(dto.estado)) {
+      throw new BadRequestException('Estado de visita no válido');
+    }
+    if (dto.estado === 'resuelto') {
+      const fotos = fotosList(dto.fotosUrl !== undefined ? dto.fotosUrl : current.fotosUrl);
+      if (fotos.length < 1) {
+        throw new BadRequestException('Debes subir al menos una foto de evidencia para marcar como resuelto');
+      }
+    }
     const row = await this.prisma.relevamiento.update({
       where: { id },
       data: {
         ...(dto.fecha ? { fecha: new Date(dto.fecha) } : {}),
         ...(dto.fechaFin !== undefined ? { fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : null } : {}),
         ...(dto.tipoVisita ? { tipoVisita: dto.tipoVisita } : {}),
+        ...(dto.estado ? { estado: dto.estado } : {}),
+        ...(dto.prioridad ? { prioridad: dto.prioridad } : {}),
         ...(dto.vendedorId !== undefined ? { vendedorId: dto.vendedorId || null } : {}),
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
         ...(dto.lugar ? { lugar: dto.lugar.trim() } : {}),
@@ -73,6 +109,52 @@ export class RelevamientosService {
       },
     });
     await this.activity.log(user.id, sessionId, 'relevamiento.update', 'relevamiento', id);
+    this.realtime.emit('relevamiento.updated', 'relevamiento', id, {
+      byUserId: user.id,
+      patch: {
+        estado: row.estado,
+        prioridad: row.prioridad,
+        fotosCount: fotosList(row.fotosUrl).length,
+      },
+    });
     return row;
+  }
+
+  async attachPhoto(
+    id: string,
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string },
+    user: User,
+    sessionId?: string,
+  ) {
+    const current = await this.get(id, user);
+    if (!file?.buffer?.length) throw new BadRequestException('Archivo de imagen requerido');
+    const mime = String(file.mimetype || '');
+    if (!mime.startsWith('image/')) throw new BadRequestException('Solo se permiten imágenes');
+    const dir = uploadDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const ext = path.extname(file.originalname || '') || '.jpg';
+    const name = `${id}-${Date.now()}${ext}`;
+    const full = path.join(dir, name);
+    fs.writeFileSync(full, file.buffer);
+    const url = `/api/files/relevamientos/${name}`;
+    const prev = fotosList(current.fotosUrl);
+    const fotosUrl = [...prev, url];
+    const row = await this.prisma.relevamiento.update({
+      where: { id },
+      data: { fotosUrl },
+    });
+    await this.activity.log(user.id, sessionId, 'relevamiento.photo', 'relevamiento', id);
+    this.realtime.emit('relevamiento.updated', 'relevamiento', id, {
+      byUserId: user.id,
+      patch: { fotosCount: fotosUrl.length },
+    });
+    return row;
+  }
+
+  async filePath(name: string) {
+    const safe = path.basename(name);
+    const full = path.join(uploadDir(), safe);
+    if (!fs.existsSync(full)) throw new NotFoundException('Foto no encontrada');
+    return full;
   }
 }

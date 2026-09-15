@@ -20,6 +20,16 @@ export class UpsertRelevamientoDto {
   @IsIn(['relevamiento', 'asistencia'])
   tipoVisita?: string;
 
+  @ApiPropertyOptional({ enum: ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'] })
+  @IsOptional()
+  @IsIn(['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'])
+  estado?: string;
+
+  @ApiPropertyOptional({ enum: ['baja', 'media', 'alta', 'urgente'] })
+  @IsOptional()
+  @IsIn(['baja', 'media', 'alta', 'urgente'])
+  prioridad?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

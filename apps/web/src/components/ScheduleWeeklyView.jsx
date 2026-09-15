@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { User, Wrench, MapPin, DollarSign, Loader2, ListTodo, Clock, ChevronLeft, ChevronRight, FileStack, ClipboardList, Plus, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Wrench, MapPin, DollarSign, Loader2, ListTodo, Clock, ChevronLeft, ChevronRight, FileStack, ClipboardCheck, Plus, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.jsx';
@@ -13,6 +14,7 @@ import WorkDetailModal from '@/components/WorkDetailModal.jsx';
 import { deadlineChipClass, deadlineLabel, deadlineTone } from '@/lib/deadline.js';
 
 const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, refreshKey, tasks = [], quotations = [], visits = [], onDayAdd }) => {
+  const navigate = useNavigate();
   const { getSchedules, rescheduleWork } = useSchedules();
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -251,13 +253,17 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
       >
         {days.map(day => {
           const daySchedules = schedules.filter(s => isSameDayLocal(s.fecha_programada, day) && s.tipo_entrada !== 'asistencia' && s.tipo_entrada !== 'relevamiento');
-          const dayVisitJobs = schedules.filter(s => isSameDayLocal(s.fecha_programada, day) && (s.tipo_entrada === 'asistencia' || s.tipo_entrada === 'relevamiento'));
           const dayTasks = tasks.filter((t) => t.plazo && isSameDayLocal(String(t.plazo), day));
           const dayQuotes = quotations.filter((q) => q.plazo_final && isSameDayLocal(String(q.plazo_final), day));
-          const dayVisits = visits.filter((v) => v.fecha && isSameDayLocal(String(v.fecha), day));
-          const hasEvents = daySchedules.length > 0 || dayTasks.length > 0 || dayQuotes.length > 0 || dayVisits.length > 0 || dayVisitJobs.length > 0;
+          const dayVisitsPending = (visits || []).filter((v) => {
+            if (!v.fecha || !isSameDayLocal(String(v.fecha), day)) return false;
+            const st = v.estado || 'programado';
+            return st !== 'resuelto' && st !== 'cancelado';
+          });
+          const hasEvents = daySchedules.length > 0 || dayTasks.length > 0 || dayQuotes.length > 0 || dayVisitsPending.length > 0;
           const isToday = format(new Date(), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
-          const eventCount = daySchedules.length + dayTasks.length + dayQuotes.length + dayVisits.length + dayVisitJobs.length;
+          const eventCount = daySchedules.length + dayTasks.length + dayQuotes.length;
+          const fechaKey = format(day, 'yyyy-MM-dd');
 
           if (!hasEvents) {
             return (
@@ -316,6 +322,20 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
                   <Badge variant="secondary" className="text-[10px] font-bold tabular-nums">
                     {eventCount}
                   </Badge>
+                  {dayVisitsPending.length > 0 ? (
+                    <button
+                      type="button"
+                      title={`${dayVisitsPending.length} visita(s) pendiente(s)`}
+                      className="inline-flex items-center gap-0.5 rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/surveys?fecha=${fechaKey}`);
+                      }}
+                    >
+                      <ClipboardCheck className="h-3 w-3" />
+                      {dayVisitsPending.length}
+                    </button>
+                  ) : null}
                   {onDayAdd ? (
                     <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDayAdd(day)} aria-label="Programar en este día">
                       <Plus className="h-3.5 w-3.5" />
@@ -470,19 +490,6 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
                       </div>
                     );
                   })}
-                {[...dayVisitJobs, ...dayVisits].map((visit) => (
-                  <div
-                    key={visit.id}
-                    className="w-full rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5 opacity-80"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <ClipboardList className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {visit.tipo_visita || visit.tipo_entrada || 'Visita'} · {visit.cliente_nombre || visit.lugar || 'Sin cliente'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           );

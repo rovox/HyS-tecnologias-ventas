@@ -79,3 +79,6 @@ id_rsa.pub
 
 # Local quotation PDF uploads
 apps/api/uploads/
+
+# Documentación interna (datos reales, no GitHub)
+docs/decisiones-tecnicas/

@@ -136,7 +136,7 @@ Do **not** nest another `u656468476` folder inside home (wrong path: `/home/u656
 | Root | `apps/api` |
 | Framework | **Other** |
 | Build | **empty** |
-| Entry / start | `start-api.mjs` (or `dist/main.js`) |
+| Entry / start | **Live:** `dist/main.js` (do not switch to `start-api.mjs` without verifying Hostinger listen detector ~3s) |
 
 Save → **Redeploy** after each Git push that changes `postinstall`, `dist`, or Prisma config.
 
@@ -179,7 +179,7 @@ The monorepo still contains `apps/web`, but the Node app **ignores** it because 
 
 **pnpm on Hostinger (pnpm 11):** root and [`apps/api/pnpm-workspace.yaml`](../../apps/api/pnpm-workspace.yaml) must set `allowBuilds` for `prisma` / `@prisma/client` / `@prisma/engines` (`true`) and deny `esbuild` / `@scarf/scarf` / `unrs-resolver`. `strictDepBuilds: false` avoids hard-fail on other ignored scripts. `apps/api` `postinstall` runs `prisma generate`. If the log shows `ERR_PNPM_IGNORED_BUILDS` + `ERROR: Failed to install dependencies`, push those YAML files and Redeploy — Nest never starts, so `/api/health` stays 503.
 
-**File Manager (UPLOAD_DIR):** the house icon = `/home/u656468476`. Create `hys-uploads/quotations` directly under home — not inside an extra `u656468476` folder.
+**File Manager (UPLOAD_DIR):** the house icon = `/home/u656468476`. Create `hys-uploads` under home (not inside the git checkout). Nest writes quotation PDFs at the root of `UPLOAD_DIR` and relevamiento photos under `UPLOAD_DIR/relevamientos/` (created on first upload). Ensure both are writable.
 
 **MySQL password lost:** hPanel → Databases → user `u656468476_hys_api` → **Change password** → rebuild `DATABASE_URL`. Reassign DB to **lime-chamois** (not white-goat) for clarity.
 
@@ -194,9 +194,11 @@ UPLOAD_DIR=/home/u656468476/hys-uploads/quotations
 # ENABLE_SWAGGER=1
 ```
 
-Nest fails fast if `JWT_SECRET` or `CORS_ORIGIN` is missing. Swagger (`/api/docs`) is off unless `ENABLE_SWAGGER=1`.
+Nest fails fast if `JWT_SECRET` or `CORS_ORIGIN` is missing. Swagger (`/api/docs`) is off unless `ENABLE_SWAGGER=1` (keep off in production).
 
-`UPLOAD_DIR` must be **outside** the git checkout. Redeploys wipe `apps/api`.
+`UPLOAD_DIR` must be **outside** the git checkout. Redeploys wipe `apps/api`. Create subdirectory `relevamientos/` for visit photos.
+
+**SSE / proxy:** `GET /api/realtime/events` keeps a long-lived stream. Hostinger Node cold start may exceed the ~3s listen detector; heartbeats run from Nest. If the proxy drops idle connections, clients reconnect; Plan B is polling `metrics/feed`.
 
 ## phpMyAdmin — import schema
 

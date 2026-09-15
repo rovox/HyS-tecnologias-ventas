@@ -19,10 +19,15 @@ Rol en el sistema: supervisión transversal, configuración, auditoría.
 
 | Ruta | Función |
 |------|---------|
-| `/dashboard` | Vista global — todos los KPIs |
+| `/dashboard` | Vista operativa (no global finance rewrite) |
+| `/schedule` | Cronograma (jobs = events; visits = indicator) |
+| `/surveys` | Relevamientos / asistencias + foto gate |
+| `/usuarios/:id` | Perfil (Admin: todos; usuario: propio) |
 | `/admin/management` | Panel de control + auditoría |
 | `/configuration` | Configuración del sistema |
-| Todas las demás | Acceso completo |
+| Admin extras | Finanzas, Costos, Gastos, Marketing, Vehicular (end of nav) |
+
+Sidebar: **OPERACIONES** first for every role; Admin appends extras at the end.
 
 ---
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Menu, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -31,13 +32,21 @@ const Header = ({ onMenuClick, activityOpen = false, onToggleActivity }) => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 ml-auto min-w-0">
-          <div className="hidden sm:flex flex-col items-end mr-1 text-right min-w-0">
+          <Link
+            to={currentUser?.id ? `/usuarios/${currentUser.id}` : '/dashboard'}
+            className="hidden sm:flex flex-col items-end mr-1 text-right min-w-0 hover:opacity-80"
+            title="Ver mi perfil"
+          >
             <p className="text-sm font-semibold leading-none truncate max-w-[10rem]">{currentUser?.name || 'Usuario'}</p>
             <p className="text-xs text-muted-foreground mt-1 truncate max-w-[10rem]">{currentUser?.role}</p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+          </Link>
+          <Link
+            to={currentUser?.id ? `/usuarios/${currentUser.id}` : '/dashboard'}
+            className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0"
+            aria-label="Abrir perfil"
+          >
             {currentUser?.name?.charAt(0) || 'U'}
-          </div>
+          </Link>
           <Button
             type="button"
             variant={activityOpen ? 'default' : 'outline'}
