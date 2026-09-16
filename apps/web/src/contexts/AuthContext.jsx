@@ -49,8 +49,7 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = () => currentUser?.role === 'ADMINISTRADOR';
   const isVentas = () => currentUser?.role === 'VENTAS / ADMINISTRACIÓN';
   const isSeguridad = () => currentUser?.role === 'SEGURIDAD ELECTRÓNICA';
-  const isContadora = () => currentUser?.role === 'Contadora';
-  const isVentasLevel = () => isAdmin() || isVentas() || isContadora();
+  const isVentasLevel = () => isAdmin() || isVentas();
 
   const value = {
     currentUser,
@@ -65,13 +64,13 @@ export const AuthProvider = ({ children }) => {
     isVentas,
     isSeguridad,
     isVentasLevel,
-    canApproveExpenses: isVentasLevel,
+    // Solo administradores validan egresos/ingresos (ver egresos e ingresos: registran ventas/admin, validan solo admins).
+    canApproveExpenses: isAdmin,
     canDeleteRecords: isAdmin,
-    isContadora,
     canViewFinancialReports: isVentasLevel,
     canRegisterFinancial: isVentasLevel,
     canAccessExecutivePanel: isAdmin,
-    canManageVehicles: () => isAdmin() || isVentas() || isSeguridad() || isContadora(),
+    canManageVehicles: () => isAdmin() || isVentas() || isSeguridad(),
     canViewVehicleAnalytics: isAdmin,
   };
 

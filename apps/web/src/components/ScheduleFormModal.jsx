@@ -21,8 +21,10 @@ import { isMockMode } from '@/api/http.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 
 const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
+  const { isAdmin } = useAuth();
   const { vendors, loading: vendorsLoading } = useVendedorList();
   const { tecnicos, loading: tecnicosLoading } = useTecnicosList();
   const { sucursales, loading: sucursalesLoading } = useSucursalesList();
@@ -431,7 +433,8 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                 caja_banco_nombre: caja?.nombre || '',
                 trabajo_id: savedJobId,
                 cliente_nombre: clientName,
-                estado: 'confirmado',
+                // Solo un administrador puede dejar el ingreso ya validado; el resto queda pendiente.
+                estado: isAdmin() ? 'confirmado' : 'pendiente',
                 origen: 'adelanto_trabajo',
                 id_origen: savedJobId,
                 created_by: authUserId,

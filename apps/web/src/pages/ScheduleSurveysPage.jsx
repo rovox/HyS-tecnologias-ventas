@@ -253,8 +253,8 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
 };
 
 const ScheduleSurveysPage = () => {
-  const { currentUser, isAdmin, isVentas, isContadora, isSeguridad } = useAuth();
-  const canEdit = isAdmin() || isVentas() || isContadora() || isSeguridad();
+  const { currentUser, isAdmin, isVentas, isSeguridad } = useAuth();
+  const canEdit = isAdmin() || isVentas() || isSeguridad();
   const canDelete = isAdmin();
 
   const [visitas, setVisitas] = useState([]);

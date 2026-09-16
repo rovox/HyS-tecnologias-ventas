@@ -269,13 +269,9 @@ export const schedulesService = {
     }
     const job = store.findById('schedules', trabajoId);
     if (!job) throw new Error('Trabajo no encontrado');
-    const payment = store.insert('schedule_payments', { ...paymentData, trabajo_id: trabajoId });
-    const cobros = store.list('schedule_payments', { filter: `trabajo_id="${trabajoId}"` })
-      .filter((r) => r.tipo !== 'extra_asistencia' && r.tipo_cobro !== 'extra_asistencia');
-    const cobrado = cobros.reduce((sum, row) => sum + (Number(row.monto_cobrado) || 0), 0);
-    const saldo = Math.max(0, (Number(job.monto) || 0) - cobrado);
-    store.update('schedules', trabajoId, { adelanto: cobrado, saldo });
-    return payment;
+    // El saldo del trabajo (adelanto/cobros_realizados) es responsabilidad de quien llama
+    // (ver calculateBalance + update/updateStatus); aquí solo queda el registro del pago.
+    return store.insert('schedule_payments', { ...paymentData, trabajo_id: trabajoId });
   },
 };
 

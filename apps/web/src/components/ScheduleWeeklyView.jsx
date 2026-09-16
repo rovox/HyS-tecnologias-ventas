@@ -101,7 +101,8 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
 
   const getDynamicStyles = (status) => {
     switch (status) {
-      case 'completado': 
+      case 'terminado':
+      case 'completado':
         return 'bg-green-50/80 border-l-green-500 text-green-900 dark:bg-green-950/30 dark:border-l-green-600 dark:text-green-300';
       case 'en_proceso': 
         return 'bg-orange-50/80 border-l-orange-500 text-orange-900 dark:bg-amber-950/30 dark:border-l-amber-500 dark:text-amber-300';

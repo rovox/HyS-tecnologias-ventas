@@ -17,7 +17,7 @@ pnpm install
 pnpm dev:web
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `dennis.ventas@demo.hs.local` / `Demo1234!`.
+Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `dennis.ventas@demo.hs.local` / `dennis` (o `Demo1234!`).
 
 | Comando | Descripción |
 |---------|-------------|
@@ -58,10 +58,9 @@ aca/
 
 | Grupo | Rol | Enfoque |
 |-------|-----|---------|
-| Ventas | VENTAS / ADMINISTRACIÓN | Clientes, relevamientos, cotizaciones, planificación de cronograma |
+| Ventas | VENTAS / ADMINISTRACIÓN | Clientes, relevamientos, cotizaciones, planificación de cronograma, registro de cobros/egresos (pendientes de validación) |
 | Técnicos | SEGURIDAD ELECTRÓNICA | Ejecución en campo, visitas, pedidos de materiales |
-| Finanzas | Contadora | Cobranzas, costos, reportes |
-| Admin | ADMINISTRADOR | Visión global, configuración, auditoría |
+| Admin | ADMINISTRADOR | Visión global, configuración, auditoría, validación de egresos/ingresos y reportes de finanzas |
 
 Flujo comercial:
 
@@ -86,14 +85,18 @@ Manuales extendidos:
 
 ## Cuentas demo
 
-Contraseña: **`Demo1234!`**
+Contraseña: nombre en minúsculas (ej. `julio`), también funciona `Demo1234!` para cualquier cuenta.
 
 | Email | Rol |
 |-------|-----|
 | `julio.admin@demo.hs.local` | Administrador |
+| `elias.ops@demo.hs.local` | Administrador |
+| `estefany.admin@demo.hs.local` | Administrador |
+| `mabel.admin@demo.hs.local` | Administrador |
 | `dennis.ventas@demo.hs.local` | Ventas |
-| `elias.ops@demo.hs.local` | Técnico |
-| `elena.conta@demo.hs.local` | Finanzas |
+| `wilson.ventas@demo.hs.local` | Ventas |
+| `vanesa.ventas@demo.hs.local` | Ventas |
+| `giovanni.ventas@demo.hs.local` | Ventas |
 
 Lista completa: [`docs/getting-started/demo-accounts.md`](./docs/getting-started/demo-accounts.md)
 

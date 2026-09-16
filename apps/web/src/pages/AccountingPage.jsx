@@ -543,12 +543,12 @@ const FichaTab = ({
   users,
   currentUser,
   canAdmin,
-  canContadora,
+  canVentasLevel,
   canTecnico,
   sucursalesList,
   tecnicosList
 }) => {
-  const canCreate = canAdmin || canContadora || canTecnico;
+  const canCreate = canAdmin || canVentasLevel || canTecnico;
   const [selectedJobId, setSelectedJobId] = useState('none');
   const [jobInfo, setJobInfo] = useState(null);
   const [existingItems, setExistingItems] = useState([]);
@@ -929,7 +929,7 @@ const FichaTab = ({
           </div>
 
           {/* Summary KPIs */}
-          {(canAdmin || canContadora) && <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {(canAdmin || canVentasLevel) && <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
               {[{
           label: 'Valor trabajo',
           val: summary.valorTrabajo,
@@ -977,7 +977,7 @@ const FichaTab = ({
             </div>}
 
           {/* Utilidad */}
-          {(canAdmin || canContadora) && <div className={cn('flex items-center gap-3 px-4 py-3 rounded-xl border font-bold', summary.utilidad >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700')}>
+          {(canAdmin || canVentasLevel) && <div className={cn('flex items-center gap-3 px-4 py-3 rounded-xl border font-bold', summary.utilidad >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700')}>
               {summary.utilidad >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
               <span>Utilidad estimada: {fmt(summary.utilidad)}</span>
               <span className="text-sm font-medium">({summary.pctUtil}%)</span>
@@ -1000,10 +1000,10 @@ const FichaTab = ({
                       <th className="px-3 py-2.5 text-left">Marca/Modelo</th>
                       <th className="px-3 py-2.5 text-right">Cant.</th>
                       <th className="px-3 py-2.5 text-left">Unidad</th>
-                      {(canAdmin || canContadora) && <th className="px-3 py-2.5 text-right">Monto</th>}
+                      {(canAdmin || canVentasLevel) && <th className="px-3 py-2.5 text-right">Monto</th>}
                       <th className="px-3 py-2.5 text-left">Técnico</th>
                       <th className="px-3 py-2.5 text-left">Estado</th>
-                      {(canAdmin || canContadora) && <th className="px-3 py-2.5 text-center">Acción</th>}
+                      {(canAdmin || canVentasLevel) && <th className="px-3 py-2.5 text-center">Acción</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1013,12 +1013,12 @@ const FichaTab = ({
                         <td className="px-3 py-2 text-muted-foreground text-xs">{r.marca_modelo || '—'}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.cantidad || r.cantidad_devuelta || '—'}</td>
                         <td className="px-3 py-2 text-muted-foreground text-xs">{r.unidad || '—'}</td>
-                        {(canAdmin || canContadora) && <td className="px-3 py-2 text-right font-black tabular-nums">{fmt(r._monto)}</td>}
+                        {(canAdmin || canVentasLevel) && <td className="px-3 py-2 text-right font-black tabular-nums">{fmt(r._monto)}</td>}
                         <td className="px-3 py-2 text-muted-foreground text-xs">{r.tecnico_nombre || r.persona_nombre || '—'}</td>
                         <td className="px-3 py-2"><EstadoBadge v={r.estado} /></td>
-                        {(canAdmin || canContadora) && <td className="px-3 py-2 text-center">
+                        {(canAdmin || canVentasLevel) && <td className="px-3 py-2 text-center">
                             <div className="flex items-center justify-center gap-1">
-                              {r.estado === 'pendiente' && (canAdmin || canContadora) && <Button size="sm" variant="ghost" className="h-6 px-1.5 text-emerald-600 hover:bg-emerald-50" onClick={() => validateItem(r, 'validado')} title="Validar">
+                              {r.estado === 'pendiente' && (canAdmin || canVentasLevel) && <Button size="sm" variant="ghost" className="h-6 px-1.5 text-emerald-600 hover:bg-emerald-50" onClick={() => validateItem(r, 'validado')} title="Validar">
                                   <CheckCircle className="h-3 w-3" />
                                 </Button>}
                               {canAdmin && r.estado !== 'anulado' && <Button size="sm" variant="ghost" className="h-6 px-1.5 text-amber-600 hover:bg-amber-50" onClick={() => validateItem(r, 'anulado')} title="Anular">
@@ -1127,7 +1127,7 @@ const FichaTab = ({
                               <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="pendiente">Pendiente</SelectItem>
-                                {(canAdmin || canContadora) && <SelectItem value="validado">Validado</SelectItem>}
+                                {(canAdmin || canVentasLevel) && <SelectItem value="validado">Validado</SelectItem>}
                               </SelectContent>
                             </Select>
                           </td>
@@ -1298,12 +1298,12 @@ const MaterialesTab = ({
   users,
   currentUser,
   canAdmin,
-  canContadora,
+  canVentasLevel,
   canTecnico,
   sucursalesList,
   tecnicosList
 }) => {
-  const canCreate = canAdmin || canContadora || canTecnico;
+  const canCreate = canAdmin || canVentasLevel || canTecnico;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1511,11 +1511,11 @@ const MaterialesTab = ({
               <Select value={form.estado} onValueChange={v => setForm(p => ({
             ...p,
             estado: v
-          }))} disabled={saving || !canAdmin && !canContadora}>
+          }))} disabled={saving || !canAdmin && !canVentasLevel}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pendiente">Pendiente</SelectItem>
-                  {(canAdmin || canContadora) && <SelectItem value="validado">Validado</SelectItem>}
+                  {(canAdmin || canVentasLevel) && <SelectItem value="validado">Validado</SelectItem>}
                   {canAdmin && <SelectItem value="anulado">Anulado</SelectItem>}
                 </SelectContent>
               </Select>
@@ -1540,11 +1540,11 @@ const MaterialesTab = ({
               <th className="px-4 py-3 text-left">Material</th>
               <th className="px-4 py-3 text-right">Cant.</th>
               <th className="px-4 py-3 text-left">Unidad</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-right">Costo unit. (Bs)</th>}
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-right">Total</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-right">Costo unit. (Bs)</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-right">Total</th>}
               <th className="px-4 py-3 text-left">Técnico</th>
               <th className="px-4 py-3 text-left">Estado</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-center">Acción</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-center">Acción</th>}
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1556,11 +1556,11 @@ const MaterialesTab = ({
                   <td className="px-4 py-2.5 font-bold">{r.material_nombre}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{r.cantidad}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{r.unidad}</td>
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-right tabular-nums">{fmt(r.costo_unitario)}</td>}
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-right font-black tabular-nums text-orange-600">{fmt(r.costo_total)}</td>}
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-right tabular-nums">{fmt(r.costo_unitario)}</td>}
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-right font-black tabular-nums text-orange-600">{fmt(r.costo_total)}</td>}
                   <td className="px-4 py-2.5 text-muted-foreground">{r.tecnico_nombre || '—'}</td>
                   <td className="px-4 py-2.5"><EstadoBadge v={r.estado} /></td>
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-center">
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {r.estado === 'pendiente' && <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-600 hover:bg-emerald-50" onClick={() => validateRow(r.id, 'validado')}><CheckCircle className="h-3.5 w-3.5" /></Button>}
                         {r.estado !== 'anulado' && canAdmin && <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-600 hover:bg-amber-50" onClick={() => validateRow(r.id, 'anulado')}><XCircle className="h-3.5 w-3.5" /></Button>}
@@ -1589,12 +1589,12 @@ const EquiposTab = ({
   users,
   currentUser,
   canAdmin,
-  canContadora,
+  canVentasLevel,
   canTecnico,
   sucursalesList,
   tecnicosList
 }) => {
-  const canCreate = canAdmin || canContadora || canTecnico;
+  const canCreate = canAdmin || canVentasLevel || canTecnico;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1781,7 +1781,7 @@ const EquiposTab = ({
               <th className="px-4 py-3 text-left">Marca / Modelo</th>
               <th className="px-4 py-3 text-left">Serie</th>
               <th className="px-4 py-3 text-right">Cant.</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-right">Total</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-right">Total</th>}
               <th className="px-4 py-3 text-left">Trabajo</th>
               <th className="px-4 py-3 text-left">Técnico</th>
               <th className="px-4 py-3 text-left">Estado</th>
@@ -1797,7 +1797,7 @@ const EquiposTab = ({
                   <td className="px-4 py-2.5 text-muted-foreground">{r.marca_modelo || '—'}</td>
                   <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{r.numero_serie || '—'}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{r.cantidad}</td>
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-right font-black tabular-nums text-blue-600">{fmt(r.costo_total)}</td>}
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-right font-black tabular-nums text-blue-600">{fmt(r.costo_total)}</td>}
                   <td className="px-4 py-2.5 text-muted-foreground max-w-[140px] truncate">{r.cliente_nombre || '—'}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{r.tecnico_nombre || '—'}</td>
                   <td className="px-4 py-2.5"><EstadoBadge v={r.estado} /></td>
@@ -1828,12 +1828,12 @@ const GastosDirectosTab = ({
   users,
   currentUser,
   canAdmin,
-  canContadora,
+  canVentasLevel,
   canTecnico,
   sucursalesList,
   tecnicosList
 }) => {
-  const canCreate = canAdmin || canContadora || canTecnico;
+  const canCreate = canAdmin || canVentasLevel || canTecnico;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -2003,11 +2003,11 @@ const GastosDirectosTab = ({
               <Select value={form.estado} onValueChange={v => setForm(p => ({
             ...p,
             estado: v
-          }))} disabled={saving || !canAdmin && !canContadora}>
+          }))} disabled={saving || !canAdmin && !canVentasLevel}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pendiente">Pendiente</SelectItem>
-                  {(canAdmin || canContadora) && <SelectItem value="validado">Validado</SelectItem>}
+                  {(canAdmin || canVentasLevel) && <SelectItem value="validado">Validado</SelectItem>}
                   {canAdmin && <SelectItem value="anulado">Anulado</SelectItem>}
                 </SelectContent>
               </Select>
@@ -2032,9 +2032,9 @@ const GastosDirectosTab = ({
               <th className="px-4 py-3 text-left">Descripción</th>
               <th className="px-4 py-3 text-left">Trabajo</th>
               <th className="px-4 py-3 text-left">Persona</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-right">Monto</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-right">Monto</th>}
               <th className="px-4 py-3 text-left">Estado</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-center">Acción</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-center">Acción</th>}
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -2046,9 +2046,9 @@ const GastosDirectosTab = ({
                   <td className="px-4 py-2.5 font-bold">{r.descripcion}</td>
                   <td className="px-4 py-2.5 text-muted-foreground max-w-[140px] truncate">{r.cliente_nombre || '—'}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{r.persona_nombre || '—'}</td>
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-right font-black tabular-nums text-red-600">{fmt(r.monto)}</td>}
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-right font-black tabular-nums text-red-600">{fmt(r.monto)}</td>}
                   <td className="px-4 py-2.5"><EstadoBadge v={r.estado} /></td>
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-center">
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {r.estado === 'pendiente' && <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-600 hover:bg-emerald-50" onClick={() => validateRow(r.id, 'validado')}><CheckCircle className="h-3.5 w-3.5" /></Button>}
                         {canAdmin && r.estado !== 'anulado' && <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-600 hover:bg-amber-50" onClick={() => validateRow(r.id, 'anulado')}><XCircle className="h-3.5 w-3.5" /></Button>}
@@ -2077,12 +2077,12 @@ const SobrantesTab = ({
   users,
   currentUser,
   canAdmin,
-  canContadora,
+  canVentasLevel,
   canTecnico,
   sucursalesList,
   tecnicosList
 }) => {
-  const canCreate = canAdmin || canContadora || canTecnico;
+  const canCreate = canAdmin || canVentasLevel || canTecnico;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -2281,7 +2281,7 @@ const SobrantesTab = ({
 const HistorialTab = ({
   schedules,
   canAdmin,
-  canContadora
+  canVentasLevel
 }) => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2357,7 +2357,7 @@ const HistorialTab = ({
         </Select>
       </div>
 
-      {byJob.length > 0 && (canAdmin || canContadora) && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {byJob.length > 0 && (canAdmin || canVentasLevel) && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {byJob.slice(0, 6).map(({
         jid,
         label,
@@ -2400,7 +2400,7 @@ const HistorialTab = ({
               <th className="px-4 py-3 text-left">Tipo</th>
               <th className="px-4 py-3 text-left">Concepto</th>
               <th className="px-4 py-3 text-left">Trabajo / Cliente</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-right">Monto</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-right">Monto</th>}
               <th className="px-4 py-3 text-left">Estado</th>
             </tr>
           </thead>
@@ -2412,7 +2412,7 @@ const HistorialTab = ({
                   <td className="px-4 py-2.5"><TipoBadge v={r._tipo} /></td>
                   <td className="px-4 py-2.5 font-bold">{r.material_nombre}</td>
                   <td className="px-4 py-2.5 text-muted-foreground max-w-[150px] truncate">{r.cliente_nombre || '—'}</td>
-                  {(canAdmin || canContadora) && <td className="px-4 py-2.5 text-right font-black tabular-nums">{fmt(r._monto)}</td>}
+                  {(canAdmin || canVentasLevel) && <td className="px-4 py-2.5 text-right font-black tabular-nums">{fmt(r._monto)}</td>}
                   <td className="px-4 py-2.5"><EstadoBadge v={r.estado} /></td>
                 </tr>) : <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Sin registros de costos.</td></tr>}
           </tbody>
@@ -2426,12 +2426,11 @@ const AccountingPage = () => {
   const {
     currentUser,
     isAdmin,
-    isContadora,
     isSeguridad,
     isVentasLevel
   } = useAuth();
   const canAdmin = isAdmin();
-  const canContadora = isVentasLevel(); // VENTAS / ADMINISTRACIÓN has same level as Contadora
+  const canVentasLevel = isVentasLevel();
   const canTecnico = isSeguridad();
   const [schedules, setSchedules] = useState([]);
   const [users, setUsers] = useState([]);
@@ -2481,7 +2480,7 @@ const AccountingPage = () => {
     users,
     currentUser,
     canAdmin,
-    canContadora,
+    canVentasLevel,
     canTecnico,
     sucursalesList,
     tecnicosList
@@ -2524,7 +2523,7 @@ const AccountingPage = () => {
             <SobrantesTab {...sharedProps} />
           </TabsContent>
           <TabsContent value="historial">
-            <HistorialTab schedules={schedules} canAdmin={canAdmin} canContadora={canContadora} />
+            <HistorialTab schedules={schedules} canAdmin={canAdmin} canVentasLevel={canVentasLevel} />
           </TabsContent>
         </Tabs>
       </div>
