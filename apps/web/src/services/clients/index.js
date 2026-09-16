@@ -8,7 +8,7 @@ import { isActiveClient, isClienteContratado } from '@/lib/clientStatus.js';
 function scopeClients(rows) {
   const me = mockAdapter.authStore.record;
   if (!me) return rows;
-  if (me.role === ROLES.ADMIN || me.role === ROLES.CONT) return rows;
+  if (me.role === ROLES.ADMIN) return rows;
   const suc = sucursalOf(me);
   if (!suc) return rows;
   return rows.filter((row) => (row.sucursal_id || row.sucursalId) === suc);

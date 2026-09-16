@@ -18,19 +18,19 @@ import { ROLES } from '@/mocks/users.js';
 
 export { ROLES };
 
-export const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONT];
+export const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
 
-const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONT];
-const CLIENT_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONT, ROLES.TEC];
+const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
+const CLIENT_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
 const SURVEY_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
 const TASK_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
-const REPORT_ROLES = [ROLES.ADMIN, ROLES.CONT];
+const REPORT_ROLES = [ROLES.ADMIN];
 const ADMIN_ONLY = [ROLES.ADMIN];
 const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
 
 /**
  * Menú unificado: OPERACIONES primero para todos los roles.
- * Admin añade extras al final. Tareas = botón flotante (TasksFloatingPanel).
+ * Admin añade extras al final.
  */
 export const operationalMenuSections = [
   {
@@ -108,17 +108,13 @@ export function canWriteQuotations(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
 }
 
-/** Quien puede ver /quotations también puede editar en esta vista (incluye Contadora). */
+/** Quien puede ver /quotations también puede editar en esta vista. */
 export function canEditQuotationsView(role) {
   return routeRoles.quotations.includes(role);
 }
 
 export function canWriteClients(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
-}
-
-export function canAccessTasks(role) {
-  return role === ROLES.ADMIN || role === ROLES.VENTAS || role === ROLES.TEC;
 }
 
 export function sucursalOf(user) {

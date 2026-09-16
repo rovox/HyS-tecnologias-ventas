@@ -164,17 +164,19 @@ const ReportsPage = () => {
       value: pedidos.filter(p => p.sucursal_destino_id === suc.id).length,
     })).filter(s => s.value > 0);
 
-    // FINANZAS
-    const ingresos = movimientos.filter(m => m.tipo === 'ingreso' || m.tipo === 'cobro').reduce((sum, m) => sum + (m.monto || 0), 0);
-    const egresos = movimientos.filter(m => m.tipo === 'egreso' || m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
+    // FINANZAS — solo movimientos y gastos ya validados por un administrador cuentan en los reportes.
+    const movimientosValidados = movimientos.filter(m => String(m.estado || '').toLowerCase() === 'confirmado');
+    const gastosValidados = gastos.filter(g => g.estado === 'Devuelto');
+    const ingresos = movimientosValidados.filter(m => m.tipo === 'ingreso' || m.tipo === 'cobro').reduce((sum, m) => sum + (m.monto || 0), 0);
+    const egresos = movimientosValidados.filter(m => m.tipo === 'egreso' || m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
     const cuentasPorCobrar = schedules.reduce((sum, s) => sum + Math.max(0, s.saldo_pendiente || 0), 0);
     const cobros = pagos.reduce((sum, p) => sum + (p.monto || 0), 0);
-    const pagProveedores = movimientos.filter(m => m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
+    const pagProveedores = movimientosValidados.filter(m => m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
 
     // COSTOS OPERATIVOS
     const totalMat = materiales.reduce((sum, m) => sum + (m.total || 0), 0);
     const totalEquipos = equipos.reduce((sum, e) => sum + (e.costo_total || 0), 0);
-    const totalGastos = gastos.reduce((sum, g) => sum + (g.monto || 0), 0);
+    const totalGastos = gastosValidados.reduce((sum, g) => sum + (g.monto || 0), 0);
     const ingresosTrab = schedules.filter(s => ['completado','terminado'].includes(s.estado)).reduce((sum, s) => sum + (s.monto || 0), 0);
     const utilidad = ingresosTrab - totalMat - totalEquipos - totalGastos;
 

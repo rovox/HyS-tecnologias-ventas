@@ -17,7 +17,8 @@ export const financeService = {
     return store.list('schedule_payments', { sort: '-created' });
   },
   async createMovimiento(data) {
-    return store.insert('movimientos', { estado: 'confirmado', ...data });
+    // Por defecto queda pendiente de validación por un administrador, salvo que el llamador indique lo contrario.
+    return store.insert('movimientos', { estado: 'pendiente', ...data });
   },
 };
 

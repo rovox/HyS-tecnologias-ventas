@@ -9,8 +9,10 @@ const PASSWORDS: Record<string, string> = {
   'dennis.ventas@demo.hs.local': 'dennis',
   'wilson.ventas@demo.hs.local': 'wilson',
   'vanesa.ventas@demo.hs.local': 'vanesa',
+  'giovanni.ventas@demo.hs.local': 'giovanni',
   'elias.ops@demo.hs.local': 'elias',
-  'elena.conta@demo.hs.local': 'elena',
+  'estefany.admin@demo.hs.local': 'estefany',
+  'mabel.admin@demo.hs.local': 'mabel',
 };
 
 const BRANCHES = [
@@ -36,8 +38,10 @@ async function main() {
     { id: 'usr_ventas', email: 'dennis.ventas@demo.hs.local', name: 'Dennis', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 18000, phone: '70000002', sucursalId: 'suc_central' },
     { id: 'usr_wilson', email: 'wilson.ventas@demo.hs.local', name: 'Wilson', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 14000, phone: '70000005', sucursalId: 'suc_punata' },
     { id: 'usr_vanesa', email: 'vanesa.ventas@demo.hs.local', name: 'Vanesa', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 14000, phone: '70000006', sucursalId: 'suc_quillacollo' },
-    { id: 'usr_tec', email: 'elias.ops@demo.hs.local', name: 'Elias', role: 'SEGURIDAD ELECTRÓNICA', monthlyGoalBs: 0, phone: '70000003', sucursalId: 'suc_central' },
-    { id: 'usr_conta', email: 'elena.conta@demo.hs.local', name: 'Elena Rojas', role: 'Contadora', monthlyGoalBs: 0, phone: '70000004', sucursalId: 'suc_central' },
+    { id: 'usr_giovanni', email: 'giovanni.ventas@demo.hs.local', name: 'Giovanni', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 14000, phone: '70000007', sucursalId: 'suc_central' },
+    { id: 'usr_tec', email: 'elias.ops@demo.hs.local', name: 'Elias', role: 'ADMINISTRADOR', monthlyGoalBs: 0, phone: '70000003', sucursalId: 'suc_central' },
+    { id: 'usr_conta', email: 'estefany.admin@demo.hs.local', name: 'Estefany', role: 'ADMINISTRADOR', monthlyGoalBs: 0, phone: '70000004', sucursalId: 'suc_central' },
+    { id: 'usr_mabel', email: 'mabel.admin@demo.hs.local', name: 'Mabel', role: 'ADMINISTRADOR', monthlyGoalBs: 0, phone: '70000008', sucursalId: 'suc_central' },
   ];
 
   for (const row of users) {
@@ -182,7 +186,7 @@ async function main() {
     });
   }
 
-  console.log('Seed OK — passwords: julio / dennis / wilson / vanesa / elias / elena');
+  console.log('Seed OK — passwords: julio / dennis / wilson / vanesa / giovanni / elias / estefany / mabel');
 }
 
 main()

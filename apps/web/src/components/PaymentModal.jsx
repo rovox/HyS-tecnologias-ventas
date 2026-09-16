@@ -13,8 +13,9 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
 
 const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
-  const { currentUser, isAdmin, isContadora } = useAuth();
-  const canDirectConfirm = isAdmin?.() || isContadora?.();
+  const { currentUser, isAdmin } = useAuth();
+  // Solo un administrador puede confirmar un cobro directamente; el resto queda pendiente de rendición.
+  const canDirectConfirm = isAdmin?.();
   const { updateSchedule } = useSchedules();
   const [loading, setLoading] = useState(false);
   const [overpayWarning, setOverpayWarning] = useState('');

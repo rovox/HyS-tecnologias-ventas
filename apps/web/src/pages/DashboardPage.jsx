@@ -15,15 +15,12 @@ const DashboardPage = () => {
   const { currentUser, userRole } = useAuth();
   const isVentas = userRole === ROLES.VENTAS;
   const isTec = userRole === ROLES.TEC;
-  const isCont = userRole === ROLES.CONT;
 
   const subtitle = isVentas
     ? 'Tus cotizaciones, ventas y meta del mes.'
     : isTec
       ? 'Relevamientos y tareas asignadas.'
-      : isCont
-        ? 'Métricas comerciales de lectura.'
-        : 'Visión comercial de sucursales y vendedores.';
+      : 'Visión comercial de sucursales y vendedores.';
 
   return (
     <Layout>
@@ -48,11 +45,9 @@ const DashboardPage = () => {
           <Button variant="outline" className="min-h-11" onClick={() => navigate('/clientes')}>
             <Building2 className="h-4 w-4" /> Clientes
           </Button>
-          {!isCont && (
-            <Button variant="outline" className="min-h-11" onClick={() => navigate('/surveys')}>
-              <ClipboardCheck className="h-4 w-4" /> Relevamientos
-            </Button>
-          )}
+          <Button variant="outline" className="min-h-11" onClick={() => navigate('/surveys')}>
+            <ClipboardCheck className="h-4 w-4" /> Relevamientos
+          </Button>
         </div>
       </div>
     </Layout>

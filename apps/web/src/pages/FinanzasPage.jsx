@@ -172,7 +172,7 @@ const ResumenTab = ({ data, filters, loading }) => {
 };
 
 // ─────────────── TRABAJOS FINANCIEROS TAB ───────────────
-const TrabajosFinancierosTab = ({ data, loading, canAdmin, canContadora, onRefresh }) => {
+const TrabajosFinancierosTab = ({ data, loading, canAdmin, canVentasLevel, onRefresh }) => {
   const { schedules, costos, usersMap } = data;
   const [search, setSearch] = useState('');
   const [editFactura, setEditFactura] = useState(null);
@@ -267,7 +267,7 @@ const TrabajosFinancierosTab = ({ data, loading, canAdmin, canContadora, onRefre
               <th className="px-4 py-3 text-right">Utilidad</th>
               <th className="px-4 py-3 text-left">Estado op.</th>
               <th className="px-4 py-3 text-left">Factura</th>
-              {(canAdmin || canContadora) && <th className="px-4 py-3 text-center">Factura</th>}
+              {(canAdmin || canVentasLevel) && <th className="px-4 py-3 text-center">Factura</th>}
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -301,7 +301,7 @@ const TrabajosFinancierosTab = ({ data, loading, canAdmin, canContadora, onRefre
                     <td className="px-4 py-2.5">
                       <EstadoBadge v={j.factura_estado || 'Pendiente'} map={FACTURA_MAP} />
                     </td>
-                    {(canAdmin || canContadora) && (
+                    {(canAdmin || canVentasLevel) && (
                       <td className="px-4 py-2.5 text-center">
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-primary" onClick={() => openFactura(j)}>
                           <FileText className="h-3.5 w-3.5" />
@@ -427,14 +427,14 @@ const CuentasPorCobrarTab = ({ data, loading, userRole }) => {
 };
 
 // ─────────────── COBROS Y RENDICIONES TAB ───────────────
-const CobrosRendicionesTab = ({ data, loading, canAdmin, canContadora, currentUser, onRefresh }) => {
+const CobrosRendicionesTab = ({ data, loading, canAdmin, canVentasLevel, currentUser, onRefresh }) => {
   const { paymentsAll, payments: paymentsMes, schedulesMap, usersMap, cajasMap, cajas = [] } = data;
   const payments = (paymentsAll && paymentsAll.length) ? paymentsAll : paymentsMes;
   const [obsModal, setObsModal] = useState({ open: false, id: null, obs: '' });
   const [confirmModal, setConfirmModal] = useState({ open: false, payment: null, cajaId: 'none' });
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null, label: '' });
   const [saving, setSaving] = useState(false);
-  const canManage = canAdmin || canContadora;
+  const canManage = canAdmin || canVentasLevel;
 
   const sorted = useMemo(() => [...payments].sort((a, b) => new Date(b.created) - new Date(a.created)), [payments]);
 
@@ -516,7 +516,7 @@ const CobrosRendicionesTab = ({ data, loading, canAdmin, canContadora, currentUs
     } catch { toast.error('Error al eliminar'); } finally { setSaving(false); }
   };
 
-  const colCount = canAdmin ? 10 : (canContadora ? 9 : 8);
+  const colCount = canAdmin ? 10 : (canVentasLevel ? 9 : 8);
 
   return (
     <div className="space-y-4">
@@ -568,7 +568,7 @@ const CobrosRendicionesTab = ({ data, loading, canAdmin, canContadora, currentUs
                     {canManage && (
                       <td className="px-4 py-2.5">
                         <div className="flex justify-center gap-1">
-                          {isPending && (
+                          {isPending && canAdmin && (
                             <>
                               <Button size="sm" variant="outline" className="h-7 px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 text-[11px] font-bold" onClick={() => setConfirmModal({ open: true, payment: p, cajaId: p.caja_banco_id || 'none' })}>
                                 <CheckCircle2 className="h-3.5 w-3.5 mr-1"/> Confirmar
@@ -578,6 +578,7 @@ const CobrosRendicionesTab = ({ data, loading, canAdmin, canContadora, currentUs
                               </Button>
                             </>
                           )}
+                          {isPending && !canAdmin && <span className="text-[11px] text-muted-foreground">Espera validación de un administrador</span>}
                           {canAdmin && (
                             <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50" onClick={() => setDeleteModal({ open: true, id: p.id, label: `cobro de ${fmt(p.monto_cobrado)}` })}>
                               <Trash2 className="h-3.5 w-3.5" />
@@ -649,7 +650,7 @@ const CobrosRendicionesTab = ({ data, loading, canAdmin, canContadora, currentUs
 };
 
 // ─────────────── COSTOS POR TRABAJO TAB ───────────────
-const CostosTab = ({ data, loading, currentUser, canAdmin, canContadora, onRefresh }) => {
+const CostosTab = ({ data, loading, currentUser, canAdmin, canVentasLevel, onRefresh }) => {
   const { costos, schedulesAll, schedules } = data;
   const allSchedules = schedulesAll || schedules || [];
   const [form, setForm] = useState({ trabajo_id: 'none', concepto: '', cantidad: '1', precio_unitario: '', fecha: format(new Date(), 'yyyy-MM-dd'), observacion: '' });
@@ -657,7 +658,7 @@ const CostosTab = ({ data, loading, currentUser, canAdmin, canContadora, onRefre
   const [saving, setSaving] = useState(false);
   const [localCostos, setLocalCostos] = useState([]);
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null, label: '' });
-  const canManage = canAdmin || canContadora;
+  const canManage = canAdmin || canVentasLevel;
 
   useEffect(() => { setLocalCostos(costos); }, [costos]);
 
@@ -803,9 +804,9 @@ const CostosTab = ({ data, loading, currentUser, canAdmin, canContadora, onRefre
 };
 
 // ─────────────── CAJAS Y BANCOS TAB ───────────────
-const CajasBancosTab = ({ data, loading, canAdmin, canContadora, currentUser, onRefresh }) => {
+const CajasBancosTab = ({ data, loading, canAdmin, canVentasLevel, currentUser, onRefresh }) => {
   const { cajas, sucursales = [], movimientos = [] } = data;
-  const canManage = canAdmin || canContadora;
+  const canManage = canAdmin || canVentasLevel;
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nombre: '', tipo: 'Caja', sucursal: '', saldo_inicial: '', descripcion: '' });
   const [saving, setSaving] = useState(false);
@@ -882,7 +883,7 @@ const CajasBancosTab = ({ data, loading, canAdmin, canContadora, currentUser, on
           cajas.length > 0 ? cajas.map(c => {
             const Icon = TIPO_ICONS[c.tipo] || Wallet;
             // Compute saldo actual from confirmed movimientos
-            const confirmed = movimientos.filter(m => m.estado === 'confirmado');
+            const confirmed = movimientos.filter(m => String(m.estado || '').toLowerCase() === 'confirmado');
             const ingresos = confirmed.filter(m => (m.tipo === 'ingreso' || m.tipo === 'cobro') && m.caja_banco_id === c.id).reduce((s, m) => s + (m.monto || 0), 0);
             const egresos = confirmed.filter(m => (m.tipo === 'egreso' || m.tipo === 'pago_proveedor') && m.caja_banco_id === c.id).reduce((s, m) => s + (m.monto || 0), 0);
             // Transferencias: destino suma, origen resta
@@ -934,9 +935,9 @@ const CajasBancosTab = ({ data, loading, canAdmin, canContadora, currentUser, on
 };
 
 // ─────────────── PROVEEDORES TAB ───────────────
-const ProveedoresTab = ({ data, loading, canAdmin, canContadora, currentUser, onRefresh }) => {
+const ProveedoresTab = ({ data, loading, canAdmin, canVentasLevel, currentUser, onRefresh }) => {
   const { proveedores, compras, sucursales = [], cajasMap = {}, cajas = [] } = data;
-  const canManage = canAdmin || canContadora;
+  const canManage = canAdmin || canVentasLevel;
   const [tab, setTab] = useState('proveedores');
   const [showProvForm, setShowProvForm] = useState(false);
   const [showCompraForm, setShowCompraForm] = useState(false);
@@ -984,7 +985,8 @@ const ProveedoresTab = ({ data, loading, canAdmin, canContadora, currentUser, on
           monto: montoNum,
           proveedor_id: compraForm.proveedor_id,
           registrado_por_id: currentUser?.id || '',
-          estado: compraForm.estado_pago === 'Pagado' ? 'Confirmado' : 'Pendiente',
+          // Solo un administrador puede dejar el egreso ya validado; el resto queda pendiente.
+          estado: canAdmin && compraForm.estado_pago === 'Pagado' ? 'confirmado' : 'pendiente',
           observacion: compraForm.observacion || '',
           created_by: currentUser?.id || ''
         }, { $autoCancel: false });
@@ -1129,10 +1131,10 @@ const ProveedoresTab = ({ data, loading, canAdmin, canContadora, currentUser, on
 };
 
 // ─────────────── FACTURAS TAB ───────────────
-const FacturasTab = ({ data, loading, canAdmin, canContadora, currentUser, onRefresh }) => {
+const FacturasTab = ({ data, loading, canAdmin, canVentasLevel, currentUser, onRefresh }) => {
   const { facturas, schedulesAll, schedules } = data;
   const allSchedules = schedulesAll || schedules || [];
-  const canManage = canAdmin || canContadora;
+  const canManage = canAdmin || canVentasLevel;
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ trabajo_id: 'none', cliente_nombre: '', tiene_factura: 'Pendiente', numero_factura: '', fecha_factura: format(new Date(), 'yyyy-MM-dd'), monto_facturado: '', debito_fiscal: '', observacion: '' });
   const [saving, setSaving] = useState(false);
@@ -1474,9 +1476,9 @@ const TIPO_MOV_MAP = {
   transferencia: { cls: 'bg-slate-100 text-slate-700 border-slate-200', label: 'Transferencia', sign: 0 },
 };
 
-const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, currentUser, onRefresh }) => {
+const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canVentasLevel, currentUser, onRefresh }) => {
   const { cajas, cajasMap, sucursales, proveedores, schedulesAll } = data;
-  const canManage = canAdmin || canContadora;
+  const canManage = canAdmin || canVentasLevel;
   const [movimientos, setMovimientos] = useState([]);
   const [loadingLocal, setLoadingLocal] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1511,6 +1513,8 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
       const caja = cajasMap[form.caja_banco_id];
       const prov = proveedores.find(p => p.id === form.proveedor_id);
       const job = (schedulesAll || []).find(j => j.id === form.trabajo_id);
+      // Solo un administrador puede registrar un movimiento ya confirmado; el resto queda pendiente de validación.
+      const estado = canAdmin ? form.estado : 'pendiente';
       await pb.collection('movimientos').create({
         tipo: form.tipo,
         categoria: form.categoria,
@@ -1527,11 +1531,11 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
         proveedor_nombre: prov?.nombre || '',
         trabajo_id: form.trabajo_id === 'none' ? '' : form.trabajo_id,
         cliente_nombre: job?.cliente_nombre || '',
-        estado: form.estado,
+        estado,
         observacion: form.observacion,
         created_by: currentUser?.id || '',
       }, { $autoCancel: false });
-      toast.success('Movimiento registrado');
+      toast.success(canAdmin ? 'Movimiento registrado' : 'Movimiento registrado, pendiente de validación por un administrador');
       setShowForm(false);
       setForm(emptyForm());
       fetchMovimientos();
@@ -1549,11 +1553,26 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
     } catch { toast.error('Error al eliminar'); } finally { setSaving(false); }
   };
 
+  const validarMovimiento = async (id) => {
+    setSaving(true);
+    try {
+      const updated = await pb.collection('movimientos').update(id, {
+        estado: 'confirmado',
+        validado_por_id: currentUser?.id || '',
+        validado_por_nombre: currentUser?.name || currentUser?.email || '',
+      }, { $autoCancel: false });
+      setMovimientos(prev => prev.map(m => (m.id === id ? updated : m)));
+      toast.success('Movimiento validado');
+    } catch { toast.error('Error al validar'); } finally { setSaving(false); }
+  };
+
+  const isConfirmado = (m) => String(m.estado || '').toLowerCase() === 'confirmado';
+
   const filtered = filterTipo === 'todos' ? movimientos : movimientos.filter(m => m.tipo === filterTipo);
 
   const totales = useMemo(() => {
     let ingresos = 0, egresos = 0;
-    filtered.forEach(m => {
+    filtered.filter(isConfirmado).forEach(m => {
       const s = TIPO_MOV_MAP[m.tipo]?.sign || 0;
       if (s > 0) ingresos += m.monto || 0;
       if (s < 0) egresos += m.monto || 0;
@@ -1567,13 +1586,13 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground font-medium">Ingresos, egresos, pagos, cobros y ajustes del negocio.</p>
+      <p className="text-sm text-muted-foreground font-medium">Ingresos, egresos, pagos, cobros y ajustes del negocio. Los totales solo consideran movimientos validados por un administrador.</p>
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Ingresos', value: totales.ingresos, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-          { label: 'Egresos', value: totales.egresos, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
+          { label: 'Ingresos (validados)', value: totales.ingresos, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+          { label: 'Egresos (validados)', value: totales.egresos, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
           { label: 'Neto', value: totales.neto, color: totales.neto >= 0 ? 'text-blue-600' : 'text-red-600', bg: 'bg-blue-50 border-blue-200' },
         ].map((s, i) => (
           <div key={i} className={cn('rounded-xl border p-3', s.bg)}>
@@ -1664,13 +1683,20 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
                   <SelectContent><SelectItem value="none">Sin trabajo</SelectItem>{(schedulesAll || []).slice(0,100).map(j => <SelectItem key={j.id} value={j.id}>{j.cliente_nombre} — {fmtFecha(j.fecha_programada)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold">Estado</Label>
-                <Select value={form.estado} onValueChange={v => setForm(p => ({...p, estado: v}))} disabled={saving}>
-                  <SelectTrigger><SelectValue/></SelectTrigger>
-                  <SelectContent><SelectItem value="pendiente">Pendiente</SelectItem><SelectItem value="confirmado">Confirmado</SelectItem></SelectContent>
-                </Select>
-              </div>
+              {canAdmin ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Estado</Label>
+                  <Select value={form.estado} onValueChange={v => setForm(p => ({...p, estado: v}))} disabled={saving}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent><SelectItem value="pendiente">Pendiente</SelectItem><SelectItem value="confirmado">Confirmado</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Estado</Label>
+                  <p className="text-xs text-muted-foreground pt-2">Pendiente — un administrador debe validarlo.</p>
+                </div>
+              )}
               <div className="space-y-1.5 col-span-3"><Label className="text-xs font-bold">Observación</Label><Input value={form.observacion} onChange={e => setForm(p => ({...p, observacion: e.target.value}))} disabled={saving}/></div>
               <div className="flex justify-end col-span-4 gap-2">
                 <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
@@ -1716,13 +1742,20 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
                     <td className="px-4 py-2.5 text-muted-foreground">{m.medio_pago || '—'}</td>
                     <td className={cn('px-4 py-2.5 text-right font-black tabular-nums', tipoInfo.sign > 0 ? 'text-emerald-600' : tipoInfo.sign < 0 ? 'text-red-600' : 'text-foreground')}>{fmt(m.monto)}</td>
                     <td className="px-4 py-2.5">
-                      <Badge className={cn('text-[10px] font-bold border shadow-none', m.estado === 'confirmado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : m.estado === 'anulado' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-700 border-amber-200')}>{m.estado || 'pendiente'}</Badge>
+                      <Badge className={cn('text-[10px] font-bold border shadow-none', isConfirmado(m) ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : String(m.estado).toLowerCase() === 'anulado' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-700 border-amber-200')}>{m.estado || 'pendiente'}</Badge>
                     </td>
                     {canAdmin && (
                       <td className="px-4 py-2.5 text-center">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50" onClick={() => setDeleteModal({ open: true, id: m.id, label: m.descripcion })}>
-                          <Trash2 className="h-3.5 w-3.5"/>
-                        </Button>
+                        <div className="flex justify-center gap-1">
+                          {!isConfirmado(m) && (
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 text-[11px] font-bold" onClick={() => validarMovimiento(m.id)} disabled={saving}>
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1"/> Validar
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50" onClick={() => setDeleteModal({ open: true, id: m.id, label: m.descripcion })}>
+                            <Trash2 className="h-3.5 w-3.5"/>
+                          </Button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -1739,11 +1772,10 @@ const MovimientosTab = ({ data, loading: parentLoading, canAdmin, canContadora, 
 
 // ─────────────── MAIN PAGE ───────────────
 const FinanzasPage = () => {
-  const { currentUser, isAdmin, isContadora, isVentas, isVentasLevel, userRole } = useAuth();
+  const { currentUser, isAdmin, isVentas, isVentasLevel, userRole } = useAuth();
   const canAdmin = isAdmin();
-  // VENTAS / ADMINISTRACIÓN has the same operational level as Contadora in Finanzas
-  const canContadora = isVentasLevel();
-  const canManage = canAdmin || canContadora;
+  const canVentasLevel = isVentasLevel();
+  const canManage = canAdmin || canVentasLevel;
 
   const currentMes = format(new Date(), 'yyyy-MM');
   const [filters, setFilters] = useState({ mes: currentMes });
@@ -1907,11 +1939,11 @@ const FinanzasPage = () => {
           </TabsContent>
 
           <TabsContent value="movimientos">
-            <MovimientosTab data={data} loading={loading} canAdmin={canAdmin} canContadora={canContadora} currentUser={currentUser} onRefresh={fetchData} />
+            <MovimientosTab data={data} loading={loading} canAdmin={canAdmin} canVentasLevel={canVentasLevel} currentUser={currentUser} onRefresh={fetchData} />
           </TabsContent>
 
           <TabsContent value="trabajos">
-            <TrabajosFinancierosTab data={data} loading={loading} canAdmin={canAdmin} canContadora={canContadora} onRefresh={fetchData} />
+            <TrabajosFinancierosTab data={data} loading={loading} canAdmin={canAdmin} canVentasLevel={canVentasLevel} onRefresh={fetchData} />
           </TabsContent>
 
           <TabsContent value="cxc">
@@ -1919,11 +1951,11 @@ const FinanzasPage = () => {
           </TabsContent>
 
           <TabsContent value="cobros">
-            <CobrosRendicionesTab data={data} loading={loading} canAdmin={canAdmin} canContadora={canContadora} currentUser={currentUser} onRefresh={fetchData} />
+            <CobrosRendicionesTab data={data} loading={loading} canAdmin={canAdmin} canVentasLevel={canVentasLevel} currentUser={currentUser} onRefresh={fetchData} />
           </TabsContent>
 
           <TabsContent value="costos">
-            <CostosTab data={data} loading={loading} currentUser={currentUser} canAdmin={canAdmin} canContadora={canContadora} onRefresh={fetchData} />
+            <CostosTab data={data} loading={loading} currentUser={currentUser} canAdmin={canAdmin} canVentasLevel={canVentasLevel} onRefresh={fetchData} />
           </TabsContent>
 
           <TabsContent value="gastos">
@@ -1961,19 +1993,19 @@ const FinanzasPage = () => {
 
           {canManage && (
             <TabsContent value="cajas">
-              <CajasBancosTab data={data} loading={loading} canAdmin={canAdmin} canContadora={canContadora} currentUser={currentUser} onRefresh={fetchData} />
+              <CajasBancosTab data={data} loading={loading} canAdmin={canAdmin} canVentasLevel={canVentasLevel} currentUser={currentUser} onRefresh={fetchData} />
             </TabsContent>
           )}
 
           {canManage && (
             <TabsContent value="proveedores">
-              <ProveedoresTab data={data} loading={loading} canAdmin={canAdmin} canContadora={canContadora} currentUser={currentUser} onRefresh={fetchData} />
+              <ProveedoresTab data={data} loading={loading} canAdmin={canAdmin} canVentasLevel={canVentasLevel} currentUser={currentUser} onRefresh={fetchData} />
             </TabsContent>
           )}
 
           {canManage && (
             <TabsContent value="facturas">
-              <FacturasTab data={data} loading={loading} canAdmin={canAdmin} canContadora={canContadora} currentUser={currentUser} onRefresh={fetchData} />
+              <FacturasTab data={data} loading={loading} canAdmin={canAdmin} canVentasLevel={canVentasLevel} currentUser={currentUser} onRefresh={fetchData} />
             </TabsContent>
           )}
 
