@@ -269,42 +269,21 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     if (!formData.fecha_programada) { toast.error('La fecha programada es obligatoria'); return; }
     setIsSubmitting(true);
     try {
-      const visita = selectedVisita || visitasList.find(v => v.id === selectedVisitaId);
-      const authUserId = pb.authStore.record?.id || '';
-      const etiqueta = tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento';
-      const clienteNombre = visita?.cliente_nombre || 'Sin cliente';
-      const payload = {
-        tipo_entrada: tipoEntrada,
-        type: 'seguridad',
-        visita_id: selectedVisitaId,
-        cliente_id: visita?.cliente_id || '',
-        cliente: clienteNombre,
-        lugar: visita?.lugar || 'Sin ubicación',
-        fecha_programada: formData.fecha_programada,
-        estado: 'programado',
-        monto: 0,
-        adelanto: 0,
-        saldo: 0,
-        descripcion_trabajo: `${etiqueta} — ${clienteNombre}`,
-        tecnico_responsable_id: formData.tecnico_responsable_id || visita?.tecnico_id || '',
-        sucursal_id: visita?.sucursal_id || '',
-        sucursal: visita?.sucursal_nombre || '',
-        created_by: authUserId,
-      };
-      if (initialData?.id) {
-        await pb.collection('schedules').update(initialData.id, payload, { $autoCancel: false });
-        toast.success(`${tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} actualizado`);
-      } else {
-        await pb.collection('schedules').create(payload, { $autoCancel: false });
-        toast.success(`${tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} agregada al cronograma`);
-      }
-      if (onSave) onSave(); onClose();
+      // Visitas no son eventos del calendario: se reprograman en relevamientos (indicador).
+      await surveysService.update(selectedVisitaId, {
+        fecha: formData.fecha_programada,
+        tecnico_id: formData.tecnico_responsable_id || undefined,
+      });
+      toast.success(
+        `${tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} programado para ${formData.fecha_programada}`,
+      );
+      if (onSave) onSave();
+      onClose();
     } catch (err) {
-      console.error('Error guardando visita en cronograma:', err?.response?.data || err);
-      const d = err?.response?.data || err?.data;
-      const first = d && typeof d === 'object' ? Object.keys(d)[0] : null;
-      toast.error(first ? `Error en campo ${first}: ${d[first]?.message || ''}` : (err.message || 'Error al guardar'));
-    } finally { setIsSubmitting(false); }
+      toast.error(err.message || 'Error al programar la visita');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e) => {

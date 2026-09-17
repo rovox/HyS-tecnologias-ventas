@@ -38,7 +38,7 @@ const Layout = ({ children }) => {
         <div className="bg-primary-fixed text-on-primary-fixed text-xs font-semibold px-4 py-2 border-b border-outline-variant">
           {isMockMode
             ? 'POC frontend · datos en este navegador · sin conexión a NestJS'
-            : 'Modo API · sesión JWT contra NestJS'}
+            : 'En línea'}
         </div>
         <main className="flex-1 w-full min-w-0 pb-8">
           {children}

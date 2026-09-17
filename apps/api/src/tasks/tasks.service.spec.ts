@@ -12,7 +12,8 @@ describe('TasksService', () => {
     },
   };
   const activity = { log: jest.fn() };
-  const service = new TasksService(prisma as never, activity as never);
+  const realtime = { emit: jest.fn() };
+  const service = new TasksService(prisma as never, activity as never, realtime as never);
 
   const cont = { id: 'usr_conta', role: ROLES.CONT, sucursalId: 'suc_central' } as never;
   const ventas = { id: 'usr_ventas', role: ROLES.VENTAS, sucursalId: 'suc_central' } as never;
