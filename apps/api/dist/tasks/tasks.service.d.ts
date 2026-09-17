@@ -2,10 +2,12 @@ import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { RealtimeService } from '../realtime/realtime.service';
 export declare class TasksService {
     private readonly prisma;
     private readonly activity;
-    constructor(prisma: PrismaService, activity: ActivityService);
+    private readonly realtime;
+    constructor(prisma: PrismaService, activity: ActivityService, realtime: RealtimeService);
     list(user: User, tipo?: string): Promise<({
         sucursal: {
             id: string;

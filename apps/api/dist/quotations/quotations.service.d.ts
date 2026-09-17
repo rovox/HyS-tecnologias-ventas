@@ -2,10 +2,12 @@ import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
+import { RealtimeService } from '../realtime/realtime.service';
 export declare class QuotationsService {
     private readonly prisma;
     private readonly activity;
-    constructor(prisma: PrismaService, activity: ActivityService);
+    private readonly realtime;
+    constructor(prisma: PrismaService, activity: ActivityService, realtime: RealtimeService);
     private nextNumero;
     private requireSucursal;
     private assertCommission;

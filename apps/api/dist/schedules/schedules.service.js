@@ -14,28 +14,33 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const activity_service_1 = require("../auth/activity.service");
 const roles_1 = require("../auth/roles");
+const realtime_service_1 = require("../realtime/realtime.service");
 const FLOW = {
     programado: ['en_proceso', 'cancelado'],
     en_proceso: ['terminado', 'cancelado'],
     terminado: [],
     cancelado: [],
 };
+const BUDGET_TIPOS = new Set(['adelanto', 'cobro']);
 const include = {
     cliente: true,
     sucursal: true,
     vendedor: { select: { id: true, name: true } },
     tecnico: { select: { id: true, name: true } },
-    quotation: { select: { id: true, numero: true, titulo: true } },
+    quotation: { select: { id: true, numero: true, titulo: true, monto: true } },
+    payments: true,
 };
 let SchedulesService = class SchedulesService {
     prisma;
     activity;
-    constructor(prisma, activity) {
+    realtime;
+    constructor(prisma, activity, realtime) {
         this.prisma = prisma;
         this.activity = activity;
+        this.realtime = realtime;
     }
-    saldo(monto, adelanto) {
-        return Math.max(0, Number(monto) - Number(adelanto));
+    saldo(monto, cobradoPresupuesto) {
+        return Math.max(0, Number(monto) - Number(cobradoPresupuesto));
     }
     list(user, filters = {}) {
         return this.prisma.schedule.findMany({
@@ -101,23 +106,39 @@ let SchedulesService = class SchedulesService {
                 quotationId: dto.quotationId || null,
                 observaciones: dto.observaciones || '',
                 mapsLink: dto.mapsLink || '',
+                ...(adelanto > 0
+                    ? {
+                        payments: {
+                            create: {
+                                tipo: 'adelanto',
+                                monto: adelanto,
+                                metodo: '',
+                                nota: 'Adelanto al crear trabajo',
+                                cobradoPorId: user.id,
+                                quotationId: dto.quotationId || null,
+                            },
+                        },
+                    }
+                    : {}),
             },
             include,
         });
         await this.prisma.touchClientActivity(dto.clienteId);
         await this.activity.log(user.id, sessionId, 'schedule.create', 'schedule', row.id);
+        this.realtime.emit('schedule.created', 'schedule', row.id, {
+            byUserId: user.id,
+            patch: { estado: row.estado, saldo: Number(row.saldo) },
+        });
         return row;
     }
     async update(id, dto, user, sessionId) {
         (0, roles_1.assertCanMutateSchedules)(user);
         const current = await this.get(id, user);
         if ((0, roles_1.isTec)(user) && !(0, roles_1.isAdmin)(user)) {
-            const allowed = ['estado', 'observaciones', 'fechaFinalizacion', 'horario'].filter((key) => dto[key] !== undefined);
             const keys = Object.keys(dto).filter((k) => dto[k] !== undefined);
             if (keys.some((k) => !['estado', 'observaciones', 'fechaFinalizacion', 'horario'].includes(k))) {
                 throw new common_1.ForbiddenException('Técnico solo actualiza estado u observaciones');
             }
-            void allowed;
         }
         if (dto.estado && dto.estado !== current.estado) {
             const allowed = FLOW[current.estado] || [];
@@ -126,7 +147,8 @@ let SchedulesService = class SchedulesService {
             }
         }
         const monto = dto.monto !== undefined ? Number(dto.monto) : Number(current.monto);
-        const adelanto = dto.adelanto !== undefined ? Number(dto.adelanto) : Number(current.adelanto);
+        let adelanto = dto.adelanto !== undefined ? Number(dto.adelanto) : Number(current.adelanto);
+        const budgetPaid = await this.budgetPaid(id, adelanto);
         const row = await this.prisma.schedule.update({
             where: { id },
             data: {
@@ -134,7 +156,9 @@ let SchedulesService = class SchedulesService {
                 ...(dto.descripcionTrabajo ? { descripcionTrabajo: dto.descripcionTrabajo.trim() } : {}),
                 ...(dto.monto !== undefined ? { monto } : {}),
                 ...(dto.adelanto !== undefined ? { adelanto } : {}),
-                ...(dto.monto !== undefined || dto.adelanto !== undefined ? { saldo: this.saldo(monto, adelanto) } : {}),
+                ...(dto.monto !== undefined || dto.adelanto !== undefined
+                    ? { saldo: this.saldo(monto, budgetPaid) }
+                    : {}),
                 ...(dto.fechaProgramada ? { fechaProgramada: new Date(dto.fechaProgramada) } : {}),
                 ...(dto.horario !== undefined ? { horario: dto.horario || null } : {}),
                 ...(dto.vendedorId !== undefined ? { vendedorId: dto.vendedorId || null } : {}),
@@ -150,16 +174,64 @@ let SchedulesService = class SchedulesService {
         });
         await this.prisma.touchClientActivity(current.clienteId);
         await this.activity.log(user.id, sessionId, 'schedule.update', 'schedule', id);
+        this.realtime.emit(dto.estado ? 'schedule.status' : 'schedule.updated', 'schedule', id, {
+            byUserId: user.id,
+            patch: { estado: row.estado, saldo: Number(row.saldo), adelanto: Number(row.adelanto) },
+        });
         return row;
     }
     async updateStatus(id, dto, user, sessionId) {
         return this.update(id, { estado: dto.estado, fechaFinalizacion: dto.fechaFinalizacion }, user, sessionId);
+    }
+    listPayments(scheduleId, user) {
+        return this.get(scheduleId, user).then((row) => row.payments || []);
+    }
+    async registerPayment(scheduleId, dto, user, sessionId) {
+        (0, roles_1.assertCanMutateSchedules)(user);
+        const schedule = await this.get(scheduleId, user);
+        const payment = await this.prisma.schedulePayment.create({
+            data: {
+                scheduleId,
+                relevamientoId: dto.relevamientoId || null,
+                quotationId: dto.quotationId || schedule.quotationId || null,
+                tipo: dto.tipo,
+                monto: Number(dto.monto),
+                metodo: dto.metodo || '',
+                nota: dto.nota || '',
+                cobradoPorId: user.id,
+            },
+        });
+        if (BUDGET_TIPOS.has(dto.tipo)) {
+            const paid = await this.budgetPaid(scheduleId);
+            await this.prisma.schedule.update({
+                where: { id: scheduleId },
+                data: {
+                    adelanto: paid,
+                    saldo: this.saldo(Number(schedule.monto), paid),
+                },
+            });
+        }
+        await this.activity.log(user.id, sessionId, 'schedule.payment', 'schedule', scheduleId);
+        this.realtime.emit('payment.created', 'payment', payment.id, {
+            byUserId: user.id,
+            patch: { scheduleId, tipo: dto.tipo, monto: Number(dto.monto) },
+        });
+        return this.get(scheduleId, user);
+    }
+    async budgetPaid(scheduleId, fallbackAdelanto) {
+        const rows = await this.prisma.schedulePayment.findMany({
+            where: { scheduleId, tipo: { in: [...BUDGET_TIPOS] } },
+        });
+        if (!rows.length && fallbackAdelanto !== undefined)
+            return Number(fallbackAdelanto);
+        return rows.reduce((sum, r) => sum + Number(r.monto), 0);
     }
 };
 exports.SchedulesService = SchedulesService;
 exports.SchedulesService = SchedulesService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        activity_service_1.ActivityService])
+        activity_service_1.ActivityService,
+        realtime_service_1.RealtimeService])
 ], SchedulesService);
 //# sourceMappingURL=schedules.service.js.map

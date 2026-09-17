@@ -33,3 +33,11 @@ export declare class ScheduleStatusDto {
     estado: string;
     fechaFinalizacion?: string;
 }
+export declare class CreateSchedulePaymentDto {
+    tipo: string;
+    monto: number;
+    metodo?: string;
+    nota?: string;
+    relevamientoId?: string;
+    quotationId?: string;
+}

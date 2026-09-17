@@ -49,6 +49,7 @@ const path = __importStar(require("path"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const activity_service_1 = require("../auth/activity.service");
 const roles_1 = require("../auth/roles");
+const realtime_service_1 = require("../realtime/realtime.service");
 const FLOW = {
     borrador: ['enviado', 'rechazado'],
     enviado: ['aceptado', 'rechazado', 'borrador'],
@@ -61,9 +62,11 @@ function uploadDir() {
 let QuotationsService = class QuotationsService {
     prisma;
     activity;
-    constructor(prisma, activity) {
+    realtime;
+    constructor(prisma, activity, realtime) {
         this.prisma = prisma;
         this.activity = activity;
+        this.realtime = realtime;
     }
     async nextNumero() {
         const now = new Date();
@@ -163,6 +166,10 @@ let QuotationsService = class QuotationsService {
         });
         await this.prisma.touchClientActivity(dto.clienteId);
         await this.activity.log(user.id, sessionId, 'quotation.create', 'quotation', quote.id);
+        this.realtime.emit('quotation.updated', 'quotation', quote.id, {
+            byUserId: user.id,
+            patch: { estado: quote.estado },
+        });
         return quote;
     }
     async updateStatus(id, estado, user, sessionId, motivoRechazo, fechaEnvio) {
@@ -187,6 +194,10 @@ let QuotationsService = class QuotationsService {
         });
         await this.prisma.touchClientActivity(current.clienteId);
         await this.activity.log(user.id, sessionId, 'quotation.status', 'quotation', id);
+        this.realtime.emit('quotation.updated', 'quotation', id, {
+            byUserId: user.id,
+            patch: { estado },
+        });
         return quote;
     }
     async update(id, dto, user, sessionId) {
@@ -244,6 +255,10 @@ let QuotationsService = class QuotationsService {
         const finalClientId = dto.clienteId || current.clienteId;
         await this.prisma.touchClientActivity(finalClientId);
         await this.activity.log(user.id, sessionId, 'quotation.update', 'quotation', id);
+        this.realtime.emit('quotation.updated', 'quotation', id, {
+            byUserId: user.id,
+            patch: { estado: quote.estado },
+        });
         return quote;
     }
     async attachFile(id, file, user, sessionId, kind = 'pdf') {
@@ -341,6 +356,7 @@ exports.QuotationsService = QuotationsService;
 exports.QuotationsService = QuotationsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        activity_service_1.ActivityService])
+        activity_service_1.ActivityService,
+        realtime_service_1.RealtimeService])
 ], QuotationsService);
 //# sourceMappingURL=quotations.service.js.map

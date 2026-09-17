@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ScheduleStatusDto = exports.UpdateScheduleDto = exports.CreateScheduleDto = void 0;
+exports.CreateSchedulePaymentDto = exports.ScheduleStatusDto = exports.UpdateScheduleDto = exports.CreateScheduleDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
@@ -245,4 +245,53 @@ __decorate([
     (0, class_transformer_1.Transform)(emptyToUndef),
     __metadata("design:type", String)
 ], ScheduleStatusDto.prototype, "fechaFinalizacion", void 0);
+class CreateSchedulePaymentDto {
+    tipo;
+    monto;
+    metodo;
+    nota;
+    relevamientoId;
+    quotationId;
+}
+exports.CreateSchedulePaymentDto = CreateSchedulePaymentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ enum: ['adelanto', 'cobro', 'extra_asistencia'] }),
+    (0, class_validator_1.IsIn)(['adelanto', 'cobro', 'extra_asistencia']),
+    __metadata("design:type", String)
+], CreateSchedulePaymentDto.prototype, "tipo", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.01),
+    __metadata("design:type", Number)
+], CreateSchedulePaymentDto.prototype, "monto", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_transformer_1.Transform)(emptyToUndef),
+    __metadata("design:type", String)
+], CreateSchedulePaymentDto.prototype, "metodo", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_transformer_1.Transform)(emptyToUndef),
+    __metadata("design:type", String)
+], CreateSchedulePaymentDto.prototype, "nota", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_transformer_1.Transform)(emptyToUndef),
+    __metadata("design:type", String)
+], CreateSchedulePaymentDto.prototype, "relevamientoId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_transformer_1.Transform)(emptyToUndef),
+    __metadata("design:type", String)
+], CreateSchedulePaymentDto.prototype, "quotationId", void 0);
 //# sourceMappingURL=schedule.dto.js.map

@@ -60,9 +60,11 @@ export declare class RelevamientosController {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
@@ -124,9 +126,11 @@ export declare class RelevamientosController {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
@@ -141,9 +145,11 @@ export declare class RelevamientosController {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
@@ -158,12 +164,44 @@ export declare class RelevamientosController {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
         notas: string | null;
     }>;
+    files(id: string, file: {
+        buffer?: Buffer;
+        originalname?: string;
+        mimetype?: string;
+    }, user: User, sessionId?: string): Promise<{
+        id: string;
+        sucursalId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tecnicoId: string | null;
+        vendedorId: string | null;
+        cotizacionId: string;
+        usuarioId: string;
+        estado: string;
+        clienteId: string;
+        lugar: string;
+        fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
+        fecha: Date;
+        fechaFin: Date | null;
+        tipoVisita: string;
+        notas: string | null;
+    }>;
+}
+export declare class RelevamientoFilesController {
+    private readonly relevamientos;
+    constructor(relevamientos: RelevamientosService);
+    getFile(name: string, res: {
+        sendFile: (path: string) => unknown;
+    }): Promise<unknown>;
 }
