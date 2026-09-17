@@ -12,8 +12,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RelevamientosController = void 0;
+exports.RelevamientoFilesController = exports.RelevamientosController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const swagger_1 = require("@nestjs/swagger");
 const auth_guard_1 = require("../auth/auth.guard");
 const current_user_decorator_1 = require("../auth/current-user.decorator");
@@ -35,6 +36,9 @@ let RelevamientosController = class RelevamientosController {
     }
     update(id, dto, user, sessionId) {
         return this.relevamientos.update(id, dto, user, sessionId);
+    }
+    files(id, file, user, sessionId) {
+        return this.relevamientos.attachPhoto(id, file, user, sessionId);
     }
 };
 exports.RelevamientosController = RelevamientosController;
@@ -68,7 +72,7 @@ __decorate([
 ], RelevamientosController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    (0, swagger_1.ApiOperation)({ summary: 'Update relevamiento' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update relevamiento (resuelto requiere foto)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, current_user_decorator_1.CurrentUser)()),
@@ -77,6 +81,25 @@ __decorate([
     __metadata("design:paramtypes", [String, Object, Object, String]),
     __metadata("design:returntype", void 0)
 ], RelevamientosController.prototype, "update", null);
+__decorate([
+    (0, common_1.Post)(':id/files'),
+    (0, swagger_1.ApiOperation)({ summary: 'Upload evidence photo' }),
+    (0, swagger_1.ApiConsumes)('multipart/form-data'),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: { file: { type: 'string', format: 'binary' } },
+        },
+    }),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', { limits: { fileSize: 8 * 1024 * 1024 } })),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __param(3, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object, String]),
+    __metadata("design:returntype", void 0)
+], RelevamientosController.prototype, "files", null);
 exports.RelevamientosController = RelevamientosController = __decorate([
     (0, swagger_1.ApiTags)('relevamientos'),
     (0, swagger_1.ApiBearerAuth)(),
@@ -84,4 +107,31 @@ exports.RelevamientosController = RelevamientosController = __decorate([
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     __metadata("design:paramtypes", [relevamientos_service_1.RelevamientosService])
 ], RelevamientosController);
+let RelevamientoFilesController = class RelevamientoFilesController {
+    relevamientos;
+    constructor(relevamientos) {
+        this.relevamientos = relevamientos;
+    }
+    async getFile(name, res) {
+        const full = await this.relevamientos.filePath(name);
+        return res.sendFile(full);
+    }
+};
+exports.RelevamientoFilesController = RelevamientoFilesController;
+__decorate([
+    (0, common_1.Get)(':name'),
+    (0, swagger_1.ApiOperation)({ summary: 'Download relevamiento photo' }),
+    __param(0, (0, common_1.Param)('name')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], RelevamientoFilesController.prototype, "getFile", null);
+exports.RelevamientoFilesController = RelevamientoFilesController = __decorate([
+    (0, swagger_1.ApiTags)('files'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('files/relevamientos'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __metadata("design:paramtypes", [relevamientos_service_1.RelevamientosService])
+], RelevamientoFilesController);
 //# sourceMappingURL=relevamientos.controller.js.map

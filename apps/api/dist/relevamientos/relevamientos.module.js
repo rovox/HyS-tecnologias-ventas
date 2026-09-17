@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RelevamientosModule = void 0;
 const common_1 = require("@nestjs/common");
 const auth_module_1 = require("../auth/auth.module");
+const realtime_module_1 = require("../realtime/realtime.module");
 const relevamientos_controller_1 = require("./relevamientos.controller");
 const relevamientos_service_1 = require("./relevamientos.service");
 let RelevamientosModule = class RelevamientosModule {
@@ -16,9 +17,10 @@ let RelevamientosModule = class RelevamientosModule {
 exports.RelevamientosModule = RelevamientosModule;
 exports.RelevamientosModule = RelevamientosModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule],
-        controllers: [relevamientos_controller_1.RelevamientosController],
+        imports: [auth_module_1.AuthModule, realtime_module_1.RealtimeModule],
+        controllers: [relevamientos_controller_1.RelevamientosController, relevamientos_controller_1.RelevamientoFilesController],
         providers: [relevamientos_service_1.RelevamientosService],
+        exports: [relevamientos_service_1.RelevamientosService],
     })
 ], RelevamientosModule);
 //# sourceMappingURL=relevamientos.module.js.map

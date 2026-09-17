@@ -6,21 +6,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SchedulesModule = void 0;
+exports.RealtimeModule = void 0;
 const common_1 = require("@nestjs/common");
 const auth_module_1 = require("../auth/auth.module");
-const realtime_module_1 = require("../realtime/realtime.module");
-const schedules_controller_1 = require("./schedules.controller");
-const schedules_service_1 = require("./schedules.service");
-let SchedulesModule = class SchedulesModule {
+const realtime_controller_1 = require("./realtime.controller");
+const realtime_service_1 = require("./realtime.service");
+let RealtimeModule = class RealtimeModule {
 };
-exports.SchedulesModule = SchedulesModule;
-exports.SchedulesModule = SchedulesModule = __decorate([
+exports.RealtimeModule = RealtimeModule;
+exports.RealtimeModule = RealtimeModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, realtime_module_1.RealtimeModule],
-        controllers: [schedules_controller_1.SchedulesController],
-        providers: [schedules_service_1.SchedulesService],
-        exports: [schedules_service_1.SchedulesService],
+        imports: [auth_module_1.AuthModule],
+        controllers: [realtime_controller_1.RealtimeController],
+        providers: [realtime_service_1.RealtimeService],
+        exports: [realtime_service_1.RealtimeService],
     })
-], SchedulesModule);
-//# sourceMappingURL=schedules.module.js.map
+], RealtimeModule);
+//# sourceMappingURL=realtime.module.js.map

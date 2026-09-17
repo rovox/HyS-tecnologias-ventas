@@ -22,6 +22,7 @@ const metrics_module_1 = require("./metrics/metrics.module");
 const tasks_module_1 = require("./tasks/tasks.module");
 const schedules_module_1 = require("./schedules/schedules.module");
 const categories_module_1 = require("./categories/categories.module");
+const realtime_module_1 = require("./realtime/realtime.module");
 const health_controller_1 = require("./health.controller");
 let AppModule = class AppModule {
 };
@@ -56,6 +57,7 @@ exports.AppModule = AppModule = __decorate([
             tasks_module_1.TasksModule,
             schedules_module_1.SchedulesModule,
             categories_module_1.CategoriesModule,
+            realtime_module_1.RealtimeModule,
         ],
         controllers: [health_controller_1.HealthController],
     })

@@ -3,6 +3,8 @@ export declare class UpsertRelevamientoDto {
     fecha: string;
     fechaFin?: string;
     tipoVisita?: string;
+    estado?: string;
+    prioridad?: string;
     vendedorId?: string;
     tecnicoId?: string;
     lugar: string;

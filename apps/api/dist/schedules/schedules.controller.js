@@ -29,6 +29,12 @@ let SchedulesController = class SchedulesController {
     list(user, estado, sucursalId, from, to, tecnicoId, quotationId, clienteId) {
         return this.schedules.list(user, { estado, sucursalId, from, to, tecnicoId, quotationId, clienteId });
     }
+    listPayments(id, user) {
+        return this.schedules.listPayments(id, user);
+    }
+    registerPayment(id, dto, user, sessionId) {
+        return this.schedules.registerPayment(id, dto, user, sessionId);
+    }
     get(id, user) {
         return this.schedules.get(id, user);
     }
@@ -58,6 +64,28 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], SchedulesController.prototype, "list", null);
+__decorate([
+    (0, common_1.Get)(':id/payments'),
+    (0, swagger_1.ApiOperation)({ summary: 'List payments for a schedule job' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], SchedulesController.prototype, "listPayments", null);
+__decorate([
+    (0, common_1.Post)(':id/payments'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_guard_1.Roles)(roles_1.ROLES.ADMIN, roles_1.ROLES.VENTAS, roles_1.ROLES.TEC),
+    (0, swagger_1.ApiOperation)({ summary: 'Register adelanto, cobro, or extra_asistencia' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __param(3, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, schedule_dto_1.CreateSchedulePaymentDto, Object, String]),
+    __metadata("design:returntype", void 0)
+], SchedulesController.prototype, "registerPayment", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get schedule by id' }),

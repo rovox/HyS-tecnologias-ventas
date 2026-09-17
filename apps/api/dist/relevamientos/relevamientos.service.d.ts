@@ -2,10 +2,12 @@ import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
+import { RealtimeService } from '../realtime/realtime.service';
 export declare class RelevamientosService {
     private readonly prisma;
     private readonly activity;
-    constructor(prisma: PrismaService, activity: ActivityService);
+    private readonly realtime;
+    constructor(prisma: PrismaService, activity: ActivityService, realtime: RealtimeService);
     list(user: User, cotizacionId?: string): import("@prisma/client").Prisma.PrismaPromise<({
         sucursal: {
             id: string;
@@ -62,9 +64,11 @@ export declare class RelevamientosService {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
@@ -126,9 +130,11 @@ export declare class RelevamientosService {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
@@ -143,9 +149,11 @@ export declare class RelevamientosService {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
@@ -160,12 +168,38 @@ export declare class RelevamientosService {
         vendedorId: string | null;
         cotizacionId: string;
         usuarioId: string;
+        estado: string;
         clienteId: string;
         lugar: string;
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
         fecha: Date;
         fechaFin: Date | null;
         tipoVisita: string;
         notas: string | null;
     }>;
+    attachPhoto(id: string, file: {
+        buffer?: Buffer;
+        originalname?: string;
+        mimetype?: string;
+    }, user: User, sessionId?: string): Promise<{
+        id: string;
+        sucursalId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tecnicoId: string | null;
+        vendedorId: string | null;
+        cotizacionId: string;
+        usuarioId: string;
+        estado: string;
+        clienteId: string;
+        lugar: string;
+        fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
+        prioridad: string;
+        fecha: Date;
+        fechaFin: Date | null;
+        tipoVisita: string;
+        notas: string | null;
+    }>;
+    filePath(name: string): Promise<string>;
 }

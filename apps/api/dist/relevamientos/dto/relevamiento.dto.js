@@ -17,6 +17,8 @@ class UpsertRelevamientoDto {
     fecha;
     fechaFin;
     tipoVisita;
+    estado;
+    prioridad;
     vendedorId;
     tecnicoId;
     lugar;
@@ -46,6 +48,18 @@ __decorate([
     (0, class_validator_1.IsIn)(['relevamiento', 'asistencia']),
     __metadata("design:type", String)
 ], UpsertRelevamientoDto.prototype, "tipoVisita", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado']),
+    __metadata("design:type", String)
+], UpsertRelevamientoDto.prototype, "estado", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['baja', 'media', 'alta', 'urgente'] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['baja', 'media', 'alta', 'urgente']),
+    __metadata("design:type", String)
+], UpsertRelevamientoDto.prototype, "prioridad", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),

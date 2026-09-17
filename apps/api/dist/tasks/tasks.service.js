@@ -14,6 +14,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const activity_service_1 = require("../auth/activity.service");
 const roles_1 = require("../auth/roles");
+const realtime_service_1 = require("../realtime/realtime.service");
 const PRIORIDAD = { alta: 0, media: 1, baja: 2 };
 const TASK_INCLUDE = {
     creador: { select: { id: true, name: true } },
@@ -28,9 +29,11 @@ function titleFromDescription(text) {
 let TasksService = class TasksService {
     prisma;
     activity;
-    constructor(prisma, activity) {
+    realtime;
+    constructor(prisma, activity, realtime) {
         this.prisma = prisma;
         this.activity = activity;
+        this.realtime = realtime;
     }
     async list(user, tipo) {
         if ((0, roles_1.isCont)(user))
@@ -97,6 +100,7 @@ let TasksService = class TasksService {
             },
         });
         await this.activity.log(user.id, sessionId, 'task.create', 'task', row.id);
+        this.realtime.emit('task.updated', 'task', row.id, { byUserId: user.id, patch: { estado: 'pendiente' } });
         return this.get(row.id, user);
     }
     async update(id, dto, user, sessionId) {
@@ -127,6 +131,10 @@ let TasksService = class TasksService {
             },
         });
         await this.activity.log(user.id, sessionId, completing ? 'task.complete' : 'task.update', 'task', id);
+        this.realtime.emit('task.updated', 'task', id, {
+            byUserId: user.id,
+            patch: { estado: row.estado, prioridad: row.prioridad },
+        });
         return this.get(id, user);
     }
     async claim(id, user, sessionId) {
@@ -146,6 +154,10 @@ let TasksService = class TasksService {
             },
         });
         await this.activity.log(user.id, sessionId, 'task.claim', 'task', id);
+        this.realtime.emit('task.updated', 'task', id, {
+            byUserId: user.id,
+            patch: { asignadoId: user.id },
+        });
         return this.get(id, user);
     }
 };
@@ -153,6 +165,7 @@ exports.TasksService = TasksService;
 exports.TasksService = TasksService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        activity_service_1.ActivityService])
+        activity_service_1.ActivityService,
+        realtime_service_1.RealtimeService])
 ], TasksService);
 //# sourceMappingURL=tasks.service.js.map
