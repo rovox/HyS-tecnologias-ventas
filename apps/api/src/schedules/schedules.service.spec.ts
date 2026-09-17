@@ -16,7 +16,8 @@ describe('SchedulesService', () => {
     touchClientActivity: jest.fn(),
   };
   const activity = { log: jest.fn() };
-  const service = new SchedulesService(prisma as never, activity as never);
+  const realtime = { emit: jest.fn() };
+  const service = new SchedulesService(prisma as never, activity as never, realtime as never);
 
   const admin = {
     id: 'usr_admin',
