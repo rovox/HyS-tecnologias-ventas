@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClients } from '@/hooks/useClients.js';
-import { QUOTATION_MAIN_CATEGORIES } from '@/mocks/quotations.js';
+import { QUOTATION_MAIN_CATEGORIES } from '@/constants/quotations.js';
 
 const CLIENT_TYPE_LABELS = QUOTATION_MAIN_CATEGORIES.map((row) => row.label);
 

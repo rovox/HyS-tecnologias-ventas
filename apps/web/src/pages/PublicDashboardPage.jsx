@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { Calendar, ClipboardList, ShieldCheck, Clock, MapPin, ArrowRight, Activity, Camera } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,20 +25,14 @@ const PublicDashboardPage = () => {
         const todayStr = format(today, 'yyyy-MM-dd');
         const endDateStr = format(addDays(today, 3), 'yyyy-MM-dd');
         
+        const token = authToken();
         const [scheds, acts] = await Promise.all([
-          pb.collection('schedules').getFullList({ 
-            filter: `(type = "seguridad" || type = "proyectos") && fecha_programada >= "${todayStr}" && fecha_programada < "${endDateStr}"`,
-            sort: 'fecha_programada',
-            $autoCancel: false 
-          }),
-          pb.collection('activity').getList(1, 5, { 
-            sort: '-created',
-            $autoCancel: false 
-          })
+          apiClient.get('schedules', { query: { from: todayStr, to: endDateStr }, token }).catch(() => []),
+          apiClient.get('activity', { query: { limit: 5 }, token }).catch(() => []),
         ]);
 
         setSchedules(scheds);
-        setActivities(acts.items);
+        setActivities(Array.isArray(acts) ? acts : acts.items || []);
       } catch (err) {
         console.error(err);
       } finally {

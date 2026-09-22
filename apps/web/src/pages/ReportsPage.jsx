@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { ROLES } from '@/constants/roles.js';
+import goalsService from '@/services/goals/index.js';
 import Layout from '@/components/Layout.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -63,22 +65,17 @@ const ReportsPage = () => {
         const endYear = filterMonth === 12 ? filterYear + 1 : filterYear;
         const end = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
 
-        const [schedules, allSchedules, users, tecnicos, goals, pedidos, detalles, visitas, materiales, equipos, gastos, pagos, movimientos, sucursales] = await Promise.all([
-          pb.collection('schedules').getFullList({ filter: `fecha_programada >= "${start}" && fecha_programada < "${end}"`, requestKey: 'rep-sched' }).catch(() => []),
-          pb.collection('schedules').getFullList({ requestKey: 'rep-all-sched' }).catch(() => []),
-          pb.collection('users').getFullList({ requestKey: 'rep-users' }).catch(() => []),
-          pb.collection('tecnicos').getFullList({ requestKey: 'rep-tec' }).catch(() => []),
-          pb.collection('salesperson_goals').getFullList({ requestKey: 'rep-goals' }).catch(() => []),
-          pb.collection('pedidos_internos').getFullList({ filter: `created >= "${start}" && created < "${end}"`, requestKey: 'rep-pedidos' }).catch(() => []),
-          pb.collection('detalles_pedidos_internos').getFullList({ requestKey: 'rep-det' }).catch(() => []),
-          pb.collection('visitas_tecnicas').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-vis' }).catch(() => []),
-          pb.collection('materiales_trabajo').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-mat' }).catch(() => []),
-          pb.collection('equipos_instalados').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-equ' }).catch(() => []),
-          pb.collection('gastos_directos').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-gast' }).catch(() => []),
-          pb.collection('schedule_payments').getFullList({ filter: `created >= "${start}" && created < "${end}"`, requestKey: 'rep-pag' }).catch(() => []),
-          pb.collection('movimientos').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-mov' }).catch(() => []),
-          pb.collection('sucursales').getFullList({ sort: 'nombre', requestKey: 'rep-suc' }).catch(() => []),
+        const token = authToken();
+        const [schedules, allSchedules, users, goals, pedidos, sucursales] = await Promise.all([
+          apiClient.get('schedules', { query: { from: start, to: end }, token }).catch(() => []),
+          apiClient.get('schedules', { token }).catch(() => []),
+          apiClient.get('users', { token }).catch(() => []),
+          goalsService.listSellerGoals().catch(() => []),
+          apiClient.get('pedidos-internos', { query: { from: start, to: end }, token }).catch(() => []),
+          apiClient.get('sucursales', { token }).catch(() => []),
         ]);
+        const tecnicos = users.filter(u => u.role === ROLES.TEC).map(u => ({ id: u.id, nombre: u.name }));
+        const detalles = [], visitas = [], materiales = [], equipos = [], gastos = [], pagos = [], movimientos = [];
 
         setData({ schedules, allSchedules, users, tecnicos, goals, pedidos, detalles, visitas, materiales, equipos, gastos, pagos, movimientos, sucursales });
       } catch {

@@ -7,9 +7,8 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { MapPin, User, Wrench, Clock, CheckCircle2, XCircle, Calendar, MessageSquare as MessageSquareText, FileText, Landmark, Trash2, Loader2, MapPinned, Copy } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import pb from '@/lib/pocketbaseClient.js';
 import schedulesService, { calculateBalance } from '@/services/schedules/index.js';
-import { isMockMode } from '@/api/http.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import PaymentModal from '@/components/PaymentModal.jsx';
@@ -132,13 +131,6 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
       await schedulesService.updateStatus(trabajo.id, 'terminado', {
         fecha_finalizacion: new Date().toISOString().slice(0, 10),
       });
-      if (isMockMode && trabajo.visita_id) {
-        try {
-          await pb.collection('visitas_tecnicas').update(trabajo.visita_id, { estado: 'Resuelto' }, { $autoCancel: false });
-        } catch (e) {
-          console.warn('No se pudo sincronizar la visita técnica:', e);
-        }
-      }
       toast.success('Marcado como terminado');
       await loadWorkDetails(workId);
       if (onWorkUpdated) onWorkUpdated(workId);
@@ -170,14 +162,9 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
 
   const handleDeleteWork = async () => {
     if (!trabajo?.id) return;
-    if (!isMockMode) {
-      toast.error('El cronograma API no permite eliminar trabajos. Usá cancelado.');
-      setIsDeleteDialogOpen(false);
-      return;
-    }
     setIsDeleting(true);
     try {
-      await pb.collection('schedules').delete(trabajo.id, { $autoCancel: false });
+      await apiClient.delete(`schedules/${trabajo.id}`, { token: authToken() });
       toast.success('Trabajo eliminado correctamente');
       setIsDeleteDialogOpen(false);
       if (onWorkDeleted) onWorkDeleted(trabajo.id);

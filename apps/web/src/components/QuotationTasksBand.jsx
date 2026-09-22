@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import tasksService from '@/services/tasks/index.js';
 import quotationsService from '@/services/quotations/index.js';
 import { deadlineTone, deadlineLabel, deadlineChipClass } from '@/lib/deadline.js';
-import { QUOTATION_MAIN_CATEGORIES } from '@/mocks/quotations.js';
+import { QUOTATION_MAIN_CATEGORIES } from '@/constants/quotations.js';
 import QuotationTaskCreateModal from '@/components/QuotationTaskCreateModal.jsx';
 
 function assignmentLabel(task) {

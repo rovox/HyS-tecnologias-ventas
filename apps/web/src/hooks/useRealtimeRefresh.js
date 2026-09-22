@@ -1,18 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { isMockMode } from '@/api/config.js';
 import { apiClient, authToken } from '@/api/http.js';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
-/**
- * Una conexión SSE por pestaña. Emite `hs-realtime` en window para que
- * páginas/listas hagan refetch sin recargar.
- */
 export function useRealtimeRefresh() {
   const esRef = useRef(null);
 
   useEffect(() => {
-    if (isMockMode || !API_BASE) return undefined;
+    if (!API_BASE) return undefined;
 
     let cancelled = false;
     let retryTimer;

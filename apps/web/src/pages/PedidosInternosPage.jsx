@@ -17,7 +17,7 @@ import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.jsx';
 import RowActions from '@/components/RowActions.jsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
 
 const PRIORIDADES = ['Todas', 'Baja', 'Normal', 'Alta', 'Urgente'];
@@ -76,9 +76,9 @@ const PedidosInternosPage = () => {
         sucursal: filtroSucursal
       });
 
-      const usersRes = await pb.collection('users').getFullList({ $autoCancel: false }).catch(() => []);
+      const usersRes = await apiClient.get('users', { token: authToken() }).catch(() => []);
       const map = {};
-      usersRes.forEach(u => map[u.id] = u.name);
+      (usersRes || []).forEach(u => { map[u.id] = u.name; });
 
       setUsersMap(map);
       setPedidos(pedidosRes || []);

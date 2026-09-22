@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { useSchedules, calculateBalance } from '@/hooks/useSchedules.js';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
 import { Loader2, DollarSign, Calculator, UserCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -33,12 +33,9 @@ const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
 
   useEffect(() => {
     if (isOpen) {
-      pb.collection('users').getFullList({ sort: 'name', $autoCancel: false })
-        .then(setUsersList)
-        .catch(() => setUsersList([]));
-      pb.collection('cajas_bancos').getFullList({ sort: 'nombre', $autoCancel: false })
-        .then(r => setCajasList(r.filter(c => c.activo !== false)))
-        .catch(() => setCajasList([]));
+      const token = authToken();
+      apiClient.get('users', { token }).then(setUsersList).catch(() => setUsersList([]));
+      setCajasList([]);
       setFormData(prev => ({ ...prev, cobrado_por_id: currentUser?.id || '' }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,7 +105,7 @@ const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
     setLoading(true);
     try {
       // (1) Fetch current schedule
-      const currentWork = await pb.collection('schedules').getOne(work.id, { $autoCancel: false });
+      const currentWork = await apiClient.get(`schedules/${work.id}`, { token: authToken() });
       
       // (2) Calculate new cobros_realizados
       const currentCobros = parseFloat(currentWork.cobros_realizados || currentWork.cobros_registrados || 0);
@@ -157,27 +154,6 @@ const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
           saldo_anterior: currentWork.saldo || 0,
           saldo_nuevo: calculatedSaldo,
         });
-      }
-
-      // (4b) If Admin/Contadora with caja selected: auto-create movimiento confirmed
-      if (canDirectConfirm && formData.caja_banco_id !== 'none' && monto_cobrado > 0) {
-        await pb.collection('movimientos').create({
-          tipo: 'ingreso',
-          categoria: 'Cobro de trabajo',
-          descripcion: `Cobro directo - ${work.cliente_nombre || work.cliente || '—'}`,
-          fecha: new Date().toISOString().split('T')[0],
-          sucursal: work.sucursal_nombre || work.sucursal_id || '',
-          caja_banco_id: formData.caja_banco_id,
-          caja_banco_nombre: cajaSeleccionada?.nombre || '',
-          medio_pago: formData.metodo_pago === 'efectivo' ? 'Efectivo' : formData.metodo_pago,
-          monto: monto_cobrado,
-          cliente_id: work.cliente_id || '',
-          cliente_nombre: work.cliente_nombre || work.cliente || '',
-          trabajo_id: work.id,
-          estado: 'confirmado',
-          observacion: finalObs || `Cobrado por: ${cobradorNombre}`,
-          created_by: currentUser?.id || '',
-        }, { $autoCancel: false });
       }
 
       // (5) CRITICAL: Call updateSchedule to persist calculated balance and totals

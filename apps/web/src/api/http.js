@@ -1,8 +1,7 @@
-import { isMockMode } from '@/api/config.js';
 import apiClient from '@/api/client.js';
-import mockAdapter from '@/api/mockAdapter.js';
+import { authStore } from '@/lib/authStore.js';
 
-export const authToken = () => mockAdapter.authStore.token;
+export const authToken = () => authStore.token;
 
 export function mapClient(row) {
   if (!row) return row;
@@ -48,4 +47,4 @@ export function mapQuote(row) {
   };
 }
 
-export { isMockMode, apiClient };
+export { apiClient };

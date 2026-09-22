@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
-import { apiClient, authToken, isMockMode } from '@/api/http.js';
+import { apiClient, authToken } from '@/api/http.js';
 
 export const useSucursalesList = (onlyActive = true) => {
   const [sucursales, setSucursales] = useState([]);
@@ -13,19 +12,9 @@ export const useSucursalesList = (onlyActive = true) => {
     const fetchSucursales = async () => {
       try {
         setLoading(true);
-        let records;
-        if (!isMockMode) {
-          records = await apiClient.get('sucursales', { token: authToken() });
-        } else {
-          records = await pb.collection('sucursales').getFullList({
-            sort: 'nombre',
-            filter: onlyActive ? 'activa = true' : '',
-            $autoCancel: false,
-          });
-        }
-
+        const records = await apiClient.get('sucursales', { token: authToken() });
         if (isMounted) {
-          setSucursales(records || []);
+          setSucursales((records || []).filter((s) => !onlyActive || s.activa !== false));
           setError(null);
         }
       } catch (err) {
@@ -35,17 +24,12 @@ export const useSucursalesList = (onlyActive = true) => {
           setError(err.message);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchSucursales();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [onlyActive]);
 
   return { sucursales, loading, error };

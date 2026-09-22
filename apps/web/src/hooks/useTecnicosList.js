@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
+import { ROLES } from '@/constants/roles.js';
 
 export const useTecnicosList = () => {
   const [tecnicos, setTecnicos] = useState([]);
@@ -10,13 +11,16 @@ export const useTecnicosList = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const records = await pb.collection('tecnicos').getFullList({
-        sort: 'nombre',
-        $autoCancel: false
-      });
-      
-      setTecnicos(records);
+      const users = await apiClient.get('users', { token: authToken() });
+      const mapped = (users || [])
+        .filter((u) => u.role === ROLES.TEC)
+        .map((u) => ({
+          id: u.id,
+          nombre: u.name || u.email,
+          user_id: u.id,
+          sucursal_id: u.sucursalId || '',
+        }));
+      setTecnicos(mapped);
     } catch (err) {
       console.error('Error fetching tecnicos:', err);
       setTecnicos([]);

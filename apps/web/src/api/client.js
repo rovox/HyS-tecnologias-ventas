@@ -1,9 +1,4 @@
-/**
- * HTTP client for the future NestJS REST API.
- * Unused while VITE_API_MODE=mock. Services switch to this when mode=api.
- */
-
-import { API_URL, isMockMode } from './config.js';
+import { API_URL } from './config.js';
 
 function buildUrl(path, query) {
   const url = new URL(path.replace(/^\//, ''), API_URL.endsWith('/') ? API_URL : `${API_URL}/`);
@@ -18,10 +13,6 @@ function buildUrl(path, query) {
 }
 
 async function request(method, path, { body, query, token } = {}) {
-  if (isMockMode) {
-    throw new Error('api/client.js is not used in mock mode. Call a service instead.');
-  }
-
   const headers = { Accept: 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
