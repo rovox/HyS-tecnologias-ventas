@@ -3,7 +3,7 @@ import { FileStack, Handshake, Target, TrendingDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import reportsService from '@/services/reports/index.js';
-import { ROLES } from '@/mocks/users.js';
+import { ROLES } from '@/constants/roles.js';
 import { cn } from '@/lib/utils.js';
 
 const fmtBs = (value) =>

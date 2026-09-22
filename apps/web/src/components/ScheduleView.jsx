@@ -13,7 +13,7 @@ import { tasksService } from '@/services/tasks/index.js';
 import quotationsService from '@/services/quotations/index.js';
 import { surveysService } from '@/services/surveys/index.js';
 import authService from '@/services/auth/index.js';
-import { ROLES } from '@/mocks/users.js';
+import { ROLES } from '@/constants/roles.js';
 import ScheduleFormModal from './ScheduleFormModal.jsx';
 import ScheduleWeeklyView from './ScheduleWeeklyView.jsx';
 import ScheduleMonthlyView from './ScheduleMonthlyView.jsx';

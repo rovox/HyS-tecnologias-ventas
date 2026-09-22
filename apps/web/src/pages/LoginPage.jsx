@@ -8,8 +8,7 @@ import { Lock, Mail, Users, ShieldCheck, TrendingUp, ArrowRight, Eye, EyeOff, Wi
 import { Helmet } from 'react-helmet';
 import { toast } from 'sonner';
 import authService from '@/services/auth/index.js';
-import { DEMO_PASSWORD, ROLES } from '@/mocks/users.js';
-import { isMockMode } from '@/api/http.js';
+import { ROLES } from '@/constants/roles.js';
 
 /** Chips en producción: solo rellenan el correo (cada usuario tiene su propia clave). */
 const API_ACCOUNT_CHIPS = [
@@ -32,18 +31,10 @@ const LoginPage = () => {
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const accountChips = isMockMode
-    ? authService.listDemoAccounts().map((a) => ({
-        email: a.email,
-        name: a.name,
-        role: a.role,
-        password: a.password || DEMO_PASSWORD,
-      }))
-    : API_ACCOUNT_CHIPS;
+  const accountChips = API_ACCOUNT_CHIPS;
 
   const fillAccount = (account) => {
     setEmail(account.email);
-    if (isMockMode && account.password) setPassword(account.password);
   };
 
   const handleSubmit = async (e) => {
@@ -235,12 +226,6 @@ const LoginPage = () => {
                   <p className="text-[11px] font-medium mt-2" style={{ color: '#6B8499' }}>Plataforma H&amp;S Tecnologías</p>
                 </div>
 
-                {isMockMode && (
-                  <p className="text-[11px] text-[#8DA4B8] mb-3">
-                    POC mock. Contraseña: <span className="font-mono text-white">{DEMO_PASSWORD}</span>
-                  </p>
-                )}
-
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 mb-5">
                   {accountChips.map((account) => (
                     <button
@@ -321,9 +306,7 @@ const LoginPage = () => {
                         }
                         try {
                           await authService.requestPasswordReset(email);
-                          toast.success(isMockMode
-                            ? 'POC mock: no se envía correo real.'
-                            : 'Si el correo existe, el administrador gestionará el restablecimiento.');
+                          toast.success('Si el correo existe, el administrador gestionará el restablecimiento.');
                         } catch {
                           toast.error('No se pudo enviar la solicitud. Contactá al administrador.');
                         }

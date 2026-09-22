@@ -12,7 +12,10 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "jest --config ./test/jest-unit.json",
-    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 3 && pnpm prisma:migrate && pnpm prisma:seed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

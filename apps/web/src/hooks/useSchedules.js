@@ -3,8 +3,6 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import schedulesService, { calculateBalance } from '@/services/schedules/index.js';
 import clientsService from '@/services/clients/index.js';
-import { isMockMode } from '@/api/http.js';
-import pb from '@/lib/pocketbaseClient.js';
 
 export { calculateBalance };
 
@@ -95,14 +93,7 @@ export const useSchedules = () => {
 
   const getPaymentHistory = async (trabajo_id) => {
     try {
-      if (!isMockMode) return [];
-      const result = await pb.collection('schedule_payments').getList(1, 50, {
-        filter: `trabajo_id="${trabajo_id}"`,
-        sort: '-created',
-        expand: 'usuario_id',
-        $autoCancel: false,
-      });
-      return result.items || [];
+      return await schedulesService.getPayments(trabajo_id);
     } catch (err) {
       console.error('Error fetching payments:', err);
       return [];

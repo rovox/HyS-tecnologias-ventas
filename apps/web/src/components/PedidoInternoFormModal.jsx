@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea.jsx';
 import { Plus, Trash2, Loader2, PackageSearch } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useInternalOrders } from '@/hooks/useInternalOrders.js';
 
@@ -58,25 +58,19 @@ const PedidoInternoFormModal = ({ isOpen, onClose, onSuccess, initialData = null
     const fetchDependencies = async () => {
       setLoading(true);
       try {
+        const token = authToken();
         const [usersRes, schedsRes, sucursalesRes] = await Promise.all([
-          pb.collection('users').getFullList({ $autoCancel: false, sort: 'name' }),
-          pb.collection('schedules').getFullList({ 
-            filter: `estado != "terminado" && estado != "cancelado"`, 
-            sort: '-fecha_programada', 
-            $autoCancel: false 
-          }),
-          pb.collection('sucursales').getFullList({ $autoCancel: false, sort: 'nombre', filter: 'activa = true' })
+          apiClient.get('users', { token }).catch(() => []),
+          apiClient.get('schedules', { query: { estado_ne: 'terminado' }, token }).catch(() => []),
+          apiClient.get('sucursales', { token }).catch(() => []),
         ]);
-        
+
         setUsers(usersRes);
-        setSchedules(schedsRes);
+        setSchedules(schedsRes.filter ? schedsRes.filter(s => s.estado !== 'terminado' && s.estado !== 'cancelado') : schedsRes);
         setSucursales(sucursalesRes);
 
         if (initialData) {
-          const detailsRes = await pb.collection('detalles_pedidos_internos').getFullList({
-            filter: `pedido_id="${initialData.id}"`,
-            $autoCancel: false
-          }).catch(() => []);
+          const detailsRes = [];
 
           const isParaTrabajo = !!initialData.cronograma_id;
           setTipo(isParaTrabajo ? 'Para trabajo' : 'Para sucursal');

@@ -1,6 +1,6 @@
 import {
   Controller,
-  Get,
+  Header,
   Post,
   Query,
   Req,
@@ -39,6 +39,9 @@ export class RealtimeController {
   }
 
   @Sse('events')
+  @Header('X-Accel-Buffering', 'no')
+  @Header('Cache-Control', 'no-cache')
+  @Header('Connection', 'keep-alive')
   @ApiOperation({ summary: 'SSE stream — pass ticket as ?access_token=' })
   async events(@Query('access_token') accessToken?: string): Promise<Observable<MessageEvent>> {
     const token = String(accessToken || '').trim();

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X, ZoomIn } from 'lucide-react';
 
@@ -19,7 +18,7 @@ const PhotoGallery = ({ record, photos = [] }) => {
     <>
       <div className={`grid gap-2 mt-4 ${getGridClass(photos.length)}`}>
         {photos.map((photo, idx) => {
-          const url = pb.files.getUrl(record, photo);
+          const url = typeof photo === 'string' && photo.startsWith('http') ? photo : String(photo);
           return (
             <div 
               key={idx} 

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import quotationsService from '@/services/quotations/index.js';
 import tasksService from '@/services/tasks/index.js';
-import { QUOTATION_MAIN_CATEGORIES } from '@/mocks/quotations.js';
+import { QUOTATION_MAIN_CATEGORIES } from '@/constants/quotations.js';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 

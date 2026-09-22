@@ -100,8 +100,6 @@ importers:
         specifier: ~5.7.3
         version: 5.7.3
 
-  apps/pocketbase: {}
-
   apps/web:
     dependencies:
       '@hookform/resolvers':
@@ -218,9 +216,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      pocketbase:
-        specifier: ^0.25.0
-        version: 0.25.2
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -4847,9 +4842,6 @@ packages:
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
-
-  pocketbase@0.25.2:
-    resolution: {integrity: sha512-ONZl1+qHJMnhR2uacBlBJ90lm7njtL/zy0606+1ROfK9hSL4LRBRc8r89rMcNRzPzRqCNyoFTh2Qg/lYXdEC1w==}
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -10704,8 +10696,6 @@ snapshots:
       pathe: 2.0.3
 
   pluralize@8.0.0: {}
-
-  pocketbase@0.25.2: {}
 
   possible-typed-array-names@1.1.0: {}
 

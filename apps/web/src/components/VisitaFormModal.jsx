@@ -13,8 +13,8 @@ import authService from '@/services/auth/index.js';
 import { surveysService } from '@/services/surveys/index.js';
 import clientsService from '@/services/clients/index.js';
 import schedulesService from '@/services/schedules/index.js';
-import { apiClient, authToken, isMockMode } from '@/api/http.js';
-import { ROLES } from '@/mocks/users.js';
+import { apiClient, authToken } from '@/api/http.js';
+import { ROLES } from '@/constants/roles.js';
 import { toast } from 'sonner';
 import { Check, ChevronsUpDown, Search, UserPlus, Loader2 } from 'lucide-react';
 
@@ -175,12 +175,7 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
       const [c, users, s, tr] = await Promise.all([
         clientsService.getAll().catch(() => []),
         authService.listUsers().catch(() => []),
-        (isMockMode
-          ? import('@/lib/pocketbaseClient.js').then(({ default: pb }) =>
-              pb.collection('sucursales').getFullList({ filter: 'activa = true', sort: 'nombre', requestKey: 'vfm-sucursales' }),
-            )
-          : apiClient.get('sucursales', { token: authToken() })
-        ).catch(() => []),
+        apiClient.get('sucursales', { token: authToken() }).catch(() => []),
         schedulesService.getAll({}).catch(() => []),
       ]);
       setClientes(c || []);

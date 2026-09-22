@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import pb from '@/lib/pocketbaseClient.js';
+import { authStore } from '@/lib/authStore.js';
 import { useTecnicosList } from '@/hooks/useTecnicosList.js';
+import { useSchedules } from '@/hooks/useSchedules.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
 
 const FinalizeAssistanceModal = ({ isOpen, onClose, job, onSaved }) => {
   const { tecnicos } = useTecnicosList();
+  const { updateSchedule } = useSchedules();
   const [diagnostico, setDiagnostico] = useState('');
   const [solucion, setSolucion] = useState('');
   const [seCobra, setSeCobra] = useState('no');
@@ -30,30 +32,18 @@ const FinalizeAssistanceModal = ({ isOpen, onClose, job, onSaved }) => {
     if (seCobra === 'si' && montoNum <= 0) { toast.error('Ingresá el monto cobrado'); return; }
     setSaving(true);
     try {
-      const authUserId = pb.authStore.record?.id || '';
-      if (job.visita_id) {
-        try {
-          await pb.collection('visitas_tecnicas').update(job.visita_id, {
-            diagnostico, solucion,
-            estado: 'Resuelto',
-            se_cobra: seCobra === 'si',
-            monto_cobrado: seCobra === 'si' ? montoNum : 0,
-            medio_pago: seCobra === 'si' ? metodo : '',
-          }, { $autoCancel: false });
-        } catch (e) { console.error('update visita err:', e?.response?.data || e); }
-      }
+      const authUserId = authStore.record?.id || '';
 
-      await pb.collection('schedules').update(job.id, {
+      await updateSchedule(job.id, {
         estado: 'completado',
         descripcion_trabajo: `${job.descripcion_trabajo || ''}\nDiagnóstico: ${diagnostico}\nSolución: ${solucion}`.trim(),
         monto: seCobra === 'si' ? montoNum : 0,
         saldo: 0,
         estado_pago: seCobra === 'si' ? 'Pagado' : 'Pendiente',
-        updated_by: authUserId,
-      }, { $autoCancel: false });
+      });
 
       if (seCobra === 'si' && montoNum > 0) {
-        const tecNombre = tecnicos.find(t => t.id === cobradoPor)?.nombre || pb.authStore.record?.name || '';
+        const tecNombre = tecnicos.find(t => t.id === cobradoPor)?.nombre || authStore.record?.name || '';
         await crearCobroRendicion({
           trabajo_id: job.id,
           tipo: esAsistencia ? 'Asistencia' : 'Relevamiento',

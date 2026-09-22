@@ -7,7 +7,7 @@ import SalesActivityCharts from '@/components/SalesActivityCharts.jsx';
 import { Helmet } from 'react-helmet';
 import { FileStack, Building2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
-import { ROLES } from '@/mocks/users.js';
+import { ROLES } from '@/constants/roles.js';
 import { canWriteQuotations } from '@/config/nav.js';
 
 const DashboardPage = () => {

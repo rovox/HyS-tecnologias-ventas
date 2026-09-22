@@ -2,14 +2,14 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Skeleton } from '@/components/ui/skeleton';
-import mockAdapter from '@/api/mockAdapter.js';
-import { ROLES } from '@/mocks/users.js';
+import { authStore } from '@/lib/authStore.js';
+import { ROLES } from '@/constants/roles.js';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, userRole, initialLoading } = useAuth();
   const location = useLocation();
-  const authed = isAuthenticated || mockAdapter.authStore.isValid;
-  const role = userRole || mockAdapter.authStore.record?.role;
+  const authed = isAuthenticated || authStore.isValid;
+  const role = userRole || authStore.record?.role;
 
   if (initialLoading) {
     return (

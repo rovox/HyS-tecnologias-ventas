@@ -25,10 +25,9 @@ import {
   QUOTATION_STATUS_LABEL,
   QUOTATION_STATUS_CLASS,
   formatQuotationTitle,
-} from '@/mocks/quotations.js';
-import { ROLES } from '@/mocks/users.js';
+} from '@/constants/quotations.js';
+import { ROLES } from '@/constants/roles.js';
 import { canWriteQuotations, canEditQuotationsView } from '@/config/nav.js';
-import { isMockMode } from '@/api/http.js';
 import NewQuotationForm from '@/components/NewQuotationForm.jsx';
 import QuoteEncargadoDialog from '@/components/QuoteEncargadoDialog.jsx';
 import QuotationTasksBand from '@/components/QuotationTasksBand.jsx';
@@ -134,9 +133,7 @@ const QuotationsLibraryPage = () => {
       setCategories(await categoriesService.getAll());
       setSelectedCat(created.id);
       setNewCategoryLabel('');
-      toast.success(isMockMode
-        ? `Filtro «${created.label}» añadido (solo en este navegador)`
-        : `Filtro «${created.label}» guardado`);
+      toast.success(`Filtro «${created.label}» guardado`);
     } catch (err) {
       toast.error(err.message || 'No se pudo crear la categoría');
     } finally {
@@ -599,7 +596,6 @@ const QuotationsLibraryPage = () => {
             <p className="text-xs text-muted-foreground">
               Las 3 categorías principales ({QUOTATION_MAIN_CATEGORIES.map((m) => m.label).join(', ')}) son fijas.
               Aquí puedes crear accesos rápidos que filtran por subcategoría y aparecen en el formulario de cotización.
-              {isMockMode ? ' En modo local solo se guardan en este navegador.' : ''}
             </p>
             {pseudoCats.length > 0 ? (
               <ul className="divide-y divide-border rounded-lg border">

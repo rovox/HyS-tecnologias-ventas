@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import authService from '@/services/auth/index.js';
-import mockAdapter from '@/api/mockAdapter.js';
-import { isMockMode } from '@/api/config.js';
+import { authStore } from '@/lib/authStore.js';
 
 const AuthContext = createContext(null);
 
@@ -10,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = mockAdapter.authStore.onChange((_token, record) => {
+    const unsubscribe = authStore.onChange((_token, record) => {
       setCurrentUser(record);
     });
     setInitialLoading(false);
@@ -59,7 +58,6 @@ export const AuthProvider = ({ children }) => {
     logout,
     isAuthenticated: Boolean(currentUser) && currentUser.active !== false,
     initialLoading,
-    isMockAuth: isMockMode,
     isAdmin,
     isVentas,
     isSeguridad,

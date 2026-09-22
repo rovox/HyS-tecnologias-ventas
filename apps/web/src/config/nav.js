@@ -14,7 +14,7 @@ import {
   Calculator,
   Wallet,
 } from 'lucide-react';
-import { ROLES } from '@/mocks/users.js';
+import { ROLES } from '@/constants/roles.js';
 
 export { ROLES };
 

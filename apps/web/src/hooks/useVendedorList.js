@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
+import { ROLES } from '@/constants/roles.js';
 
 export const useVendedorList = () => {
   const [vendors, setVendors] = useState([]);
@@ -10,34 +11,15 @@ export const useVendedorList = () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Load real vendors from Configuración > Vendedores (salesperson_goals)
-      const records = await pb.collection('salesperson_goals').getFullList({
-        sort: 'salesperson_name',
-        $autoCancel: false
-      });
-
-      const mappedVendors = records.map(r => ({
-        id: r.id,
-        name: r.salesperson_name || 'Sin nombre',
-        role: 'VENTAS / ADMINISTRACIÓN'
-      }));
-
-      setVendors(mappedVendors);
+      const users = await apiClient.get('users', { token: authToken() });
+      const mapped = (users || [])
+        .filter((u) => u.role === ROLES.ADMIN || u.role === ROLES.VENTAS)
+        .map((u) => ({ id: u.id, name: u.name || u.email, role: u.role }));
+      setVendors(mapped);
     } catch (err) {
-      console.error('Error fetching vendors from salesperson_goals:', err);
-      // Fallback to users if salesperson_goals not accessible
-      try {
-        const users = await pb.collection('users').getFullList({
-          sort: 'name',
-          filter: "role = 'VENTAS / ADMINISTRACIÓN'",
-          $autoCancel: false
-        });
-        setVendors(users.map(u => ({ id: u.id, name: u.name || u.email, role: u.role })));
-      } catch (e2) {
-        setVendors([]);
-        setError(err.message);
-      }
+      console.error('Error fetching vendors:', err);
+      setVendors([]);
+      setError(err.message);
     } finally {
       setLoading(false);
     }

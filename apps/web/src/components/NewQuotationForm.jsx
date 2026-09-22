@@ -12,11 +12,11 @@ import clientsService from '@/services/clients/index.js';
 import {
   QUOTATION_MAIN_CATEGORIES,
   QUOTATION_SUBCATEGORIES,
-  QUOTATION_SUCURSALES,
   EQUIPOS_TECNOLOGIA_ID,
   COT_PREFIX,
   peekNextQuotationNumero,
-} from '@/mocks/quotations.js';
+} from '@/constants/quotations.js';
+import { useSucursalesList } from '@/hooks/useSucursalesList.js';
 import ClientFormModal from '@/components/ClientFormModal.jsx';
 
 const FormSection = ({ title, children, className = '' }) => (
@@ -95,6 +95,8 @@ const NewQuotationForm = ({
   const [saving, setSaving] = useState(false);
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [searchHits, setSearchHits] = useState([]);
+
+  const { sucursales: sucursalesList } = useSucursalesList();
 
   const categoryOptions = QUOTATION_MAIN_CATEGORIES.map((row) => ({
     id: row.id,
@@ -209,7 +211,7 @@ const NewQuotationForm = ({
     try {
       const client = clients.find((row) => row.id === form.cliente_id);
       const categoriaLabel = categoryOptions.find((row) => row.id === form.categoria_id)?.label || '';
-      const sucursal = QUOTATION_SUCURSALES.find((row) => row.id === form.sucursal_id);
+      const sucursal = sucursalesList.find((row) => row.id === form.sucursal_id);
       const subcategoria = usesCustomSub
         ? (form.subcategoria_custom.trim() || form.subcategoria)
         : form.subcategoria;
@@ -465,7 +467,7 @@ const NewQuotationForm = ({
                         </div>
                       </SelectTrigger>
                       <SelectContent>
-                        {QUOTATION_SUCURSALES.map((suc) => (
+                        {sucursalesList.map((suc) => (
                           <SelectItem key={suc.id} value={suc.id}>{suc.nombre}</SelectItem>
                         ))}
                       </SelectContent>
