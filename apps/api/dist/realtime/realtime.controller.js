@@ -57,6 +57,9 @@ __decorate([
 ], RealtimeController.prototype, "ticket", null);
 __decorate([
     (0, common_1.Sse)('events'),
+    (0, common_1.Header)('X-Accel-Buffering', 'no'),
+    (0, common_1.Header)('Cache-Control', 'no-cache'),
+    (0, common_1.Header)('Connection', 'keep-alive'),
     (0, swagger_1.ApiOperation)({ summary: 'SSE stream — pass ticket as ?access_token=' }),
     __param(0, (0, common_1.Query)('access_token')),
     __metadata("design:type", Function),

@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const auth_controller_1 = require("./auth.controller");
+const activity_controller_1 = require("./activity.controller");
 const sessions_controller_1 = require("./sessions.controller");
 const users_controller_1 = require("./users.controller");
 const auth_guard_1 = require("./auth.guard");
@@ -20,7 +21,7 @@ let AuthModule = class AuthModule {
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
-        controllers: [auth_controller_1.AuthController, sessions_controller_1.SessionsController, users_controller_1.UsersController],
+        controllers: [auth_controller_1.AuthController, activity_controller_1.ActivityController, sessions_controller_1.SessionsController, users_controller_1.UsersController],
         providers: [auth_service_1.AuthService, auth_guard_1.AuthGuard, roles_guard_1.RolesGuard, activity_service_1.ActivityService],
         exports: [auth_guard_1.AuthGuard, roles_guard_1.RolesGuard, activity_service_1.ActivityService],
     })
