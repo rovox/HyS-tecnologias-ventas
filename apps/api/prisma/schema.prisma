@@ -18,6 +18,7 @@ model Sucursal {
   relevamientos Relevamiento[]
   tasks         Task[]
   schedules     Schedule[]
+  pedidosOrigen PedidoInterno[] @relation("SucursalPedidosOrigen")
 
   @@map("sucursales")
 }
@@ -46,6 +47,8 @@ model User {
   schedulesVendedor Schedule[]    @relation("ScheduleVendedor")
   schedulesTecnico  Schedule[]    @relation("ScheduleTecnico")
   schedulePayments  SchedulePayment[] @relation("PaymentCollector")
+  pedidosResponsable PedidoInterno[] @relation("PedidoResponsable")
+  comentariosPedidos PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
 
   @@index([sucursalId])
   @@map("users")
@@ -361,4 +364,58 @@ model QuotationCategory {
 
   @@unique([label])
   @@map("quotation_categories")
+}
+
+model PedidoInterno {
+  id                    String                    @id @default(uuid())
+  responsableId         String
+  responsable           User                      @relation("PedidoResponsable", fields: [responsableId], references: [id])
+  sucursalOrigenId      String?
+  sucursalOrigen        Sucursal?                 @relation("SucursalPedidosOrigen", fields: [sucursalOrigenId], references: [id])
+  sucursalDestinoId     String?
+  cronogramaId          String?
+  prioridad             String                    @default("Normal") @db.VarChar(16)
+  estado                String                    @default("solicitado") @db.VarChar(32)
+  fechaEntregaEstimada  DateTime?
+  fechaEntregaReal      DateTime?
+  entregadoPorId        String?
+  observaciones         String?                   @db.Text
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  items                 PedidoInternoItem[]
+  comentarios           PedidoInternoComentario[]
+
+  @@index([responsableId])
+  @@index([estado])
+  @@index([sucursalOrigenId])
+  @@map("pedidos_internos")
+}
+
+model PedidoInternoItem {
+  id               String        @id @default(uuid())
+  pedidoId         String
+  pedido           PedidoInterno @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  materialNombre   String        @db.VarChar(200)
+  cantidad         Float         @default(1)
+  unidad           String        @default("unidades") @db.VarChar(32)
+  costoUnitario    Float?
+  observaciones    String?       @db.VarChar(500)
+  createdAt        DateTime      @default(now())
+
+  @@index([pedidoId])
+  @@map("pedido_interno_items")
+}
+
+model PedidoInternoComentario {
+  id        String        @id @default(uuid())
+  pedidoId  String
+  pedido    PedidoInterno @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  autorId   String
+  autor     User          @relation("ComentarioPedidoAutor", fields: [autorId], references: [id])
+  contenido String        @db.Text
+  createdAt DateTime      @default(now())
+
+  @@index([pedidoId])
+  @@index([autorId])
+  @@map("pedido_interno_comentarios")
 }

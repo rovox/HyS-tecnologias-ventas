@@ -14,6 +14,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { CategoriesModule } from './categories/categories.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { PedidosInternosModule } from './pedidos-internos/pedidos-internos.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -48,6 +49,7 @@ import { HealthController } from './health.controller';
     SchedulesModule,
     CategoriesModule,
     RealtimeModule,
+    PedidosInternosModule,
   ],
   controllers: [HealthController],
 })
