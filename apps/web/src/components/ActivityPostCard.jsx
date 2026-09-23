@@ -25,7 +25,7 @@ const ActivityPostCard = ({
   // Resolve author handling edge cases where listing users isn't permitted for regular users
   const authorId = post.usuario_id || post.created_by;
   const author = usersMap[authorId] || { name: 'Usuario Desconocido' };
-  const avatarUrl = author.avatar ? pb.files.getUrl(author, author.avatar) : null;
+  const avatarUrl = author.avatarUrl || author.avatar_url || null;
   
   const isAuthor = currentUser?.id === post.created_by;
   

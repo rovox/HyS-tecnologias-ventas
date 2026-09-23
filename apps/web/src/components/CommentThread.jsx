@@ -21,7 +21,7 @@ const CommentThread = ({ comments, parentId, postId, usersMap, currentUser, onRe
         // Fallback checks for user mapping using both usuario_id and created_by
         const authorId = comment.usuario_id || comment.created_by;
         const author = usersMap[authorId] || { name: 'Usuario Desconocido' };
-        const avatarUrl = author.avatar ? pb.files.getUrl(author, author.avatar) : null;
+        const avatarUrl = author.avatarUrl || author.avatar_url || null;
         const isAuthor = currentUser?.id === comment.created_by;
 
         return (

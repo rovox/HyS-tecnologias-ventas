@@ -27,8 +27,9 @@ const VehicleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const [sucursales, setSucursales] = useState([]);
 
   useEffect(() => {
-    pb.collection('sucursales').getFullList({ filter: 'activa = true', sort: 'nombre', requestKey: 'vfm-suc' })
-      .then(setSucursales).catch(() => setSucursales([]));
+    import('@/api/http.js').then(({ apiClient, authToken }) =>
+      apiClient.get('sucursales', { token: authToken() })
+    ).then(rows => setSucursales(rows || [])).catch(() => setSucursales([]));
   }, []);
 
   useEffect(() => {

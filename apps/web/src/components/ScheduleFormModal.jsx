@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.jsx';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command.jsx';
-import { Image as ImageIcon, X, Loader2, DollarSign, Calculator, UserPlus, AlertCircle, Search, MapPinned, Copy, Check, ChevronsUpDown } from 'lucide-react';
+import { Image as ImageIcon, X, Loader2, DollarSign, Calculator, UserPlus, AlertCircle, Search, MapPinned, Copy, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useVendedorList } from '@/hooks/useVendedorList.js';
 import { useTecnicosList } from '@/hooks/useTecnicosList.js';
@@ -16,6 +16,7 @@ import { useSchedules } from '@/hooks/useSchedules.js';
 import LocationPickerModal from '@/components/LocationPickerModal.jsx';
 import clientsService from '@/services/clients/index.js';
 import { surveysService } from '@/services/surveys/index.js';
+import VisitaFormModal from '@/components/VisitaFormModal.jsx';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
@@ -74,6 +75,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const [visitasLoading, setVisitasLoading] = useState(false);
   const [selectedVisitaId, setSelectedVisitaId] = useState('');
   const [selectedVisita, setSelectedVisita] = useState(null);
+  const [showVisitaForm, setShowVisitaForm] = useState(false);
 
   const fetchVisitas = async (tipo) => {
     setVisitasLoading(true);
@@ -391,15 +393,21 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
               <div className="space-y-2">
                 <Label>{tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} existente <span className="text-destructive">*</span></Label>
                 {visitasLoading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando...</div> : (
-                  <Select value={selectedVisitaId} onValueChange={(val) => { setSelectedVisitaId(val); setSelectedVisita(visitasList.find(x => x.id === val) || null); }} disabled={isSubmitting}>
-                    <SelectTrigger className="bg-card font-medium"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                    <SelectContent>
-                      {visitasList.length === 0 && <SelectItem value="_vacio">Sin registros disponibles</SelectItem>}
-                      {visitasList.map(v => (
-                        <SelectItem key={v.id} value={v.id}>{v.cliente_nombre || '—'} — {v.fecha ? String(v.fecha).split(' ')[0].split('T')[0] : ''}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select value={selectedVisitaId} onValueChange={(val) => { setSelectedVisitaId(val); setSelectedVisita(visitasList.find(x => x.id === val) || null); }} disabled={isSubmitting}>
+                      <SelectTrigger className="bg-card font-medium"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        {visitasList.length === 0 && <SelectItem value="_vacio" disabled>Sin registros disponibles</SelectItem>}
+                        {visitasList.map(v => (
+                          <SelectItem key={v.id} value={v.id}>{v.cliente_nombre || '—'} — {v.fecha ? String(v.fecha).split(' ')[0].split('T')[0] : ''}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="sm" className="w-full font-bold text-primary border-primary/30 hover:bg-primary/5"
+                      onClick={() => setShowVisitaForm(true)} disabled={isSubmitting}>
+                      <PlusCircle className="h-4 w-4 mr-2" /> Crear nueva {tipoEntrada === 'asistencia' ? 'asistencia' : 'relevamiento'}
+                    </Button>
+                  </div>
                 )}
                 {selectedVisita && (
                   <div className="mt-2 p-3 rounded-lg border border-border bg-muted/30 text-sm space-y-1">
@@ -772,6 +780,18 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
         }}
       />
     </Dialog>
+
+    {showVisitaForm && (
+      <VisitaFormModal
+        isOpen={showVisitaForm}
+        onClose={() => setShowVisitaForm(false)}
+        onSave={async () => {
+          setShowVisitaForm(false);
+          await fetchVisitas(tipoEntrada);
+        }}
+        initialData={{}}
+      />
+    )}
   );
 };
 
