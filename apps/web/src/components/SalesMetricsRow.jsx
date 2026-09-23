@@ -56,6 +56,7 @@ const SalesMetricsRow = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState(null);
+  const [error, setError] = useState(null);
   const ownGoal = currentUser?.role === ROLES.VENTAS;
 
   useEffect(() => {
@@ -67,13 +68,15 @@ const SalesMetricsRow = () => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await reportsService.getSalesMetrics({
           userId: ownGoal ? currentUser.id : undefined,
         });
         if (!cancelled) setMetrics(data);
-      } catch {
-        if (!cancelled) setMetrics(null);
+      } catch (err) {
+        console.error('[SalesMetricsRow] Error cargando métricas:', err?.message || err);
+        if (!cancelled) { setMetrics(null); setError(err?.message || 'Error al cargar métricas'); }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -83,6 +86,14 @@ const SalesMetricsRow = () => {
   }, [currentUser?.id, ownGoal]);
 
   const scope = ownGoal ? 'tu mes' : 'equipo · mes';
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        No se pudieron cargar las métricas: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

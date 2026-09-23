@@ -1,0 +1,1 @@
+import{j as o}from"./index-Ubk2niU3.js";import{U as t}from"./UnderConstructionPage-BYDMUIcK.js";import"./Helmet-DgGFQECi.js";import"./Layout-Ds-ZHIMC.js";import"./button-D-C9e1ZL.js";import"./index-D7TCTBrn.js";const a=()=>o.jsx(t,{moduleName:"Control de Vehículos"});export{a as default};

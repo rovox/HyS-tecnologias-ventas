@@ -36,8 +36,6 @@ let TasksService = class TasksService {
         this.realtime = realtime;
     }
     async list(user, tipo) {
-        if ((0, roles_1.isCont)(user))
-            throw new common_1.ForbiddenException('Sin acceso a tareas');
         const hace24 = new Date();
         hace24.setHours(hace24.getHours() - 24);
         const rows = await this.prisma.task.findMany({
@@ -70,8 +68,6 @@ let TasksService = class TasksService {
         return row;
     }
     async create(dto, user, sessionId) {
-        if ((0, roles_1.isCont)(user))
-            throw new common_1.ForbiddenException('Sin acceso a tareas');
         const sucursalId = dto.sucursalId || user.sucursalId;
         if (!sucursalId)
             throw new common_1.BadRequestException('Sucursal requerida');

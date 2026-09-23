@@ -294,6 +294,7 @@ function withGoal(rows, fallbackGoalBs) {
 
 const SalesActivityCharts = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activity, setActivity] = useState({
     byVendedor: [],
     bySucursal: [],
@@ -306,20 +307,21 @@ const SalesActivityCharts = () => {
     let alive = true;
     reportsService.getSalesActivity()
       .then((row) => { if (alive) setActivity(row); })
-      .catch(() => {
-        if (alive) {
-          setActivity({
-            byVendedor: [],
-            bySucursal: [],
-            byCategoria: [],
-            goalBs: 0,
-            categoryInsights: { topSucursalPorCategoria: [], topCategoriaPorVendedor: [] },
-          });
-        }
+      .catch((err) => {
+        console.error('[SalesActivityCharts] Error cargando actividad:', err?.message || err);
+        if (alive) setError(err?.message || 'Error al cargar actividad');
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        No se pudo cargar la actividad de ventas: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2">

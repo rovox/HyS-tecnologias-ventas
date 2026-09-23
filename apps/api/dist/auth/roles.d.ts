@@ -3,13 +3,11 @@ export declare const ROLES: {
     readonly ADMIN: "ADMINISTRADOR";
     readonly VENTAS: "VENTAS / ADMINISTRACIÓN";
     readonly TEC: "SEGURIDAD ELECTRÓNICA";
-    readonly CONT: "Contadora";
     readonly NONE: "SIN ACCESO";
 };
 export declare function isAdmin(user?: User | null): boolean;
 export declare function isVentas(user?: User | null): boolean;
 export declare function isTec(user?: User | null): boolean;
-export declare function isCont(user?: User | null): boolean;
 export declare function isNone(user?: User | null): boolean;
 export declare function assertAdmin(user: User): void;
 export declare function assertCanMutateQuotes(user: User): void;

@@ -74,8 +74,6 @@ let RelevamientosService = class RelevamientosService {
         this.realtime = realtime;
     }
     list(user, cotizacionId) {
-        if ((0, roles_1.isCont)(user))
-            throw new common_1.ForbiddenException('Sin acceso a relevamientos');
         return this.prisma.relevamiento.findMany({
             where: (0, roles_1.relevamientoWhere)(user, cotizacionId),
             include: { cliente: true, sucursal: true, cotizacion: true },
@@ -92,8 +90,6 @@ let RelevamientosService = class RelevamientosService {
         return row;
     }
     async create(dto, user, sessionId) {
-        if ((0, roles_1.isCont)(user))
-            throw new common_1.ForbiddenException('Sin acceso a relevamientos');
         const quote = await this.prisma.quotation.findUnique({ where: { id: dto.cotizacionId } });
         if (!quote)
             throw new common_1.BadRequestException('La cotización es obligatoria');

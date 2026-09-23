@@ -2,6 +2,5 @@ export const ROLES = {
   ADMIN: 'ADMINISTRADOR',
   VENTAS: 'VENTAS / ADMINISTRACIÓN',
   TEC: 'SEGURIDAD ELECTRÓNICA',
-  CONT: 'Contadora',
   NONE: 'SIN ACCESO',
 };

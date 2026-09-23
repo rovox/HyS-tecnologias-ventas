@@ -94,13 +94,13 @@ let QuotationsService = class QuotationsService {
         }
     }
     list(filters, user) {
-        if ((0, roles_1.isTec)(user) || (0, roles_1.isCont)(user))
+        if ((0, roles_1.isTec)(user))
             throw new common_1.ForbiddenException('Sin acceso a cotizaciones');
         return this.prisma.quotation.findMany({
             where: {
                 ...(0, roles_1.quotationWhere)(user),
                 ...(filters.estado ? { estado: filters.estado } : {}),
-                ...(filters.vendedorId && !(0, roles_1.isCont)(user) ? { vendedorId: filters.vendedorId } : {}),
+                ...(filters.vendedorId ? { vendedorId: filters.vendedorId } : {}),
                 ...(filters.sucursalId ? { sucursalId: filters.sucursalId } : {}),
             },
             include: { sellers: true, cliente: true, sucursal: true, sale: true },

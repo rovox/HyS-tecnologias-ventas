@@ -23,7 +23,7 @@ export class CategoriesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.CONT)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS)
   @ApiOperation({ summary: 'Create quotation category' })
   create(@Body() dto: CreateCategoryDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.categories.create(dto, user, sessionId);
@@ -31,7 +31,7 @@ export class CategoriesController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.CONT)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS)
   @ApiOperation({ summary: 'Deactivate quotation category (soft delete)' })
   deactivate(
     @Param('id') id: string,

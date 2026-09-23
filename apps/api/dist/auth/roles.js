@@ -4,7 +4,6 @@ exports.ROLES = void 0;
 exports.isAdmin = isAdmin;
 exports.isVentas = isVentas;
 exports.isTec = isTec;
-exports.isCont = isCont;
 exports.isNone = isNone;
 exports.assertAdmin = assertAdmin;
 exports.assertCanMutateQuotes = assertCanMutateQuotes;
@@ -23,7 +22,6 @@ exports.ROLES = {
     ADMIN: 'ADMINISTRADOR',
     VENTAS: 'VENTAS / ADMINISTRACIÓN',
     TEC: 'SEGURIDAD ELECTRÓNICA',
-    CONT: 'Contadora',
     NONE: 'SIN ACCESO',
 };
 function isAdmin(user) {
@@ -34,9 +32,6 @@ function isVentas(user) {
 }
 function isTec(user) {
     return user?.role === exports.ROLES.TEC;
-}
-function isCont(user) {
-    return user?.role === exports.ROLES.CONT;
 }
 function isNone(user) {
     return user?.role === exports.ROLES.NONE;
@@ -68,7 +63,7 @@ function assertCanCreateSchedules(user) {
 function scheduleWhere(user) {
     if (isNone(user))
         return { id: '__none__' };
-    if (isAdmin(user) || isCont(user) || isVentas(user))
+    if (isAdmin(user) || isVentas(user))
         return {};
     if (isTec(user))
         return { tecnicoId: user.id };
@@ -84,7 +79,7 @@ function quotationWhere(user) {
 function clientWhere(user) {
     if (isNone(user))
         return { id: '__none__' };
-    if (isAdmin(user) || isCont(user) || isVentas(user))
+    if (isAdmin(user) || isVentas(user))
         return {};
     if (isTec(user))
         return {};
@@ -93,7 +88,7 @@ function clientWhere(user) {
 function saleWhere(user) {
     if (isNone(user))
         return { id: '__none__' };
-    if (isAdmin(user) || isCont(user))
+    if (isAdmin(user))
         return {};
     if (isVentas(user)) {
         return {
@@ -134,8 +129,6 @@ function metricsUserId(user, requested) {
         return requested;
     if (isVentas(user))
         return user.id;
-    if (isCont(user))
-        return requested;
     return user.id;
 }
 //# sourceMappingURL=roles.js.map

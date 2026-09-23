@@ -3,7 +3,6 @@ import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import ActivityOverlay from './ActivityOverlay.jsx';
 import { useRealtimeRefresh } from '@/hooks/useRealtimeRefresh.js';
-import { isMockMode } from '@/api/config.js';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -35,11 +34,6 @@ const Layout = ({ children }) => {
           activityOpen={activityOpen}
           onToggleActivity={toggleActivity}
         />
-        <div className="bg-primary-fixed text-on-primary-fixed text-xs font-semibold px-4 py-2 border-b border-outline-variant">
-          {isMockMode
-            ? 'POC frontend · datos en este navegador · sin conexión a NestJS'
-            : 'En línea'}
-        </div>
         <main className="flex-1 w-full min-w-0 pb-8">
           {children}
         </main>

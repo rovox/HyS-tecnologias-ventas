@@ -8,7 +8,7 @@ import {
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
-import { isAdmin, isCont, isVentas, taskWhere } from '../auth/roles';
+import { isAdmin, isVentas, taskWhere } from '../auth/roles';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 
@@ -35,7 +35,6 @@ export class TasksService {
   ) {}
 
   async list(user: User, tipo?: string) {
-    if (isCont(user)) throw new ForbiddenException('Sin acceso a tareas');
     const hace24 = new Date();
     hace24.setHours(hace24.getHours() - 24);
     const rows = await this.prisma.task.findMany({
@@ -68,7 +67,6 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, user: User, sessionId?: string) {
-    if (isCont(user)) throw new ForbiddenException('Sin acceso a tareas');
     const sucursalId = dto.sucursalId || user.sucursalId;
     if (!sucursalId) throw new BadRequestException('Sucursal requerida');
     const descripcion = dto.descripcion?.trim() || null;

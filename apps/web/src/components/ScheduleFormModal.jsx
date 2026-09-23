@@ -14,10 +14,8 @@ import { useTecnicosList } from '@/hooks/useTecnicosList.js';
 import { useSucursalesList } from '@/hooks/useSucursalesList.js';
 import { useSchedules } from '@/hooks/useSchedules.js';
 import LocationPickerModal from '@/components/LocationPickerModal.jsx';
-import pb from '@/lib/pocketbaseClient.js';
 import clientsService from '@/services/clients/index.js';
 import { surveysService } from '@/services/surveys/index.js';
-import { isMockMode } from '@/api/http.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
@@ -87,10 +85,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   };
 
   const fetchCajas = async () => {
-    try {
-      const res = await pb.collection('cajas_bancos').getFullList({ sort: 'nombre', $autoCancel: false });
-      setCajasList(res);
-    } catch (_) {}
+    setCajasList([]);
   };
 
   const fetchClients = async () => {
@@ -105,19 +100,9 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     }
   };
 
-  const fetchPaymentStats = async (workId) => {
-    try {
-      const pays = await pb.collection('schedule_payments').getList(1, 500, {
-        filter: `trabajo_id="${workId}"`,
-        $autoCancel: false
-      });
-      const cobros = pays.items.reduce((sum, p) => sum + (p.monto_cobrado || 0), 0);
-      const descuentos = pays.items.reduce((sum, p) => sum + (p.descuento || 0), 0);
-      const adicionales = pays.items.reduce((sum, p) => sum + (p.adicional || 0), 0);
-      setPaymentStats({ cobros, descuentos, adicionales });
-    } catch (err) {
-      console.error("Error fetching payment stats:", err);
-    }
+  const fetchPaymentStats = async (_workId) => {
+    setPaymentStats({ cobros: 0, descuentos: 0, adicionales: 0 });
+    // Payment stats are managed via the schedule payments endpoint; not fetched here yet.
   };
 
   useEffect(() => {
@@ -351,80 +336,6 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
       } else {
         savedRecord = await createSchedule(data);
       }
-      const savedJobId = savedRecord?.id || initialData?.id;
-
-      // Adelanto en ledger Cobros/Rendición solo en mock (finanzas congelado en API)
-      if (isMockMode && adelanto_recibido > 0 && savedJobId) {
-        const authUserId = pb.authStore.record?.id || '';
-        const sucursalNombre = sucursales?.find(s => s.id === formData.sucursal_id)?.nombre || '';
-        const cobradorId = authUserId;
-        const cobradorNombre = vendors?.find(v => v.id === formData.vendedor_responsable_id)?.name
-          || tecnicos?.find(t => t.id === formData.tecnico_responsable_id)?.nombre
-          || pb.authStore.record?.name || '';
-        const vendNombre = vendors?.find(v => v.id === formData.vendedor_responsable_id)?.name || '';
-
-        // Dedup: skip if Adelanto already registered for this job
-        let alreadyExists = false;
-        try {
-          const check = await pb.collection('schedule_payments').getList(1, 1, {
-            filter: pb.filter('trabajo_id = {:jid} && tipo = "Adelanto"', { jid: savedJobId }),
-            $autoCancel: false,
-          });
-          alreadyExists = check.totalItems > 0;
-        } catch (_) { alreadyExists = false; }
-
-        if (!alreadyExists) {
-          const cajaSel = adelantoCajaId ? cajasList.find(c => c.id === adelantoCajaId) : null;
-          const esDirecto = adelantoTipo === 'directo' && !!adelantoCajaId;
-          try {
-            await crearCobroRendicion({
-              trabajo_id: savedJobId,
-              tipo: 'Adelanto',
-              monto: adelanto_recibido,
-              metodo_pago: 'efectivo',
-              cliente_nombre: clientName,
-              sucursal_nombre: sucursalNombre,
-              vendedor_nombre: vendNombre,
-              cobrado_por_id: cobradorId,
-              cobrado_por_nombre: cobradorNombre,
-              origen: 'trabajo_adelanto',
-              confirmado: esDirecto,
-              caja_banco_id: adelantoCajaId || '',
-              caja_banco_nombre: cajaSel?.nombre || '',
-              observacion: 'Adelanto de trabajo',
-            });
-          } catch (spErr) {
-            console.error('Error creando Cobro/Rendición (adelanto):', spErr?.response?.data || spErr);
-            toast.error('Trabajo guardado, pero el adelanto no se registró en Cobros/Rendición.');
-          }
-
-          // If Admin/Ventas selected direct-to-caja, also create movimiento immediately
-          if (esDirecto) {
-            try {
-              const caja = adelantoCajaId ? cajasList.find(c => c.id === adelantoCajaId) : null;
-              await pb.collection('movimientos').create({
-                tipo: 'ingreso',
-                categoria: 'Cobro de trabajo',
-                descripcion: `Adelanto trabajo — ${clientName}`,
-                fecha: formData.fecha_programada,
-                monto: adelanto_recibido,
-                caja_banco_id: adelantoCajaId || '',
-                caja_banco_nombre: caja?.nombre || '',
-                trabajo_id: savedJobId,
-                cliente_nombre: clientName,
-                // Solo un administrador puede dejar el ingreso ya validado; el resto queda pendiente.
-                estado: isAdmin() ? 'confirmado' : 'pendiente',
-                origen: 'adelanto_trabajo',
-                id_origen: savedJobId,
-                created_by: authUserId,
-              }, { $autoCancel: false });
-            } catch (movErr) {
-              console.error('Error registrando movimiento del adelanto:', movErr?.response?.data || movErr);
-            }
-          }
-        }
-      }
-
       toast.success("Trabajo guardado correctamente");
       if (onSave) onSave();
       onClose();

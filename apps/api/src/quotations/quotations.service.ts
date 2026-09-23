@@ -5,7 +5,7 @@ import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
-import { assertCanMutateQuotes, isCont, isTec, quotationWhere } from '../auth/roles';
+import { assertCanMutateQuotes, isTec, quotationWhere } from '../auth/roles';
 import { RealtimeService } from '../realtime/realtime.service';
 
 const FLOW: Record<string, string[]> = {
@@ -54,12 +54,12 @@ export class QuotationsService {
   }
 
   list(filters: { estado?: string; vendedorId?: string; sucursalId?: string }, user: User) {
-    if (isTec(user) || isCont(user)) throw new ForbiddenException('Sin acceso a cotizaciones');
+    if (isTec(user)) throw new ForbiddenException('Sin acceso a cotizaciones');
     return this.prisma.quotation.findMany({
       where: {
         ...quotationWhere(user),
         ...(filters.estado ? { estado: filters.estado } : {}),
-        ...(filters.vendedorId && !isCont(user) ? { vendedorId: filters.vendedorId } : {}),
+        ...(filters.vendedorId ? { vendedorId: filters.vendedorId } : {}),
         ...(filters.sucursalId ? { sucursalId: filters.sucursalId } : {}),
       },
       include: { sellers: true, cliente: true, sucursal: true, sale: true },
