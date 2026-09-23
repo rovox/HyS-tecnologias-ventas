@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import Layout from '@/components/Layout.jsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -33,42 +33,25 @@ const ManagementPanelPage = () => {
 
   const loadSummaryData = useCallback(async () => {
     if (!isAdmin) return;
-    
     setLoading(true);
     try {
-      // Load user dictionary
-      const usersRes = await pb.collection('users').getFullList({ $autoCancel: false });
-      const userMap = usersRes.reduce((acc, u) => ({ ...acc, [u.id]: u }), {});
-      setUsers(userMap);
-
-      // Current month boundary
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      
-      const [schedules, config, maintenance, fuel, oil, orders] = await Promise.all([
-        pb.collection('schedules').getFullList({ 
-          filter: `fecha_programada >= "${firstDay}" && (estado = "completado" || estado = "terminado")`, 
-          $autoCancel: false 
-        }),
-        pb.collection('configuration').getFullList({ $autoCancel: false }),
-        pb.collection('registros_mantenimiento').getFullList({ filter: `fecha >= "${firstDay}"`, $autoCancel: false }),
-        pb.collection('registros_combustible').getFullList({ filter: `fecha >= "${firstDay}"`, $autoCancel: false }),
-        pb.collection('registros_aceite').getFullList({ filter: `fecha >= "${firstDay}"`, $autoCancel: false }),
-        pb.collection('pedidos_internos').getFullList({ filter: `created >= "${firstDay}" && estado = "entregado"`, $autoCancel: false })
+
+      const [usersRes, schedulesRes, metricsRes] = await Promise.all([
+        apiClient.get('users', { token: authToken() }).catch(() => []),
+        apiClient.get('schedules', { token: authToken(), query: { estado: 'terminado', from: firstDay } }).catch(() => []),
+        apiClient.get('metrics/sales', { token: authToken() }).catch(() => null),
       ]);
 
-      const income = schedules.reduce((sum, s) => sum + (s.monto || 0), 0);
-      
-      const expenses = 
-        maintenance.reduce((sum, m) => sum + (m.costo || 0), 0) +
-        fuel.reduce((sum, f) => sum + (f.costo || 0), 0) +
-        oil.reduce((sum, o) => sum + (o.costo || 0), 0) +
-        orders.reduce((sum, p) => sum + (p.costo_total || 0), 0);
-      
-      const profit = income - expenses;
-      const goal = config[0]?.monthly_goal || 50000; // Fallback to 50k if no config
+      const userMap = (usersRes || []).reduce((acc, u) => ({ ...acc, [u.id]: u }), {});
+      setUsers(userMap);
 
-      setSummaryData({ income, expenses, profit, goal, schedules });
+      const schedules = (schedulesRes || []);
+      const income = metricsRes?.salesTotal ?? schedules.reduce((sum, s) => sum + Number(s.monto || s.costo_total || 0), 0);
+      const goal = metricsRes?.goalBs ?? 50000;
+
+      setSummaryData({ income, expenses: 0, profit: income, goal, schedules });
     } catch (err) {
       console.error('Error fetching summary:', err);
       toast.error('Error al cargar el resumen ejecutivo.');
@@ -79,24 +62,14 @@ const ManagementPanelPage = () => {
 
   const loadAuditLogs = useCallback(async () => {
     if (!isAdmin) return;
-    
     setAuditLoading(true);
     try {
-      const filters = [];
-      if (auditActionFilter !== 'all') {
-        filters.push(`accion = "${auditActionFilter}"`);
-      }
-
-      const records = await pb.collection('historial_actividad').getList(1, 50, {
-        sort: '-created',
-        filter: filters.length > 0 ? filters.join(' && ') : '',
-        $autoCancel: false
-      });
-      
-      setAuditLogs(records.items);
+      const query = { limit: 50 };
+      if (auditActionFilter !== 'all') query.action = auditActionFilter;
+      const records = await apiClient.get('activity', { token: authToken(), query }).catch(() => []);
+      setAuditLogs(records || []);
     } catch (err) {
       console.error('Error fetching audit logs:', err);
-      toast.error('Error al cargar el registro de auditoría.');
     } finally {
       setAuditLoading(false);
     }
@@ -137,7 +110,7 @@ const ManagementPanelPage = () => {
         <title>Management Panel - H&S</title>
       </Helmet>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <div className="content-container py-6 space-y-8">
         <header>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
             <LayoutDashboard className="h-10 w-10 text-primary" />
@@ -282,33 +255,39 @@ const ManagementPanelPage = () => {
                           </td>
                         </tr>
                       ) : (
-                        auditLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-muted/20 transition-colors">
-                            <td className="px-6 py-3 whitespace-nowrap text-muted-foreground">
-                              {format(new Date(log.created), "dd MMM yyyy, HH:mm", { locale: es })}
-                            </td>
-                            <td className="px-6 py-3 font-medium text-foreground">
-                              {users[log.usuario_id]?.name || 'Usuario desconocido'}
-                            </td>
-                            <td className="px-6 py-3">
-                              <Badge variant="outline" className="capitalize">
-                                {log.entidad_tipo.replace(/_/g, ' ')}
-                              </Badge>
-                            </td>
-                            <td className="px-6 py-3">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold capitalize
-                                ${log.accion === 'crear' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                  log.accion === 'eliminar' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                                  log.accion === 'editar' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                  'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'}`}>
-                                {log.accion.replace(/_/g, ' ')}
-                              </span>
-                            </td>
-                            <td className="px-6 py-3 max-w-[250px] truncate text-muted-foreground" title={log.descripcion || 'Sin detalle'}>
-                              {log.descripcion || '-'}
-                            </td>
-                          </tr>
-                        ))
+                        auditLogs.map((log) => {
+                          const accion = log.action || log.accion || '';
+                          const entidad = log.entityType || log.entidad_tipo || '';
+                          const usuarioId = log.userId || log.usuario_id;
+                          const fecha = log.at || log.created;
+                          return (
+                            <tr key={log.id} className="hover:bg-muted/20 transition-colors">
+                              <td className="px-6 py-3 whitespace-nowrap text-muted-foreground">
+                                {fecha ? format(new Date(fecha), "dd MMM yyyy, HH:mm", { locale: es }) : '-'}
+                              </td>
+                              <td className="px-6 py-3 font-medium text-foreground">
+                                {log.user?.name || users[usuarioId]?.name || usuarioId || 'Usuario desconocido'}
+                              </td>
+                              <td className="px-6 py-3">
+                                <Badge variant="outline" className="capitalize">
+                                  {entidad.replace(/_/g, ' ')}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-3">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold capitalize
+                                  ${accion === 'crear' || accion === 'CREATE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                    accion === 'eliminar' || accion === 'DELETE' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                    accion === 'editar' || accion === 'UPDATE' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                    'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'}`}>
+                                  {accion.replace(/_/g, ' ').toLowerCase()}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 max-w-[250px] truncate text-muted-foreground" title={log.description || log.descripcion || 'Sin detalle'}>
+                                {log.description || log.descripcion || '-'}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

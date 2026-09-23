@@ -4,10 +4,16 @@ node_modules/
 .pnp.js
 .pnpm-store/
 
-# Builds
+# Builds (Hostinger POC ships a pre-built SPA — see docs/deployment/hostinger-frontend.md)
 dist/
 build/
 out/
+!apps/web/dist/
+!apps/web/dist/**
+!apps/api/dist/
+!apps/api/dist/**
+app.tar.gz
+*.tar.gz
 
 # Next.js build
 /.next/
@@ -19,6 +25,7 @@ next-env.d.ts
 .env.local
 .env.*.local
 .env*.local
+apps/api/.env.test
 
 # PocketBase local data (NO subir a git)
 apps/pocketbase/pb_data/
@@ -46,6 +53,9 @@ Thumbs.db
 # Testing
 coverage/
 
+# Generated
+apps/web/public/llms.txt
+
 # Vercel
 .vercel
 
@@ -67,3 +77,9 @@ id_rsa.pub
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Local quotation PDF uploads
+apps/api/uploads/
+
+# Documentación interna (datos reales, no GitHub)
+docs/decisiones-tecnicas/

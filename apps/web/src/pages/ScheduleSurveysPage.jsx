@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import Layout from '@/components/Layout.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import { surveysService } from '@/services/surveys/index.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx';
 import { toast } from 'sonner';
-import { MapPin, Clock, User, Plus, ExternalLink, Search, Eye, Wrench, ClipboardList, AlertTriangle, Trash2, Shield, RotateCcw } from 'lucide-react';
+import { MapPin, Clock, User, Plus, ExternalLink, Search, Eye, Wrench, ClipboardList, Trash2, Shield, RotateCcw } from 'lucide-react';
 import VisitaFormModal from '@/components/VisitaFormModal.jsx';
 
 const fmtDate = (d) => {
@@ -21,8 +21,6 @@ const fmtDate = (d) => {
     return `${day}/${m}/${y}`;
   } catch { return String(d); }
 };
-
-const fmtTime = (h) => h ? String(h).slice(0, 5) : '';
 
 const openMaps = (mapsLink, lugar) => {
   if (mapsLink?.trim()) {
@@ -53,10 +51,17 @@ const ESTADO_LABELS = {
 };
 
 const PRIORIDAD_COLORS = {
-  baja: 'text-gray-400',
-  media: 'text-blue-500',
-  alta: 'text-orange-500',
-  urgente: 'text-red-600',
+  baja: 'text-gray-500',
+  media: 'text-blue-600',
+  alta: 'text-orange-600',
+  urgente: 'text-red-700',
+};
+
+const PRIORIDAD_CHIP = {
+  baja: 'bg-muted text-muted-foreground border-border',
+  media: 'bg-blue-50 text-blue-800 border-blue-200',
+  alta: 'bg-orange-50 text-orange-800 border-orange-200',
+  urgente: 'bg-red-50 text-red-800 border-red-300 ring-1 ring-red-200',
 };
 
 const TABS = [
@@ -69,17 +74,37 @@ const TABS = [
 
 const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDelete, onDelete }) => {
   const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
   if (!visita) return null;
   const esAsistencia = visita.tipo_visita === 'Asistencia';
+  const fotos = visita.fotografias || visita.fotosUrl || [];
 
   const changeStatus = async (newStatus) => {
     setSaving(true);
     try {
-      await pb.collection('visitas_tecnicas').update(visita.id, { estado: newStatus });
+      if (newStatus === 'resuelto') {
+        let next = visita;
+        if (photoFile) {
+          next = await surveysService.uploadPhoto(visita.id, photoFile);
+          setPhotoFile(null);
+        }
+        const list = next.fotografias || next.fotosUrl || fotos;
+        if (!list.length) {
+          toast.error('Sube una foto de evidencia para marcar como resuelto');
+          setSaving(false);
+          return;
+        }
+        await surveysService.update(visita.id, { estado: 'resuelto', fotografias: list, fotosUrl: list });
+      } else {
+        await surveysService.update(visita.id, { estado: newStatus });
+      }
       toast.success('Estado actualizado');
       onStatusChange();
-    } catch { toast.error('Error al actualizar'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error(err.message || 'Error al actualizar');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -92,11 +117,16 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
         </DialogHeader>
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 gap-3">
-            <div><span className="text-muted-foreground font-semibold">Fecha:</span> <span className="font-bold">{fmtDate(visita.fecha)}</span></div>
-            <div><span className="text-muted-foreground font-semibold">Hora:</span> <span className="font-bold">{fmtTime(visita.hora) || '—'}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Atención:</span> <span className="font-bold">{fmtDate(visita.fecha_inicio || visita.fecha)}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Fin:</span> <span className="font-bold">{fmtDate(visita.fecha_fin) || '—'}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Vendedor:</span> <span className="font-bold">{visita.vendedor_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Técnico:</span> <span className="font-bold">{visita.tecnico_nombre || '—'}</span></div>
             <div><span className="text-muted-foreground font-semibold">Sucursal:</span> <span className="font-bold">{visita.sucursal_nombre || '—'}</span></div>
-            <div><span className="text-muted-foreground font-semibold">Prioridad:</span> <span className={`font-bold capitalize ${PRIORIDAD_COLORS[visita.prioridad] || ''}`}>{visita.prioridad || '—'}</span></div>
+            <div><span className="text-muted-foreground font-semibold">Prioridad:</span>{' '}
+              <Badge variant="outline" className={`text-[10px] font-bold capitalize ${PRIORIDAD_CHIP[visita.prioridad] || ''}`}>
+                {visita.prioridad || '—'}
+              </Badge>
+            </div>
             <div>
               <span className="text-muted-foreground font-semibold">Estado:</span>{' '}
               <Badge className={`text-[10px] border capitalize ${ESTADO_COLORS[visita.estado] || ''}`}>{ESTADO_LABELS[visita.estado] || visita.estado || '—'}</Badge>
@@ -161,6 +191,38 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
           )}
           {canEdit && (
             <div className="border-t pt-3 space-y-3">
+              <p className="font-bold text-xs text-muted-foreground uppercase tracking-wide">Evidencia fotográfica</p>
+              <p className="text-[11px] text-muted-foreground">
+                Obligatoria para marcar como resuelto. Fotos actuales: {fotos.length}
+              </p>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+              />
+              {photoFile && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="font-bold text-xs"
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await surveysService.uploadPhoto(visita.id, photoFile);
+                      setPhotoFile(null);
+                      toast.success('Foto subida');
+                      onStatusChange();
+                    } catch (err) {
+                      toast.error(err.message || 'No se pudo subir');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  Subir foto ahora
+                </Button>
+              )}
               <p className="font-bold text-xs text-muted-foreground uppercase tracking-wide">Cambiar estado</p>
               <div className="flex flex-wrap gap-2">
                 {['programado','en_camino','en_atencion','resuelto','pendiente','cancelado'].map(s => (
@@ -191,8 +253,8 @@ const DetailModal = ({ visita, onClose, onEdit, onStatusChange, canEdit, canDele
 };
 
 const ScheduleSurveysPage = () => {
-  const { currentUser, isAdmin, isVentas, isContadora, isSeguridad } = useAuth();
-  const canEdit = isAdmin() || isVentas() || isContadora();
+  const { currentUser, isAdmin, isVentas, isSeguridad } = useAuth();
+  const canEdit = isAdmin() || isVentas() || isSeguridad();
   const canDelete = isAdmin();
 
   const [visitas, setVisitas] = useState([]);
@@ -216,10 +278,7 @@ const ScheduleSurveysPage = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const records = await pb.collection('visitas_tecnicas').getFullList({
-        sort: '-fecha',
-        requestKey: 'surveys-fetch',
-      });
+      const records = await surveysService.getAll();
       setVisitas(records);
     } catch (err) {
       console.error('Error al cargar visitas:', err);
@@ -230,6 +289,23 @@ const ScheduleSurveysPage = () => {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fecha = params.get('fecha');
+    if (fecha) {
+      setFilterFechaDesde(fecha);
+      setFilterFechaHasta(fecha);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onRt = (e) => {
+      if (e.detail?.entity === 'relevamiento') fetchData();
+    };
+    window.addEventListener('hs-realtime', onRt);
+    return () => window.removeEventListener('hs-realtime', onRt);
+  }, [fetchData]);
 
   // Unique tecnicos and sucursales for filter dropdowns
   const uniqueTecnicos = useMemo(() => {
@@ -297,10 +373,7 @@ const ScheduleSurveysPage = () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await pb.collection('visitas_tecnicas').delete(deleteTarget.id);
-      toast.success('Visita eliminada');
-      setDeleteTarget(null);
-      fetchData();
+      toast.error('Los relevamientos no se eliminan. Cambia el estado si ya no aplica.');
     } catch (e) {
       toast.error('Error al eliminar');
     } finally {
@@ -315,7 +388,7 @@ const ScheduleSurveysPage = () => {
         <meta name="description" content="Bandeja operativa de visitas técnicas, relevamientos y asistencias" />
       </Helmet>
 
-      <div className="content-container py-6 pb-24 space-y-4">
+      <div className="content-container py-6 space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -433,16 +506,16 @@ const ScheduleSurveysPage = () => {
               const urgente = v.prioridad === 'urgente' || v.prioridad === 'alta';
 
               return (
-                <div key={v.id} className={`bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all space-y-3 ${urgente ? 'border-orange-300 dark:border-orange-700' : ''}`}>
+                <div key={v.id} className="bg-card border rounded-xl p-3 shadow-sm hover:shadow-sm transition-all space-y-2 text-sm">
                   {/* Top row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="font-extrabold text-foreground text-base leading-tight block truncate">{v.cliente_nombre || '—'}</span>
+                      <span className="font-semibold text-foreground text-sm leading-tight block truncate">{v.cliente_nombre || '—'}</span>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {isAsistencia
-                          ? <Wrench className="h-3 w-3 text-blue-500 shrink-0" />
-                          : <ClipboardList className="h-3 w-3 text-green-500 shrink-0" />}
-                        <span className={`text-xs font-bold ${isAsistencia ? 'text-blue-600' : 'text-green-600'}`}>{v.tipo_visita}</span>
+                          ? <Wrench className="h-3 w-3 text-muted-foreground shrink-0" />
+                          : <ClipboardList className="h-3 w-3 text-muted-foreground shrink-0" />}
+                        <span className="text-[11px] font-medium text-muted-foreground">{v.tipo_visita}</span>
                         {isAsistencia && v.estado_garantia && (
                           <span className={`text-[10px] font-bold ${garantiaColor}`}>• {v.estado_garantia}</span>
                         )}
@@ -464,11 +537,21 @@ const ScheduleSurveysPage = () => {
                         <span className="truncate">{v.lugar}</span>
                       </div>
                     )}
-                    {v.tecnico_nombre && (
+                    {(v.fecha || v.fecha_inicio || v.fecha_fin) && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          Atención: {fmtDate(v.fecha_inicio || v.fecha)}
+                          {v.fecha_fin ? ` · Fin: ${fmtDate(v.fecha_fin)}` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {(v.vendedor_nombre || v.tecnico_nombre) && (
                       <div className="flex items-center gap-1.5">
                         <User className="h-3.5 w-3.5 shrink-0" />
-                        <span>{v.tecnico_nombre}</span>
-                        {v.fecha && <span className="text-muted-foreground/60">• {fmtDate(v.fecha)}{v.hora ? ` ${fmtTime(v.hora)}` : ''}</span>}
+                        <span>
+                          {[v.vendedor_nombre && `Vendedor: ${v.vendedor_nombre}`, v.tecnico_nombre && `Téc: ${v.tecnico_nombre}`].filter(Boolean).join(' · ')}
+                        </span>
                       </div>
                     )}
 
@@ -494,10 +577,7 @@ const ScheduleSurveysPage = () => {
                       </div>
                     )}
                     {urgente && (
-                      <div className={`flex items-center gap-1.5 font-bold ${PRIORIDAD_COLORS[v.prioridad]}`}>
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        <span className="capitalize">Prioridad {v.prioridad}</span>
-                      </div>
+                      <p className="text-[11px] text-muted-foreground capitalize">Prioridad {v.prioridad}</p>
                     )}
                   </div>
 

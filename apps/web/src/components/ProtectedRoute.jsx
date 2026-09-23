@@ -2,10 +2,14 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Skeleton } from '@/components/ui/skeleton';
+import { authStore } from '@/lib/authStore.js';
+import { ROLES } from '@/constants/roles.js';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, userRole, initialLoading } = useAuth();
   const location = useLocation();
+  const authed = isAuthenticated || authStore.isValid;
+  const role = userRole || authStore.record?.role;
 
   if (initialLoading) {
     return (
@@ -18,12 +22,19 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!authed) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/public-dashboard" replace />;
+  if (role === ROLES.NONE) {
+    if (location.pathname === '/sin-acceso') {
+      return children;
+    }
+    return <Navigate to="/sin-acceso" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

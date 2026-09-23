@@ -1,0 +1,10 @@
+# Hostinger SPA root = apps/web. Isolate so pnpm does not install Nest/Prisma
+# from the monorepo parent (that raced with lime-chamois and emptied deploy logs).
+packages:
+  - '.'
+
+allowBuilds:
+  esbuild: false
+  '@scarf/scarf': false
+  unrs-resolver: false
+strictDepBuilds: false

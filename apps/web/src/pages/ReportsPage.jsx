@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { ROLES } from '@/constants/roles.js';
+import goalsService from '@/services/goals/index.js';
 import Layout from '@/components/Layout.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -63,22 +65,17 @@ const ReportsPage = () => {
         const endYear = filterMonth === 12 ? filterYear + 1 : filterYear;
         const end = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
 
-        const [schedules, allSchedules, users, tecnicos, goals, pedidos, detalles, visitas, materiales, equipos, gastos, pagos, movimientos, sucursales] = await Promise.all([
-          pb.collection('schedules').getFullList({ filter: `fecha_programada >= "${start}" && fecha_programada < "${end}"`, requestKey: 'rep-sched' }).catch(() => []),
-          pb.collection('schedules').getFullList({ requestKey: 'rep-all-sched' }).catch(() => []),
-          pb.collection('users').getFullList({ requestKey: 'rep-users' }).catch(() => []),
-          pb.collection('tecnicos').getFullList({ requestKey: 'rep-tec' }).catch(() => []),
-          pb.collection('salesperson_goals').getFullList({ requestKey: 'rep-goals' }).catch(() => []),
-          pb.collection('pedidos_internos').getFullList({ filter: `created >= "${start}" && created < "${end}"`, requestKey: 'rep-pedidos' }).catch(() => []),
-          pb.collection('detalles_pedidos_internos').getFullList({ requestKey: 'rep-det' }).catch(() => []),
-          pb.collection('visitas_tecnicas').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-vis' }).catch(() => []),
-          pb.collection('materiales_trabajo').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-mat' }).catch(() => []),
-          pb.collection('equipos_instalados').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-equ' }).catch(() => []),
-          pb.collection('gastos_directos').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-gast' }).catch(() => []),
-          pb.collection('schedule_payments').getFullList({ filter: `created >= "${start}" && created < "${end}"`, requestKey: 'rep-pag' }).catch(() => []),
-          pb.collection('movimientos').getFullList({ filter: `fecha >= "${start}" && fecha < "${end}"`, requestKey: 'rep-mov' }).catch(() => []),
-          pb.collection('sucursales').getFullList({ sort: 'nombre', requestKey: 'rep-suc' }).catch(() => []),
+        const token = authToken();
+        const [schedules, allSchedules, users, goals, pedidos, sucursales] = await Promise.all([
+          apiClient.get('schedules', { query: { from: start, to: end }, token }).catch(() => []),
+          apiClient.get('schedules', { token }).catch(() => []),
+          apiClient.get('users', { token }).catch(() => []),
+          goalsService.listSellerGoals().catch(() => []),
+          apiClient.get('pedidos-internos', { query: { from: start, to: end }, token }).catch(() => []),
+          apiClient.get('sucursales', { token }).catch(() => []),
         ]);
+        const tecnicos = users.filter(u => u.role === ROLES.TEC).map(u => ({ id: u.id, nombre: u.name }));
+        const detalles = [], visitas = [], materiales = [], equipos = [], gastos = [], pagos = [], movimientos = [];
 
         setData({ schedules, allSchedules, users, tecnicos, goals, pedidos, detalles, visitas, materiales, equipos, gastos, pagos, movimientos, sucursales });
       } catch {
@@ -164,17 +161,19 @@ const ReportsPage = () => {
       value: pedidos.filter(p => p.sucursal_destino_id === suc.id).length,
     })).filter(s => s.value > 0);
 
-    // FINANZAS
-    const ingresos = movimientos.filter(m => m.tipo === 'ingreso' || m.tipo === 'cobro').reduce((sum, m) => sum + (m.monto || 0), 0);
-    const egresos = movimientos.filter(m => m.tipo === 'egreso' || m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
+    // FINANZAS — solo movimientos y gastos ya validados por un administrador cuentan en los reportes.
+    const movimientosValidados = movimientos.filter(m => String(m.estado || '').toLowerCase() === 'confirmado');
+    const gastosValidados = gastos.filter(g => g.estado === 'Devuelto');
+    const ingresos = movimientosValidados.filter(m => m.tipo === 'ingreso' || m.tipo === 'cobro').reduce((sum, m) => sum + (m.monto || 0), 0);
+    const egresos = movimientosValidados.filter(m => m.tipo === 'egreso' || m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
     const cuentasPorCobrar = schedules.reduce((sum, s) => sum + Math.max(0, s.saldo_pendiente || 0), 0);
     const cobros = pagos.reduce((sum, p) => sum + (p.monto || 0), 0);
-    const pagProveedores = movimientos.filter(m => m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
+    const pagProveedores = movimientosValidados.filter(m => m.tipo === 'pago_proveedor').reduce((sum, m) => sum + (m.monto || 0), 0);
 
     // COSTOS OPERATIVOS
     const totalMat = materiales.reduce((sum, m) => sum + (m.total || 0), 0);
     const totalEquipos = equipos.reduce((sum, e) => sum + (e.costo_total || 0), 0);
-    const totalGastos = gastos.reduce((sum, g) => sum + (g.monto || 0), 0);
+    const totalGastos = gastosValidados.reduce((sum, g) => sum + (g.monto || 0), 0);
     const ingresosTrab = schedules.filter(s => ['completado','terminado'].includes(s.estado)).reduce((sum, s) => sum + (s.monto || 0), 0);
     const utilidad = ingresosTrab - totalMat - totalEquipos - totalGastos;
 
@@ -227,7 +226,7 @@ const ReportsPage = () => {
         <meta name="description" content="Reportes integrales de ventas, operaciones y contabilidad" />
       </Helmet>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 space-y-6">
+      <div className="content-container py-6 space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">

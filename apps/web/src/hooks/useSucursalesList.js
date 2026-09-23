@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 
 export const useSucursalesList = (onlyActive = true) => {
   const [sucursales, setSucursales] = useState([]);
@@ -12,35 +12,24 @@ export const useSucursalesList = (onlyActive = true) => {
     const fetchSucursales = async () => {
       try {
         setLoading(true);
-        const records = await pb.collection('sucursales').getFullList({
-          sort: 'nombre',
-          filter: onlyActive ? 'activa = true' : '',
-          $autoCancel: false
-        });
-        
+        const records = await apiClient.get('sucursales', { token: authToken() });
         if (isMounted) {
-          setSucursales(records);
+          setSucursales((records || []).filter((s) => !onlyActive || s.activa !== false));
           setError(null);
         }
       } catch (err) {
-        console.warn('Advertencia: Error cargando colección sucursales.', err);
+        console.warn('Advertencia: Error cargando sucursales.', err);
         if (isMounted) {
-          // Retornamos array vacío para evitar caídas
           setSucursales([]);
           setError(err.message);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchSucursales();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [onlyActive]);
 
   return { sucursales, loading, error };

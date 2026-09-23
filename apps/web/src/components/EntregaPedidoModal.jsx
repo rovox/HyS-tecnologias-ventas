@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, PackageCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 
 const EntregaPedidoModal = ({ isOpen, onClose, onConfirm, submitting }) => {
   const { currentUser } = useAuth();
@@ -23,7 +23,7 @@ const EntregaPedidoModal = ({ isOpen, onClose, onConfirm, submitting }) => {
     setEntregadoPorId(currentUser?.id || '');
     setObservacion('');
 
-    pb.collection('users').getFullList({ $autoCancel: false, sort: 'name' })
+    apiClient.get('users', { token: authToken() })
       .then(setUsers)
       .catch(() => setUsers([]));
   }, [isOpen, currentUser]);

@@ -1,2 +1,17 @@
 packages:
   - 'apps/*'
+
+# Hostinger Cloud Startup uses pnpm 11 (strictDepBuilds). Only allowBuilds is read;
+# legacy onlyBuiltDependencies / ignoredBuiltDependencies are ignored in v11.
+# SPA host never installs apps/api; API host needs Prisma generate on postinstall.
+allowBuilds:
+  esbuild: false
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  unrs-resolver: false
+# If Hostinger still treats an unlisted package as fatal, warn instead of fail.
+strictDepBuilds: false
+packageImportMethod: copy
+confirmModulesPurge: false

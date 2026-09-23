@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
+const pb = null; // PocketBase removed
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 

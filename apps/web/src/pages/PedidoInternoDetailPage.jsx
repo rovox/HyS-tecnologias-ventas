@@ -15,7 +15,7 @@ import PedidoInternoFormModal from '@/components/PedidoInternoFormModal.jsx';
 import EntregaPedidoModal from '@/components/EntregaPedidoModal.jsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import pb from '@/lib/pocketbaseClient.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { toast } from 'sonner';
 import { isValidTransition, canUserChangeState, getValidNextStates } from '@/hooks/StateFlowValidator.js';
@@ -46,8 +46,8 @@ const PedidoInternoDetailPage = () => {
       if (res && res.pedido) {
         setData(res);
         try {
-          const uRes = await pb.collection('users').getFullList({ $autoCancel: false });
-          const map = uRes.reduce((acc, u) => ({...acc, [u.id]: u.name}), {});
+          const uRes = await apiClient.get('users', { token: authToken() }).catch(() => []);
+          const map = (uRes || []).reduce((acc, u) => ({...acc, [u.id]: u.name}), {});
           map[currentUser.id] = currentUser.name;
           setUsers(map);
         } catch (e) {

@@ -1,0 +1,19 @@
+---
+description: H&S ERP environment — stack, language, product scope. Always apply.
+alwaysApply: true
+---
+
+# H&S Tecnologías ERP
+
+Operational, minimalist ERP for registering and sharing work information. Not a finance suite.
+
+- **Docs** (`docs/**`, `agent.md`, READMEs): English.
+- **UI copy and code comments:** Spanish.
+- **Frontend now:** Vite + React in `apps/web`. Read `apps/web/agent.md`. Keep the SPA; improve working flows only. Short files. Reuse `components/ui` and existing modals.
+- **Backend target:** NestJS + **Prisma** + MySQL in `apps/api` (sales service). Default SPA stays mock (`VITE_API_MODE=mock`). Read `apps/api/agent.md`.
+- **In scope:** users (manual), sessions/activity, clients, quotations (`borrador` → `enviado` → `aceptado`|`rechazado`, PDF on disk), relevamientos, monthly seller goals, 3 sucursales (Central, Punata, Quillacollo), sales-goal metrics, **schedules (cronograma)**, tasks (floating panel). Sales/jobs/payments stay frozen.
+- **Out of scope for now:** finance module, costos, egresos/ingresos, quotation biblioteca, Nest rewrite of the UI, TypeORM.
+- pnpm only. No PocketBase at runtime. No quotation line-items. No hard delete of quotations.
+- Domain logic lives in `apps/web/src/services/*`. One domain, one owner.
+- Frontend deploy: GitHub Actions compiles `dist/`; Hostinger only publishes. See `.cursor/rules/frontend-cicd.mdc`.
+- API deploy: separate Hostinger Node Web App + MySQL. See `.cursor/rules/backend-cicd.mdc`.

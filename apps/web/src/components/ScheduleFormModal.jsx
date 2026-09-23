@@ -14,12 +14,15 @@ import { useTecnicosList } from '@/hooks/useTecnicosList.js';
 import { useSucursalesList } from '@/hooks/useSucursalesList.js';
 import { useSchedules } from '@/hooks/useSchedules.js';
 import LocationPickerModal from '@/components/LocationPickerModal.jsx';
-import pb from '@/lib/pocketbaseClient.js';
+import clientsService from '@/services/clients/index.js';
+import { surveysService } from '@/services/surveys/index.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 
 const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
+  const { isAdmin } = useAuth();
   const { vendors, loading: vendorsLoading } = useVendedorList();
   const { tecnicos, loading: tecnicosLoading } = useTecnicosList();
   const { sucursales, loading: sucursalesLoading } = useSucursalesList();
@@ -75,26 +78,20 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const fetchVisitas = async (tipo) => {
     setVisitasLoading(true);
     try {
+      const records = await surveysService.getAll();
       const tipoVisita = tipo === 'asistencia' ? 'Asistencia' : 'Relevamiento';
-      const records = await pb.collection('visitas_tecnicas').getFullList({
-        filter: pb.filter('tipo_visita = {:t}', { t: tipoVisita }),
-        sort: '-fecha', $autoCancel: false
-      });
-      setVisitasList(records);
+      setVisitasList((records || []).filter((row) => (row.tipo_visita || 'Relevamiento') === tipoVisita));
     } catch (e) { setVisitasList([]); } finally { setVisitasLoading(false); }
   };
 
   const fetchCajas = async () => {
-    try {
-      const res = await pb.collection('cajas_bancos').getFullList({ sort: 'nombre', $autoCancel: false });
-      setCajasList(res);
-    } catch (_) {}
+    setCajasList([]);
   };
 
   const fetchClients = async () => {
     setClientsLoading(true);
     try {
-      const records = await pb.collection('clientes').getFullList({ sort: 'nombre', $autoCancel: false });
+      const records = await clientsService.getAll();
       setClientsList(records);
     } catch (e) {
       toast.error('Error al cargar la lista de clientes');
@@ -103,19 +100,9 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     }
   };
 
-  const fetchPaymentStats = async (workId) => {
-    try {
-      const pays = await pb.collection('schedule_payments').getList(1, 500, {
-        filter: `trabajo_id="${workId}"`,
-        $autoCancel: false
-      });
-      const cobros = pays.items.reduce((sum, p) => sum + (p.monto_cobrado || 0), 0);
-      const descuentos = pays.items.reduce((sum, p) => sum + (p.descuento || 0), 0);
-      const adicionales = pays.items.reduce((sum, p) => sum + (p.adicional || 0), 0);
-      setPaymentStats({ cobros, descuentos, adicionales });
-    } catch (err) {
-      console.error("Error fetching payment stats:", err);
-    }
+  const fetchPaymentStats = async (_workId) => {
+    setPaymentStats({ cobros: 0, descuentos: 0, adicionales: 0 });
+    // Payment stats are managed via the schedule payments endpoint; not fetched here yet.
   };
 
   useEffect(() => {
@@ -267,42 +254,21 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     if (!formData.fecha_programada) { toast.error('La fecha programada es obligatoria'); return; }
     setIsSubmitting(true);
     try {
-      const visita = selectedVisita || visitasList.find(v => v.id === selectedVisitaId);
-      const authUserId = pb.authStore.record?.id || '';
-      const etiqueta = tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento';
-      const clienteNombre = visita?.cliente_nombre || 'Sin cliente';
-      const payload = {
-        tipo_entrada: tipoEntrada,
-        type: 'seguridad',
-        visita_id: selectedVisitaId,
-        cliente_id: visita?.cliente_id || '',
-        cliente: clienteNombre,
-        lugar: visita?.lugar || 'Sin ubicación',
-        fecha_programada: formData.fecha_programada,
-        estado: 'programado',
-        monto: 0,
-        adelanto: 0,
-        saldo: 0,
-        descripcion_trabajo: `${etiqueta} — ${clienteNombre}`,
-        tecnico_responsable_id: formData.tecnico_responsable_id || visita?.tecnico_id || '',
-        sucursal_id: visita?.sucursal_id || '',
-        sucursal: visita?.sucursal_nombre || '',
-        created_by: authUserId,
-      };
-      if (initialData?.id) {
-        await pb.collection('schedules').update(initialData.id, payload, { $autoCancel: false });
-        toast.success(`${tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} actualizado`);
-      } else {
-        await pb.collection('schedules').create(payload, { $autoCancel: false });
-        toast.success(`${tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} agregada al cronograma`);
-      }
-      if (onSave) onSave(); onClose();
+      // Visitas no son eventos del calendario: se reprograman en relevamientos (indicador).
+      await surveysService.update(selectedVisitaId, {
+        fecha: formData.fecha_programada,
+        tecnico_id: formData.tecnico_responsable_id || undefined,
+      });
+      toast.success(
+        `${tipoEntrada === 'asistencia' ? 'Asistencia' : 'Relevamiento'} programado para ${formData.fecha_programada}`,
+      );
+      if (onSave) onSave();
+      onClose();
     } catch (err) {
-      console.error('Error guardando visita en cronograma:', err?.response?.data || err);
-      const d = err?.response?.data || err?.data;
-      const first = d && typeof d === 'object' ? Object.keys(d)[0] : null;
-      toast.error(first ? `Error en campo ${first}: ${d[first]?.message || ''}` : (err.message || 'Error al guardar'));
-    } finally { setIsSubmitting(false); }
+      toast.error(err.message || 'Error al programar la visita');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -346,6 +312,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     if (formData.sucursal_id) data.append('sucursal_id', formData.sucursal_id);
     if (formData.vendedor_responsable_id) data.append('vendedor_responsable_id', formData.vendedor_responsable_id);
     if (formData.tecnico_responsable_id) data.append('tecnico_responsable_id', formData.tecnico_responsable_id);
+    if (initialData?.quotation_id) data.append('quotation_id', initialData.quotation_id);
     // Persist vendedor_id + vendedor_nombre for Cronograma/Finanzas/Dashboard/Reportes
     const vendedorObj = vendors?.find(v => v.id === formData.vendedor_responsable_id);
     data.append('vendedor_id', formData.vendedor_responsable_id || '');
@@ -358,6 +325,10 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 
     files.forEach(file => data.append('fotografias', file));
 
+    if (files.length > 0) {
+      toast.message('Las fotos del cronograma no se suben aún; el trabajo se guardará sin archivos.');
+    }
+
     try {
       let savedRecord;
       if (initialData?.id) {
@@ -365,79 +336,6 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
       } else {
         savedRecord = await createSchedule(data);
       }
-      const savedJobId = savedRecord?.id || initialData?.id;
-
-      // Handle adelanto — create schedule_payments record (Cobros/Rendición)
-      if (adelanto_recibido > 0 && savedJobId) {
-        const authUserId = pb.authStore.record?.id || '';
-        const sucursalNombre = sucursales?.find(s => s.id === formData.sucursal_id)?.nombre || '';
-        const cobradorId = authUserId;
-        const cobradorNombre = vendors?.find(v => v.id === formData.vendedor_responsable_id)?.name
-          || tecnicos?.find(t => t.id === formData.tecnico_responsable_id)?.nombre
-          || pb.authStore.record?.name || '';
-        const vendNombre = vendors?.find(v => v.id === formData.vendedor_responsable_id)?.name || '';
-
-        // Dedup: skip if Adelanto already registered for this job
-        let alreadyExists = false;
-        try {
-          const check = await pb.collection('schedule_payments').getList(1, 1, {
-            filter: pb.filter('trabajo_id = {:jid} && tipo = "Adelanto"', { jid: savedJobId }),
-            $autoCancel: false,
-          });
-          alreadyExists = check.totalItems > 0;
-        } catch (_) { alreadyExists = false; }
-
-        if (!alreadyExists) {
-          const cajaSel = adelantoCajaId ? cajasList.find(c => c.id === adelantoCajaId) : null;
-          const esDirecto = adelantoTipo === 'directo' && !!adelantoCajaId;
-          try {
-            await crearCobroRendicion({
-              trabajo_id: savedJobId,
-              tipo: 'Adelanto',
-              monto: adelanto_recibido,
-              metodo_pago: 'efectivo',
-              cliente_nombre: clientName,
-              sucursal_nombre: sucursalNombre,
-              vendedor_nombre: vendNombre,
-              cobrado_por_id: cobradorId,
-              cobrado_por_nombre: cobradorNombre,
-              origen: 'trabajo_adelanto',
-              confirmado: esDirecto,
-              caja_banco_id: adelantoCajaId || '',
-              caja_banco_nombre: cajaSel?.nombre || '',
-              observacion: 'Adelanto de trabajo',
-            });
-          } catch (spErr) {
-            console.error('Error creando Cobro/Rendición (adelanto):', spErr?.response?.data || spErr);
-            toast.error('Trabajo guardado, pero el adelanto no se registró en Cobros/Rendición.');
-          }
-
-          // If Admin/Ventas selected direct-to-caja, also create movimiento immediately
-          if (esDirecto) {
-            try {
-              const caja = adelantoCajaId ? cajasList.find(c => c.id === adelantoCajaId) : null;
-              await pb.collection('movimientos').create({
-                tipo: 'ingreso',
-                categoria: 'Cobro de trabajo',
-                descripcion: `Adelanto trabajo — ${clientName}`,
-                fecha: formData.fecha_programada,
-                monto: adelanto_recibido,
-                caja_banco_id: adelantoCajaId || '',
-                caja_banco_nombre: caja?.nombre || '',
-                trabajo_id: savedJobId,
-                cliente_nombre: clientName,
-                estado: 'confirmado',
-                origen: 'adelanto_trabajo',
-                id_origen: savedJobId,
-                created_by: authUserId,
-              }, { $autoCancel: false });
-            } catch (movErr) {
-              console.error('Error registrando movimiento del adelanto:', movErr?.response?.data || movErr);
-            }
-          }
-        }
-      }
-
       toast.success("Trabajo guardado correctamente");
       if (onSave) onSave();
       onClose();
@@ -475,10 +373,10 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 
           {!initialData && (
             <div className="flex gap-1 p-1 bg-muted rounded-xl border border-border">
-              {[{k:'trabajo',l:'Trabajo'},{k:'asistencia',l:'Asistencia'},{k:'relevamiento',l:'Relevamiento'}].map(({k,l}) => (
+              {[{k:'trabajo',l:'Trabajo',primary:true},{k:'asistencia',l:'Asistencia',primary:false},{k:'relevamiento',l:'Relevamiento',primary:false}].map(({k,l,primary}) => (
                 <button key={k} type="button"
                   onClick={() => { setTipoEntrada(k); setSelectedVisitaId(''); setSelectedVisita(null); if (k !== 'trabajo') fetchVisitas(k); }}
-                  className={`flex-1 px-3 py-2 rounded-lg font-bold text-sm transition-all ${tipoEntrada===k ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`flex-1 px-3 py-2 rounded-lg font-bold text-sm transition-all ${tipoEntrada===k ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'} ${!primary ? 'opacity-70 text-xs' : ''}`}
                 >{l}</button>
               ))}
             </div>

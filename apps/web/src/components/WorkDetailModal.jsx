@@ -7,8 +7,8 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { MapPin, User, Wrench, Clock, CheckCircle2, XCircle, Calendar, MessageSquare as MessageSquareText, FileText, Landmark, Trash2, Loader2, MapPinned, Copy } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import pb from '@/lib/pocketbaseClient.js';
-import { calculateBalance } from '@/hooks/useSchedules.js';
+import schedulesService, { calculateBalance } from '@/services/schedules/index.js';
+import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import PaymentModal from '@/components/PaymentModal.jsx';
@@ -28,6 +28,7 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
 
   const [modalView, setModalView] = useState(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [payments, setPayments] = useState([]);
 
   const canEditFull = isAdmin() || isVentas();
 
@@ -35,35 +36,33 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     if (!id) return;
     setLoadingData(true);
     try {
-      const data = await pb.collection('schedules').getOne(id, { $autoCancel: false });
-
+      const data = await schedulesService.getById(id);
+      if (!data) throw Object.assign(new Error('No encontrado'), { status: 404 });
       const { saldo, estado_pago } = calculateBalance(data);
-
-      const [clienteData, tecnicoData, allUsers] = await Promise.all([
-        data.cliente_id
-          ? pb.collection('clientes').getOne(data.cliente_id, { $autoCancel: false }).catch(() => null)
-          : Promise.resolve(null),
-        data.tecnico_responsable_id
-          ? pb.collection('tecnicos').getOne(data.tecnico_responsable_id, { $autoCancel: false }).catch(() => null)
-          : Promise.resolve(null),
-        pb.collection('users').getFullList({ $autoCancel: false, fields: 'id,name' }).catch(() => []),
-      ]);
-      const vendedorData = data.vendedor_responsable_id
-        ? (allUsers.find(u => u.id === data.vendedor_responsable_id) || null)
-        : null;
-      // If vendedor_nombre is stored on the record, use it directly
-      const vendedorNombre = data.vendedor_nombre || vendedorData?.name || null;
-
-      setTrabajo({ ...data, saldo, estado_pago, clienteData, tecnicoData, vendedorData, vendedorNombre });
-
+      setTrabajo({
+        ...data,
+        saldo,
+        estado_pago,
+        clienteData: data.clientData || data.cliente || null,
+        tecnicoData: data.tecnico_nombre ? { nombre: data.tecnico_nombre } : null,
+        vendedorData: data.vendedor_nombre ? { name: data.vendedor_nombre } : null,
+        vendedorNombre: data.vendedor_nombre || null,
+      });
+      try {
+        const pays = await schedulesService.getPayments(id);
+        setPayments(pays || []);
+      } catch {
+        setPayments([]);
+      }
     } catch (err) {
-      console.error("Error loading work details:", err);
+      console.error('Error loading work details:', err);
       if (err?.status === 404) {
-        toast.error('Este trabajo ya no existe. Puede haber sido eliminado.');
+        toast.error('Este trabajo ya no existe.');
         if (onWorkDeleted) onWorkDeleted(id);
         onClose();
       }
       setTrabajo(null);
+      setPayments([]);
     } finally {
       setLoadingData(false);
     }
@@ -73,15 +72,10 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     if (!id) return;
     setLoadingObs(true);
     try {
-      const obs = await pb.collection('schedule_observations').getList(1, 50, {
-        filter: `trabajo_id="${id}"`,
-        sort: '-created',
-        expand: 'usuario_id',
-        $autoCancel: false
-      });
-      setObservaciones(obs.items || []);
+      const obs = await schedulesService.getObservations(id);
+      setObservaciones(obs || []);
     } catch (err) {
-      console.error("Error loading observations:", err);
+      console.error('Error loading observations:', err);
       setObservaciones([]);
     } finally {
       setLoadingObs(false);
@@ -111,6 +105,13 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     // Update local state to reflect new saldo and estado_pago immediately
     const { saldo, estado_pago } = calculateBalance(updatedWork);
     const fullyUpdatedWork = { ...updatedWork, saldo, estado_pago };
+    setTrabajo((prev) => ({ ...prev, ...fullyUpdatedWork }));
+    try {
+      const pays = await schedulesService.getPayments(updatedWork.id || workId);
+      setPayments(pays || []);
+    } catch {
+      /* keep previous */
+    }
     
     setTrabajo(fullyUpdatedWork);
     await loadObservations(workId);
@@ -127,25 +128,10 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     if (!trabajo?.id) return;
     setIsCompleting(true);
     try {
-      const authUserId = pb.authStore.record?.id || '';
-      await pb.collection('schedules').update(trabajo.id, {
-        estado: 'completado',
-        fecha_finalizacion: new Date().toISOString(),
-        updated_by: authUserId,
-      }, { $autoCancel: false });
-
-      // Si es Asistencia/Relevamiento vinculado a una visita técnica, marcarla como Resuelto
-      if (trabajo.visita_id) {
-        try {
-          await pb.collection('visitas_tecnicas').update(trabajo.visita_id, {
-            estado: 'Resuelto',
-          }, { $autoCancel: false });
-        } catch (e) {
-          console.warn('No se pudo sincronizar la visita técnica:', e);
-        }
-      }
-
-      toast.success('Marcado como completado');
+      await schedulesService.updateStatus(trabajo.id, 'terminado', {
+        fecha_finalizacion: new Date().toISOString().slice(0, 10),
+      });
+      toast.success('Marcado como terminado');
       await loadWorkDetails(workId);
       if (onWorkUpdated) onWorkUpdated(workId);
     } catch (err) {
@@ -178,7 +164,7 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     if (!trabajo?.id) return;
     setIsDeleting(true);
     try {
-      await pb.collection('schedules').delete(trabajo.id, { $autoCancel: false });
+      await apiClient.delete(`schedules/${trabajo.id}`, { token: authToken() });
       toast.success('Trabajo eliminado correctamente');
       setIsDeleteDialogOpen(false);
       if (onWorkDeleted) onWorkDeleted(trabajo.id);
@@ -238,6 +224,9 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
   const costoTotal = parseFloat(trabajo.monto || trabajo.costo_total || 0);
   const adelantoRecibido = parseFloat(trabajo.adelanto || trabajo.adelanto_recibido || 0);
   const saldoActual = parseFloat(trabajo.saldo || 0);
+  const extrasAsistencia = (payments || [])
+    .filter((p) => p.tipo === 'extra_asistencia')
+    .reduce((s, p) => s + Number(p.monto_cobrado ?? p.monto ?? 0), 0);
 
   const formattedDate = trabajo.fecha_programada ? format(parseISO(trabajo.fecha_programada.split(' ')[0]), "d 'de' MMMM, yyyy", { locale: es }) : 'Sin fecha';
   const clienteNombre = trabajo.clienteData?.nombre || trabajo.cliente || 'Sin cliente';
@@ -266,6 +255,21 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5"/> Qué se debe hacer</h4>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{trabajo.descripcion_trabajo || 'Sin descripción'}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/> Fecha y horario</h4>
+                  <p className="font-medium text-foreground capitalize">{formattedDate}</p>
+                  {trabajo.horario ? (
+                    <p className="text-sm text-primary font-semibold mt-1 flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" /> {trabajo.horario}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">Sin horario específico</p>
+                  )}
+                </div>
+                <div>
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/> Lugar</h4>
                   <p className="font-medium text-foreground">{trabajo.lugar || 'No especificado'}</p>
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -279,25 +283,20 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
                     </Button>
                   </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/> Fecha Programada</h4>
-                  <p className="font-medium text-foreground capitalize">{formattedDate}</p>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5"/> Descripción</h4>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{trabajo.descripcion_trabajo || 'Sin descripción'}</p>
-                </div>
               </div>
 
               <div className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="flex gap-4 mb-4">
-                  <div className="flex-1">
-                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><Wrench className="h-3.5 w-3.5"/> Técnico</h4>
-                    <p className="text-sm font-medium text-foreground">{trabajo.tecnicoData?.nombre || 'No asignado'}</p>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><User className="h-3.5 w-3.5"/> Vendedor</h4>
-                    <p className="text-sm font-medium text-foreground">{trabajo.vendedorNombre || trabajo.vendedorData?.name || 'No asignado'}</p>
+                <div>
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Participantes</h4>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><Wrench className="h-3 w-3"/> Técnico</h5>
+                      <p className="text-sm font-medium text-foreground">{trabajo.tecnicoData?.nombre || trabajo.tecnico_nombre || 'No asignado'}</p>
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5"><User className="h-3 w-3"/> Vendedor</h5>
+                      <p className="text-sm font-medium text-foreground">{trabajo.vendedorNombre || trabajo.vendedorData?.name || trabajo.vendedor_nombre || 'No asignado'}</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -307,16 +306,22 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
                     <span className="font-medium tabular-nums">${costoTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Adelanto Recibido:</span>
-                    <span className="font-medium tabular-nums text-emerald-600">-${adelantoRecibido.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Adelanto / cobros:</span>
+                    <span className="font-medium tabular-nums text-emerald-600">-${Number(adelantoRecibido ?? 0).toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center pt-3 mt-3 border-t-2 border-slate-200 dark:border-slate-800">
                     <span className="font-bold uppercase text-xs tracking-wider">Saldo Pendiente</span>
                     <span className={`font-black text-lg tabular-nums flex items-center ${saldoActual > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                      ${saldoActual.toFixed(2)}
+                      ${Number(saldoActual ?? 0).toFixed(2)}
                     </span>
                   </div>
+                  {extrasAsistencia > 0 ? (
+                    <div className="flex justify-between items-center text-sm pt-1">
+                      <span className="text-muted-foreground">Extras asistencia (fuera de presupuesto):</span>
+                      <span className="font-medium tabular-nums">${Number(extrasAsistencia).toFixed(2)}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between items-center pt-2">
                     <span className="font-bold uppercase text-xs tracking-wider">Estado de Pago</span>
                     {getPaymentBadge(trabajo.estado_pago)}
