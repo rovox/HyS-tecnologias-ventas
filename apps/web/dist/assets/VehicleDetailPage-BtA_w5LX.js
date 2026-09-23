@@ -1,1 +1,0 @@
-import{j as e}from"./index-Ubk2niU3.js";import{U as o}from"./UnderConstructionPage-BYDMUIcK.js";import"./Helmet-DgGFQECi.js";import"./Layout-Ds-ZHIMC.js";import"./button-D-C9e1ZL.js";import"./index-D7TCTBrn.js";const s=()=>e.jsx(o,{moduleName:"Detalle de Vehículo"});export{s as default};

@@ -325,8 +325,8 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 
     files.forEach(file => data.append('fotografias', file));
 
-    if (!isMockMode && files.length > 0) {
-      toast.message('Las fotos del cronograma no se suben aún en modo API; el trabajo se guardará sin archivos.');
+    if (files.length > 0) {
+      toast.message('Las fotos del cronograma no se suben aún; el trabajo se guardará sin archivos.');
     }
 
     try {

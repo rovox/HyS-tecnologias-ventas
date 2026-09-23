@@ -1,0 +1,1 @@
+import{j as o}from"./index-BAHkUi5s.js";import{U as r}from"./UnderConstructionPage-BmoQJgr4.js";import"./Helmet-zzJ-eixU.js";import"./Layout-Cd9Zi_mv.js";import"./button-DDUHNN0X.js";import"./index-CEvFiUz6.js";function s(){return o.jsx(r,{moduleName:"Finanzas"})}export{s as default};
