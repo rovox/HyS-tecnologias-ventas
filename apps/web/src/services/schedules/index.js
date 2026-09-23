@@ -1,6 +1,4 @@
-import * as store from '@/mocks/store.js';
-import { SCHEDULE_FLOW } from '@/mocks/schedules.js';
-import { apiClient, authToken, isMockMode } from '@/api/http.js';
+import { apiClient, authToken } from '@/api/http.js';
 
 export function calculateBalance(trabajo) {
   const costo_total = parseFloat(trabajo.monto || trabajo.costo_total || 0);
@@ -54,224 +52,124 @@ function mapApiSchedule(row) {
   };
 }
 
-function normalize(record, clientsMap) {
-  const { saldo, estado_pago } = calculateBalance(record);
-  const clientData = clientsMap[record.cliente_id] || null;
-  const fallbackLocation = clientData?.direccion?.trim() ? clientData.direccion : 'Sin ubicación';
-  const dateStr = record.fecha_programada ? String(record.fecha_programada).split(' ')[0] : '';
-  return {
-    ...record,
-    saldo,
-    estado_pago,
-    cliente_nombre: clientData?.nombre || record.cliente || 'Sin cliente',
-    tipo_trabajo: record.type,
-    lugar: record.lugar?.trim() ? record.lugar : fallbackLocation,
-    fecha_programada: dateStr,
-    vendedor_id: record.vendedor_responsable_id,
-    tecnico_id: record.tecnico_responsable_id,
-    costo_total: record.monto || 0,
-    clientData,
-  };
-}
-
 export const schedulesService = {
   async getAll(filters = {}) {
-    if (!isMockMode) {
-      const rows = await apiClient.get('schedules', {
-        token: authToken(),
-        query: {
-          estado: filters.estado,
-          sucursalId: filters.sucursalId,
-          from: filters.from,
-          to: filters.to,
-          tecnicoId: filters.tecnicoId,
-          quotationId: filters.quotationId || filters.quotation_id,
-          clienteId: filters.clienteId || filters.cliente_id,
-        },
-      });
-      return (rows || []).map(mapApiSchedule);
-    }
-    let records = store.list('schedules', { sort: '-fecha_programada' });
-    if (filters.quotationId || filters.quotation_id) {
-      const qid = filters.quotationId || filters.quotation_id;
-      records = records.filter((row) => row.quotation_id === qid || row.quotationId === qid);
-    }
-    if (filters.clienteId || filters.cliente_id) {
-      const cid = filters.clienteId || filters.cliente_id;
-      records = records.filter((row) => row.cliente_id === cid || row.clienteId === cid);
-    }
-    const clients = store.list('clientes');
-    const clientsMap = Object.fromEntries(clients.map((row) => [row.id, row]));
-    return records.map((row) => normalize(row, clientsMap));
+    const rows = await apiClient.get('schedules', {
+      token: authToken(),
+      query: {
+        estado: filters.estado,
+        sucursalId: filters.sucursalId,
+        from: filters.from,
+        to: filters.to,
+        tecnicoId: filters.tecnicoId,
+        quotationId: filters.quotationId || filters.quotation_id,
+        clienteId: filters.clienteId || filters.cliente_id,
+      },
+    });
+    return (rows || []).map(mapApiSchedule);
   },
 
   async getById(id) {
-    if (!isMockMode) {
-      return mapApiSchedule(await apiClient.get(`schedules/${id}`, { token: authToken() }));
-    }
-    const record = store.findById('schedules', id);
-    if (!record) return null;
-    const clients = store.list('clientes');
-    const clientsMap = Object.fromEntries(clients.map((row) => [row.id, row]));
-    return normalize(record, clientsMap);
+    return mapApiSchedule(await apiClient.get(`schedules/${id}`, { token: authToken() }));
   },
 
   async create(data) {
     const payload = data instanceof FormData ? Object.fromEntries(data.entries()) : { ...data };
-    if (!isMockMode) {
-      return mapApiSchedule(await apiClient.post('schedules', {
-        type: payload.type || payload.tipo_trabajo || 'seguridad',
-        clienteId: payload.clienteId || payload.cliente_id,
-        descripcionTrabajo: payload.descripcionTrabajo || payload.descripcion_trabajo || '',
-        sucursalId: payload.sucursalId || payload.sucursal_id,
-        fechaProgramada: payload.fechaProgramada || payload.fecha_programada,
-        lugar: payload.lugar,
-        monto: Number(payload.monto ?? payload.costo_total ?? 0),
-        adelanto: Number(payload.adelanto ?? 0),
-        horario: payload.horario || undefined,
-        vendedorId: payload.vendedorId || payload.vendedor_responsable_id || undefined,
-        tecnicoId: payload.tecnicoId || payload.tecnico_responsable_id || undefined,
-        quotationId: payload.quotationId || payload.quotation_id || undefined,
-        observaciones: payload.observaciones || undefined,
-        mapsLink: payload.mapsLink || payload.google_maps_link || undefined,
-        estado: payload.estado || 'programado',
-      }, { token: authToken() }));
-    }
-    if (!payload.cliente_id) throw new Error('cliente_id es requerido');
-    payload.estado = payload.estado || 'programado';
-    const { saldo } = calculateBalance(payload);
-    payload.saldo = saldo;
-    return store.insert('schedules', payload);
+    return mapApiSchedule(await apiClient.post('schedules', {
+      type: payload.type || payload.tipo_trabajo || 'seguridad',
+      clienteId: payload.clienteId || payload.cliente_id,
+      descripcionTrabajo: payload.descripcionTrabajo || payload.descripcion_trabajo || '',
+      sucursalId: payload.sucursalId || payload.sucursal_id,
+      fechaProgramada: payload.fechaProgramada || payload.fecha_programada,
+      lugar: payload.lugar,
+      monto: Number(payload.monto ?? payload.costo_total ?? 0),
+      adelanto: Number(payload.adelanto ?? 0),
+      horario: payload.horario || undefined,
+      vendedorId: payload.vendedorId || payload.vendedor_responsable_id || undefined,
+      tecnicoId: payload.tecnicoId || payload.tecnico_responsable_id || undefined,
+      quotationId: payload.quotationId || payload.quotation_id || undefined,
+      observaciones: payload.observaciones || undefined,
+      mapsLink: payload.mapsLink || payload.google_maps_link || undefined,
+      estado: payload.estado || 'programado',
+    }, { token: authToken() }));
   },
 
   async update(id, data) {
     const payload = data instanceof FormData ? Object.fromEntries(data.entries()) : { ...data };
-    if (!isMockMode) {
-      return mapApiSchedule(await apiClient.patch(`schedules/${id}`, {
-        lugar: payload.lugar,
-        descripcionTrabajo: payload.descripcionTrabajo || payload.descripcion_trabajo,
-        monto: payload.monto !== undefined ? Number(payload.monto) : undefined,
-        adelanto: payload.adelanto !== undefined ? Number(payload.adelanto) : undefined,
-        fechaProgramada: payload.fechaProgramada || payload.fecha_programada,
-        horario: payload.horario,
-        vendedorId: payload.vendedorId || payload.vendedor_responsable_id,
-        tecnicoId: payload.tecnicoId || payload.tecnico_responsable_id,
-        observaciones: payload.observaciones,
-        mapsLink: payload.mapsLink || payload.google_maps_link,
-        estado: payload.estado,
-        fechaFinalizacion: payload.fechaFinalizacion || payload.fecha_finalizacion,
-      }, { token: authToken() }));
-    }
-    const updated = store.update('schedules', id, payload);
-    if (!updated) throw new Error('Trabajo no encontrado');
-    return updated;
+    return mapApiSchedule(await apiClient.patch(`schedules/${id}`, {
+      lugar: payload.lugar,
+      descripcionTrabajo: payload.descripcionTrabajo || payload.descripcion_trabajo,
+      monto: payload.monto !== undefined ? Number(payload.monto) : undefined,
+      adelanto: payload.adelanto !== undefined ? Number(payload.adelanto) : undefined,
+      fechaProgramada: payload.fechaProgramada || payload.fecha_programada,
+      horario: payload.horario,
+      vendedorId: payload.vendedorId || payload.vendedor_responsable_id,
+      tecnicoId: payload.tecnicoId || payload.tecnico_responsable_id,
+      observaciones: payload.observaciones,
+      mapsLink: payload.mapsLink || payload.google_maps_link,
+      estado: payload.estado,
+      fechaFinalizacion: payload.fechaFinalizacion || payload.fecha_finalizacion,
+    }, { token: authToken() }));
   },
 
   async updateStatus(id, estado, extra = {}) {
-    if (!isMockMode) {
-      return mapApiSchedule(await apiClient.post(`schedules/${id}/status`, {
-        estado,
-        fechaFinalizacion: extra.fecha_finalizacion || extra.fechaFinalizacion,
-      }, { token: authToken() }));
-    }
-    const current = store.findById('schedules', id);
-    if (!current) throw new Error('Trabajo no encontrado');
-    if (current.estado !== estado) {
-      const allowed = SCHEDULE_FLOW[current.estado] || [];
-      if (!allowed.includes(estado) && estado !== 'cancelado') {
-        throw new Error(`Transición inválida: ${current.estado} → ${estado}`);
-      }
-    }
-    const payload = { ...extra, estado };
-    if (estado === 'terminado') {
-      payload.fecha_finalizacion = extra.fecha_finalizacion || new Date().toISOString().slice(0, 10);
-    }
-    return store.update('schedules', id, payload);
+    return mapApiSchedule(await apiClient.post(`schedules/${id}/status`, {
+      estado,
+      fechaFinalizacion: extra.fecha_finalizacion || extra.fechaFinalizacion,
+    }, { token: authToken() }));
   },
 
   async assignTechnician(id, tecnicoId) {
-    if (!isMockMode) {
-      return this.update(id, { tecnicoId });
-    }
-    const tec = store.findById('tecnicos', tecnicoId);
-    return store.update('schedules', id, {
-      tecnico_responsable_id: tecnicoId,
-      tecnico_nombre: tec?.nombre || '',
-    });
+    return this.update(id, { tecnicoId });
   },
 
   async getObservations(trabajo_id) {
-    if (!isMockMode) {
-      const row = await this.getById(trabajo_id);
-      const text = String(row?.observaciones || '').trim();
-      if (!text) return [];
-      return text.split('\n').filter(Boolean).map((observacion, index) => ({
-        id: `${trabajo_id}-obs-${index}`,
-        trabajo_id,
-        observacion,
-        tipo: 'nota',
-        created: row?.updated || row?.updatedAt || null,
-      }));
-    }
-    return store.list('schedule_observations', { filter: `trabajo_id="${trabajo_id}"`, sort: '-created' });
+    const row = await this.getById(trabajo_id);
+    const text = String(row?.observaciones || '').trim();
+    if (!text) return [];
+    return text.split('\n').filter(Boolean).map((observacion, index) => ({
+      id: `${trabajo_id}-obs-${index}`,
+      trabajo_id,
+      observacion,
+      tipo: 'nota',
+      created: row?.updated || row?.updatedAt || null,
+    }));
   },
 
-  async addObservation(trabajo_id, observacion, usuario_id, tipo = 'nota') {
-    if (!isMockMode) {
-      const row = await this.getById(trabajo_id);
-      return this.update(trabajo_id, {
-        observaciones: [row?.observaciones, observacion].filter(Boolean).join('\n'),
-      });
-    }
-    return store.insert('schedule_observations', {
-      trabajo_id,
-      usuario_id,
-      observacion,
-      tipo,
-      created_by: usuario_id,
+  async addObservation(trabajo_id, observacion) {
+    const row = await this.getById(trabajo_id);
+    return this.update(trabajo_id, {
+      observaciones: [row?.observaciones, observacion].filter(Boolean).join('\n'),
     });
   },
 
   async getPayments(trabajo_id) {
-    if (!isMockMode) {
-      if (!trabajo_id) return [];
-      const rows = await apiClient.get(`schedules/${trabajo_id}/payments`, { token: authToken() });
-      return (rows || []).map((p) => ({
-        ...p,
-        trabajo_id: p.scheduleId || trabajo_id,
-        monto_cobrado: Number(p.monto ?? p.monto_cobrado ?? 0),
-        medio_pago: p.metodo || p.medio_pago || '',
-        tipo: p.tipo,
-        created: p.at || p.createdAt,
-      }));
-    }
-    if (trabajo_id) {
-      return store.list('schedule_payments', { filter: `trabajo_id="${trabajo_id}"`, sort: '-created' });
-    }
-    return store.list('schedule_payments', { sort: '-created' });
+    if (!trabajo_id) return [];
+    const rows = await apiClient.get(`schedules/${trabajo_id}/payments`, { token: authToken() });
+    return (rows || []).map((p) => ({
+      ...p,
+      trabajo_id: p.scheduleId || trabajo_id,
+      monto_cobrado: Number(p.monto ?? p.monto_cobrado ?? 0),
+      medio_pago: p.metodo || p.medio_pago || '',
+      tipo: p.tipo,
+      created: p.at || p.createdAt,
+    }));
   },
 
   async registerPayment(paymentData) {
     const trabajoId = paymentData.trabajo_id || paymentData.schedule_id;
-    if (!isMockMode) {
-      if (!trabajoId) throw new Error('Trabajo requerido');
-      const tipoRaw = paymentData.tipo || paymentData.tipo_cobro || 'cobro';
-      const tipo = tipoRaw === 'adelanto' ? 'adelanto' : tipoRaw === 'extra_asistencia' ? 'extra_asistencia' : 'cobro';
-      const updated = await apiClient.post(`schedules/${trabajoId}/payments`, {
-        tipo,
-        monto: Number(paymentData.monto_cobrado ?? paymentData.monto ?? 0),
-        metodo: paymentData.medio_pago || paymentData.metodo || '',
-        nota: paymentData.observacion || paymentData.nota || '',
-        relevamientoId: paymentData.relevamiento_id || paymentData.relevamientoId || undefined,
-        quotationId: paymentData.quotation_id || paymentData.quotationId || undefined,
-      }, { token: authToken() });
-      return mapApiSchedule(updated);
-    }
-    const job = store.findById('schedules', trabajoId);
-    if (!job) throw new Error('Trabajo no encontrado');
-    // El saldo del trabajo (adelanto/cobros_realizados) es responsabilidad de quien llama
-    // (ver calculateBalance + update/updateStatus); aquí solo queda el registro del pago.
-    return store.insert('schedule_payments', { ...paymentData, trabajo_id: trabajoId });
+    if (!trabajoId) throw new Error('Trabajo requerido');
+    const tipoRaw = paymentData.tipo || paymentData.tipo_cobro || 'cobro';
+    const tipo = tipoRaw === 'adelanto' ? 'adelanto' : tipoRaw === 'extra_asistencia' ? 'extra_asistencia' : 'cobro';
+    const updated = await apiClient.post(`schedules/${trabajoId}/payments`, {
+      tipo,
+      monto: Number(paymentData.monto_cobrado ?? paymentData.monto ?? 0),
+      metodo: paymentData.medio_pago || paymentData.metodo || '',
+      nota: paymentData.observacion || paymentData.nota || '',
+      relevamientoId: paymentData.relevamiento_id || paymentData.relevamientoId || undefined,
+      quotationId: paymentData.quotation_id || paymentData.quotationId || undefined,
+    }, { token: authToken() });
+    return mapApiSchedule(updated);
   },
 };
 

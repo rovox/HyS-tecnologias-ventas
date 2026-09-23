@@ -1,25 +1,10 @@
-import * as store from '@/mocks/store.js';
-
 export const financeService = {
-  async getMovimientos() {
-    return store.list('movimientos', { sort: '-fecha,-created' });
-  },
-  async getCajas() {
-    return store.list('cajas_bancos', { sort: 'nombre' });
-  },
-  async getGastos() {
-    return store.list('gastos_operativos', { sort: '-fecha' });
-  },
-  async getCostos() {
-    return store.list('costos_trabajo', { sort: '-fecha' });
-  },
-  async getPayments() {
-    return store.list('schedule_payments', { sort: '-created' });
-  },
-  async createMovimiento(data) {
-    // Por defecto queda pendiente de validación por un administrador, salvo que el llamador indique lo contrario.
-    return store.insert('movimientos', { estado: 'pendiente', ...data });
-  },
+  async getMovimientos() { return []; },
+  async getCajas() { return []; },
+  async getGastos() { return []; },
+  async getCostos() { return []; },
+  async getPayments() { return []; },
+  async createMovimiento() { throw new Error('Finance module not yet implemented'); },
 };
 
 export default financeService;

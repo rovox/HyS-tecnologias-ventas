@@ -1,0 +1,1 @@
+import{j as o}from"./index-Ubk2niU3.js";import{U as t}from"./UnderConstructionPage-BYDMUIcK.js";import"./Helmet-DgGFQECi.js";import"./Layout-Ds-ZHIMC.js";import"./button-D-C9e1ZL.js";import"./index-D7TCTBrn.js";const p=()=>o.jsx(t,{moduleName:"Gastos Operativos"});export{p as default};

@@ -35,6 +35,7 @@ async function request(method, path, { body, query, token } = {}) {
   if (!response.ok) {
     const raw = payload?.message;
     const message = Array.isArray(raw) ? raw.join(', ') : raw || `HTTP ${response.status}`;
+    console.error(`[apiClient] ${method} ${path} → ${response.status}`, message, payload);
     const error = new Error(message);
     error.status = response.status;
     error.data = payload;

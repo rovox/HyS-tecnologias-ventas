@@ -5,7 +5,7 @@ import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
-import { isCont, isTec, isVentas, relevamientoWhere } from '../auth/roles';
+import { isTec, isVentas, relevamientoWhere } from '../auth/roles';
 import { RealtimeService } from '../realtime/realtime.service';
 
 const ESTADOS = ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'];
@@ -32,7 +32,6 @@ export class RelevamientosService {
   ) {}
 
   list(user: User, cotizacionId?: string) {
-    if (isCont(user)) throw new ForbiddenException('Sin acceso a relevamientos');
     return this.prisma.relevamiento.findMany({
       where: relevamientoWhere(user, cotizacionId),
       include: { cliente: true, sucursal: true, cotizacion: true },
@@ -50,7 +49,6 @@ export class RelevamientosService {
   }
 
   async create(dto: UpsertRelevamientoDto, user: User, sessionId?: string) {
-    if (isCont(user)) throw new ForbiddenException('Sin acceso a relevamientos');
     const quote = await this.prisma.quotation.findUnique({ where: { id: dto.cotizacionId } });
     if (!quote) throw new BadRequestException('La cotización es obligatoria');
     if (!quote.clienteId) throw new BadRequestException('Asigna un cliente a la cotización antes del relevamiento');

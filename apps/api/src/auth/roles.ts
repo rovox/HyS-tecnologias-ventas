@@ -5,7 +5,6 @@ export const ROLES = {
   ADMIN: 'ADMINISTRADOR',
   VENTAS: 'VENTAS / ADMINISTRACIÓN',
   TEC: 'SEGURIDAD ELECTRÓNICA',
-  CONT: 'Contadora',
   NONE: 'SIN ACCESO',
 } as const;
 
@@ -19,10 +18,6 @@ export function isVentas(user?: User | null) {
 
 export function isTec(user?: User | null) {
   return user?.role === ROLES.TEC;
-}
-
-export function isCont(user?: User | null) {
-  return user?.role === ROLES.CONT;
 }
 
 export function isNone(user?: User | null) {
@@ -57,10 +52,9 @@ export function assertCanCreateSchedules(user: User) {
   }
 }
 
-/** Lectura: Admin/Contadora/Ventas ven todas las sucursales. sucursalId del usuario es solo default al crear. */
 export function scheduleWhere(user: User) {
   if (isNone(user)) return { id: '__none__' };
-  if (isAdmin(user) || isCont(user) || isVentas(user)) return {};
+  if (isAdmin(user) || isVentas(user)) return {};
   if (isTec(user)) return { tecnicoId: user.id };
   return { id: '__none__' };
 }
@@ -73,14 +67,14 @@ export function quotationWhere(user: User) {
 
 export function clientWhere(user: User) {
   if (isNone(user)) return { id: '__none__' };
-  if (isAdmin(user) || isCont(user) || isVentas(user)) return {};
+  if (isAdmin(user) || isVentas(user)) return {};
   if (isTec(user)) return {};
   return { id: '__none__' };
 }
 
 export function saleWhere(user: User) {
   if (isNone(user)) return { id: '__none__' };
-  if (isAdmin(user) || isCont(user)) return {};
+  if (isAdmin(user)) return {};
   if (isVentas(user)) {
     return {
       quotation: { OR: [{ vendedorId: user.id }, { sellers: { some: { userId: user.id } } }] },
@@ -113,6 +107,5 @@ export function metricsUserId(user: User, requested?: string) {
   if (isNone(user)) return user.id;
   if (isAdmin(user)) return requested;
   if (isVentas(user)) return user.id;
-  if (isCont(user)) return requested;
   return user.id;
 }

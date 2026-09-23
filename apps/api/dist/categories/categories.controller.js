@@ -47,7 +47,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_guard_1.Roles)(roles_1.ROLES.ADMIN, roles_1.ROLES.VENTAS, roles_1.ROLES.CONT),
+    (0, roles_guard_1.Roles)(roles_1.ROLES.ADMIN, roles_1.ROLES.VENTAS),
     (0, swagger_1.ApiOperation)({ summary: 'Create quotation category' }),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
@@ -59,7 +59,7 @@ __decorate([
 __decorate([
     (0, common_1.Patch)(':id'),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_guard_1.Roles)(roles_1.ROLES.ADMIN, roles_1.ROLES.VENTAS, roles_1.ROLES.CONT),
+    (0, roles_guard_1.Roles)(roles_1.ROLES.ADMIN, roles_1.ROLES.VENTAS),
     (0, swagger_1.ApiOperation)({ summary: 'Deactivate quotation category (soft delete)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
