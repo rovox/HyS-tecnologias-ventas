@@ -167,8 +167,8 @@ model Relevamiento {
   usuario      User      @relation(fields: [usuarioId], references: [id])
   clienteId    String
   cliente      Client    @relation(fields: [clienteId], references: [id])
-  sucursalId   String
-  sucursal     Sucursal  @relation(fields: [sucursalId], references: [id])
+  sucursalId   String?
+  sucursal     Sucursal? @relation(fields: [sucursalId], references: [id])
   fecha        DateTime  @db.Date
   fechaFin     DateTime? @db.Date
   tipoVisita   String    @default("relevamiento") @db.VarChar(32)
@@ -179,8 +179,8 @@ model Relevamiento {
   lugar        String    @db.VarChar(200)
   notas        String?   @db.Text
   fotosUrl     Json?
-  cotizacionId String
-  cotizacion   Quotation @relation(fields: [cotizacionId], references: [id])
+  cotizacionId String?
+  cotizacion   Quotation? @relation(fields: [cotizacionId], references: [id])
   payments     SchedulePayment[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

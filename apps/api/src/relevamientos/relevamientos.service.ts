@@ -49,15 +49,33 @@ export class RelevamientosService {
   }
 
   async create(dto: UpsertRelevamientoDto, user: User, sessionId?: string) {
-    const quote = await this.prisma.quotation.findUnique({ where: { id: dto.cotizacionId } });
-    if (!quote) throw new BadRequestException('La cotización es obligatoria');
-    if (!quote.clienteId) throw new BadRequestException('Asigna un cliente a la cotización antes del relevamiento');
+    let clienteId: string;
+    let sucursalId: string | null = null;
+    let cotizacionId: string | null = null;
+
+    if (dto.cotizacionId) {
+      const quote = await this.prisma.quotation.findUnique({ where: { id: dto.cotizacionId } });
+      if (!quote) throw new BadRequestException('Cotización no encontrada');
+      if (!quote.clienteId) throw new BadRequestException('Asigna un cliente a la cotización antes del relevamiento');
+      clienteId = quote.clienteId;
+      sucursalId = quote.sucursalId;
+      cotizacionId = quote.id;
+    } else if (dto.clienteId) {
+      const client = await this.prisma.client.findUnique({ where: { id: dto.clienteId } });
+      if (!client) throw new BadRequestException('Cliente no encontrado');
+      clienteId = dto.clienteId;
+      sucursalId = dto.sucursalId || null;
+      cotizacionId = null;
+    } else {
+      throw new BadRequestException('Debes indicar una cotización o un cliente');
+    }
+
     const defaultTipo = isTec(user) && !isVentas(user) ? 'asistencia' : 'relevamiento';
     const row = await this.prisma.relevamiento.create({
       data: {
         usuarioId: user.id,
-        clienteId: quote.clienteId,
-        sucursalId: quote.sucursalId,
+        clienteId,
+        sucursalId: sucursalId ?? undefined,
         fecha: new Date(dto.fecha),
         fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : null,
         tipoVisita: dto.tipoVisita || defaultTipo,
@@ -68,10 +86,10 @@ export class RelevamientosService {
         lugar: dto.lugar.trim(),
         notas: dto.notas || null,
         fotosUrl: dto.fotosUrl === undefined ? undefined : (dto.fotosUrl as object),
-        cotizacionId: quote.id,
+        cotizacionId: cotizacionId ?? undefined,
       },
     });
-    await this.prisma.touchClientActivity(quote.clienteId);
+    await this.prisma.touchClientActivity(clienteId);
     await this.activity.log(user.id, sessionId, 'relevamiento.create', 'relevamiento', row.id);
     this.realtime.emit('relevamiento.created', 'relevamiento', row.id, {
       byUserId: user.id,

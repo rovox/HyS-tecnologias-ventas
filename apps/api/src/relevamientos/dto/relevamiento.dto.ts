@@ -2,9 +2,20 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class UpsertRelevamientoDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  cotizacionId: string;
+  cotizacionId?: string;
+
+  @ApiPropertyOptional({ description: 'ID directo del cliente (cuando no hay cotización)' })
+  @IsOptional()
+  @IsString()
+  clienteId?: string;
+
+  @ApiPropertyOptional({ description: 'ID de sucursal (cuando no hay cotización)' })
+  @IsOptional()
+  @IsString()
+  sucursalId?: string;
 
   @ApiProperty({ example: '2026-08-21', description: 'Fecha de atención (inicio)' })
   @IsString()

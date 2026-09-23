@@ -43,7 +43,9 @@ export const surveysService = {
 
   async create(data) {
     const row = await apiClient.post('relevamientos', {
-      cotizacionId: data.cotizacionId || data.quotation_id || data.cotizacion_id,
+      cotizacionId: data.cotizacionId || data.quotation_id || data.cotizacion_id || undefined,
+      clienteId: data.cliente_id || data.clienteId || undefined,
+      sucursalId: data.sucursal_id || data.sucursalId || undefined,
       fecha: data.fecha || data.fecha_inicio,
       fechaFin: data.fecha_fin || data.fechaFin || undefined,
       tipoVisita: data.tipoVisita || (data.tipo_visita === 'Asistencia' ? 'asistencia' : 'relevamiento'),
