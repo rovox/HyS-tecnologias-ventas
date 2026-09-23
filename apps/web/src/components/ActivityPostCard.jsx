@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MoreHorizontal, Edit2, Archive, Trash2, MessageSquare } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient.js';
+const pb = null; // PocketBase removed
 import PhotoGallery from './PhotoGallery.jsx';
 import CommentThread from './CommentThread.jsx';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
