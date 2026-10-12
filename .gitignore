@@ -6,6 +6,7 @@ node_modules/
 
 # Builds (Hostinger POC ships a pre-built SPA — see docs/deployment/hostinger-frontend.md)
 dist/
+.dev-dist/
 build/
 out/
 !apps/web/dist/
