@@ -1,0 +1,45 @@
+# Database rules
+
+## Environments
+
+| Env | Where | Who writes |
+|---|---|---|
+| **local** | Docker MySQL 8.4, `127.0.0.1:3307`, db `hys_sales` | you, freely (`pnpm db:reset`) |
+| production | Hostinger MySQL `u656468476_hys_sales` | **only** reviewed SQL, applied by a human |
+
+All current data is test data. Until go-live, production is not a testing ground: do not deploy to test.
+
+## Schema changes
+
+1. Edit `apps/api/prisma/schema.prisma`.
+2. `pnpm --filter api prisma migrate dev --name <change>` (local only).
+3. Commit the migration **and** a copy of its SQL in `docs/deployment/sql/<date>_<change>.sql`.
+4. Ask for approval before: dropping/renaming tables or columns, changing stored role/status values.
+
+Never run `prisma migrate deploy`, `db push` or `seed` against Hostinger. Never connect the app to the production DB from a laptop.
+
+## Conventions
+
+- Status and role columns are `String` validated against constants in `common/` (no MySQL enums, to avoid migration churn). Allowed values are listed in `common/state-machine.ts` / `common/policy/roles.ts` only.
+- Money: `Decimal(12,2)`. Never `Float`.
+- Every foreign key is a real Prisma relation (missing today: `QuotationSeller.userId`, `SaleJob.asignadoId`, `Quotation.categoriaId`).
+- Totals stored on a parent (e.g. `Schedule.saldo`) are **recomputed in the same transaction** that writes the children.
+- Timestamps in UTC; the UI formats to local time.
+
+## Reading production safely (backups, schema checks)
+
+Production MySQL only listens on the server. Use SSH:
+
+```bash
+# On the server
+mysqldump -h 127.0.0.1 -u u656468476_hys_api -p u656468476_hys_sales > backup_$(date +%F).sql
+
+# From the laptop: tunnel, then connect a read-only client to localhost:3308
+ssh -p <ssh-port> -L 3308:127.0.0.1:3306 u656468476@<server-ip>
+```
+
+Use the tunnel only to read and to compare schemas (`prisma db pull` into a scratch folder). Writes go through reviewed SQL.
+
+## Seed
+
+`apps/api/prisma/seed.ts` must create at least one user per role, including **SEGURIDAD ELECTRÓNICA** (missing today), and data in every status of schedules, payments, quotations and orders, so every screen can be tested locally.
