@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "postinstall": "prisma generate --schema=./prisma/schema.prisma",
-    "dev": "nest build && nest start --watch -e \"node dist/main.js\"",
+    "dev": "nest build && API_STRICT_DTO=1 nest start --watch -e \"node dist/main.js\"",
     "build": "nest build",
     "start": "node dist/main.js",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",

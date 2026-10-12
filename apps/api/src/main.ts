@@ -20,6 +20,8 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      // Dev only (API_STRICT_DTO=1, set by `pnpm dev`): reject fields the API does not know instead of dropping them silently.
+      forbidNonWhitelisted: process.env.API_STRICT_DTO === '1',
       transform: true,
       transformOptions: { enableImplicitConversion: true },
     }),
