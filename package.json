@@ -22,7 +22,6 @@
     "dev:api": "pnpm --filter api dev",
     "build": "pnpm --filter web build",
     "build:web": "pnpm --filter web build",
-    "start": "concurrently --kill-others --raw \"pnpm --filter pocketbase-app start\"",
     "start:web": "pnpm --filter web start",
     "lint": "pnpm --filter web lint",
     "verify:dist": "pnpm --filter web verify:dist",

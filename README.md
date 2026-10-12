@@ -26,7 +26,7 @@ Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `denn
 | `pnpm start:web` | Preview del build |
 | `pnpm lint` | ESLint |
 | `pnpm dev:api` | NestJS sales en `:3001` (MySQL local) |
-| `pnpm dev` | Frontend + PocketBase legacy (no necesario para POC) |
+| `pnpm dev` | API (`:3001`) + frontend (`:3000`) |
 
 Documentación completa: **[`docs/README.md`](./docs/README.md)**
 
@@ -39,7 +39,6 @@ aca/
 ├── apps/
 │   ├── web/              ← SPA React + Vite (activo)
 │   ├── api/              ← NestJS sales (Prisma + MySQL)
-│   └── pocketbase/       ← Legacy / referencia auditada
 ├── docs/                 ← Documentación canónica modular
 │   ├── getting-started/
 │   ├── design/
@@ -143,5 +142,4 @@ git push origin migration/frontend-poc
 
 ## Licencia y notas
 
-- `apps/pocketbase/` se conserva como referencia del sistema auditado; el POC no lo ejecuta.
 - npm/yarn están bloqueados — usar solo **pnpm**.

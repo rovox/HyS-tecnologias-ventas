@@ -2,7 +2,6 @@ import React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Edit2, Trash2, Reply } from 'lucide-react';
-const pb = null; // PocketBase removed
 import PhotoGallery from './PhotoGallery.jsx';
 
 const CommentThread = ({ comments, parentId, postId, usersMap, currentUser, onReply, onEdit, onDelete, depth = 0 }) => {

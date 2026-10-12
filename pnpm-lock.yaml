@@ -256,18 +256,6 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@babel/generator':
-        specifier: ^7.26.3
-        version: 7.29.8
-      '@babel/parser':
-        specifier: ^7.26.3
-        version: 7.29.8
-      '@babel/traverse':
-        specifier: ^7.26.4
-        version: 7.29.8(supports-color@10.2.2)
-      '@babel/types':
-        specifier: ^7.26.3
-        version: 7.29.8
       '@types/node':
         specifier: ^20.17.10
         version: 20.19.43

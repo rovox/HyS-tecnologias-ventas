@@ -27,10 +27,6 @@ next-env.d.ts
 .env*.local
 apps/api/.env.test
 
-# PocketBase local data (NO subir a git)
-apps/pocketbase/pb_data/
-apps/pocketbase/pocketbase
-apps/pocketbase/pocketbase.zip
 *.db
 *.db-shm
 *.db-wal
