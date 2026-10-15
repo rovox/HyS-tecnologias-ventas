@@ -40,6 +40,13 @@ export function assertCanMutateClients(user: User) {
   }
 }
 
+/** Web contact-form requests (WEB-01): commercial roles only. */
+export function assertCanManageWebLeads(user: User) {
+  if (!isAdmin(user) && !isVentas(user)) {
+    throw new ForbiddenException('No puedes ver ni gestionar solicitudes web');
+  }
+}
+
 export function assertCanMutateSchedules(user: User) {
   if (!isAdmin(user) && !isVentas(user) && !isTec(user)) {
     throw new ForbiddenException('No puedes modificar el cronograma');

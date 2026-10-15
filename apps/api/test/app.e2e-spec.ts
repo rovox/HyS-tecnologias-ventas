@@ -89,6 +89,77 @@ describe('Sales API (e2e)', () => {
     expect(res.body.month).toBe('2026-08');
   });
 
+  describe('solicitudes web (WEB-01)', () => {
+    const key = 'e2e-web-leads-key';
+    const lead = {
+      nombre: 'Prueba E2E',
+      empresa: `Empresa E2E ${Date.now()}`,
+      email: `e2e-${Date.now()}@demo.bo`,
+      telefono: '70011122',
+      departamento: 'Cochabamba',
+      servicio: 'Cableado estructurado',
+      detalle: 'Cableado de 20 puntos Cat 6A con certificación.',
+    };
+    let solicitudId = '';
+    let tecToken = '';
+
+    beforeAll(async () => {
+      process.env.WEB_LEADS_KEY = key;
+      const tec = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'marcos.tec@demo.hs.local', password: 'marcos' });
+      tecToken = tec.body?.accessToken || tec.body?.token || '';
+    });
+
+    it('rejects the webhook without the key', async () => {
+      await request(app.getHttpServer()).post('/api/solicitudes-web/webhook').send(lead).expect(401);
+    });
+
+    it('stores a request with the right key', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/solicitudes-web/webhook')
+        .set('X-HS-Webhook-Key', key)
+        .send(lead)
+        .expect(201);
+      solicitudId = res.body.id;
+      expect(solicitudId).toBeTruthy();
+    });
+
+    it('lists requests for VENTAS and blocks technicians', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/solicitudes-web')
+        .query({ q: lead.empresa })
+        .set('Authorization', `Bearer ${ventasToken}`)
+        .expect(200);
+      expect(res.body[0]?.id).toBe(solicitudId);
+      await request(app.getHttpServer())
+        .get('/api/solicitudes-web')
+        .set('Authorization', `Bearer ${tecToken}`)
+        .expect(403);
+    });
+
+    it('converts into one client and reuses it for a repeated contact', async () => {
+      const first = await request(app.getHttpServer())
+        .post(`/api/solicitudes-web/${solicitudId}/convertir`)
+        .set('Authorization', `Bearer ${ventasToken}`)
+        .expect(201);
+      expect(first.body.created).toBe(true);
+      const clientId = first.body.client.id;
+
+      const again = await request(app.getHttpServer())
+        .post('/api/solicitudes-web/webhook')
+        .set('X-HS-Webhook-Key', key)
+        .send(lead)
+        .expect(201);
+      const second = await request(app.getHttpServer())
+        .post(`/api/solicitudes-web/${again.body.id}/convertir`)
+        .set('Authorization', `Bearer ${ventasToken}`)
+        .expect(201);
+      expect(second.body.created).toBe(false);
+      expect(second.body.client.id).toBe(clientId);
+    });
+  });
+
   it('frozen sales jobs require admin', async () => {
     await request(app.getHttpServer())
       .post('/api/sales/sale_andina/jobs')

@@ -419,3 +419,32 @@ model PedidoInternoComentario {
   @@index([autorId])
   @@map("pedido_interno_comentarios")
 }
+
+/// Contact-form requests from hstecnologias.com (WEB-01). Kept apart from
+/// Client on purpose: a request becomes an official Client only when sales
+/// converts it (POST /solicitudes-web/:id/convertir). `clienteId` stores the
+/// resulting client id without a Prisma relation, so Client is untouched.
+model SolicitudWeb {
+  id           String    @id @default(uuid())
+  nombre       String    @db.VarChar(200)
+  empresa      String    @default("") @db.VarChar(200)
+  email        String    @default("") @db.VarChar(200)
+  telefono     String    @default("") @db.VarChar(50)
+  departamento String    @default("") @db.VarChar(50)
+  servicio     String    @default("") @db.VarChar(100)
+  detalle      String    @db.Text
+  origen       String    @default("web") @db.VarChar(32)
+  pagina       String    @default("") @db.VarChar(500)
+  estado       String    @default("nueva") @db.VarChar(32)
+  notas        String    @db.Text
+  clienteId    String?
+  convertidaAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([estado])
+  @@index([email])
+  @@index([telefono])
+  @@index([createdAt])
+  @@map("solicitudes_web")
+}

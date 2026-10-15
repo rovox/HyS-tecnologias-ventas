@@ -15,6 +15,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { CategoriesModule } from './categories/categories.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { PedidosInternosModule } from './pedidos-internos/pedidos-internos.module';
+import { SolicitudesWebModule } from './solicitudes-web/solicitudes-web.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -50,6 +51,7 @@ import { HealthController } from './health.controller';
     CategoriesModule,
     RealtimeModule,
     PedidosInternosModule,
+    SolicitudesWebModule,
   ],
   controllers: [HealthController],
 })

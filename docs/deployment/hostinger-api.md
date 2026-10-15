@@ -115,6 +115,7 @@ Delete lowercase keys such as `cors_origin` / `upload_dir`. Nest reads **only** 
 | `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` — **required**; missing value aborts bootstrap |
 | `UPLOAD_DIR` | `/home/u656468476/hys-uploads/quotations` |
 | `ENABLE_SWAGGER` | Omit in production. Set `1` only when you intentionally need `/api/docs` |
+| `WEB_LEADS_KEY` | `openssl rand -hex 32` — shared secret for `POST /api/solicitudes-web/webhook` (WEB-01). The same value goes in WordPress `wp-config.php` as `HS_ERP_LEADS_KEY`. Without it the webhook answers 503 |
 
 `PORT` is assigned by Hostinger — do not override unless support says so.
 

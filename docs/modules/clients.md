@@ -16,6 +16,7 @@ The customer book. A Cliente is a company or person; "prospecto" is a state, not
 - [ ] CLI-02 Saldo adeudado total, computed in the API from Movimientos (never stored).
 - [ ] CLI-03 `prospecto` as a client state; every edit is audited (RT-01).
 - [ ] CLI-04 Create/edit appears in lists without reload (RT-02).
+- Related: WEB-01 (`docs/STATUS.md`). Website requests live in `solicitudes_web`, not in `clients`; converting one creates or links a Client (`POST /api/solicitudes-web/:id/convertir`). A converted request is the client's first touchpoint.
 
 ## Smoke steps
 1. Ventas: `/clientes` → create a client → it appears in the list; open its file.
