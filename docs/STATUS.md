@@ -28,7 +28,7 @@ Priority and scope from `business-design.md` §5. *S1\** = smoke S1 run on 2026-
 | Reports | 3 | 🟡 | after FIN | S1*: `/reports`, `/admin/management` load (admin) |
 | Accounting export | 3 | ⚪ | – | – |
 | Marketing, automation | 4 | ⚪ (frozen stub) | – | S1*: stub |
-| Web leads (`solicitudes-web`) | 4 | 🟡 | WEB-01 UI | API: 6 unit + 4 e2e green (2026-10-15) |
+| Web leads (`solicitudes-web`) | 4 | 🟡 | WEB-01 deploy | 2026-10-15: 6 unit + 4 e2e green; local WordPress form → list updates without reload (ventas) → convert opens the client file (with the PLAT-01 temporary fix) |
 | Realtime (SSE) | – | 🟡 | RT-01 | S8 not run |
 
 Module files exist only for priority 1 (`docs/modules/`). Others get one when their phase starts.
@@ -86,7 +86,7 @@ Module files exist only for priority 1 (`docs/modules/`). Others get one when th
 - [ ] AUTH-02 `forgot-password`: implement or remove endpoint + UI. AUTH-03 Branches `POST/PATCH/DELETE /sucursales` (admin) or remove the UI.
 
 ### F — Priority 3–4 and weight
-- [ ] WEB-01 Web leads from hstecnologias.com (`business-design.md` §6 "Formulario web"): table + webhook + list/convert API ✅ 2026-10-15 · ERP page `/solicitudes-web` · production deploy (migration + `WEB_LEADS_KEY`).
+- [ ] WEB-01 Web leads from hstecnologias.com (`business-design.md` §6 "Formulario web"): table + webhook + list/convert API ✅ 2026-10-15 · ERP page `/solicitudes-web` (admin, ventas) ✅ 2026-10-15 · production deploy (migration + `WEB_LEADS_KEY`) pending owner approval.
 - [ ] Vehicles (`useVehicleControl.js` still calls `pb.collection(...)` with `pb` undefined: rewrite on the ledger), Reports, Accounting export, Marketing, automation.
 - [ ] PLAT-07 Legacy inventory (~4.9k unreferenced lines: Schedules/Jobs/Surveys pages, Activity wall, Vehicles, Marketing, `services/orders`, `services/finance`): decide each (integrate/delete) and delete unused `components/ui/*` + packages (`docs/rules/libraries.md`).
 - [ ] ARCH-01 API `common/` (policy, state machine, audit, storage, pagination) · ARCH-02 one HTTP client, no snake_case mapping · ARCH-03 `features/<x>` one at a time · ARCH-04 split components >250 lines · ARCH-05 `lib/format.js`, `constants/status.js`, `<StatusBadge>`, Bs everywhere.

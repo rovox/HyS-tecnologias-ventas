@@ -19,6 +19,7 @@ const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
 const QuotationsLibraryPage = lazy(() => import('@/pages/QuotationsLibraryPage.jsx'));
 const ScheduleWorkPage = lazy(() => import('@/pages/ScheduleWorkPage.jsx'));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
+const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
 const PedidoInternoDetailPage = lazy(() => import('@/pages/PedidoInternoDetailPage.jsx'));
 const GastosOperativosPage = lazy(() => import('@/pages/GastosOperativosPage.jsx'));
 const VehicleControlPage = lazy(() => import('@/pages/VehicleControlPage.jsx'));
@@ -119,6 +120,12 @@ function App() {
             <Route path="/configuration" element={
               <ProtectedRoute allowedRoles={routeRoles.admin}>
                 <ConfigurationPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/solicitudes-web" element={
+              <ProtectedRoute allowedRoles={routeRoles.solicitudesWeb}>
+                <SolicitudesWebPage />
               </ProtectedRoute>
             } />
 

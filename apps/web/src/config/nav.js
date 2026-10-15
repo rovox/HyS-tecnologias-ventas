@@ -13,6 +13,7 @@ import {
   Megaphone,
   Calculator,
   Wallet,
+  Inbox,
 } from 'lucide-react';
 import { ROLES } from '@/constants/roles.js';
 
@@ -27,6 +28,7 @@ const TASK_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
 const REPORT_ROLES = [ROLES.ADMIN];
 const ADMIN_ONLY = [ROLES.ADMIN];
 const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
+const SOLICITUDES_WEB_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
 
 /**
  * Menú unificado: OPERACIONES primero para todos los roles.
@@ -44,6 +46,7 @@ export const operationalMenuSections = [
     items: [
       { to: '/quotations', icon: FileStack, label: 'Cotizaciones', allowedRoles: QUOTE_ROLES },
       { to: '/clientes', icon: Building2, label: 'Clientes', allowedRoles: CLIENT_ROLES },
+      { to: '/solicitudes-web', icon: Inbox, label: 'Solicitudes web', allowedRoles: SOLICITUDES_WEB_ROLES },
       { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
@@ -100,6 +103,7 @@ export const routeRoles = {
   activity: ALL_ROLES,
   admin: ADMIN_ONLY,
   pedidos: PEDIDOS_ROLES,
+  solicitudesWeb: SOLICITUDES_WEB_ROLES,
   frozen: ADMIN_ONLY,
   users: ALL_ROLES,
 };
