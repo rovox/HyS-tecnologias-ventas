@@ -38,7 +38,7 @@ mysqldump -h 127.0.0.1 -u u656468476_hys_api -p u656468476_hys_sales > backup_$(
 ssh -p <ssh-port> -L 3308:127.0.0.1:3306 u656468476@<server-ip>
 ```
 
-Use the tunnel only to read and to compare schemas (`prisma db pull` into a scratch folder). Writes go through reviewed SQL.
+Use the tunnel only to read and to compare schemas (`prisma db pull` into a scratch folder). Writes go through reviewed SQL, applied by one approved session after a backup. The SSH alias is `hostinger-hs` (`~/.ssh/config`). Prefer one scripted SSH session over many separate calls; do not use the Hostinger MCP connector for database work.
 
 ## Seed
 

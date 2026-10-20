@@ -28,7 +28,9 @@ Use the vocabulary of `business-design.md` (Proyecto, Actividad, Asistencia, Mov
 
 ## 3. Environment
 
-**Local only.** All development and testing happens on the local stack (`docs/rules/testing.md`). Never point the app, a script or a migration at the Hostinger database or API.
+**Local first.** All development and testing happens on the local stack (`docs/rules/testing.md`). Never point the app, a script or a migration at the Hostinger database or API, and nothing reaches Hostinger before the local promotion gate (`docs/STATUS.md`, LOCAL-04) passes.
+
+**Production database, the only exception:** read-only inspection through `ssh hostinger-hs` (backup, `information_schema`, row counts, `SHOW CREATE TABLE`) in a single session, with credentials read on the server and never printed or copied. Any write is a reviewed SQL script applied only after explicit approval, in one session, after a backup (`docs/rules/database.md`, "Reading production safely"). Do not use the Hostinger MCP connector for database work (it refuses connections under many requests).
 
 ```bash
 pnpm install

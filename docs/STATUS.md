@@ -54,7 +54,7 @@ Module files exist only for priority 1 (`docs/modules/`). Others get one when th
 
 ### 0 — Safety and decisions (hs-erp plan, 2026-10-19)
 - [x] P0-1 `docs/deployment/hostinger-users-hscontrol.sql` retired without touching any credential; replaced by `hostinger-users.md` + `scripts/generate-users-sql.mjs` (hashes from env, `INSERT IGNORE`). Re-importing the old file would reset a user to the removed Contadora role. 2026-10-19
-- [ ] P0-2 `CLAUDE.md` §3 amended: read-only prod inspection via `ssh hostinger-hs`; one approved write session per migration.
+- [x] P0-2 `CLAUDE.md` §3 amended: read-only prod inspection via `ssh hostinger-hs`; one approved write session per migration. 2026-10-19
 - [ ] P0-3 Branch restructure and auto-deploy freeze (`main` = `rebuild`, `legacy/main`, `develop`).
 - [ ] P0-4 Rename to `hs-erp` (merges only with local Playwright equivalence on three roles).
 
