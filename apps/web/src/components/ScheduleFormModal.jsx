@@ -356,6 +356,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const isSaveDisabled = isSubmitting || isCreatingClient || showClientForm || !selectedClientId;
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !isCreatingClient && onClose(open)}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto bg-background rounded-2xl">
         <DialogHeader>
@@ -792,6 +793,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
         initialData={{}}
       />
     )}
+    </>
   );
 };
 
