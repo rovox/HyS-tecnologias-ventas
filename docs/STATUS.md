@@ -48,15 +48,27 @@ Module files exist only for priority 1 (`docs/modules/`). Others get one when th
 | owner | An Asistencia is chargeable and does not need a quotation; a bigger need creates a relevamiento or quotation. |
 | owner | Money is one ledger (Movimiento): validation = rendición; discounts exist only in a quotation. (Closes the old PAY-03 D1–D3.) |
 | 2026-10-15 | WEB-01: the hstecnologias.com form lands in its own table `solicitudes_web` (Client untouched). Sales converts a request with `POST /solicitudes-web/:id/convertir`, which links an existing client (same email, phone or name) or creates one. Webhook auth = header `X-HS-Webhook-Key` vs env `WEB_LEADS_KEY`. |
+| 2026-10-19 | hs-erp plan approved (D1–D14): prod DB read-only over SSH first; name `hs-erp` (rename deferred, RC-02); stabilize before migrating the data model; credentials out of scope (no rotation/purge, D4); `main` = current `rebuild`, `legacy/main` kept; no time estimates; local-first promotion gate (LOCAL-04); CRUD toolkit before feature migration; roles ADMINISTRADOR/VENTAS/CONTABILIDAD/TÉCNICO (open model rejected for the first release); Inventory P2-a = catalog + StockMovement + cost; first release = Phases 0–4 + P1-b/P1-c/P1-d + P2-a. Source: `~/.claude/plans/review-all-the-session-purrfect-avalanche.md`. |
 | ❓ open | `business-design.md` §3 lists a CONTABILIDAD role and an open "everyone sees/edits everything + audit trail" model, but the Contadora role was just removed and `CLAUDE.md` forbids role strings outside `common/policy`. Decide in Phase C before touching roles. |
 
 ## Phases
 
 ### 0 — Safety and decisions (hs-erp plan, 2026-10-19)
+Documented exception to *one item per branch*: `chore/phase0-safety` groups P0-1 + P0-2 (two small docs-only changes, one commit each). Not a violation.
 - [x] P0-1 `docs/deployment/hostinger-users-hscontrol.sql` retired without touching any credential; replaced by `hostinger-users.md` + `scripts/generate-users-sql.mjs` (hashes from env, `INSERT IGNORE`). Re-importing the old file would reset a user to the removed Contadora role. 2026-10-19
 - [x] P0-2 `CLAUDE.md` §3 amended: read-only prod inspection via `ssh hostinger-hs`; one approved write session per migration. 2026-10-19
-- [ ] P0-3 Branch restructure and auto-deploy freeze (`main` = `rebuild`, `legacy/main`, `develop`).
-- [ ] P0-4 Rename to `hs-erp` (merges only with local Playwright equivalence on three roles).
+- [ ] P0-3 Branch restructure. Done 2026-10-20: `legacy/main` pushed (= old `origin/main` `743cf62b`); the existing annotated tag `horizons-original` (`5dcbbc55`, the original Horizons export) is kept as is, not moved. **Pending**: push of the tag and of `chore/phase0-safety` (blocked by the permission classifier, needs the owner); force-push of `main` (owner picks the target SHA); `develop`; freeze of Hostinger auto-deploy of `migration/backend-api` (owner, hPanel).
+- [ ] P0-3b Repo-level `.claude/settings.json` allowing `git branch|push|tag` (owner: the agent may not edit its own permissions).
+
+### Deferred — after Phase 1.5 (RC-02)
+- [ ] P0-4 Rename to `hs-erp` (D2). Needs LOCAL-02 (local Playwright on three roles) for the functional-equivalence proof, so it runs after Phase 1.5.
+
+### In progress (parallel local branches from `chore/phase0-safety`, no PRs until `develop` exists)
+| Track | Branch | Scope | State |
+|---|---|---|---|
+| B | `analysis/modules` | Phase 0.5 AN-01..AN-06 → `docs/analysis/2026-10-20-modules.md`, `scripts/blank-view-sweep.mjs` | delivered, AN-05 and UI-04 `N` need the owner |
+| C | `fix/plat-baseline` | Phase 1 PLAT-01/02/03 + CI. Documented exception: the four mechanical items share one PR | started |
+| D | `chore/local-env` | Phase 1.5 LOCAL-01..04 | started |
 
 ### A — Safety and inventory ✅ 2026-10-12
 - [x] Origin at `899fac51` with `pedidos-internos`; local-only work inventoried (nothing needed beyond ENV-02..05).
