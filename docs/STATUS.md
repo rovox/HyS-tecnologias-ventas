@@ -11,7 +11,7 @@ Priority and scope from `business-design.md` §5. *S1\** = smoke S1 run on 2026-
 
 | Module | P | Status | Next item | Last verified |
 |---|---|---|---|---|
-| Platform (build, CI, dist, knip) | – | 🔴 | PLAT-01 | `pnpm check` red (PLAT-01, PLAT-02) |
+| Platform (build, CI, dist, knip) | – | 🟡 | PLAT-01b sweep (Phase 1.5) | 2026-10-20 branch `fix/plat-baseline`: `pnpm check` green locally (api build, 11 unit, 12 e2e, web lint+build, knip 0); route sweep not run yet |
 | Auth & users | – | 🟡 | AUTH-01 | S1*: login OK for 3 roles |
 | Clients | 1 | 🟡 | `docs/modules/clients.md` | S1*: loads admin/ventas/técnico |
 | Quotations | 1 | 🟡 | `docs/modules/quotations.md` | S1*: loads admin/ventas |
@@ -67,7 +67,7 @@ Documented exception to *one item per branch*: `chore/phase0-safety` groups P0-1
 | Track | Branch | Scope | State |
 |---|---|---|---|
 | B | `analysis/modules` | Phase 0.5 AN-01..AN-06 → `docs/analysis/2026-10-20-modules.md`, `scripts/blank-view-sweep.mjs` | delivered, AN-05 and UI-04 `N` need the owner |
-| C | `fix/plat-baseline` | Phase 1 PLAT-01/02/03 + CI. Documented exception: the four mechanical items share one PR | started |
+| C | `fix/plat-baseline` | Phase 1 PLAT-01/02/03/06 + CI. Documented exception to one-item-per-branch: the mechanical items share one PR | delivered locally; RC-01 sweep (PLAT-01b) pending the Phase 1.5 stack |
 | D | `chore/local-env` | Phase 1.5 LOCAL-01..04 | started |
 
 ### A — Safety and inventory ✅ 2026-10-12
@@ -78,12 +78,12 @@ Documented exception to *one item per branch*: `chore/phase0-safety` groups P0-1
 - [x] ENV-02 root scripts · ENV-03 web env · ENV-04 seed (+technician, all statuses, pedidos) · ENV-05 `API_STRICT_DTO` (2026-10-12)
 - [x] PocketBase, Horizons plugins, zips and logs removed; `pnpm dev` leaves `git status` clean.
 - [x] Docs restructured (this file, `docs/modules/*`).
-- [ ] PLAT-01 🔴 `apps/web/src/components/ScheduleFormModal.jsx`: two JSX siblings in `return (…)` with no fragment (lines 358/784) → Vite 500 → **every screen blank on all roles**. Fix = wrap in `<>…</>` (verified locally, not committed).
-- [ ] PLAT-02 🔴 `apps/api/src/tasks/tasks.service.spec.ts:18` uses removed `ROLES.CONT` → unit suite fails to compile → `pnpm check` stops there.
-- [ ] PLAT-03 `knip` is not clean: 36 unused files, 5 unused deps + 3 devDeps, 1 unlisted, 19 unused exports, 35 config hints. Target 0.
+- [x] PLAT-01 `ScheduleFormModal.jsx` return wrapped in a fragment; `esbuild` parses it, `pnpm check` builds the web. 2026-10-20
+- [x] PLAT-02 `tasks.service.spec.ts` no longer uses `ROLES.CONT` (replaced by a técnico-claim test). 2026-10-20
+- [x] PLAT-03 `knip` exits 0: `knip.json` rewritten, `vite.config.js` ESM `__dirname`, 76 unused web files deleted (incl. dead `ui/*`), 26 web deps + `mariadb`/`swagger-ui-express` removed, `tailwindcss-animate` → devDependencies, unused exports cleaned; `duplicates` rule off until FE-01. `react-hook-form`/`zod`/`@hookform/resolvers`/`framer-motion` were removed as unused; UI-03 may re-add them with a written reason. 2026-10-20
 - [ ] PLAT-04 ❓ Make `rebuild` the default branch (was ENV-01), create `develop`, freeze cloud deploys until staging.
 - [ ] PLAT-05 Back up production once via SSH and compare with `schema.prisma` (was ENV-07). **Blocked: no SSH from this device.**
-- [ ] PLAT-06 Tracked `apps/api/dist` and `apps/web/dist` are stale (api dist lacks `pedidos-internos`); `pnpm check` rewrites them. Decide who refreshes them (CI).
+- [x] PLAT-06 `apps/*/dist` untracked and ignored; `.github/workflows/ci.yml` replaces `api.yml`/`web.yml` (runs `pnpm check` on PRs and main/develop/feat/fix/chore/analysis, uploads `dist` as an artifact, never commits). Deploy from CI artifact is REL-01/02. 2026-10-20
 
 ### C — Data model (needs approval: schema, roles) — `business-design.md` §8, P1-a
 - [ ] AUTH-01 ❓ Decide role model (see decisions log); rename técnico → TÉCNICO.
