@@ -28,8 +28,8 @@ const PAGES = [
 ];
 
 let chromium;
-try { ({ chromium } = await import('playwright')); } catch {
-  console.error('playwright is not installed (devDependency @playwright/test).');
+try { ({ chromium } = await import('@playwright/test')); } catch {
+  console.error('@playwright/test is not installed.');
   process.exit(2);
 }
 

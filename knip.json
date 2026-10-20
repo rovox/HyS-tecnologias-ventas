@@ -3,8 +3,11 @@
 	"rules": {
 		"duplicates": "off"
 	},
-	"ignore": ["docs/**"],
 	"workspaces": {
+		".": {
+			"entry": ["e2e/**/*.ts", "scripts/*.mjs"],
+			"project": ["e2e/**/*.ts", "scripts/*.mjs"]
+		},
 		"apps/web": {
 			"entry": ["tools/*.{js,mjs}"],
 			"project": ["src/**/*.{js,jsx,css}", "tools/*.{js,mjs}"],
