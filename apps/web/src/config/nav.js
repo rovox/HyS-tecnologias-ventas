@@ -19,7 +19,7 @@ import { ROLES } from '@/constants/roles.js';
 
 export { ROLES };
 
-export const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
+const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
 
 const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
 const CLIENT_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
@@ -34,7 +34,7 @@ const SOLICITUDES_WEB_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
  * Menú unificado: OPERACIONES primero para todos los roles.
  * Admin añade extras al final.
  */
-export const operationalMenuSections = [
+const operationalMenuSections = [
   {
     title: 'PRINCIPAL',
     items: [
@@ -63,7 +63,7 @@ export const operationalMenuSections = [
 ];
 
 /** Extras solo ADMINISTRADOR (después de OPERACIONES / ADMINISTRACIÓN base). */
-export const adminExtraMenuSections = [
+const adminExtraMenuSections = [
   {
     title: 'GESTIÓN ADMIN',
     items: [
@@ -75,14 +75,6 @@ export const adminExtraMenuSections = [
     ],
   },
 ];
-
-/** @deprecated Prefer getMenuSections — kept for imports that still reference admin menu. */
-export const adminMenuSections = [
-  ...operationalMenuSections,
-  ...adminExtraMenuSections,
-];
-
-export const menuSections = operationalMenuSections;
 
 export function getMenuSections(role) {
   if (role === ROLES.NONE) return [];
@@ -119,8 +111,4 @@ export function canEditQuotationsView(role) {
 
 export function canWriteClients(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
-}
-
-export function sucursalOf(user) {
-  return user?.sucursalId || user?.sucursal_id || user?.department || '';
 }

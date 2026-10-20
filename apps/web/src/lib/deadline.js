@@ -1,6 +1,6 @@
 /** Tono de plazo para cotizaciones, tareas y cronograma. */
 
-export function parseDeadline(value) {
+function parseDeadline(value) {
   if (!value) return null;
   const raw = String(value).replace(' ', 'T');
   const iso = raw.length <= 10 ? `${raw.slice(0, 10)}T23:59:59` : raw;

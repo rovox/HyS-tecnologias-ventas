@@ -7,7 +7,7 @@ function publicUser(user) {
   return safe;
 }
 
-export const authService = {
+const authService = {
   async login(email, password, options = {}) {
     const data = await apiClient.post('auth/login', { email, password });
     authStore.save(data.accessToken, publicUser(data.user), { remember: options.remember !== false });

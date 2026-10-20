@@ -32,10 +32,8 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "mariadb": "^3.5.3",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "swagger-ui-express": "^5.0.1"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",

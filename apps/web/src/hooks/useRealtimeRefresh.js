@@ -51,9 +51,3 @@ export function useRealtimeRefresh() {
     };
   }, []);
 }
-
-export function onRealtime(handler) {
-  const fn = (e) => handler(e.detail);
-  window.addEventListener('hs-realtime', fn);
-  return () => window.removeEventListener('hs-realtime', fn);
-}

@@ -1,7 +1,7 @@
 import { apiClient, authToken } from '@/api/http.js';
 
-export const ESTADO_PENDIENTE = 'Pendiente rendición';
-export const ESTADO_CONFIRMADO = 'Confirmado';
+const ESTADO_PENDIENTE = 'Pendiente rendición';
+const ESTADO_CONFIRMADO = 'Confirmado';
 
 const today = () => new Date().toISOString().split('T')[0];
 

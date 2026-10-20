@@ -28,8 +28,6 @@ export const QUOTATION_SUBCATEGORIES = {
   proyectos: ['Redes/Datos', 'Eléctrico'],
 };
 
-export const QUOTATION_SUCURSALES = [];
-
 export const QUOTATION_FLOW = {
   borrador: ['enviado', 'rechazado'],
   enviado: ['aceptado', 'rechazado'],
@@ -39,7 +37,7 @@ export const QUOTATION_FLOW = {
 
 export const COT_PREFIX = 'COT-';
 
-export function buildQuotationDateCode(date = new Date()) {
+function buildQuotationDateCode(date = new Date()) {
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
   const yy = String(date.getFullYear()).slice(-2);

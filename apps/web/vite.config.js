@@ -1,15 +1,11 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
-const allDeps = Object.keys(pkg.dependencies || {});
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(() => ({
-  optimizeDeps: {
-    include: allDeps,
-  },
   plugins: [react()],
   server: {
     port: 3000,

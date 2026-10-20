@@ -32,7 +32,7 @@ function mapApiRow(row) {
   };
 }
 
-export const categoriesService = {
+const categoriesService = {
   async getAll() {
     const rows = await apiClient.get('categories', { token: authToken() });
     const custom = (rows || []).map(mapApiRow).filter((row) => row.active);

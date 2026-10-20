@@ -10,7 +10,7 @@ function vendorPayload(data) {
   }));
 }
 
-export const quotationsService = {
+const quotationsService = {
   async getAll() {
     const rows = await apiClient.get('quotations', { token: authToken() });
     return (rows || []).map(mapQuote);
