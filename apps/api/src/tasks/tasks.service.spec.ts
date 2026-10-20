@@ -15,13 +15,14 @@ describe('TasksService', () => {
   const realtime = { emit: jest.fn() };
   const service = new TasksService(prisma as never, activity as never, realtime as never);
 
-  const cont = { id: 'usr_conta', role: ROLES.CONT, sucursalId: 'suc_central' } as never;
+  const tecnico = { id: 'usr_tecnico', role: ROLES.TEC, sucursalId: 'suc_central' } as never;
   const ventas = { id: 'usr_ventas', role: ROLES.VENTAS, sucursalId: 'suc_central' } as never;
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('blocks contadora from listing tasks', async () => {
-    await expect(service.list(cont)).rejects.toBeInstanceOf(ForbiddenException);
+  it('blocks técnico from claiming a task', async () => {
+    await expect(service.claim('t1', tecnico, 'sess')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.task.findFirst).not.toHaveBeenCalled();
   });
 
   it('creates task with optional empty links', async () => {
