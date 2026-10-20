@@ -28,9 +28,17 @@
     "db:up": "pnpm --filter api db:up",
     "db:down": "pnpm --filter api db:down",
     "db:reset": "pnpm --filter api db:reset",
-    "check": "pnpm --filter api build && pnpm --filter api test && pnpm --filter api test:e2e && pnpm --filter web lint && pnpm --filter web build && knip"
+    "check": "pnpm --filter api build && pnpm --filter api test && pnpm --filter api test:e2e && pnpm --filter web lint && pnpm --filter web build && knip",
+    "local:up": "docker compose up -d --build --wait",
+    "local:down": "docker compose down",
+    "local:reset": "docker compose down -v && docker compose up -d --build --wait",
+    "local:test": "playwright test --pass-with-no-tests",
+    "local:bundle": "node scripts/measure-bundle.mjs",
+    "local:lighthouse": "node scripts/lighthouse-local.mjs",
+    "local:gate": "node scripts/promote-gate.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "concurrently": "^10.0.4",
     "knip": "^6.32.1",
     "only-allow": "^1.2.1"

@@ -11,7 +11,7 @@ The API is a **separate** Hostinger Cloud Startup **Node.js Web App** + dedicate
 
 ## Split
 
-- **Local:** `pnpm dev:api` against `apps/api/docker-compose.yml` MySQL.
+- **Local:** `pnpm dev:api` against the MySQL of the root `docker-compose.yml` (`pnpm db:up`).
 - **CI:** `.github/workflows/api.yml` on `migration/backend-api` — `prisma generate` + `nest build` on `ubuntu-latest`, then commit `apps/api/dist`.
 - **CD:** Hostinger Node app (`lime-chamois-337700.hostingersite.com`), Framework **Other**, empty build, **start / entry** `start-api.mjs` (or `dist/main.js`). Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
 

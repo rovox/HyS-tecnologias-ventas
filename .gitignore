@@ -77,3 +77,7 @@ apps/api/uploads/
 # Documentación interna (datos reales, no GitHub)
 docs/decisiones-tecnicas/
 *.zip
+
+# Playwright
+test-results/
+playwright-report/

@@ -8,7 +8,7 @@ Not included: finance, TypeORM, PocketBase, quotation biblioteca.
 
 ```bash
 cp apps/api/.env.example apps/api/.env
-docker compose -f apps/api/docker-compose.yml up -d
+docker compose up -d db   # root docker-compose.yml (or `pnpm local:up` for db + api + web)
 pnpm --filter api prisma:generate
 pnpm --filter api prisma:deploy
 pnpm --filter api prisma:seed
