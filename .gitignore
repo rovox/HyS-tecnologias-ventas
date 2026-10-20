@@ -4,15 +4,11 @@ node_modules/
 .pnp.js
 .pnpm-store/
 
-# Builds (Hostinger POC ships a pre-built SPA — see docs/deployment/hostinger-frontend.md)
+# Builds: dist/ is built by CI only and never committed (PLAT-06, decision D7)
 dist/
 .dev-dist/
 build/
 out/
-!apps/web/dist/
-!apps/web/dist/**
-!apps/api/dist/
-!apps/api/dist/**
 app.tar.gz
 *.tar.gz
 
