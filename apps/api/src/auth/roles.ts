@@ -20,6 +20,10 @@ export function isTec(user?: User | null) {
   return user?.role === ROLES.TEC;
 }
 
+function isNone(user?: User | null) {
+  return user?.role === ROLES.NONE;
+}
+
 export function assertAdmin(user: User) {
   if (!isAdmin(user)) throw new ForbiddenException('Solo administrador');
 }
