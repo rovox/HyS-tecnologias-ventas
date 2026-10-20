@@ -68,7 +68,17 @@ Documented exception to *one item per branch*: `chore/phase0-safety` groups P0-1
 |---|---|---|---|
 | B | `analysis/modules` | Phase 0.5 AN-01..AN-06 → `docs/analysis/2026-10-20-modules.md`, `scripts/blank-view-sweep.mjs` | delivered, AN-05 and UI-04 `N` need the owner |
 | C | `fix/plat-baseline` | Phase 1 PLAT-01/02/03/06 + CI. Documented exception to one-item-per-branch: the mechanical items share one PR | delivered locally; RC-01 sweep (PLAT-01b) pending the Phase 1.5 stack |
-| D | `chore/local-env` | Phase 1.5 LOCAL-01..04 | started |
+| D | `chore/local-env` | Phase 1.5 LOCAL-01..04 | delivered locally (rebased on `fix/plat-baseline`); Lighthouse baseline missing, gate not wired to CI |
+
+### 1.5 — Local reproducible environment (RC-03) · `chore/local-env`
+- [x] LOCAL-01 `docker-compose.yml` (db + api + web, healthchecks, project `hs-erp`) and `pnpm local:up` / `local:down` / `local:reset`. Verified 2026-10-20: all three services healthy, web 200, técnico login OK, `GET /api/health/db` OK. `pnpm db:*` use the same compose file.
+- [x] LOCAL-02 `playwright.config.ts` + `e2e/fixtures/auth.ts` (admin/ventas/técnico `loginAs`). No route specs yet: the first suite is the route sweep (`scripts/blank-view-sweep.mjs`, on `analysis/modules`) once both branches are in `develop`, then S1..S8 from `docs/rules/testing.md`. `pnpm local:test` passes with no specs.
+- [x] LOCAL-03 baseline recorded 2026-10-20 (local stack, seed data). Scripts: `scripts/measure-bundle.mjs`, `scripts/measure-api.mjs`, `scripts/lighthouse-local.mjs`.
+  - Bundle (`pnpm local:bundle`): entry JS (index + shell/Layout) **577.9 kB** vs budget 300 (index chain 259.4 + Layout 286.6 + Helmet 21 + 11); CSS **79.6 kB** vs 60; 0 of 25 route chunks over 100 kB (largest `QuotationsLibraryPage` 77.6 kB); largest chunk `BarChart` 383.5 kB (recharts). Both budgets fail today; they are the FE-09 target, so `local:gate` fails until then.
+  - API p50/p95 ms, 200 requests, concurrency 5 (`node scripts/measure-api.mjs`): `GET /clients` 38/58, `GET /quotations` 35/52, `GET /schedules` 38/46, `GET /metrics/sales` 29/47, `POST /auth/login` 655/857 (bcrypt cost). All 200/201.
+  - Lighthouse: **not measured**. `pnpm dlx lighthouse` fails on this machine (`MODULE_NOT_FOUND`, then a timeout inside the script). Needs a fix or a pinned devDependency decision (new dependency = owner approval).
+- [x] LOCAL-04 `scripts/promote-gate.mjs` (`pnpm local:gate`): compose healthy + `local:test` + `local:bundle`. Not wired to CI (owner decision, with Phase 1.5 exit).
+- Phase 1.5 exit still needs: the sweep merged and green (see AN-01 `/pedidos-internos/:id`), Lighthouse numbers, S1..S8 specs.
 
 ### A — Safety and inventory ✅ 2026-10-12
 - [x] Origin at `899fac51` with `pedidos-internos`; local-only work inventoried (nothing needed beyond ENV-02..05).

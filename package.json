@@ -34,6 +34,7 @@
     "local:reset": "docker compose down -v && docker compose up -d --build --wait",
     "local:test": "playwright test --pass-with-no-tests",
     "local:bundle": "node scripts/measure-bundle.mjs",
+    "local:api": "node scripts/measure-api.mjs",
     "local:lighthouse": "node scripts/lighthouse-local.mjs",
     "local:gate": "node scripts/promote-gate.mjs"
   },
