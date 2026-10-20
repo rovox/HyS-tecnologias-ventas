@@ -4,8 +4,8 @@
 //   node scripts/blank-view-sweep.mjs [--web http://localhost:3000] [--api http://localhost:3001/api]
 //                                     [--roles admin,ventas,tecnico] [--json out.json] [--timeout 8000]
 //
-// Needs the local stack running (`pnpm dev` or the compose stack) and `playwright` installed.
-// Classification: pass | blank | error-boundary | spinner | redirect (unexpected) | forbidden-ok (expected redirect)
+// Needs the local stack running (`pnpm dev` or the compose stack) and `@playwright/test` installed (LOCAL-02).
+// Classification: pass | blank | error-boundary | spinner | redirect (unexpected) | redirect-ok | forbidden-ok (expected redirect)
 // Exit code 1 when any cell is blank, error-boundary, spinner or an unexpected redirect.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -42,6 +42,8 @@ const ROUTES = [
   ['/gastos-operativos', A], ['/usuarios/:userId', ALL],
 ];
 const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T' };
+// Routes that intentionally redirect (ActivityWallPage is `<Navigate to="/dashboard">`); classified `redirect-ok`, not failing.
+const EXPECTED_REDIRECT = new Set(['/activity-wall']);
 
 function checkRouteTable() {
   const app = readFileSync(path.join(ROOT, 'apps/web/src/App.jsx'), 'utf8');
@@ -98,15 +100,15 @@ async function classify(page, url, allowed) {
   if (state.overlay || state.boundary) result = 'error-boundary';
   else if (state.text < 20) result = 'blank';
   else if (state.spinner) result = 'spinner';
-  else if (state.path !== wanted) result = allowed ? 'redirect' : 'forbidden-ok';
+  else if (state.path !== wanted) result = !allowed ? 'forbidden-ok' : EXPECTED_REDIRECT.has(wanted) ? 'redirect-ok' : 'redirect';
   return { result, finalPath: state.path, problems: [...new Set(problems)] };
 }
 
 async function main() {
   checkRouteTable();
   let chromium;
-  try { ({ chromium } = await import('playwright')); } catch {
-    console.error('playwright is not installed. Add it as a devDependency (see LOCAL-02) and run `pnpm exec playwright install chromium`.');
+  try { ({ chromium } = await import('@playwright/test')); } catch {
+    console.error('@playwright/test is not installed (LOCAL-02) or Chromium is missing: pnpm exec playwright install chromium');
     process.exit(2);
   }
   const browser = await chromium.launch();
