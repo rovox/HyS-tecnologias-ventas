@@ -12,17 +12,17 @@ Priority and scope from `business-design.md` §5. *S1\** = smoke S1 run on 2026-
 | Module | P | Status | Next item | Last verified |
 |---|---|---|---|---|
 | Platform (build, CI, dist, knip) | – | 🟡 | PLAT-01b sweep (Phase 1.5) | 2026-10-20 branch `fix/plat-baseline`: `pnpm check` green locally (api build, 11 unit, 12 e2e, web lint+build, knip 0); route sweep not run yet |
-| Auth & users | – | 🟡 | AUTH-01 | S1*: login OK for 3 roles |
+| Auth & users | – | 🟡 | AUTH-01 | 2026-10-21 branch `mvp`: policy moved to `domain/policy.ts` (unit green); new `GET /users/directory`, `GET /users/:id` |
 | Clients | 1 | 🟡 | `docs/modules/clients.md` | S1*: loads admin/ventas/técnico |
 | Quotations | 1 | 🟡 | `docs/modules/quotations.md` | S1*: loads admin/ventas |
-| Projects (today: Schedule + Sale) | 1 | 🔴 | `docs/modules/projects.md` | S1*: `/schedule` loads, técnico gets 403 |
+| Projects (today: Schedule + Sale) | 1 | 🔴 | MVP-4 (API-02 money) | 2026-10-21 branch `mvp`: técnico 403 fixed in code (`/users/directory`, quotations not requested); not re-run on the stack (Docker down) |
 | Finance | 1 | ⚪ | `docs/modules/finance.md` | S1*: frozen stubs |
 | Dashboard | 1 | 🟡 | `docs/modules/dashboard.md` | S1*: loads 3 roles |
 | Cronograma (activities) | 2 | 🔴 | after PRO-01 | = `/schedule` (see Projects) |
 | Asistencias | 2 | ⚪ | – | – |
 | Relevamientos (surveys) | 2 | 🟡 | SUR-01 | S1*: `/surveys` loads 3 roles |
 | Inventory | 2 | ⚪ | – | – |
-| Internal orders | 2 | 🟡 | ORD-01 | S1*: `/pedidos-internos` loads admin/ventas; S6 not run |
+| Internal orders | 2 | 🟡 | MVP-3 verify | 2026-10-21 branch `mvp`: detail fixed in code, rules in `domain/pedidos-internos.ts` (unit green), role guard + transition check + realtime in the API; e2e/S6 pending (Docker down) |
 | Direct sales | 2 | ⚪ | – | – |
 | Vehicles | 3 | ⚪ (frozen stub) | – | S1*: stub |
 | Reports | 3 | 🟡 | after FIN | S1*: `/reports`, `/admin/management` load (admin) |
@@ -49,9 +49,22 @@ Module files exist only for priority 1 (`docs/modules/`). Others get one when th
 | owner | Money is one ledger (Movimiento): validation = rendición; discounts exist only in a quotation. (Closes the old PAY-03 D1–D3.) |
 | 2026-10-15 | WEB-01: the hstecnologias.com form lands in its own table `solicitudes_web` (Client untouched). Sales converts a request with `POST /solicitudes-web/:id/convertir`, which links an existing client (same email, phone or name) or creates one. Webhook auth = header `X-HS-Webhook-Key` vs env `WEB_LEADS_KEY`. |
 | 2026-10-19 | hs-erp plan approved (D1–D14): prod DB read-only over SSH first; name `hs-erp` (rename deferred, RC-02); stabilize before migrating the data model; credentials out of scope (no rotation/purge, D4); `main` = current `rebuild`, `legacy/main` kept; no time estimates; local-first promotion gate (LOCAL-04); CRUD toolkit before feature migration; roles ADMINISTRADOR/VENTAS/CONTABILIDAD/TÉCNICO (open model rejected for the first release); Inventory P2-a = catalog + StockMovement + cost; first release = Phases 0–4 + P1-b/P1-c/P1-d + P2-a. Source: `~/.claude/plans/review-all-the-session-purrfect-avalanche.md`. |
+| 2026-10-21 | **MVP focus** (owner): work only on local branch `mvp` (= `chore/local-env` + `analysis/modules`; `chore/phase0-safety` already included). No change to `main`, no push unless asked. Parked: Lighthouse, bundle budgets, promote-gate, P0-4 rename, Phase 3.0 CRUD toolkit, Phase 4 (prod DB), graphify. Rule: every module touched moves its business rules to `apps/api/src/domain/` (pure TS, no Nest/Prisma imports, unit-tested; enforced by `domain/purity.spec.ts`). |
 | ❓ open | `business-design.md` §3 lists a CONTABILIDAD role and an open "everyone sees/edits everything + audit trail" model, but the Contadora role was just removed and `CLAUDE.md` forbids role strings outside `common/policy`. Decide in Phase C before touching roles. |
 
 ## Phases
+
+### MVP focus (2026-10-21) · branch `mvp` — current priority
+Goal: the core flow works locally (Docker MySQL) for admin, ventas and técnico. Everything not listed here is parked or post-MVP; the hs-erp phases below stay as reference.
+- [ ] MVP-1 Stack check: `pnpm local:reset` → `health/db` → login ×3 roles → `node scripts/blank-view-sweep.mjs` with 0 failing. **Blocked 2026-10-21**: Docker fails to start (`overlay: no such device`). The running kernel 7.2.10 has no modules after the upgrade to 7.2.11, so the machine needs a reboot (owner).
+- [x] MVP-2 `domain/` layer: `domain/policy.ts` (roles, permissions, row scoping; `auth/roles.ts` is now a Nest adapter), `domain/pedidos-internos.ts` (flow, transitions, totals, delivery fields), specs + purity test. 2026-10-21: api typecheck clean, unit 7 suites green.
+- [ ] MVP-3 `/pedidos-internos/:id` (admin, ventas): API returns `costoTotal` and `transicionesValidas`, rejects invalid transitions (400), role guard on every route (técnico 403), realtime on every mutation. The DTO now accepts `listo_para_entrega`/`rechazado` (before, the flow could never reach `entregado`). Web maps the API shape (`mapPedidoDetail`), offers only the API transitions, drops the fake `logStateChange` and the silent users catch. Done in code; e2e + S6 pending the stack.
+- [ ] MVP-4 Técnico 403s: `GET /users/directory` (id, name, role; any role with access) and `GET /users/:id` (self or admin/ventas); `ScheduleView` uses the directory and asks for quotations only for admin/ventas; `UserProfilePage` uses `getUser`. Done in code; e2e + sweep pending the stack.
+- [ ] MVP-5 Core flow smoke S1..S8 (`docs/rules/testing.md`) ×3 roles: client → quotation → accept → schedule → internal order → cobro.
+- [ ] MVP-6 API-02 money/access on the flow: `$transaction` in `schedules.registerPayment/update`, one quotation-accept path, guards on relevamientos/goals; schedule/quotation flows and balances move to `domain/`.
+- [ ] MVP-7 Silent catches and missing realtime emits in every page/module the MVP touches.
+- [ ] MVP-8 AUTH-01 role rename (needs owner approval: schema/roles).
+- Parked until after the MVP: Lighthouse, bundle budgets, promote-gate (LOCAL-03/04 follow-ups), P0-4, Phase 3.0, Phase 4, graphify. Técnico requesting internal orders stays out (`docs/operations/flows/pedidos-internos.md`: admin and ventas in this phase).
 
 ### 0 — Safety and decisions (hs-erp plan, 2026-10-19)
 Documented exception to *one item per branch*: `chore/phase0-safety` groups P0-1 + P0-2 (two small docs-only changes, one commit each). Not a violation.
