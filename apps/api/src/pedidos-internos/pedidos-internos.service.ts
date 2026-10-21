@@ -1,13 +1,33 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
+import { checkTransition, deliveryFields, itemTotal, nextStates, pedidoTotal } from '../domain/pedidos-internos';
+import { canManagePedidos } from '../domain/policy';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { AddComentarioDto, UpdateEstadoPedidoDto, UpsertPedidoInternoDto } from './dto/pedido-interno.dto';
 
 @Injectable()
 export class PedidosInternosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
+
+  private assertCanManage(user: User) {
+    if (!canManagePedidos(user)) throw new ForbiddenException('Sin acceso a pedidos internos');
+  }
+
+  private emit(type: string, id: string, user: User) {
+    this.realtime.emit(`pedido_interno.${type}`, 'pedido_interno', id, { byUserId: user.id });
+  }
+
+  private assertTransition(from: string, to: string) {
+    const check = checkTransition(from, to);
+    if (!check.ok) throw new BadRequestException(check.reason);
+  }
 
   async findAll(user: User, query: Record<string, string>) {
+    this.assertCanManage(user);
     const { estado, search, prioridad, sucursal } = query;
 
     const where: Record<string, unknown> = {};
@@ -35,7 +55,8 @@ export class PedidosInternosService {
     return pedidos;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user: User) {
+    this.assertCanManage(user);
     const pedido = await this.prisma.pedidoInterno.findUnique({
       where: { id },
       include: {
@@ -53,14 +74,15 @@ export class PedidosInternosService {
 
     const { comentarios, items, ...rest } = pedido;
     return {
-      pedido: rest,
-      detalles: items,
+      pedido: { ...rest, costoTotal: pedidoTotal(items), transicionesValidas: nextStates(rest.estado) },
+      detalles: items.map((item) => ({ ...item, costoTotal: itemTotal(item) })),
       comentarios,
       historial: [],
     };
   }
 
   async create(dto: UpsertPedidoInternoDto, user: User) {
+    this.assertCanManage(user);
     const { items, ...pedidoData } = dto;
 
     const pedido = await this.prisma.pedidoInterno.create({
@@ -94,12 +116,15 @@ export class PedidosInternosService {
       },
     });
 
+    this.emit('created', pedido.id, user);
     return pedido;
   }
 
-  async update(id: string, dto: UpsertPedidoInternoDto) {
+  async update(id: string, dto: UpsertPedidoInternoDto, user: User) {
+    this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
+    if (dto.estado && dto.estado !== existing.estado) this.assertTransition(existing.estado, dto.estado);
 
     const { items, ...pedidoData } = dto;
 
@@ -138,35 +163,39 @@ export class PedidosInternosService {
       });
     });
 
-    return this.findOne(id);
+    this.emit('updated', id, user);
+    return this.findOne(id, user);
   }
 
-  async remove(id: string) {
+  async remove(id: string, user: User) {
+    this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
 
     await this.prisma.pedidoInterno.delete({ where: { id } });
+    this.emit('deleted', id, user);
     return { ok: true };
   }
 
   async updateEstado(id: string, dto: UpdateEstadoPedidoDto, user: User) {
+    this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
+    this.assertTransition(existing.estado, dto.estado);
 
-    const data: Record<string, unknown> = { estado: dto.estado };
-    if (dto.estado === 'entregado') {
-      data.fechaEntregaReal = dto.fecha_entrega ? new Date(dto.fecha_entrega) : new Date();
-      data.entregadoPorId = dto.entregado_por_id || user.id;
-    }
-    if (dto.observacion) {
-      data.observaciones = dto.observacion;
-    }
+    const data = {
+      estado: dto.estado,
+      ...deliveryFields(dto.estado, { fechaEntrega: dto.fecha_entrega, entregadoPorId: dto.entregado_por_id }, user.id, new Date()),
+      ...(dto.observacion ? { observaciones: dto.observacion } : {}),
+    };
 
     await this.prisma.pedidoInterno.update({ where: { id }, data });
-    return this.findOne(id);
+    this.emit('updated', id, user);
+    return this.findOne(id, user);
   }
 
   async addComentario(id: string, dto: AddComentarioDto, user: User) {
+    this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
 
@@ -181,6 +210,7 @@ export class PedidosInternosService {
       include: { autor: { select: { id: true, name: true } } },
     });
 
+    this.emit('updated', id, user);
     return comentario;
   }
 }

@@ -3,6 +3,33 @@ import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 
+/** API detail (`{pedido, detalles, comentarios, historial}`, camelCase) → the fields the detail page reads. */
+function mapPedidoDetail(data) {
+  const { pedido, detalles = [], comentarios = [], historial = [] } = data;
+  return {
+    pedido: {
+      ...pedido,
+      numero_pedido: `PED-${pedido.id.slice(-6).toUpperCase()}`,
+      responsable_id: pedido.responsableId,
+      sucursal_origen_id: pedido.sucursalOrigen?.nombre || pedido.sucursalOrigenId,
+      sucursal_destino_id: pedido.sucursalDestinoId,
+      fecha_entrega_estimada: pedido.fechaEntregaEstimada,
+      costo_total: pedido.costoTotal,
+      created: pedido.createdAt,
+      fotografias: [],
+    },
+    detalles: detalles.map((d) => ({
+      ...d,
+      material_nombre: d.materialNombre,
+      costo_unitario: d.costoUnitario,
+      costo_total: d.costoTotal,
+      observaciones_item: d.observaciones,
+    })),
+    comentarios: comentarios.map((c) => ({ ...c, usuario_id: c.autorId, created: c.createdAt, fotografias: [] })),
+    historial,
+  };
+}
+
 export const useInternalOrders = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -39,20 +66,15 @@ export const useInternalOrders = () => {
   }, [currentUser]);
 
   const getPedidoDetails = async (pedidoId) => {
-    if (!pedidoId) return { pedido: null, detalles: [], comentarios: [], historial: [] };
+    if (!pedidoId) return null;
     setLoading(true);
     try {
       const data = await apiClient.get(`pedidos-internos/${pedidoId}`, { token: authToken() });
-      return {
-        pedido: data,
-        detalles: data.detalles || data.items || [],
-        comentarios: data.comentarios || [],
-        historial: data.historial || [],
-      };
+      return mapPedidoDetail(data);
     } catch (err) {
       console.error('Error getPedidoDetails:', err);
-      toast.error('Error al cargar detalles del pedido');
-      return { pedido: null, detalles: [], comentarios: [], historial: [] };
+      toast.error(err.message || 'Error al cargar detalles del pedido');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -114,7 +136,7 @@ export const useInternalOrders = () => {
       return updated;
     } catch (err) {
       console.error('Error updateEstadoPedido:', err);
-      toast.error('Error al actualizar el estado del pedido');
+      toast.error(err.message || 'Error al actualizar el estado del pedido');
       throw err;
     } finally {
       setLoading(false);

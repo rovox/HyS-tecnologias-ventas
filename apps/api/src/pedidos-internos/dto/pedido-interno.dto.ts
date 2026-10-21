@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsArray, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PEDIDO_ESTADOS } from '../../domain/pedidos-internos';
 
 export class PedidoItemDto {
   @ApiProperty()
@@ -53,9 +54,9 @@ export class UpsertPedidoInternoDto {
   @IsIn(['Baja', 'Normal', 'Alta', 'Urgente'])
   prioridad?: string;
 
-  @ApiPropertyOptional({ enum: ['solicitado', 'aprobado', 'en_preparación', 'entregado', 'cancelado'] })
+  @ApiPropertyOptional({ enum: PEDIDO_ESTADOS })
   @IsOptional()
-  @IsIn(['solicitado', 'aprobado', 'en_preparación', 'entregado', 'cancelado'])
+  @IsIn(PEDIDO_ESTADOS)
   estado?: string;
 
   @ApiPropertyOptional()
@@ -78,7 +79,7 @@ export class UpsertPedidoInternoDto {
 
 export class UpdateEstadoPedidoDto {
   @ApiProperty()
-  @IsIn(['solicitado', 'aprobado', 'en_preparación', 'entregado', 'cancelado'])
+  @IsIn(PEDIDO_ESTADOS)
   estado: string;
 
   @ApiPropertyOptional()

@@ -15,11 +15,10 @@ import PedidoInternoFormModal from '@/components/PedidoInternoFormModal.jsx';
 import EntregaPedidoModal from '@/components/EntregaPedidoModal.jsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { apiClient, authToken } from '@/api/http.js';
+import authService from '@/services/auth/index.js';
+import { ROLES } from '@/constants/roles.js';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { toast } from 'sonner';
-import { isValidTransition, canUserChangeState, getValidNextStates } from '@/hooks/StateFlowValidator.js';
-import { logStateChange } from '@/hooks/StateChangeLogger.js';
 
 const PedidoInternoDetailPage = () => {
   const { id: pedido_id } = useParams();
@@ -36,8 +35,8 @@ const PedidoInternoDetailPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEntregaOpen, setIsEntregaOpen] = useState(false);
 
-  const isTecnico = currentUser?.role === 'SEGURIDAD ELECTRÓNICA';
-  const isAdmin = currentUser?.role === 'ADMINISTRADOR';
+  const isTecnico = currentUser?.role === ROLES.TEC;
+  const isAdmin = currentUser?.role === ROLES.ADMIN;
 
   const loadData = async () => {
     if (!pedido_id) return;
@@ -46,12 +45,10 @@ const PedidoInternoDetailPage = () => {
       if (res && res.pedido) {
         setData(res);
         try {
-          const uRes = await apiClient.get('users', { token: authToken() }).catch(() => []);
-          const map = (uRes || []).reduce((acc, u) => ({...acc, [u.id]: u.name}), {});
-          map[currentUser.id] = currentUser.name;
-          setUsers(map);
-        } catch (e) {
-          setUsers({[currentUser.id]: currentUser.name});
+          const directory = await authService.userDirectory();
+          setUsers(Object.fromEntries(directory.map((u) => [u.id, u.name])));
+        } catch (err) {
+          toast.error(err.message || 'No se pudieron cargar los nombres de usuarios');
         }
       } else {
         toast.error("El pedido no existe o fue eliminado");
@@ -88,19 +85,8 @@ const PedidoInternoDetailPage = () => {
   };
 
   const handleStateChange = async (newState) => {
+    // The API validates the transition and the role (domain/pedidos-internos.ts); the UI only offers transicionesValidas.
     if (!newState || newState === data.pedido.estado) return;
-    
-    const validation = isValidTransition('pedidos_internos', data.pedido.estado, newState);
-    if (!validation.valid) {
-      toast.error(`Transición inválida: ${validation.reason}`);
-      return;
-    }
-
-    const hasPermission = canUserChangeState(currentUser?.role);
-    if (!hasPermission) {
-      toast.error('No tienes permisos para cambiar el estado');
-      return;
-    }
 
     if (newState === 'entregado') {
       setIsEntregaOpen(true);
@@ -110,20 +96,9 @@ const PedidoInternoDetailPage = () => {
     setIsUpdatingState(true);
     try {
       await updateEstadoPedido(pedido_id, newState);
-      
-      await logStateChange({
-        entityType: 'pedidos_internos',
-        entityId: pedido_id,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        estadoAnterior: data.pedido.estado,
-        estadoNuevo: newState
-      });
-      
       loadData();
-    } catch (e) {
-      console.error(e);
-      toast.error('Error al actualizar el estado');
+    } catch {
+      // updateEstadoPedido already shows the API error
     } finally {
       setIsUpdatingState(false);
     }
@@ -133,19 +108,10 @@ const PedidoInternoDetailPage = () => {
     setIsUpdatingState(true);
     try {
       await updateEstadoPedido(pedido_id, 'entregado', extra);
-      await logStateChange({
-        entityType: 'pedidos_internos',
-        entityId: pedido_id,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        estadoAnterior: data.pedido.estado,
-        estadoNuevo: 'entregado'
-      });
       setIsEntregaOpen(false);
       loadData();
-    } catch (e) {
-      console.error(e);
-      toast.error('Error al registrar la entrega');
+    } catch {
+      // updateEstadoPedido already shows the API error
     } finally {
       setIsUpdatingState(false);
     }
@@ -208,8 +174,8 @@ const PedidoInternoDetailPage = () => {
   }
 
   const { pedido, detalles, comentarios, historial } = data;
-  const validNextStates = getValidNextStates('pedidos_internos', pedido.estado);
-  const canChangeState = canUserChangeState(currentUser?.role);
+  const validNextStates = pedido.transicionesValidas || [];
+  const canChangeState = validNextStates.length > 0 && [ROLES.ADMIN, ROLES.VENTAS].includes(currentUser?.role);
   const canEdit = isAdmin || currentUser.id === pedido.responsable_id;
 
   return (

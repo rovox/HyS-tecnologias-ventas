@@ -31,8 +31,8 @@ export class PedidosInternosController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener pedido interno por ID' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.service.findOne(id, user);
   }
 
   @Post()
@@ -43,14 +43,14 @@ export class PedidosInternosController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar pedido interno' })
-  update(@Param('id') id: string, @Body() dto: UpsertPedidoInternoDto) {
-    return this.service.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpsertPedidoInternoDto, @CurrentUser() user: User) {
+    return this.service.update(id, dto, user);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar pedido interno' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.service.remove(id, user);
   }
 
   @Patch(':id/status')

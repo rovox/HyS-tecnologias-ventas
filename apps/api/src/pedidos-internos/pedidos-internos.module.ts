@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { RealtimeModule } from '../realtime/realtime.module';
 import { PedidosInternosController } from './pedidos-internos.controller';
 import { PedidosInternosService } from './pedidos-internos.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, RealtimeModule],
   controllers: [PedidosInternosController],
   providers: [PedidosInternosService],
   exports: [PedidosInternosService],
