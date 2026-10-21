@@ -160,6 +160,49 @@ describe('Sales API (e2e)', () => {
     });
   });
 
+  describe('técnico access and pedidos internos (MVP)', () => {
+    let tecToken = '';
+
+    beforeAll(async () => {
+      const tec = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'marcos.tec@demo.hs.local', password: 'marcos' });
+      tecToken = tec.body?.accessToken || tec.body?.token || '';
+    });
+
+    it('lets técnico read the user directory and their own profile only', async () => {
+      const dir = await request(app.getHttpServer())
+        .get('/api/users/directory')
+        .set('Authorization', `Bearer ${tecToken}`)
+        .expect(200);
+      expect(Object.keys(dir.body[0]).sort()).toEqual(['id', 'name', 'role']);
+      await request(app.getHttpServer()).get('/api/users').set('Authorization', `Bearer ${tecToken}`).expect(403);
+      await request(app.getHttpServer()).get('/api/users/usr_tecnico').set('Authorization', `Bearer ${tecToken}`).expect(200);
+      await request(app.getHttpServer()).get('/api/users/usr_ventas').set('Authorization', `Bearer ${tecToken}`).expect(403);
+    });
+
+    it('keeps pedidos internos for admin and ventas', async () => {
+      await request(app.getHttpServer()).get('/api/pedidos-internos').set('Authorization', `Bearer ${tecToken}`).expect(403);
+      const res = await request(app.getHttpServer())
+        .get('/api/pedidos-internos/ped_seed_1')
+        .set('Authorization', `Bearer ${ventasToken}`)
+        .expect(200);
+      expect(res.body.pedido.estado).toBe('solicitado');
+      expect(res.body.pedido.transicionesValidas).toEqual(['aprobado', 'rechazado', 'cancelado']);
+      expect(res.body.pedido.costoTotal).toBe(225);
+      expect(res.body.detalles[0].costoTotal).toBe(225);
+    });
+
+    it('rejects a transition outside the flow', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/api/pedidos-internos/ped_seed_1/status')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ estado: 'entregado' })
+        .expect(400);
+      expect(res.body.message).toContain('solicitado → entregado');
+    });
+  });
+
   it('frozen sales jobs require admin', async () => {
     await request(app.getHttpServer())
       .post('/api/sales/sale_andina/jobs')

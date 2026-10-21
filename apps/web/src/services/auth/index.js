@@ -36,6 +36,16 @@ const authService = {
     return (rows || []).map(publicUser);
   },
 
+  /** Id, name and role of active users; allowed for every role with access (técnico included). */
+  async userDirectory() {
+    return (await apiClient.get('users/directory', { token: authStore.token })) || [];
+  },
+
+  /** One profile: own, or any for admin/ventas. */
+  async getUser(id) {
+    return publicUser(await apiClient.get(`users/${id}`, { token: authStore.token }));
+  },
+
   async requestPasswordReset(email) {
     await apiClient.post('auth/forgot-password', { email });
     return true;

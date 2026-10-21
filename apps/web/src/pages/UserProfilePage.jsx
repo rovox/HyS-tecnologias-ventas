@@ -31,20 +31,21 @@ const UserProfilePage = () => {
     (async () => {
       setLoading(true);
       try {
-        const users = await authService.listUsers();
-        const found = (users || []).find((u) => u.id === id) || null;
+        const found = await authService.getUser(id);
         if (!cancelled) setUser(found);
         if (found && (found.role === ROLES.VENTAS || found.role === ROLES.ADMIN)) {
           try {
             const goals = await goalsService.listSellerGoals();
             const g = (goals || []).find((row) => row.userId === id || row.usuarioId === id || row.user_id === id);
             if (!cancelled) setGoal(g || null);
-          } catch {
+          } catch (err) {
             if (!cancelled) setGoal(null);
+            toast.error(err.message || 'No se pudo cargar la meta');
           }
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) setUser(null);
+        toast.error(err.message || 'No se pudo cargar el perfil');
       } finally {
         if (!cancelled) setLoading(false);
       }

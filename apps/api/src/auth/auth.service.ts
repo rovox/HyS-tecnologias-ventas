@@ -1,11 +1,18 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from './activity.service';
+import { canListUserDirectory, canListUsers, canViewUser } from '../domain/policy';
 import { LoginDto } from './dto/login.dto';
-import { assertAdmin, isAdmin, isVentas } from './roles';
+import { assertAdmin } from './roles';
+
+const USER_PROFILE = { id: true, email: true, name: true, role: true, phone: true, active: true, monthlyGoalBs: true, sucursalId: true } as const;
+
+function toProfile<T extends { monthlyGoalBs: unknown; sucursalId: string | null }>(row: T) {
+  return { ...row, monthlyGoalBs: Number(row.monthlyGoalBs), department: row.sucursalId };
+}
 
 function publicUser(user: User) {
   return {
@@ -77,13 +84,30 @@ export class AuthService {
   }
 
   async listUsers(actor: User) {
-    if (!isAdmin(actor) && !isVentas(actor)) throw new ForbiddenException('Sin permiso para listar usuarios');
+    if (!canListUsers(actor)) throw new ForbiddenException('Sin permiso para listar usuarios');
     const rows = await this.prisma.user.findMany({
       where: { active: true },
-      select: { id: true, email: true, name: true, role: true, phone: true, active: true, monthlyGoalBs: true, sucursalId: true },
+      select: USER_PROFILE,
       orderBy: { name: 'asc' },
     });
-    return rows.map((row) => ({ ...row, monthlyGoalBs: Number(row.monthlyGoalBs), department: row.sucursalId }));
+    return rows.map(toProfile);
+  }
+
+  /** Id, name and role of active users, so any role can show names (e.g. técnico in the schedule). */
+  async userDirectory(actor: User) {
+    if (!canListUserDirectory(actor)) throw new ForbiddenException('Sin permiso para ver usuarios');
+    return this.prisma.user.findMany({
+      where: { active: true },
+      select: { id: true, name: true, role: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async getUser(actor: User, id: string) {
+    if (!canViewUser(actor, id)) throw new ForbiddenException('Sin acceso a este perfil');
+    const row = await this.prisma.user.findUnique({ where: { id }, select: USER_PROFILE });
+    if (!row) throw new NotFoundException('Usuario no encontrado');
+    return toProfile(row);
   }
 
   async listSessions(actor: User) {

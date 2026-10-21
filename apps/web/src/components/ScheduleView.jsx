@@ -44,12 +44,10 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const users = await authService.listUsers();
-        const map = {};
-        (users || []).forEach((u) => { map[u.id] = u.name; });
-        setUsersMap(map);
+        const users = await authService.userDirectory();
+        setUsersMap(Object.fromEntries(users.map((u) => [u.id, u.name])));
       } catch (err) {
-        console.warn('Failed to fetch users map:', err);
+        toast.error(err.message || 'No se pudieron cargar los nombres de usuarios');
       }
     };
     fetchUsers();
@@ -65,11 +63,17 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
 
   const loadSchedules = async () => {
     setLoading(true);
+    // Each source loads on its own: a failure is shown and leaves that layer empty instead of blanking the calendar.
+    const orShow = (promise, label) => promise.catch((err) => {
+      toast.error(`${label}: ${err.message || 'error al cargar'}`);
+      return [];
+    });
+    const canSeeQuotes = userRole === ROLES.ADMIN || userRole === ROLES.VENTAS;
     const [data, taskRows, quoteRows, visitRows] = await Promise.all([
       getSchedules(),
-      tasksService.getAll().catch(() => []),
-      quotationsService.getAll().catch(() => []),
-      surveysService.getAll().catch(() => []),
+      orShow(tasksService.getAll(), 'Tareas'),
+      canSeeQuotes ? orShow(quotationsService.getAll(), 'Cotizaciones') : [],
+      orShow(surveysService.getAll(), 'Relevamientos'),
     ]);
     // Solo trabajos Schedule (seguridad/proyectos). Visitas no son eventos del calendario.
     const filteredData = (data || []).filter((s) => {
