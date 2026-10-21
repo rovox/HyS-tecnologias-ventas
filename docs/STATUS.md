@@ -11,18 +11,18 @@ Priority and scope from `business-design.md` §5. *S1\** = smoke S1 run on 2026-
 
 | Module | P | Status | Next item | Last verified |
 |---|---|---|---|---|
-| Platform (build, CI, dist, knip) | – | 🟡 | PLAT-01b sweep (Phase 1.5) | 2026-10-20 branch `fix/plat-baseline`: `pnpm check` green locally (api build, 11 unit, 12 e2e, web lint+build, knip 0); route sweep not run yet |
+| Platform (build, CI, dist, knip) | – | 🟢 | MVP-5 | 2026-10-21 branch `mvp`: `pnpm check` green (api build, 22 unit, 15 e2e, web lint+build, knip); sweep 72/0 on the compose stack |
 | Auth & users | – | 🟡 | AUTH-01 | 2026-10-21 branch `mvp`: policy moved to `domain/policy.ts` (unit green); new `GET /users/directory`, `GET /users/:id` |
 | Clients | 1 | 🟡 | `docs/modules/clients.md` | S1*: loads admin/ventas/técnico |
 | Quotations | 1 | 🟡 | `docs/modules/quotations.md` | S1*: loads admin/ventas |
-| Projects (today: Schedule + Sale) | 1 | 🔴 | MVP-4 (API-02 money) | 2026-10-21 branch `mvp`: técnico 403 fixed in code (`/users/directory`, quotations not requested); not re-run on the stack (Docker down) |
+| Projects (today: Schedule + Sale) | 1 | 🔴 | MVP-6 (API-02 money) | 2026-10-21 branch `mvp`: `/schedule` loads for 3 roles with no API errors (sweep) |
 | Finance | 1 | ⚪ | `docs/modules/finance.md` | S1*: frozen stubs |
 | Dashboard | 1 | 🟡 | `docs/modules/dashboard.md` | S1*: loads 3 roles |
 | Cronograma (activities) | 2 | 🔴 | after PRO-01 | = `/schedule` (see Projects) |
 | Asistencias | 2 | ⚪ | – | – |
 | Relevamientos (surveys) | 2 | 🟡 | SUR-01 | S1*: `/surveys` loads 3 roles |
 | Inventory | 2 | ⚪ | – | – |
-| Internal orders | 2 | 🟡 | MVP-3 verify | 2026-10-21 branch `mvp`: detail fixed in code, rules in `domain/pedidos-internos.ts` (unit green), role guard + transition check + realtime in the API; e2e/S6 pending (Docker down) |
+| Internal orders | 2 | 🟡 | MVP-5 (full flow) | 2026-10-21 branch `mvp`: detail works; S6 admin + ventas (state change, comment); rules in `domain/pedidos-internos.ts`; e2e green |
 | Direct sales | 2 | ⚪ | – | – |
 | Vehicles | 3 | ⚪ (frozen stub) | – | S1*: stub |
 | Reports | 3 | 🟡 | after FIN | S1*: `/reports`, `/admin/management` load (admin) |
@@ -56,10 +56,10 @@ Module files exist only for priority 1 (`docs/modules/`). Others get one when th
 
 ### MVP focus (2026-10-21) · branch `mvp` — current priority
 Goal: the core flow works locally (Docker MySQL) for admin, ventas and técnico. Everything not listed here is parked or post-MVP; the hs-erp phases below stay as reference.
-- [ ] MVP-1 Stack check: `pnpm local:reset` → `health/db` → login ×3 roles → `node scripts/blank-view-sweep.mjs` with 0 failing. **Blocked 2026-10-21**: Docker fails to start (`overlay: no such device`). The running kernel 7.2.10 has no modules after the upgrade to 7.2.11, so the machine needs a reboot (owner).
+- [x] MVP-1 Stack check 2026-10-21 (after the reboot): `pnpm local:reset` → db/api/web healthy, `health/db` OK, login 201 ×3 roles, sweep 72 cells / 0 failing / no API 4xx. Compose now builds one shared dev image (`hs-erp-dev:local`) and keeps `node_modules` in named volumes.
 - [x] MVP-2 `domain/` layer: `domain/policy.ts` (roles, permissions, row scoping; `auth/roles.ts` is now a Nest adapter), `domain/pedidos-internos.ts` (flow, transitions, totals, delivery fields), specs + purity test. 2026-10-21: api typecheck clean, unit 6 suites / 22 tests green, web build + lint (0 errors) + knip clean.
-- [ ] MVP-3 `/pedidos-internos/:id` (admin, ventas): API returns `costoTotal` and `transicionesValidas`, rejects invalid transitions (400), role guard on every route (técnico 403), realtime on every mutation. The DTO now accepts `listo_para_entrega`/`rechazado` (before, the flow could never reach `entregado`). Web maps the API shape (`mapPedidoDetail`), offers only the API transitions, drops the fake `logStateChange` and the silent users catch. Done in code; e2e + S6 pending the stack.
-- [ ] MVP-4 Técnico 403s: `GET /users/directory` (id, name, role; any role with access) and `GET /users/:id` (self or admin/ventas); `ScheduleView` uses the directory and asks for quotations only for admin/ventas; `UserProfilePage` uses `getUser`. Done in code; e2e + sweep pending the stack.
+- [x] MVP-3 `/pedidos-internos/:id` (admin, ventas): API returns `costoTotal` and `transicionesValidas`, rejects invalid transitions (400), role guard on every route (técnico 403), realtime on every mutation. The DTO now accepts `listo_para_entrega`/`rechazado` (before, the flow could never reach `entregado`). Web maps the API shape (`mapPedidoDetail`), offers only the API transitions, drops the fake `logStateChange` and the silent users catch. Verified 2026-10-21: e2e green; S6 in the browser as admin (`solicitado → aprobado`) and ventas (`aprobado → en_preparación`) with comment, no errors.
+- [x] MVP-4 Técnico 403s: `GET /users/directory` (id, name, role; any role with access) and `GET /users/:id` (self or admin/ventas); `ScheduleView` uses the directory and asks for quotations only for admin/ventas; `UserProfilePage` uses `getUser`; `useTecnicosList`/`useVendedorList` (mounted by the schedule form) use the directory too. Verified 2026-10-21: e2e green, sweep shows no 403 for técnico.
 - [ ] MVP-5 Core flow smoke S1..S8 (`docs/rules/testing.md`) ×3 roles: client → quotation → accept → schedule → internal order → cobro.
 - [ ] MVP-6 API-02 money/access on the flow: `$transaction` in `schedules.registerPayment/update`, one quotation-accept path, guards on relevamientos/goals; schedule/quotation flows and balances move to `domain/`.
 - [ ] MVP-7 Silent catches and missing realtime emits in every page/module the MVP touches.
