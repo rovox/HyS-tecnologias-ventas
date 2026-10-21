@@ -3,16 +3,19 @@
 name: hs-erp
 
 x-app: &app
+  # api and web run the same dev image: one build, one image on disk.
+  image: hs-erp-dev:local
   build:
     context: .
     dockerfile: docker/Dockerfile.dev
   working_dir: /app
   volumes:
     - .:/app
-    # Keep the dependencies installed in the image instead of the host's node_modules.
-    - /app/node_modules
-    - /app/apps/api/node_modules
-    - /app/apps/web/node_modules
+    # Dependencies come from the image (named volumes, shared by api and web) instead of the host's node_modules.
+    # They are filled from the image only when empty: after a lockfile change run `pnpm local:reset`.
+    - hs_erp_node_modules:/app/node_modules
+    - hs_erp_api_node_modules:/app/apps/api/node_modules
+    - hs_erp_web_node_modules:/app/apps/web/node_modules
 
 services:
   db:
@@ -75,3 +78,6 @@ services:
 
 volumes:
   hs_erp_mysql:
+  hs_erp_node_modules:
+  hs_erp_api_node_modules:
+  hs_erp_web_node_modules:
