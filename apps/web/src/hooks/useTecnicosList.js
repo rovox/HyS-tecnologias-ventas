@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient, authToken } from '@/api/http.js';
+import authService from '@/services/auth/index.js';
 import { ROLES } from '@/constants/roles.js';
 
 export const useTecnicosList = () => {
@@ -11,15 +11,11 @@ export const useTecnicosList = () => {
     try {
       setLoading(true);
       setError(null);
-      const users = await apiClient.get('users', { token: authToken() });
-      const mapped = (users || [])
+      // The directory (id, name, role) is open to every role, so técnico can load the schedule too.
+      const users = await authService.userDirectory();
+      const mapped = users
         .filter((u) => u.role === ROLES.TEC)
-        .map((u) => ({
-          id: u.id,
-          nombre: u.name || u.email,
-          user_id: u.id,
-          sucursal_id: u.sucursalId || '',
-        }));
+        .map((u) => ({ id: u.id, nombre: u.name, user_id: u.id }));
       setTecnicos(mapped);
     } catch (err) {
       console.error('Error fetching tecnicos:', err);

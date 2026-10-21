@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient, authToken } from '@/api/http.js';
+import authService from '@/services/auth/index.js';
 import { ROLES } from '@/constants/roles.js';
 
 export const useVendedorList = () => {
@@ -11,10 +11,11 @@ export const useVendedorList = () => {
     try {
       setLoading(true);
       setError(null);
-      const users = await apiClient.get('users', { token: authToken() });
-      const mapped = (users || [])
+      // The directory (id, name, role) is open to every role, so técnico can open the schedule form too.
+      const users = await authService.userDirectory();
+      const mapped = users
         .filter((u) => u.role === ROLES.ADMIN || u.role === ROLES.VENTAS)
-        .map((u) => ({ id: u.id, name: u.name || u.email, role: u.role }));
+        .map((u) => ({ id: u.id, name: u.name, role: u.role }));
       setVendors(mapped);
     } catch (err) {
       console.error('Error fetching vendors:', err);
