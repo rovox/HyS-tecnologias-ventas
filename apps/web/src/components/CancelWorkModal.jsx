@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
-import { useSchedules, calculateBalance } from '@/hooks/useSchedules.js';
+import { useSchedules } from '@/hooks/useSchedules.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { Loader2, XCircle } from 'lucide-react';
@@ -31,46 +31,19 @@ const CancelWorkModal = ({ isOpen, onClose, work, onSuccess }) => {
     try {
       const descuento = parseFloat(saldoCancelado || 0);
 
-      let statusPayload = {
-        estado: 'cancelado',
-        motivo_cancelacion: motivo,
-        fecha_cancelacion: new Date().toISOString(),
-        usuario_cancelacion: currentUser?.id
-      };
-
-      // Si perdonan deuda, se registra como descuento y se actualiza el saldo
+      // Forgiven debt is a `descuento` payment: the API lowers the saldo (it cannot exceed it).
       if (descuento > 0) {
-        const currentCobros = parseFloat(work.cobros_realizados || work.cobros_registrados || 0);
-        const cobros_nuevos = currentCobros + descuento;
-
-        const { saldo: calculatedSaldo, estado_pago: calculatedEstado } = calculateBalance({
-          ...work,
-          cobros_realizados: cobros_nuevos
-        });
-
         await registerPayment({
           trabajo_id: work.id,
-          usuario_id: currentUser?.id,
-          cobrado_por_id: currentUser?.id,
-          cobrado_por_nombre: currentUser?.name || currentUser?.email || '',
-          monto_cobrado: 0,
-          descuento: descuento,
-          adicional: 0,
-          metodo_pago: 'otro',
-          observacion: `Ajuste por cancelación: ${motivo}. ${observacion}`,
-          saldo_anterior: work.saldo || 0,
-          saldo_nuevo: calculatedSaldo
+          tipo: 'descuento',
+          monto: descuento,
+          metodo: 'otro',
+          nota: `Ajuste por cancelación: ${motivo}. ${observacion}`.trim(),
         });
-
-        statusPayload = {
-          ...statusPayload,
-          cobros_realizados: cobros_nuevos,
-          saldo: calculatedSaldo,
-          estado_pago: calculatedEstado
-        };
       }
 
-      await updateScheduleStatus(work.id, statusPayload);
+      // The hook already shows the API error and returns null when the change is rejected.
+      if (!(await updateScheduleStatus(work.id, { estado: 'cancelado' }))) return;
 
       await addObservation(work.id, `Cancelado: ${motivo} - ${observacion}`, currentUser?.id, 'cancelado');
 
@@ -82,7 +55,7 @@ const CancelWorkModal = ({ isOpen, onClose, work, onSuccess }) => {
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      // Error handled in hook
+      toast.error(err.message || 'No se pudo cancelar el trabajo');
     }
   };
 

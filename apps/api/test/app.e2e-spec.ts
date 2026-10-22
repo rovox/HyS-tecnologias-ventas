@@ -204,6 +204,68 @@ describe('Sales API (e2e)', () => {
     });
   });
 
+  describe('quotation → project → payments (MVP-6)', () => {
+    const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
+    let quoteId = '';
+    let scheduleId = '';
+
+    beforeAll(async () => {
+      const quote = await request(app.getHttpServer())
+        .post('/api/quotations')
+        .set(auth())
+        .send({ titulo: `E2E proyecto ${Date.now()}`, clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 1000 })
+        .expect(201);
+      quoteId = quote.body.id;
+      await request(app.getHttpServer())
+        .post(`/api/quotations/${quoteId}/files`)
+        .set(auth())
+        .attach('file', Buffer.from('%PDF-1.4 e2e'), 'cotizacion.pdf')
+        .expect(201);
+      await request(app.getHttpServer()).post(`/api/quotations/${quoteId}/status`).set(auth()).send({ estado: 'enviado' }).expect(201);
+    });
+
+    it('accepting through the status creates exactly one project with the quotation total', async () => {
+      const res = await request(app.getHttpServer()).post(`/api/quotations/${quoteId}/status`).set(auth()).send({ estado: 'aceptado' }).expect(201);
+      expect(res.body.estado).toBe('aceptado');
+      const again = await request(app.getHttpServer()).post(`/api/quotations/${quoteId}/accept`).set(auth()).send({}).expect(201);
+      expect(again.body.alreadyConverted).toBe(true);
+      const list = await request(app.getHttpServer()).get('/api/schedules').query({ quotationId: quoteId }).set(auth()).expect(200);
+      expect(list.body).toHaveLength(1);
+      expect(Number(list.body[0].monto)).toBe(1000);
+      expect(Number(list.body[0].saldo)).toBe(1000);
+      expect(again.body.schedule.id).toBe(list.body[0].id);
+      scheduleId = list.body[0].id;
+    });
+
+    it('keeps the balance in the API: cobros, adicional, overpayment and descuento', async () => {
+      const pay = (body: object, status = 201) =>
+        request(app.getHttpServer()).post(`/api/schedules/${scheduleId}/payments`).set(auth()).send(body).expect(status);
+      expect(Number((await pay({ tipo: 'adelanto', monto: 400 })).body.saldo)).toBe(600);
+      const over = await pay({ tipo: 'cobro', monto: 700 }, 400);
+      expect(over.body.message).toContain('supera el saldo pendiente (600)');
+      expect(Number((await pay({ tipo: 'extra_asistencia', monto: 50, nota: 'Material extra' })).body.saldo)).toBe(600);
+      const last = await pay({ tipo: 'descuento', monto: 600, nota: 'Saldo perdonado' });
+      expect(Number(last.body.saldo)).toBe(0);
+      expect(Number(last.body.adelanto)).toBe(1000);
+      expect(last.body.payments).toHaveLength(3);
+    });
+
+    it('does not change the official amount of a project', async () => {
+      const res = await request(app.getHttpServer()).patch(`/api/schedules/${scheduleId}`).set(auth()).send({ monto: 1200 }).expect(400);
+      expect(res.body.message).toContain('no se modifica');
+    });
+
+    it('keeps relevamientos away from users without access', async () => {
+      const none = await request(app.getHttpServer()).post('/api/auth/login').send(credentialsFor('marcelo@hscontrol.com'));
+      const token = none.body?.accessToken || '';
+      await request(app.getHttpServer())
+        .post('/api/relevamientos')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ clienteId: 'cli_andina', fecha: '2026-11-01', lugar: 'Oficina' })
+        .expect(403);
+    });
+  });
+
   it('frozen sales jobs require admin', async () => {
     await request(app.getHttpServer())
       .post('/api/sales/sale_andina/jobs')

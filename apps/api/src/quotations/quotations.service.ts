@@ -4,16 +4,10 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
-import { CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
+import { AcceptQuotationDto, CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
 import { assertCanMutateQuotes, isTec, quotationWhere } from '../auth/roles';
 import { RealtimeService } from '../realtime/realtime.service';
-
-const FLOW: Record<string, string[]> = {
-  borrador: ['enviado', 'rechazado'],
-  enviado: ['aceptado', 'rechazado', 'borrador'],
-  aceptado: ['rechazado'],
-  rechazado: ['borrador'],
-};
+import { acceptError, checkQuotationTransition, projectFromQuotation } from '../domain/quotations';
 
 function uploadDir() {
   return path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
@@ -134,16 +128,10 @@ export class QuotationsService {
   async updateStatus(id: string, estado: string, user: User, sessionId?: string, motivoRechazo?: string, fechaEnvio?: string) {
     assertCanMutateQuotes(user);
     const current = await this.get(id, user);
-    const allowed = FLOW[current.estado] || [];
-    if (!allowed.includes(estado)) {
-      throw new BadRequestException(`Transición inválida: ${current.estado} → ${estado}`);
-    }
-    if (estado === 'enviado' && !current.archivoPdfUrl) {
-      throw new BadRequestException('Adjunta el PDF antes de enviar la cotización');
-    }
-    if (estado === 'rechazado' && !motivoRechazo?.trim() && current.estado !== 'borrador') {
-      // Motivo opcional en borrador; recomendado al rechazar un envío
-    }
+    const transition = checkQuotationTransition(current.estado, estado, Boolean(current.archivoPdfUrl));
+    if (!transition.ok) throw new BadRequestException(transition.reason);
+    // One path to accept: the status change also creates the project.
+    if (estado === 'aceptado') return (await this.accept(id, {}, user, sessionId)).quotation;
     const quote = await this.prisma.quotation.update({
       where: { id },
       data: {
@@ -284,34 +272,46 @@ export class QuotationsService {
     return full;
   }
 
-  async accept(id: string, user: User, sessionId?: string) {
+  /** Accepting creates the sale and the project (schedule) in one transaction; repeating it returns what exists. */
+  async accept(id: string, dto: AcceptQuotationDto, user: User, sessionId?: string) {
     assertCanMutateQuotes(user);
     const current = await this.get(id, user);
-    if (current.sale) return { quotation: current, sale: current.sale, alreadyConverted: true };
-    if (current.estado === 'rechazado') throw new BadRequestException('Una cotización rechazada no crea venta');
-    if (current.estado !== 'enviado' && current.estado !== 'aceptado') {
-      throw new BadRequestException('La cotización no se puede aceptar');
+    const error = acceptError(current);
+    if (error) throw new BadRequestException(error);
+    const existing = await this.prisma.schedule.findFirst({ where: { quotationId: id }, orderBy: { createdAt: 'asc' } });
+    if (current.estado === 'aceptado' && current.sale && existing) {
+      return { quotation: current, sale: current.sale, schedule: existing, alreadyConverted: true };
     }
-    const sale = await this.prisma.$transaction(async (tx) => {
+    const { sale, schedule } = await this.prisma.$transaction(async (tx) => {
       await tx.quotation.update({ where: { id }, data: { estado: 'aceptado' } });
-      return tx.sale.create({
+      const sale = current.sale ?? await tx.sale.create({
         data: {
           quotationId: id,
           total: current.monto,
-          jobs: {
-            create: {
-              titulo: current.titulo,
-              estado: 'programado',
-              monto: current.monto,
-            },
-          },
+          jobs: { create: { titulo: current.titulo, estado: 'programado', monto: current.monto } },
         },
         include: { jobs: true, payments: true },
       });
+      const schedule = existing ?? await tx.schedule.create({
+        data: projectFromQuotation(
+          { ...current, monto: Number(current.monto), clienteId: current.clienteId as string },
+          current.cliente?.direccion || '',
+          dto,
+          new Date(),
+        ),
+      });
+      return { sale, schedule };
     });
     await this.prisma.touchClientActivity(current.clienteId);
-    await this.activity.log(user.id, sessionId, 'quotation.accept', 'sale', sale.id);
+    await this.activity.log(user.id, sessionId, 'quotation.accept', 'schedule', schedule.id);
+    this.realtime.emit('quotation.updated', 'quotation', id, { byUserId: user.id, patch: { estado: 'aceptado' } });
+    if (!existing) {
+      this.realtime.emit('schedule.created', 'schedule', schedule.id, {
+        byUserId: user.id,
+        patch: { estado: schedule.estado, saldo: Number(schedule.saldo) },
+      });
+    }
     const quotation = await this.get(id, user);
-    return { quotation, sale, alreadyConverted: false };
+    return { quotation, sale, schedule, alreadyConverted: Boolean(existing) };
   }
 }

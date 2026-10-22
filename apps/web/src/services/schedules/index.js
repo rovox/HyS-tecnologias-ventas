@@ -1,13 +1,9 @@
 import { apiClient, authToken } from '@/api/http.js';
 
+/** The API computes the balance from the payments; the web only reads it. */
 export function calculateBalance(trabajo) {
-  const costo_total = parseFloat(trabajo.monto || trabajo.costo_total || 0);
-  const adicionales = parseFloat(trabajo.adicionales || 0);
-  const adelanto_recibido = parseFloat(trabajo.adelanto || trabajo.adelanto_recibido || 0);
-  const cobros_realizados = parseFloat(trabajo.cobros_realizados || trabajo.cobros_registrados || 0);
-  const saldo = costo_total + adicionales - adelanto_recibido - cobros_realizados;
-  const estado_pago = saldo <= 0 ? 'Pagado' : 'Pendiente';
-  return { saldo, estado_pago };
+  const saldo = Number(trabajo?.saldo ?? 0);
+  return { saldo, estado_pago: saldo <= 0 ? 'Pagado' : 'Pendiente' };
 }
 
 function mapApiSchedule(row) {
@@ -160,7 +156,7 @@ export const schedulesService = {
     const trabajoId = paymentData.trabajo_id || paymentData.schedule_id;
     if (!trabajoId) throw new Error('Trabajo requerido');
     const tipoRaw = paymentData.tipo || paymentData.tipo_cobro || 'cobro';
-    const tipo = tipoRaw === 'adelanto' ? 'adelanto' : tipoRaw === 'extra_asistencia' ? 'extra_asistencia' : 'cobro';
+    const tipo = ['adelanto', 'extra_asistencia', 'descuento'].includes(tipoRaw) ? tipoRaw : 'cobro';
     const updated = await apiClient.post(`schedules/${trabajoId}/payments`, {
       tipo,
       monto: Number(paymentData.monto_cobrado ?? paymentData.monto ?? 0),

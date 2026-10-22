@@ -5,69 +5,36 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
-import { useSchedules, calculateBalance } from '@/hooks/useSchedules.js';
-import { apiClient, authToken } from '@/api/http.js';
+import { useSchedules } from '@/hooks/useSchedules.js';
 import { toast } from 'sonner';
-import { Loader2, DollarSign, Calculator, UserCheck } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext.jsx';
-import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
+import { Loader2, DollarSign, Calculator } from 'lucide-react';
 
+const EMPTY_FORM = { monto_cobrado: '', adicional: '', motivo_adicional: '', metodo_pago: 'efectivo', observacion: '' };
+
+// The API owns the balance: a cobro cannot exceed the saldo, and an extra charge is its own payment
+// (extra_asistencia) that does not reduce the budget.
 const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
-  const { currentUser, isAdmin } = useAuth();
-  // Solo un administrador puede confirmar un cobro directamente; el resto queda pendiente de rendición.
-  const canDirectConfirm = isAdmin?.();
-  const { updateSchedule } = useSchedules();
+  const { registerPayment } = useSchedules();
   const [loading, setLoading] = useState(false);
-  const [overpayWarning, setOverpayWarning] = useState('');
-  const [usersList, setUsersList] = useState([]);
-  const [cajasList, setCajasList] = useState([]);
-  const [formData, setFormData] = useState({
-    monto_cobrado: '',
-    adicional: '',
-    motivo_adicional: '',
-    metodo_pago: 'efectivo',
-    observacion: '',
-    cobrado_por_id: currentUser?.id || '',
-    caja_banco_id: 'none',
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
-    if (isOpen) {
-      const token = authToken();
-      apiClient.get('users', { token }).then(setUsersList).catch(() => setUsersList([]));
-      setCajasList([]);
-      setFormData(prev => ({ ...prev, cobrado_por_id: currentUser?.id || '' }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (isOpen) setFormData(EMPTY_FORM);
   }, [isOpen]);
 
   if (!work) return null;
 
+  const saldoAnterior = Number(work.saldo) || 0;
+  const monto_cobrado = parseFloat(formData.monto_cobrado) || 0;
+  const monto_adicional = parseFloat(formData.adicional) || 0;
+  const saldoNuevo = Math.max(0, saldoAnterior - monto_cobrado);
+  const overpayWarning = monto_cobrado > saldoAnterior
+    ? `El cobro supera el saldo pendiente ($${saldoAnterior.toFixed(2)}). Registra el excedente ($${(monto_cobrado - saldoAnterior).toFixed(2)}) como Monto Adicional.`
+    : '';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const updated = { ...prev, [name]: value };
-      // Live overpayment check
-      if (name === 'monto_cobrado') {
-        const cobro = parseFloat(value) || 0;
-        const adicional = parseFloat(updated.adicional) || 0;
-        const { saldo: saldoAct } = calculateBalance(work);
-        if (cobro > saldoAct) {
-          const falta = cobro - saldoAct;
-          setOverpayWarning(`El cobro supera el saldo pendiente ($${saldoAct.toFixed(2)}). Agrega al menos $${falta.toFixed(2)} como Monto Adicional para justificarlo.`);
-          if (adicional < falta) updated.adicional = String(falta.toFixed(2));
-        } else {
-          setOverpayWarning('');
-        }
-      }
-      if (name === 'adicional') {
-        const cobro = parseFloat(updated.monto_cobrado) || 0;
-        const adicional = parseFloat(value) || 0;
-        const { saldo: saldoAct } = calculateBalance(work);
-        if (cobro > saldoAct && adicional >= cobro - saldoAct) setOverpayWarning('');
-      }
-      return updated;
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (val) => {
@@ -76,120 +43,49 @@ const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
 
   const handleSavePayment = async (e) => {
     e.preventDefault();
-
-    const monto_cobrado = parseFloat(formData.monto_cobrado) || 0;
-    const monto_adicional = parseFloat(formData.adicional) || 0;
-
-    // Validate: cobro cannot exceed saldo without sufficient adicional
-    const { saldo: saldoActual } = calculateBalance(work);
-    if (monto_cobrado > saldoActual && monto_adicional < (monto_cobrado - saldoActual)) {
-      toast.error(`El monto cobrado ($${monto_cobrado.toFixed(2)}) supera el saldo pendiente ($${saldoActual.toFixed(2)}). Ingresa un Monto Adicional de al menos $${(monto_cobrado - saldoActual).toFixed(2)}.`);
+    if (overpayWarning) {
+      toast.error(overpayWarning);
       return;
     }
-
     if (monto_cobrado <= 0 && monto_adicional <= 0) {
-      toast.error('Debe ingresar un monto cobrado o cargo adicional mayor a 0.');
+      toast.error('Debe ingresar un monto cobrado o un adicional mayor a 0.');
       return;
     }
-
     if (monto_adicional > 0 && !formData.motivo_adicional.trim()) {
       toast.error('Debe ingresar un motivo para el adicional.');
       return;
     }
 
-    if (!formData.cobrado_por_id) {
-      toast.error('Debe seleccionar quién realizó el cobro.');
-      return;
-    }
-
     setLoading(true);
     try {
-      // (1) Fetch current schedule
-      const currentWork = await apiClient.get(`schedules/${work.id}`, { token: authToken() });
-      
-      // (2) Calculate new cobros_realizados
-      const currentCobros = parseFloat(currentWork.cobros_realizados || currentWork.cobros_registrados || 0);
-      const cobros_nuevos = currentCobros + monto_cobrado;
-      
-      // (3) Calculate new adicionales
-      const currentAdicionales = parseFloat(currentWork.adicionales || 0);
-      const adicionales_nuevos = currentAdicionales + monto_adicional;
-
-      const updatedWorkObj = {
-        ...currentWork,
-        cobros_realizados: cobros_nuevos,
-        adicionales: adicionales_nuevos
-      };
-
-      // Calculate balance based on new totals
-      const { saldo: calculatedSaldo, estado_pago: calculatedEstado } = calculateBalance(updatedWorkObj);
-
-      const obsExtra = formData.motivo_adicional ? ` (Motivo adicional: ${formData.motivo_adicional})` : '';
-      const finalObs = (formData.observacion + obsExtra).trim();
-
-      const cobradorUser = usersList.find(u => u.id === formData.cobrado_por_id);
-      const cobradorNombre = cobradorUser?.name || cobradorUser?.email || currentUser?.name || currentUser?.email || '';
-
-      const cajaSeleccionada = cajasList.find(c => c.id === formData.caja_banco_id);
-      const estadoRendicion = (canDirectConfirm && formData.caja_banco_id !== 'none') ? 'Confirmado' : 'Pendiente rendición';
-
-      // (4) Registrar cobro real en Cobros/Rendición (solo si hay dinero recibido)
+      let updated = work;
       if (monto_cobrado > 0) {
-        await crearCobroRendicion({
+        updated = await registerPayment({
           trabajo_id: work.id,
-          tipo: 'Cobro final',
+          tipo: 'cobro',
           monto: monto_cobrado,
-          metodo_pago: formData.metodo_pago,
-          cliente_nombre: work.cliente_nombre || work.cliente || '',
-          sucursal_nombre: work.sucursal_nombre || work.sucursal_id || '',
-          vendedor_nombre: work.vendedor_nombre || '',
-          cobrado_por_id: formData.cobrado_por_id || currentUser?.id,
-          cobrado_por_nombre: cobradorNombre,
-          origen: 'trabajo_cobro_final',
-          confirmado: estadoRendicion === 'Confirmado',
-          caja_banco_id: formData.caja_banco_id !== 'none' ? formData.caja_banco_id : '',
-          caja_banco_nombre: cajaSeleccionada?.nombre || '',
-          observacion: finalObs,
-          adicional: monto_adicional,
-          saldo_anterior: currentWork.saldo || 0,
-          saldo_nuevo: calculatedSaldo,
+          metodo: formData.metodo_pago,
+          nota: formData.observacion.trim(),
         });
       }
-
-      // (5) CRITICAL: Call updateSchedule to persist calculated balance and totals
-      const finalUpdatedWork = await updateSchedule(work.id, {
-        cobros_realizados: cobros_nuevos,
-        adicionales: adicionales_nuevos,
-        saldo: calculatedSaldo,
-        estado_pago: calculatedEstado
-      });
-
+      if (monto_adicional > 0) {
+        updated = await registerPayment({
+          trabajo_id: work.id,
+          tipo: 'extra_asistencia',
+          monto: monto_adicional,
+          metodo: formData.metodo_pago,
+          nota: [`Adicional: ${formData.motivo_adicional.trim()}`, formData.observacion.trim()].filter(Boolean).join('. '),
+        });
+      }
       toast.success('Cobro registrado correctamente');
-      setFormData({ monto_cobrado: '', adicional: '', motivo_adicional: '', metodo_pago: 'efectivo', observacion: '', cobrado_por_id: currentUser?.id || '', caja_banco_id: 'none' });
-      
-      // (6) Call onSave callback with the updated work object
-      if (onSave) onSave(finalUpdatedWork);
-      
-      // (7) Close modal
+      if (onSave) onSave(updated);
       onClose();
     } catch (err) {
-      console.error('Error al registrar el cobro:', err?.response?.data || err);
-      toast.error(err?.response?.data ? JSON.stringify(err.response.data) : 'Error al registrar el cobro');
+      toast.error(err.message || 'Error al registrar el cobro');
     } finally {
       setLoading(false);
     }
   };
-
-  // Pre-calculate logic for UI display
-  const currentCobrosPrev = parseFloat(work.cobros_realizados || work.cobros_registrados || 0);
-  const currentAdicionalesPrev = parseFloat(work.adicionales || 0);
-  const previewWork = {
-    ...work,
-    cobros_realizados: currentCobrosPrev + (parseFloat(formData.monto_cobrado) || 0),
-    adicionales: currentAdicionalesPrev + (parseFloat(formData.adicional) || 0)
-  };
-  const { saldo: saldoNuevo } = calculateBalance(previewWork);
-  const { saldo: saldoAnterior } = calculateBalance(work);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -202,7 +98,7 @@ const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
             <div>
               <DialogTitle className="text-xl font-extrabold tracking-tight">Registrar Cobro / Ajuste</DialogTitle>
               <DialogDescription className="font-medium mt-1">
-                Registra un pago y suma cargos extra al trabajo.
+                Registra un cobro del saldo y, si corresponde, un adicional fuera del presupuesto.
               </DialogDescription>
             </div>
           </div>
@@ -258,35 +154,8 @@ const PaymentModal = ({ isOpen, onClose, work, onSave }) => {
             </div>
           </div>
 
-          {canDirectConfirm && (
-            <div className="space-y-2">
-              <Label>Caja / Banco destino {canDirectConfirm ? <span className="text-xs text-muted-foreground">(opcional — si no seleccionas, queda pendiente de rendición)</span> : ''}</Label>
-              <Select value={formData.caja_banco_id} onValueChange={v => setFormData(prev => ({...prev, caja_banco_id: v}))} disabled={loading}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar caja/banco..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar (Pendiente rendición)</SelectItem>
-                  {cajasList.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre} ({c.tipo})</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="space-y-2">
-            <Label className="flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5"/> Cobrado por <span className="text-destructive">*</span></Label>
-            <Select value={formData.cobrado_por_id} onValueChange={(val) => setFormData(prev => ({ ...prev, cobrado_por_id: val }))} disabled={loading}>
-              <SelectTrigger className="font-medium">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {usersList.map(u => (
-                  <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className={`flex items-center gap-1.5 ${overpayWarning ? 'text-orange-600' : ''}`}><Calculator className="h-3.5 w-3.5"/> Monto Adicional {overpayWarning ? <span className="text-xs font-bold text-orange-600">(requerido)</span> : '(Opcional)'}</Label>
+            <Label className={`flex items-center gap-1.5 ${overpayWarning ? 'text-orange-600' : ''}`}><Calculator className="h-3.5 w-3.5"/> Monto Adicional <span className="text-xs text-muted-foreground font-normal">(fuera del presupuesto, opcional)</span></Label>
             {overpayWarning && (
               <p className="text-xs text-orange-600 font-medium bg-orange-50 border border-orange-200 rounded-lg p-2">{overpayWarning}</p>
             )}

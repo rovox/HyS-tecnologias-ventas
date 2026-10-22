@@ -1,4 +1,3 @@
-import { schedulesService } from '@/services/schedules/index.js';
 import { API_URL } from '@/api/config.js';
 import { apiClient, authToken, mapQuote } from '@/api/http.js';
 
@@ -101,28 +100,20 @@ const quotationsService = {
     window.open(URL.createObjectURL(blob), '_blank');
   },
 
+  /** Accepts the quotation; the API creates the sale and the project (schedule) once and returns them. */
   async convertToSchedule(id, extras = {}) {
-    const result = await apiClient.post(`quotations/${id}/accept`, {}, { token: authToken() });
-    const quotation = mapQuote(result.quotation);
-    const job = result.sale?.jobs?.[0];
-    const clientNombre = quotation.cliente_nombre || extras.cliente || 'Cliente';
-    const schedule = await schedulesService.create({
-      type: extras.type || 'seguridad',
-      cliente: clientNombre,
-      cliente_id: quotation.cliente_id,
-      lugar: extras.lugar || 'Por definir',
-      descripcion_trabajo: `${quotation.titulo} (${quotation.numero})`,
-      monto: quotation.total || 0,
-      adelanto: extras.adelanto || 0,
-      saldo: (quotation.total || 0) - (extras.adelanto || 0),
-      estado: job?.estado || 'programado',
-      fecha_programada: extras.fecha_programada || `${new Date().toISOString().slice(0, 10)} 00:00:00`,
-      sucursal_id: quotation.sucursal_id || extras.sucursal_id || '',
-      vendedor_responsable_id: quotation.vendedor_id || extras.vendedor_responsable_id || '',
-      vendedor_nombre: quotation.vendedor_nombre || '',
-      quotation_id: quotation.id,
-    });
-    return { quotation, sale: result.sale, schedule, alreadyConverted: Boolean(result.alreadyConverted) };
+    const result = await apiClient.post(`quotations/${id}/accept`, {
+      type: extras.type,
+      fechaProgramada: extras.fecha_programada,
+      lugar: extras.lugar,
+      tecnicoId: extras.tecnico_id,
+    }, { token: authToken() });
+    return {
+      quotation: mapQuote(result.quotation),
+      sale: result.sale,
+      schedule: result.schedule,
+      alreadyConverted: Boolean(result.alreadyConverted),
+    };
   },
 };
 

@@ -19,7 +19,6 @@ import { surveysService } from '@/services/surveys/index.js';
 import VisitaFormModal from '@/components/VisitaFormModal.jsx';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
-import { crearCobroRendicion } from '@/utils/cobrosRendicion.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 
 const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
@@ -677,11 +676,11 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
             <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border border-border bg-card mt-2 shadow-sm">
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5"/> Costo Total <span className="text-destructive">*</span></Label>
-                <Input name="monto" type="number" step="0.01" value={formData.monto} onChange={handleChange} className="font-variant-numeric tabular-nums font-bold" required disabled={isSubmitting} />
+                <Input name="monto" type="number" step="0.01" value={formData.monto} onChange={handleChange} className="font-variant-numeric tabular-nums font-bold" required disabled={isSubmitting || Boolean(initialData?.quotation_id)} title={initialData?.quotation_id ? 'El monto viene de la cotización aceptada' : undefined} />
               </div>
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5 text-blue-600"><DollarSign className="h-3.5 w-3.5"/> Adelanto Recibido</Label>
-                <Input name="adelanto" type="number" step="0.01" value={formData.adelanto} onChange={handleChange} className="font-variant-numeric tabular-nums text-blue-600 font-bold border-blue-200" disabled={isSubmitting} />
+                <Input name="adelanto" type="number" step="0.01" value={formData.adelanto} onChange={handleChange} className="font-variant-numeric tabular-nums text-blue-600 font-bold border-blue-200" disabled={isSubmitting || Number(initialData?.adelanto) > 0} title={Number(initialData?.adelanto) > 0 ? 'Los cobros se registran desde el detalle del trabajo' : undefined} />
                 {adelanto > 0 && (
                   <div className="mt-2 space-y-2 p-3 rounded-lg border border-blue-200 bg-blue-50">
                     <p className="text-[11px] font-bold text-blue-700">¿Cómo se recibió el adelanto?</p>

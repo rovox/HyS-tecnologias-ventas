@@ -18,7 +18,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../auth/current-user.decorator';
 import { ROLES } from '../auth/roles';
 import { Roles, RolesGuard } from '../auth/roles.guard';
-import { CreateQuotationDto, StatusDto, UpdateQuotationDto } from './dto/quotation.dto';
+import { AcceptQuotationDto, CreateQuotationDto, StatusDto, UpdateQuotationDto } from './dto/quotation.dto';
 import { QuotationsService } from './quotations.service';
 
 @ApiTags('quotations')
@@ -82,9 +82,14 @@ export class QuotationsController {
   @Post(':id/accept')
   @UseGuards(RolesGuard)
   @Roles(ROLES.ADMIN, ROLES.VENTAS)
-  @ApiOperation({ summary: 'Accept quotation (shortcut)' })
-  accept(@Param('id') id: string, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
-    return this.quotations.accept(id, user, sessionId);
+  @ApiOperation({ summary: 'Accept quotation: creates the sale and the project (idempotent)' })
+  accept(
+    @Param('id') id: string,
+    @Body() dto: AcceptQuotationDto,
+    @CurrentUser() user: User,
+    @CurrentSessionId() sessionId?: string,
+  ) {
+    return this.quotations.accept(id, dto, user, sessionId);
   }
 
   @Post(':id/files')
