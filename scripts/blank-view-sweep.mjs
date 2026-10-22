@@ -43,7 +43,7 @@ const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T' };
 const EXPECTED_REDIRECT = new Set(['/activity-wall']);
 
 function checkRouteTable() {
-  const app = readFileSync(path.join(ROOT, 'apps/web/src/App.jsx'), 'utf8');
+  const app = readFileSync(path.join(ROOT, 'apps/web/src/app/App.jsx'), 'utf8');
   // Only guarded routes are swept; redirects and /login need no role, /sin-acceso is for SIN ACCESO users.
   const declared = [...app.matchAll(/<Route path="([^"]+)" element=\{\s*<ProtectedRoute/g)].map((m) => m[1]).filter((p) => p !== '/sin-acceso');
   const known = new Set(ROUTES.map(([p]) => p.replace(/:[A-Za-z]+/, ':id')));

@@ -2,13 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import ActivityOverlay from './ActivityOverlay.jsx';
-import { useRealtimeRefresh } from '@/hooks/useRealtimeRefresh.js';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
-
-  useRealtimeRefresh();
 
   const toggleActivity = useCallback(() => {
     setActivityOpen((open) => !open);

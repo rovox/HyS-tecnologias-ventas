@@ -40,7 +40,7 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 | S5 | ventas | Register advance + payment on a job | Balance updated by the API; job and reports update live; payment listed in job history |
 | S6 | técnico/admin | Create internal order → approve → deliver | Status flow respected |
 | S7 | técnico | Try `/quotations`, `/reports` | Redirected; API returns 403 |
-| S8 | all | Edit in tab A | Tab B updates with no reload |
+| S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)
 

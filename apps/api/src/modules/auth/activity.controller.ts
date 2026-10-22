@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import { Roles, RolesGuard } from '../../common/auth/roles.guard';
@@ -21,5 +21,13 @@ export class ActivityController {
     @Query('action') action?: string,
   ) {
     return this.audit.list({ limit: Number(limit) || undefined, userId, action });
+  }
+
+  /** History of one record (chatter): visible to everyone who works in the app, as business-design §3 asks. */
+  @Get(':entity/:id')
+  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC)
+  @ApiOperation({ summary: 'Change history of one record' })
+  history(@Param('entity') entity: string, @Param('id') id: string) {
+    return this.audit.list({ entity, entityId: id, limit: 200 });
   }
 }

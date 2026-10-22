@@ -5,6 +5,10 @@ import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 import { routeRoles } from '@/config/nav.js';
 import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queryClient.js';
+import { RealtimeProvider } from './RealtimeProvider.jsx';
+import { ConfirmProvider } from '@/shared/views';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
@@ -45,7 +49,10 @@ function RouteFallback() {
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
+    <RealtimeProvider>
+    <ConfirmProvider>
       <Router>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -212,7 +219,10 @@ function App() {
         </Suspense>
         <Toaster position="top-center" richColors closeButton />
       </Router>
+    </ConfirmProvider>
+    </RealtimeProvider>
     </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
