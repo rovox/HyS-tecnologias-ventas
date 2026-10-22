@@ -4,7 +4,7 @@
 // Local seed data only; reports numbers, enforces no budget (the baseline is recorded in docs/STATUS.md).
 
 import { writeFileSync } from 'node:fs';
-import users from '../config/users.js';
+import { ROLE_ACCOUNTS, credentialsFor } from '../config/users.js';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, all) => (a.startsWith('--') ? [...acc, [a.slice(2), all[i + 1]]] : acc), []),
@@ -12,7 +12,7 @@ const args = Object.fromEntries(
 const API = args.api ?? 'http://localhost:3001/api';
 const N = Number(args.n ?? 200);
 const C = Number(args.c ?? 5);
-const CREDENTIALS = users.credentialsFor(users.ROLE_ACCOUNTS.admin);
+const CREDENTIALS = credentialsFor(ROLE_ACCOUNTS.admin);
 
 const post = (path, body, headers = {}) =>
   fetch(`${API}/${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });

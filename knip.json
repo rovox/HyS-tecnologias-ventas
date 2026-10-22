@@ -15,8 +15,8 @@
 			"ignoreIssues": { "src/components/ui/**": ["exports"] }
 		},
 		"apps/api": {
-			"entry": ["src/main.ts", "test/*.ts"],
-			"project": ["src/**/*.ts", "prisma/**/*.{ts,prisma}", "test/*.ts"],
+			"entry": ["src/main.ts", "test/*.ts", "scripts/*.mjs"],
+			"project": ["src/**/*.ts", "prisma/**/*.{ts,prisma}", "test/*.ts", "scripts/*.mjs"],
 			"ignoreDependencies": ["@nestjs/schematics"]
 		}
 	}

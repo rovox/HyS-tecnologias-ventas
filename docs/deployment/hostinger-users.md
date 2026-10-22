@@ -7,9 +7,10 @@
 
 ## Creating users in production
 
-1. Build the rows outside git (password manager or local shell) and export them as JSON in `HS_USERS`, with a bcrypt `passwordHash` per user.
-2. Run `node docs/deployment/scripts/generate-users-sql.mjs > users.sql` (see the header of the script for the shape).
-3. Review `users.sql`. It uses `INSERT IGNORE`, so existing users, roles and passwords are never modified.
+1. Add or update the user in [`config/users.json`](../../config/users.json) (the single roster) and put the real password in `config/users.passwords.local.json` (gitignored, `{ "email": "password" }`).
+2. Generate the SQL outside git, for example:
+   `node apps/api/scripts/generate-users-sql.mjs --insert dennis@hscontrol.com --rename stephany@hscontrol.com=estefany@hscontrol.com > ~/users.sql`
+3. Review `users.sql`. Inserts use `INSERT IGNORE` (an existing email is never modified) and production ids `usr_<local part>`; renames change only email and name.
 4. Apply it in a single approved write session after a backup (`docs/rules/database.md`, "Reading production safely").
 
 Never run `prisma db seed` on the host.

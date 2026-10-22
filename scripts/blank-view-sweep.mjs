@@ -11,9 +11,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import users from '../config/users.js';
-
-const { ROLE_ACCOUNTS, credentialsFor } = users;
+import { ROLE_ACCOUNTS, credentialsFor } from '../config/users.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

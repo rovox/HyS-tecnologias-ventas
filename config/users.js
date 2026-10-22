@@ -21,8 +21,13 @@ function findUser(email) {
   return user;
 }
 
+// Only the real password from the local file (undefined when absent); production SQL requires it.
+function localPasswordFor(email) {
+  return localPasswords[findUser(email).email];
+}
+
 function passwordFor(email) {
-  return localPasswords[email] ?? findUser(email).name.split(' ')[0].toLowerCase();
+  return localPasswordFor(email) ?? findUser(email).name.split(' ')[0].toLowerCase();
 }
 
 function credentialsFor(email) {
@@ -36,4 +41,4 @@ const ROLE_ACCOUNTS = {
   tecnico: 'marcos.tec@demo.hs.local',
 };
 
-module.exports = { USERS, ROLE_ACCOUNTS, passwordFor, credentialsFor };
+module.exports = { USERS, ROLE_ACCOUNTS, findUser, localPasswordFor, passwordFor, credentialsFor };
