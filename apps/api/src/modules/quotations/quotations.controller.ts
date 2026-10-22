@@ -18,25 +18,33 @@ import { AuthGuard } from '../../common/auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../../common/auth/current-user.decorator';
 import { ROLES } from '../../common/policy/roles';
 import { Roles, RolesGuard } from '../../common/auth/roles.guard';
-import { AcceptQuotationDto, CreateQuotationDto, StatusDto, UpdateQuotationDto } from './dto/quotation.dto';
+import {
+  AcceptQuotationDto,
+  CreateQuotationDto,
+  DeleteQuotationDto,
+  ListQuotationsQuery,
+  StatusDto,
+  UpdateQuotationDto,
+} from './dto/quotation.dto';
 import { QuotationsService } from './quotations.service';
+import { QuotationFilesService } from './quotation-files.service';
+import { QuotationFlowService } from './quotation-flow.service';
 
 @ApiTags('quotations')
 @ApiBearerAuth()
 @Controller('quotations')
 @UseGuards(AuthGuard)
 export class QuotationsController {
-  constructor(private readonly quotations: QuotationsService) {}
+  constructor(
+    private readonly quotations: QuotationsService,
+    private readonly quotationFiles: QuotationFilesService,
+    private readonly flow: QuotationFlowService,
+  ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List quotations' })
-  list(
-    @Query('estado') estado?: string,
-    @Query('vendedorId') vendedorId?: string,
-    @Query('sucursalId') sucursalId?: string,
-    @CurrentUser() user?: User,
-  ) {
-    return this.quotations.list({ estado, vendedorId, sucursalId }, user as User);
+  @ApiOperation({ summary: 'List quotations (vista=abiertas | cerradas, filters, search)' })
+  list(@Query() query: ListQuotationsQuery, @CurrentUser() user: User) {
+    return this.quotations.list(query, user);
   }
 
   @Get(':id')
@@ -76,20 +84,41 @@ export class QuotationsController {
     @CurrentUser() user: User,
     @CurrentSessionId() sessionId?: string,
   ) {
-    return this.quotations.updateStatus(id, dto.estado, user, sessionId, dto.motivoRechazo, dto.fechaEnvio);
+    return this.flow.updateStatus(id, dto.estado, user, sessionId, dto.motivoRechazo, dto.fechaEnvio);
+  }
+
+  @Post(':id/eliminar')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS)
+  @ApiOperation({ summary: 'Delete (hide) a quotation with a reason; it stays in "cerradas" and can be restored' })
+  remove(
+    @Param('id') id: string,
+    @Body() dto: DeleteQuotationDto,
+    @CurrentUser() user: User,
+    @CurrentSessionId() sessionId?: string,
+  ) {
+    return this.flow.remove(id, dto.motivo, user, sessionId);
+  }
+
+  @Post(':id/restaurar')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS)
+  @ApiOperation({ summary: 'Restore a deleted quotation' })
+  restore(@Param('id') id: string, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.flow.restore(id, user, sessionId);
   }
 
   @Post(':id/accept')
   @UseGuards(RolesGuard)
   @Roles(ROLES.ADMIN, ROLES.VENTAS)
-  @ApiOperation({ summary: 'Accept quotation: creates the sale and the project (idempotent)' })
+  @ApiOperation({ summary: 'Approve quotation: creates the project (idempotent)' })
   accept(
     @Param('id') id: string,
     @Body() dto: AcceptQuotationDto,
     @CurrentUser() user: User,
     @CurrentSessionId() sessionId?: string,
   ) {
-    return this.quotations.accept(id, dto, user, sessionId);
+    return this.flow.accept(id, dto, user, sessionId);
   }
 
   @Post(':id/files')
@@ -109,7 +138,7 @@ export class QuotationsController {
     @CurrentUser() user: User,
     @CurrentSessionId() sessionId?: string,
   ) {
-    return this.quotations.attachFile(id, file, user, sessionId, kind || 'pdf');
+    return this.quotationFiles.attachFile(id, file, user, sessionId, kind || 'pdf');
   }
 }
 
@@ -118,7 +147,7 @@ export class QuotationsController {
 @Controller('files/quotations')
 @UseGuards(AuthGuard)
 export class QuotationFilesController {
-  constructor(private readonly quotations: QuotationsService) {}
+  constructor(private readonly files: QuotationFilesService) {}
 
   @Get(':name')
   @ApiOperation({ summary: 'Download quotation PDF by stored name' })
@@ -127,7 +156,7 @@ export class QuotationFilesController {
     @CurrentUser() user: User,
     @Res() res: { sendFile: (path: string) => unknown },
   ) {
-    const full = await this.quotations.filePath(name, user);
+    const full = await this.files.filePath(name, user);
     return res.sendFile(full);
   }
 }

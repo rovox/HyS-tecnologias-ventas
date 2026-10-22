@@ -132,7 +132,7 @@ export class MetricsService {
       include: { sale: true },
     });
     const open = quotes.filter((row) => row.estado !== 'rechazado' && row.estado !== 'borrador');
-    const sold = quotes.filter((row) => row.estado === 'aceptado' || Boolean(row.sale));
+    const sold = quotes.filter((row) => row.estado === 'aprobado' || Boolean(row.sale));
     const quotationsTotal = open.reduce((sum, row) => sum + Number(row.monto), 0);
     const salesTotal = sold.reduce((sum, row) => sum + Number(row.monto), 0);
 
@@ -183,7 +183,7 @@ export class MetricsService {
         bucket.montoCotizaciones += amount;
         bucket.cotizacionesItems.push(item);
       }
-      if (quote.estado === 'aceptado' || quote.sale) {
+      if (quote.estado === 'aprobado' || quote.sale) {
         bucket.ventas += 1;
         bucket.montoVentas += amount;
         bucket.ventasItems.push(item);

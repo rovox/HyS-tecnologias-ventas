@@ -57,7 +57,7 @@ async function main() {
 
   await prisma.quotation.upsert({
     where: { numero: 'COT-080426' },
-    update: { estado: 'aceptado', sucursalId: 'suc_central', sucursalNombre: 'Central' },
+    update: { estado: 'aprobado', sucursalId: 'suc_central', sucursalNombre: 'Central' },
     create: {
       id: 'quo_andina',
       numero: 'COT-080426',
@@ -67,7 +67,7 @@ async function main() {
       sucursalId: 'suc_central',
       sucursalNombre: 'Central',
       clienteId: 'cli_andina',
-      estado: 'aceptado',
+      estado: 'aprobado',
       monto: 18500,
       vendedorId: 'usr_ventas',
       sellers: { create: [{ userId: 'usr_ventas', nombre: 'Dennis', commissionPct: 100 }] },
@@ -180,12 +180,14 @@ async function main() {
     { id: 'quo_borrador', numero: 'COT-SEED-001', titulo: 'Alarma perimetral — borrador', clienteId: 'cli_andina', estado: 'borrador', monto: 6200 },
     { id: 'quo_enviado', numero: 'COT-SEED-002', titulo: 'Control de acceso biométrico — enviado', categoriaId: 'computo_comunicacion', subcategoria: 'Equipos', clienteId: 'cli_hospital', estado: 'enviado', monto: 9800, fechaEnvio: at(-3), archivoPdfUrl: 'seed/cotizacion-enviada.pdf' },
     { id: 'quo_rechazado', numero: 'COT-SEED-003', titulo: 'Cableado estructurado — rechazado', categoriaId: 'cableado_estructurado', subcategoria: 'Redes/Datos', clienteId: 'cli_mall', estado: 'rechazado', monto: 15400, motivoRechazo: 'Presupuesto fuera de rango (seed)' },
-    { id: 'quo_aceptado_2', numero: 'COT-SEED-004', titulo: 'Cableado y cámaras IP en depósito — aceptado', categoriaId: 'cableado_estructurado', subcategoria: 'Redes/Datos', clienteId: 'cli_hospital', estado: 'aceptado', monto: 7300 },
+    { id: 'quo_aceptado_2', numero: 'COT-SEED-004', titulo: 'Cableado y cámaras IP en depósito — aprobado', categoriaId: 'cableado_estructurado', subcategoria: 'Redes/Datos', clienteId: 'cli_hospital', estado: 'aprobado', monto: 7300 },
+    { id: 'quo_vencido', numero: 'COT-SEED-005', titulo: 'Red WiFi oficinas — vencida', categoriaId: 'computo_comunicacion', subcategoria: 'Redes', clienteId: 'cli_mall', estado: 'vencido', monto: 4300, fechaEnvio: at(-20), archivoPdfUrl: 'seed/cotizacion-vencida.pdf' },
+    { id: 'quo_eliminado', numero: 'COT-SEED-006', titulo: 'Duplicado de alarma perimetral — eliminada', clienteId: 'cli_andina', estado: 'borrador', monto: 6200, eliminadaAt: at(-1), eliminadaPorId: 'usr_ventas', motivoEliminacion: 'Duplicada (seed)' },
   ];
   for (const q of quotes) {
     await prisma.quotation.upsert({
       where: { numero: q.numero },
-      update: { estado: q.estado },
+      update: { estado: q.estado, eliminadaAt: q.eliminadaAt ?? null },
       create: {
         ...quoteBase,
         ...q,

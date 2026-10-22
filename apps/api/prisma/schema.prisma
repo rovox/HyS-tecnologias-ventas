@@ -49,6 +49,7 @@ model User {
   schedulePayments   SchedulePayment[]         @relation("PaymentCollector")
   pedidosResponsable PedidoInterno[]           @relation("PedidoResponsable")
   comentariosPedidos PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
+  quotationsDeleted  Quotation[]               @relation("QuotationsDeleted")
 
   @@index([sucursalId])
   @@map("users")
@@ -127,8 +128,14 @@ model Quotation {
   sucursalNombre     String            @default("")
   clienteId          String?
   cliente            Client?           @relation(fields: [clienteId], references: [id])
+  /// borrador → enviado → aprobado | rechazado | vencido (domain/quotations.rules.ts).
   estado             String            @default("borrador")
   motivoRechazo      String?           @db.Text
+  /// Deleted = hidden from the lists (kept with the reason, restorable). Never removed from the DB.
+  eliminadaAt        DateTime?
+  eliminadaPorId     String?
+  eliminadaPor       User?             @relation("QuotationsDeleted", fields: [eliminadaPorId], references: [id])
+  motivoEliminacion  String?           @db.Text
   monto              Decimal           @db.Decimal(12, 2)
   observacion        String            @default("") @db.Text
   archivo            String            @default("")
@@ -155,6 +162,7 @@ model Quotation {
   @@index([estado, sucursalId])
   @@index([estado, createdAt])
   @@index([categoriaId])
+  @@index([eliminadaAt])
   @@map("quotations")
 }
 
