@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { UpdateClientDto, UpsertClientDto } from './dto/upsert-client.dto';
 import { assertCanMutateClients, clientWhere, isAdmin } from '../auth/roles';
 
@@ -10,6 +11,7 @@ export class ClientsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async list(user: User, q?: string, active?: string) {
@@ -205,6 +207,7 @@ export class ClientsService {
       },
     });
     await this.activity.log(user.id, sessionId, 'client.create', 'client', client.id);
+    this.realtime.emit('client.created', 'client', client.id, { byUserId: user.id });
     return client;
   }
 
@@ -236,6 +239,7 @@ export class ClientsService {
       },
     });
     await this.activity.log(user.id, sessionId, 'client.update', 'client', id);
+    this.realtime.emit('client.updated', 'client', id, { byUserId: user.id });
     return client;
   }
 }
