@@ -96,7 +96,7 @@ describe('Sales API (e2e)', () => {
       nombre: 'Prueba E2E',
       empresa: `Empresa E2E ${Date.now()}`,
       email: `e2e-${Date.now()}@demo.bo`,
-      telefono: '70011122',
+      telefono: `7${String(Date.now()).slice(-7)}`,
       departamento: 'Cochabamba',
       servicio: 'Cableado estructurado',
       detalle: 'Cableado de 20 puntos Cat 6A con certificación.',
