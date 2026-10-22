@@ -11,9 +11,8 @@ describe('TasksService', () => {
       update: jest.fn(),
     },
   };
-  const activity = { log: jest.fn() };
-  const realtime = { emit: jest.fn() };
-  const service = new TasksService(prisma as never, activity as never, realtime as never);
+  const audit = { record: jest.fn(), log: jest.fn() };
+  const service = new TasksService(prisma as never, audit as never);
 
   const tecnico = { id: 'usr_tecnico', role: ROLES.TEC, sucursalId: 'suc_central' } as never;
   const ventas = { id: 'usr_ventas', role: ROLES.VENTAS, sucursalId: 'suc_central' } as never;

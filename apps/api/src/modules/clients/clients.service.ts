@@ -1,8 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { UpdateClientDto, UpsertClientDto } from './dto/upsert-client.dto';
 import { assertCanMutateClients, clientWhere, isAdmin } from '../../common/policy/roles';
 
@@ -10,8 +9,7 @@ import { assertCanMutateClients, clientWhere, isAdmin } from '../../common/polic
 export class ClientsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(user: User, q?: string, active?: string) {
@@ -206,14 +204,13 @@ export class ClientsService {
         lastActivityAt: new Date(),
       },
     });
-    await this.activity.log(user.id, sessionId, 'client.create', 'client', client.id);
-    this.realtime.emit('client.created', 'client', client.id, { byUserId: user.id });
+    await this.audit.record({ user, sessionId, action: 'client.create', entity: 'client', id: client.id });
     return client;
   }
 
   async update(id: string, dto: UpdateClientDto, user: User, sessionId?: string) {
     assertCanMutateClients(user);
-    await this.get(id, user);
+    const before = await this.get(id, user);
     if (dto.nombre) {
       const dup = await this.prisma.client.findFirst({
         where: { nombre: { equals: dto.nombre.trim() }, NOT: { id } },
@@ -238,8 +235,7 @@ export class ClientsService {
         ...(dto.observaciones !== undefined ? { observaciones: dto.observaciones } : {}),
       },
     });
-    await this.activity.log(user.id, sessionId, 'client.update', 'client', id);
-    this.realtime.emit('client.updated', 'client', id, { byUserId: user.id });
+    await this.audit.record({ user, sessionId, action: 'client.update', entity: 'client', id, before, after: client });
     return client;
   }
 }

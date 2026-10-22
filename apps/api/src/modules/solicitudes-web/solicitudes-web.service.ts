@@ -1,10 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma, User } from '@prisma/client';
-import { ActivityService } from '../auth/activity.service';
 import { assertCanManageWebLeads } from '../../common/policy/roles';
-import { ClientsService } from '../clients/clients.service';
+import { ClientsService } from '../clients';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { SOLICITUD_ESTADOS, UpdateSolicitudDto, WebhookSolicitudDto } from './dto/solicitud-web.dto';
 
 /** Allowed manual state changes. `convertida` is only reached through convert(). */
@@ -27,8 +26,7 @@ export function clientTipoFromServicio(servicio: string): string {
 export class SolicitudesWebService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
     private readonly clients: ClientsService,
   ) {}
 
@@ -47,7 +45,10 @@ export class SolicitudesWebService {
         notas: '',
       },
     });
-    this.realtime.emit('solicitud_web.created', 'solicitud_web', row.id, {
+    await this.audit.record({
+      action: 'solicitud_web.created',
+      entity: 'solicitud_web',
+      id: row.id,
       patch: { estado: row.estado, servicio: row.servicio },
     });
     return { id: row.id };
@@ -94,11 +95,7 @@ export class SolicitudesWebService {
         ...(dto.notas !== undefined ? { notas: dto.notas } : {}),
       },
     });
-    await this.activity.log(user.id, sessionId, 'solicitud_web.update', 'solicitud_web', id);
-    this.realtime.emit('solicitud_web.updated', 'solicitud_web', id, {
-      byUserId: user.id,
-      patch: { estado: row.estado },
-    });
+    await this.audit.record({ user, sessionId, action: 'solicitud_web.update', entity: 'solicitud_web', id, patch: { estado: row.estado } });
     return row;
   }
 
@@ -147,11 +144,7 @@ export class SolicitudesWebService {
       where: { id },
       data: { estado: 'convertida', clienteId: client.id, convertidaAt: new Date() },
     });
-    await this.activity.log(user.id, sessionId, 'solicitud_web.convert', 'solicitud_web', id);
-    this.realtime.emit('solicitud_web.updated', 'solicitud_web', id, {
-      byUserId: user.id,
-      patch: { estado: solicitud.estado, clienteId: client.id },
-    });
+    await this.audit.record({ user, sessionId, action: 'solicitud_web.convert', entity: 'solicitud_web', id, patch: { estado: solicitud.estado, clienteId: client.id } });
     return { solicitud, client, created };
   }
 }

@@ -1,8 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { assertCanMutateQuotes } from '../../common/policy/roles';
 import { CreateCategoryDto, PatchCategoryDto } from './dto/category.dto';
 
@@ -21,8 +20,7 @@ function slugify(label: string) {
 export class CategoriesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   list() {
@@ -50,8 +48,7 @@ export class CategoriesService {
         active: true,
       },
     });
-    await this.activity.log(user.id, sessionId, 'category.create', 'quotation_category', row.id);
-    this.realtime.emit('category.created', 'category', row.id, { byUserId: user.id });
+    await this.audit.record({ user, sessionId, action: 'category.create', entity: 'category', id: row.id });
     return row;
   }
 
@@ -64,16 +61,14 @@ export class CategoriesService {
         where: { id },
         data: { active: false },
       });
-      await this.activity.log(user.id, sessionId, 'category.deactivate', 'quotation_category', id);
-      this.realtime.emit('category.updated', 'category', id, { byUserId: user.id });
+      await this.audit.record({ user, sessionId, action: 'category.deactivate', entity: 'category', id });
       return updated;
     }
     const updated = await this.prisma.quotationCategory.update({
       where: { id },
       data: { active: dto.active },
     });
-    await this.activity.log(user.id, sessionId, 'category.update', 'quotation_category', id);
-    this.realtime.emit('category.updated', 'category', id, { byUserId: user.id });
+    await this.audit.record({ user, sessionId, action: 'category.update', entity: 'category', id });
     return updated;
   }
 }

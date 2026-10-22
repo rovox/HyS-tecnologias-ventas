@@ -15,9 +15,8 @@ describe('SchedulesService', () => {
     quotation: { findUnique: jest.fn() },
     touchClientActivity: jest.fn(),
   };
-  const activity = { log: jest.fn() };
-  const realtime = { emit: jest.fn() };
-  const service = new SchedulesService(prisma as never, activity as never, realtime as never);
+  const audit = { record: jest.fn(), log: jest.fn() };
+  const service = new SchedulesService(prisma as never, audit as never);
 
   const admin = {
     id: 'usr_admin',
@@ -61,6 +60,6 @@ describe('SchedulesService', () => {
     );
     expect(row.id).toBe('sch_new');
     expect(prisma.touchClientActivity).toHaveBeenCalledWith('cli_1');
-    expect(activity.log).toHaveBeenCalled();
+    expect(audit.record).toHaveBeenCalled();
   });
 });

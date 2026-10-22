@@ -1,21 +1,26 @@
 # Backend rules (NestJS)
 
-## Module layout
+## Module layout (vertical slices)
 
 ```
-src/<feature>/
+src/modules/<feature>/
+  index.ts                    public API: the Nest module (+ services other modules use). Nothing else is importable
   <feature>.module.ts
   <feature>.controller.ts     HTTP only: routes, DTOs, @Roles, @CurrentUser
-  <feature>.service.ts        business rules, transactions, emits events
+  <feature>.service.ts        use cases: transactions, calls the rules, AuditService.record
   dto/<feature>.dto.ts        class-validator DTOs; Update = PartialType(Create)
-  <feature>.service.spec.ts   unit tests for rules
-src/common/
-  policy/          role constants, can*() predicates, *Where() row scopes
-  state-machine.ts transitions per entity, as data
-  audit/           AuditService.record(user, action, entity, id, patch)
-  storage/         upload paths and file URLs
-  pagination.ts    PageQueryDto { take, skip } + helper
+  domain/<feature>.rules.ts   pure business rules (state machine, money, checks) + .spec.ts
+src/common/                   shared kernel, global (CommonModule): no module imports here
+  prisma/  realtime/  auth/ (guards, decorators)
+  audit/   AuditService.record({ user, sessionId, action, entity, id, before, after, affects, patch })
+  policy/  policy.ts (pure: roles, can*(), *Where()) + roles.ts (Nest adapter, assert*)
+  domain/  pure shared rules (state-machine types, audit diff)
 ```
+
+Enforced by unit specs: `common/purity.spec.ts` (every `domain/` file: no Nest/Prisma, relative imports only into
+another `domain/`) and `common/module-boundaries.spec.ts` (a module imports only `common/` and `../<other>` = its
+`index.ts`; `common/` never imports a module). Read models that join several modules live in a read-only module
+(`reporting`), never inside a write module.
 
 ## Rules
 
@@ -24,7 +29,7 @@ src/common/
 - Coarse access: `@Roles()` on the controller. Row access: `*Where(user)` from `common/policy`. No inline `role === '...'`.
 - Status changes go through `assertTransition(entity, from, to)`.
 - Money math (balance, paid, totals) is computed in the service inside a `prisma.$transaction`, and the endpoint returns the updated aggregate.
-- Every create/update/delete calls `AuditService.record(...)`, which writes `Activity` and emits the realtime event. Do not call `realtime.emit` directly.
+- Every create/update/delete calls `AuditService.record(...)` **after the transaction commits**: it writes `Activity` (with `detalle` = changed fields, before/after, when `before`/`after` are passed) and emits the realtime event. Do not call `realtime.emit` directly.
 - Lists are paginated and ordered; default `take=50`, max `200`.
 - Errors: throw Nest exceptions with a Spanish user-facing message; never return `{ ok: false }` with 200.
 - Response shape: camelCase, the same names as Prisma. The web adapts nothing.
@@ -34,10 +39,11 @@ src/common/
 Event payload (SSE, `GET /api/realtime/events`):
 
 ```json
-{ "type": "payment.created", "entity": "schedule", "id": "<scheduleId>", "at": "...", "byUserId": "..." }
+{ "type": "schedule.payment", "entity": "payment", "id": "<paymentId>", "affects": ["schedule", "client"], "at": "...", "byUserId": "..." }
 ```
 
-- `entity` is the **aggregate the UI lists** (`schedule`, `quotation`, `client`, `survey`, `task`, `order`), so the web can invalidate by entity.
+- `type` = the audit action. `entity` is the **aggregate the UI lists**; `affects` lists the other aggregates whose
+  views or totals change, so the web invalidates `[entity, ...affects]`.
 - The bus is in-memory: valid for one process. If the API ever runs >1 instance, revisit.
 - The stream filters events by the user's row scope (same `*Where` policy).
 

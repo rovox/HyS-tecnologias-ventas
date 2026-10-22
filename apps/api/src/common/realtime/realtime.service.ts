@@ -8,6 +8,8 @@ export type RealtimePayload = {
   at: string;
   byUserId?: string;
   patch?: Record<string, unknown>;
+  /** Other entities whose views change with this one. */
+  affects?: string[];
 };
 
 @Injectable()
@@ -18,7 +20,7 @@ export class RealtimeService {
     type: string,
     entity: string,
     id: string,
-    opts: { byUserId?: string; patch?: Record<string, unknown> } = {},
+    opts: { byUserId?: string; patch?: Record<string, unknown>; affects?: string[] } = {},
   ) {
     this.bus.next({
       type,
@@ -27,6 +29,7 @@ export class RealtimeService {
       at: new Date().toISOString(),
       byUserId: opts.byUserId,
       patch: opts.patch,
+      affects: opts.affects?.length ? opts.affects : undefined,
     });
   }
 

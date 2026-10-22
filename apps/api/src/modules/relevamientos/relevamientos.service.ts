@@ -3,10 +3,9 @@ import type { User } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
 import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
 import { assertCanMutateRelevamientos, isTec, isVentas, relevamientoWhere } from '../../common/policy/roles';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 
 const ESTADOS = ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'];
 
@@ -27,8 +26,7 @@ function fotosList(fotosUrl: unknown): string[] {
 export class RelevamientosService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   list(user: User, cotizacionId?: string) {
@@ -91,11 +89,7 @@ export class RelevamientosService {
       },
     });
     await this.prisma.touchClientActivity(clienteId);
-    await this.activity.log(user.id, sessionId, 'relevamiento.create', 'relevamiento', row.id);
-    this.realtime.emit('relevamiento.created', 'relevamiento', row.id, {
-      byUserId: user.id,
-      patch: { estado: row.estado, prioridad: row.prioridad, fecha: row.fecha },
-    });
+    await this.audit.record({ user, sessionId, action: 'relevamiento.create', entity: 'relevamiento', id: row.id, patch: { estado: row.estado, prioridad: row.prioridad, fecha: row.fecha } });
     return row;
   }
 
@@ -126,15 +120,11 @@ export class RelevamientosService {
         ...(dto.fotosUrl !== undefined ? { fotosUrl: dto.fotosUrl as object } : {}),
       },
     });
-    await this.activity.log(user.id, sessionId, 'relevamiento.update', 'relevamiento', id);
-    this.realtime.emit('relevamiento.updated', 'relevamiento', id, {
-      byUserId: user.id,
-      patch: {
+    await this.audit.record({ user, sessionId, action: 'relevamiento.update', entity: 'relevamiento', id, patch: {
         estado: row.estado,
         prioridad: row.prioridad,
         fotosCount: fotosList(row.fotosUrl).length,
-      },
-    });
+      } });
     return row;
   }
 
@@ -162,11 +152,7 @@ export class RelevamientosService {
       where: { id },
       data: { fotosUrl },
     });
-    await this.activity.log(user.id, sessionId, 'relevamiento.photo', 'relevamiento', id);
-    this.realtime.emit('relevamiento.updated', 'relevamiento', id, {
-      byUserId: user.id,
-      patch: { fotosCount: fotosUrl.length },
-    });
+    await this.audit.record({ user, sessionId, action: 'relevamiento.photo', entity: 'relevamiento', id, patch: { fotosCount: fotosUrl.length } });
     return row;
   }
 

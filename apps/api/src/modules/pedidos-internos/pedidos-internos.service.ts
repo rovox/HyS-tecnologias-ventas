@@ -3,14 +3,14 @@ import type { User } from '@prisma/client';
 import { checkTransition, deliveryFields, itemTotal, nextStates, pedidoTotal } from './domain/pedidos-internos.rules';
 import { canManagePedidos } from '../../common/policy/policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { AddComentarioDto, UpdateEstadoPedidoDto, UpsertPedidoInternoDto } from './dto/pedido-interno.dto';
 
 @Injectable()
 export class PedidosInternosService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   private assertCanManage(user: User) {
@@ -18,7 +18,7 @@ export class PedidosInternosService {
   }
 
   private emit(type: string, id: string, user: User) {
-    this.realtime.emit(`pedido_interno.${type}`, 'pedido_interno', id, { byUserId: user.id });
+    return this.audit.record({ user, action: `pedido_interno.${type}`, entity: 'pedido_interno', id });
   }
 
   private assertTransition(from: string, to: string) {
@@ -116,7 +116,7 @@ export class PedidosInternosService {
       },
     });
 
-    this.emit('created', pedido.id, user);
+    await this.emit('created', pedido.id, user);
     return pedido;
   }
 
@@ -163,7 +163,7 @@ export class PedidosInternosService {
       });
     });
 
-    this.emit('updated', id, user);
+    await this.emit('updated', id, user);
     return this.findOne(id, user);
   }
 
@@ -173,7 +173,7 @@ export class PedidosInternosService {
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
 
     await this.prisma.pedidoInterno.delete({ where: { id } });
-    this.emit('deleted', id, user);
+    await this.emit('deleted', id, user);
     return { ok: true };
   }
 
@@ -190,7 +190,7 @@ export class PedidosInternosService {
     };
 
     await this.prisma.pedidoInterno.update({ where: { id }, data });
-    this.emit('updated', id, user);
+    await this.emit('updated', id, user);
     return this.findOne(id, user);
   }
 
@@ -210,7 +210,7 @@ export class PedidosInternosService {
       include: { autor: { select: { id: true, name: true } } },
     });
 
-    this.emit('updated', id, user);
+    await this.emit('updated', id, user);
     return comentario;
   }
 }

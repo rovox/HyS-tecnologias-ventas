@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { UpsertGoalDto } from './dto/goal.dto';
 import { assertAdmin, goalWhere } from '../../common/policy/roles';
 
@@ -17,8 +16,7 @@ function monthStart(month?: string) {
 export class GoalsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   list(user: User, month?: string) {
@@ -37,8 +35,7 @@ export class GoalsService {
       update: { metaMonto: dto.metaMonto, metaCotiz: dto.metaCotiz },
       create: { usuarioId: dto.usuarioId, mes: start, metaMonto: dto.metaMonto, metaCotiz: dto.metaCotiz },
     });
-    await this.activity.log(user.id, sessionId, 'goal.upsert', 'seller_goal', row.id);
-    this.realtime.emit('goal.updated', 'goal', row.id, { byUserId: user.id });
+    await this.audit.record({ user, sessionId, action: 'goal.upsert', entity: 'goal', id: row.id });
     return row;
   }
 }

@@ -7,7 +7,7 @@ Goal: code anyone can read in one sitting. Prefer **simple and explicit** over c
 - One API process and one SPA. **No microservices**, no message brokers (single Hostinger Node app).
 - The monolith is split into **feature modules with hard boundaries**, the same names on both sides:
 
-| Feature | API module | Web folder |
+| Feature | API module (`src/modules/`) | Web folder |
 |---|---|---|
 | auth | `auth` | `features/auth` |
 | clients | `clients` | `features/clients` |
@@ -61,7 +61,7 @@ There is no global store. Do not add Redux/Zustand.
 
 | Problem | Pattern |
 |---|---|
-| Allowed status changes | State machine as data: `common/state-machine.ts` |
+| Allowed status changes | State machine as data in the module's `domain/<x>.rules.ts` |
 | Who can see/do what | Policy functions: `common/policy/*` |
 | Side effects after a write | One `AuditService.record()` → activity log + realtime event |
 | Forms | Page owns data; `useXForm` hook owns form logic; presentational fields |

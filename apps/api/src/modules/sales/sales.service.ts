@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateJobDto, CreatePaymentDto } from './dto/sales.dto';
 import { saleWhere } from '../../common/policy/roles';
 
@@ -16,7 +16,7 @@ const JOB_FLOW: Record<string, string[]> = {
 export class SalesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
+    private readonly audit: AuditService,
   ) {}
 
   list(user: User) {
@@ -53,7 +53,7 @@ export class SalesService {
       },
     });
     await this.prisma.touchClientActivity(sale.quotation?.clienteId);
-    await this.activity.log(user.id, sessionId, 'sale.job', 'sale', saleId);
+    await this.audit.record({ user, sessionId, action: 'sale.job', entity: 'sale', id: saleId });
     return job;
   }
 
@@ -66,7 +66,7 @@ export class SalesService {
       throw new BadRequestException(`Transición inválida: ${job.estado} → ${estado}`);
     }
     const updated = await this.prisma.saleJob.update({ where: { id: jobId }, data: { estado } });
-    await this.activity.log(user.id, sessionId, 'sale.job.status', 'sale_job', jobId);
+    await this.audit.record({ user, sessionId, action: 'sale.job.status', entity: 'sale', id: saleId });
     return updated;
   }
 
@@ -83,7 +83,7 @@ export class SalesService {
         nota: dto.nota || '',
       },
     });
-    await this.activity.log(user.id, sessionId, 'sale.payment', 'sale', saleId);
+    await this.audit.record({ user, sessionId, action: 'sale.payment', entity: 'sale', id: saleId });
     return payment;
   }
 }

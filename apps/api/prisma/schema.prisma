@@ -77,9 +77,12 @@ model Activity {
   action     String
   entityType String?
   entityId   String?
+  /// Changed fields: { campo: { antes, despues } } (AuditService.record).
+  detalle    Json?
   at         DateTime @default(now())
 
   @@index([sessionId])
+  @@index([entityType, entityId])
   @@index([userId])
   @@index([at])
   @@map("activities")

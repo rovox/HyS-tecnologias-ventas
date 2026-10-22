@@ -3,10 +3,9 @@ import type { Prisma, User } from '@prisma/client';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
 import { AcceptQuotationDto, CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
 import { assertCanMutateQuotes, isTec, quotationWhere } from '../../common/policy/roles';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { acceptError, checkQuotationTransition, projectFromQuotation } from './domain/quotations.rules';
 
 function uploadDir() {
@@ -17,8 +16,7 @@ function uploadDir() {
 export class QuotationsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   private async nextNumero() {
@@ -117,11 +115,7 @@ export class QuotationsService {
       include: { sellers: true, cliente: true, sucursal: true },
     });
     await this.prisma.touchClientActivity(dto.clienteId);
-    await this.activity.log(user.id, sessionId, 'quotation.create', 'quotation', quote.id);
-    this.realtime.emit('quotation.updated', 'quotation', quote.id, {
-      byUserId: user.id,
-      patch: { estado: quote.estado },
-    });
+    await this.audit.record({ user, sessionId, action: 'quotation.create', entity: 'quotation', id: quote.id, patch: { estado: quote.estado } });
     return quote;
   }
 
@@ -141,11 +135,7 @@ export class QuotationsService {
       },
     });
     await this.prisma.touchClientActivity(current.clienteId);
-    await this.activity.log(user.id, sessionId, 'quotation.status', 'quotation', id);
-    this.realtime.emit('quotation.updated', 'quotation', id, {
-      byUserId: user.id,
-      patch: { estado },
-    });
+    await this.audit.record({ user, sessionId, action: 'quotation.status', entity: 'quotation', id, patch: { estado } });
     return quote;
   }
 
@@ -201,9 +191,14 @@ export class QuotationsService {
     });
     const finalClientId = dto.clienteId || current.clienteId;
     await this.prisma.touchClientActivity(finalClientId);
-    await this.activity.log(user.id, sessionId, 'quotation.update', 'quotation', id);
-    this.realtime.emit('quotation.updated', 'quotation', id, {
-      byUserId: user.id,
+    await this.audit.record({
+      user,
+      sessionId,
+      action: 'quotation.update',
+      entity: 'quotation',
+      id,
+      before: current,
+      after: quote,
       patch: { estado: quote.estado },
     });
     return quote;
@@ -240,14 +235,14 @@ export class QuotationsService {
         : { archivo: file.originalname || stored, archivoPdfUrl },
       include: { sellers: true, cliente: true, sucursal: true },
     });
-    await this.activity.log(
-      user.id,
+    await this.audit.record({
+      user,
       sessionId,
-      kind === 'licitacion' ? 'quotation.licitacion-file' : kind === 'prerequisito' ? 'quotation.prerequisito-file' : 'quotation.file',
-      'quotation',
+      action: kind === 'licitacion' ? 'quotation.licitacion-file' : kind === 'prerequisito' ? 'quotation.prerequisito-file' : 'quotation.file',
+      entity: 'quotation',
       id,
-    );
-    this.realtime.emit('quotation.updated', 'quotation', id, { byUserId: user.id, patch: { archivo: updated.archivo } });
+      patch: { archivo: updated.archivo },
+    });
     return updated;
   }
 
@@ -304,14 +299,15 @@ export class QuotationsService {
       return { sale, schedule };
     });
     await this.prisma.touchClientActivity(current.clienteId);
-    await this.activity.log(user.id, sessionId, 'quotation.accept', 'schedule', schedule.id);
-    this.realtime.emit('quotation.updated', 'quotation', id, { byUserId: user.id, patch: { estado: 'aceptado' } });
-    if (!existing) {
-      this.realtime.emit('schedule.created', 'schedule', schedule.id, {
-        byUserId: user.id,
-        patch: { estado: schedule.estado, saldo: Number(schedule.saldo) },
-      });
-    }
+    await this.audit.record({
+      user,
+      sessionId,
+      action: 'quotation.accept',
+      entity: 'quotation',
+      id,
+      patch: { estado: 'aceptado' },
+      affects: existing ? [] : ['schedule', 'client'],
+    });
     const quotation = await this.get(id, user);
     return { quotation, sale, schedule, alreadyConverted: Boolean(existing) };
   }

@@ -1,7 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
 import {
   assertCanCreateSchedules,
   assertCanMutateSchedules,
@@ -10,7 +9,7 @@ import {
   scheduleWhere,
 } from '../../common/policy/roles';
 import { CreateScheduleDto, CreateSchedulePaymentDto, ScheduleStatusDto, UpdateScheduleDto } from './dto/schedule.dto';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 import {
   adelantoChange,
   budgetPaid,
@@ -36,8 +35,7 @@ const include = {
 export class SchedulesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   list(
@@ -131,11 +129,7 @@ export class SchedulesService {
       include,
     });
     await this.prisma.touchClientActivity(dto.clienteId);
-    await this.activity.log(user.id, sessionId, 'schedule.create', 'schedule', row.id);
-    this.realtime.emit('schedule.created', 'schedule', row.id, {
-      byUserId: user.id,
-      patch: { estado: row.estado, saldo: Number(row.saldo) },
-    });
+    await this.audit.record({ user, sessionId, action: 'schedule.create', entity: 'schedule', id: row.id, patch: { estado: row.estado, saldo: Number(row.saldo) } });
     return row;
   }
 
@@ -189,9 +183,14 @@ export class SchedulesService {
       });
     });
     await this.prisma.touchClientActivity(current.clienteId);
-    await this.activity.log(user.id, sessionId, 'schedule.update', 'schedule', id);
-    this.realtime.emit(dto.estado ? 'schedule.status' : 'schedule.updated', 'schedule', id, {
-      byUserId: user.id,
+    await this.audit.record({
+      user,
+      sessionId,
+      action: dto.estado ? 'schedule.status' : 'schedule.update',
+      entity: 'schedule',
+      id,
+      before: current,
+      after: row,
       patch: { estado: row.estado, saldo: Number(row.saldo), adelanto: Number(row.adelanto) },
     });
     return row;
@@ -234,10 +233,14 @@ export class SchedulesService {
       });
       return created;
     });
-    await this.activity.log(user.id, sessionId, 'schedule.payment', 'schedule', scheduleId);
     const updated = await this.get(scheduleId, user);
-    this.realtime.emit('payment.created', 'payment', payment.id, {
-      byUserId: user.id,
+    await this.audit.record({
+      user,
+      sessionId,
+      action: 'schedule.payment',
+      entity: 'payment',
+      id: payment.id,
+      affects: ['schedule', 'client'],
       patch: { scheduleId, tipo: dto.tipo, monto: Number(dto.monto), saldo: Number(updated.saldo) },
     });
     return updated;

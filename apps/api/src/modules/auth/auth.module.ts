@@ -3,14 +3,10 @@ import { AuthController } from './auth.controller';
 import { ActivityController } from './activity.controller';
 import { SessionsController } from './sessions.controller';
 import { UsersController } from './users.controller';
-import { AuthGuard } from '../../common/auth/auth.guard';
-import { RolesGuard } from '../../common/auth/roles.guard';
 import { AuthService } from './auth.service';
-import { ActivityService } from './activity.service';
 
 @Module({
   controllers: [AuthController, ActivityController, SessionsController, UsersController],
-  providers: [AuthService, AuthGuard, RolesGuard, ActivityService],
-  exports: [AuthGuard, RolesGuard, ActivityService],
+  providers: [AuthService],
 })
 export class AuthModule {}

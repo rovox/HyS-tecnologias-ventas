@@ -7,10 +7,9 @@ import {
 } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from '../auth/activity.service';
 import { isAdmin, isVentas, taskWhere } from '../../common/policy/roles';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
-import { RealtimeService } from '../../common/realtime/realtime.service';
+import { AuditService } from '../../common/audit/audit.service';
 
 const PRIORIDAD = { alta: 0, media: 1, baja: 2 };
 
@@ -30,8 +29,7 @@ function titleFromDescription(text?: string | null) {
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activity: ActivityService,
-    private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(user: User, tipo?: string) {
@@ -92,8 +90,7 @@ export class TasksService {
         estado: 'pendiente',
       },
     });
-    await this.activity.log(user.id, sessionId, 'task.create', 'task', row.id);
-    this.realtime.emit('task.updated', 'task', row.id, { byUserId: user.id, patch: { estado: 'pendiente' } });
+    await this.audit.record({ user, sessionId, action: 'task.create', entity: 'task', id: row.id, patch: { estado: 'pendiente' } });
     return this.get(row.id, user);
   }
 
@@ -123,9 +120,12 @@ export class TasksService {
         ...(dto.estado && dto.estado !== 'completada' ? { completedAt: null } : {}),
       },
     });
-    await this.activity.log(user.id, sessionId, completing ? 'task.complete' : 'task.update', 'task', id);
-    this.realtime.emit('task.updated', 'task', id, {
-      byUserId: user.id,
+    await this.audit.record({
+      user,
+      sessionId,
+      action: completing ? 'task.complete' : 'task.update',
+      entity: 'task',
+      id,
       patch: { estado: row.estado, prioridad: row.prioridad },
     });
     return this.get(id, user);
@@ -147,11 +147,7 @@ export class TasksService {
         asignadoAt: new Date(),
       },
     });
-    await this.activity.log(user.id, sessionId, 'task.claim', 'task', id);
-    this.realtime.emit('task.updated', 'task', id, {
-      byUserId: user.id,
-      patch: { asignadoId: user.id },
-    });
+    await this.audit.record({ user, sessionId, action: 'task.claim', entity: 'task', id, patch: { asignadoId: user.id } });
     return this.get(id, user);
   }
 }

@@ -12,10 +12,9 @@ describe('SolicitudesWebService', () => {
     },
     client: { findFirst: jest.fn(), findUnique: jest.fn() },
   };
-  const activity = { log: jest.fn() };
-  const realtime = { emit: jest.fn() };
+  const audit = { record: jest.fn(), log: jest.fn() };
   const clients = { create: jest.fn() };
-  const service = new SolicitudesWebService(prisma as never, activity as never, realtime as never, clients as never);
+  const service = new SolicitudesWebService(prisma as never, audit as never, clients as never);
 
   const ventas = { id: 'usr_ventas', role: ROLES.VENTAS, sucursalId: 'suc_central' } as never;
   const tec = { id: 'usr_tecnico', role: ROLES.TEC, sucursalId: 'suc_central' } as never;
@@ -46,7 +45,9 @@ describe('SolicitudesWebService', () => {
     expect(prisma.solicitudWeb.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ nombre: 'Ana', email: 'ana@demo.bo', detalle: '40 puntos', notas: '' }) }),
     );
-    expect(realtime.emit).toHaveBeenCalledWith('solicitud_web.created', 'solicitud_web', 's1', expect.anything());
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'solicitud_web.created', entity: 'solicitud_web', id: 's1' }),
+    );
   });
 
   it('blocks technicians from listing', async () => {

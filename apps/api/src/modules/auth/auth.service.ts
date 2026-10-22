@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ActivityService } from './activity.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { canListUserDirectory, canListUsers, canViewUser } from '../../common/policy/policy';
 import { LoginDto } from './dto/login.dto';
 import { assertAdmin } from '../../common/policy/roles';
@@ -33,7 +33,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-    private readonly activity: ActivityService,
+    private readonly audit: AuditService,
   ) {}
 
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
@@ -45,7 +45,7 @@ export class AuthService {
     const session = await this.prisma.session.create({
       data: { userId: user.id, ip: ip || null, userAgent: userAgent || null },
     });
-    await this.activity.log(user.id, session.id, 'login', 'session', session.id);
+    await this.audit.log({ user, sessionId: session.id, action: 'login', entity: 'session', id: session.id });
 
     const accessToken = await this.jwt.signAsync({
       sub: user.id,
@@ -62,7 +62,7 @@ export class AuthService {
         where: { id: sessionId, endedAt: null },
         data: { endedAt: new Date() },
       });
-      await this.activity.log(user.id, sessionId, 'logout', 'session', sessionId);
+      await this.audit.log({ user, sessionId, action: 'logout', entity: 'session', id: sessionId });
     }
     return { ok: true };
   }
@@ -78,7 +78,7 @@ export class AuthService {
         where: { userId: user.id, endedAt: null },
         orderBy: { startedAt: 'desc' },
       });
-      if (open) await this.activity.log(user.id, open.id, 'forgot_password', 'user', user.id);
+      if (open) await this.audit.log({ user, sessionId: open.id, action: 'forgot_password', entity: 'user', id: user.id });
     }
     return { ok: true };
   }
