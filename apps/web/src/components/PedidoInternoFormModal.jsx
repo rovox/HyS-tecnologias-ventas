@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useInternalOrders } from '@/hooks/useInternalOrders.js';
+import { reportLoadError } from '@/lib/loadError.js';
 
 const PRIORIDADES = ['Baja', 'Normal', 'Alta', 'Urgente'];
 const ESTADOS = ['solicitado', 'aprobado', 'en_preparación', 'entregado', 'cancelado'];
@@ -60,9 +61,9 @@ const PedidoInternoFormModal = ({ isOpen, onClose, onSuccess, initialData = null
       try {
         const token = authToken();
         const [usersRes, schedsRes, sucursalesRes] = await Promise.all([
-          apiClient.get('users', { token }).catch(() => []),
-          apiClient.get('schedules', { query: { estado_ne: 'terminado' }, token }).catch(() => []),
-          apiClient.get('sucursales', { token }).catch(() => []),
+          apiClient.get('users', { token }).catch(reportLoadError('los usuarios', [])),
+          apiClient.get('schedules', { query: { estado_ne: 'terminado' }, token }).catch(reportLoadError('los trabajos', [])),
+          apiClient.get('sucursales', { token }).catch(reportLoadError('las sucursales', [])),
         ]);
 
         setUsers(usersRes);

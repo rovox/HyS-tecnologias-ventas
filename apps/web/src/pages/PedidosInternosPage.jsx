@@ -19,6 +19,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
+import { reportLoadError } from '@/lib/loadError.js';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 const PRIORIDADES = ['Todas', 'Baja', 'Normal', 'Alta', 'Urgente'];
 const ESTADOS = ['Todos', 'solicitado', 'aprobado', 'en_preparación', 'entregado', 'rechazado', 'cancelado'];
@@ -76,7 +78,7 @@ const PedidosInternosPage = () => {
         sucursal: filtroSucursal
       });
 
-      const usersRes = await apiClient.get('users', { token: authToken() }).catch(() => []);
+      const usersRes = await apiClient.get('users', { token: authToken() }).catch(reportLoadError('los usuarios', []));
       const map = {};
       (usersRes || []).forEach(u => { map[u.id] = u.name; });
 
@@ -101,6 +103,7 @@ const PedidosInternosPage = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+  useRealtimeEntities(['pedido_interno'], () => loadData());
 
   const getStatusClass = (status) => {
     switch(status) {

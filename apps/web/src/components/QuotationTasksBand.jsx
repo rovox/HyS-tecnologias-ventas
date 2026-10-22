@@ -14,6 +14,7 @@ import quotationsService from '@/services/quotations/index.js';
 import { deadlineTone, deadlineLabel, deadlineChipClass } from '@/lib/deadline.js';
 import { QUOTATION_MAIN_CATEGORIES } from '@/constants/quotations.js';
 import QuotationTaskCreateModal from '@/components/QuotationTaskCreateModal.jsx';
+import { reportLoadError } from '@/lib/loadError.js';
 
 function assignmentLabel(task) {
   if (!task.asignadoId) return 'Disponible';
@@ -104,7 +105,9 @@ export default function QuotationTasksBand({
     if (!quote) {
       try {
         quote = await quotationsService.getById(detailTask.cotizacionId);
-      } catch { /* ignore */ }
+      } catch (err) {
+        reportLoadError('la cotización', null)(err);
+      }
     }
     if (quote) {
       setDetailTask(null);
@@ -264,7 +267,7 @@ export default function QuotationTasksBand({
                     onBlur={() => {
                       const val = (motivoDraft[task.id] ?? '').trim();
                       if (task.prioridad === 'alta' && val && val !== (task.prioridadMotivo || '')) {
-                        tasksService.update(task.id, { prioridadMotivo: val }).then(loadTasks).catch(() => {});
+                        tasksService.update(task.id, { prioridadMotivo: val }).then(loadTasks).catch((err) => toast.error(err.message || 'No se pudo guardar el motivo'));
                       }
                     }}
                   />

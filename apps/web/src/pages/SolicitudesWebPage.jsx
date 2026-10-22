@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet.jsx';
 import { useSolicitudesWeb } from '@/hooks/useSolicitudesWeb.js';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 /** WEB-01: contact-form requests from hstecnologias.com, before they become clients. */
 const ESTADOS = [
@@ -54,13 +55,7 @@ const SolicitudesWebPage = () => {
   }, [load]);
 
   // Realtime: a new website request (or a change from another session) refreshes the list.
-  useEffect(() => {
-    const onRt = (e) => {
-      if (e.detail?.entity === 'solicitud_web') load();
-    };
-    window.addEventListener('hs-realtime', onRt);
-    return () => window.removeEventListener('hs-realtime', onRt);
-  }, [load]);
+  useRealtimeEntities(['solicitud_web'], () => load());
 
   const open = (row) => {
     setSelected(row);

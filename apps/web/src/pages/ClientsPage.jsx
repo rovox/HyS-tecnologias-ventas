@@ -14,6 +14,7 @@ import { canWriteClients } from '@/config/nav.js';
 import ClientFormModal from '@/components/ClientFormModal.jsx';
 import RowActions from '@/components/RowActions.jsx';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 function fmtDate(value) {
   if (!value) return '';
@@ -51,6 +52,7 @@ const ClientsPage = () => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useRealtimeEntities(['client', 'quotation', 'schedule'], () => loadData());
 
   const q = search.trim().toLowerCase();
   const filteredClients = clients.filter((c) => {

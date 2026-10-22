@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
+import { reportLoadError } from '@/lib/loadError.js';
 
 /** API detail (`{pedido, detalles, comentarios, historial}`, camelCase) → the fields the detail page reads. */
 function mapPedidoDetail(data) {
@@ -165,7 +166,7 @@ export const useInternalOrders = () => {
     if (ids.length === 0) return {};
     try {
       const results = await Promise.all(
-        ids.map((id) => apiClient.get(`pedidos-internos/${id}`, { token: authToken() }).catch(() => null))
+        ids.map((id) => apiClient.get(`pedidos-internos/${id}`, { token: authToken() }).catch(reportLoadError('el detalle de un pedido', null)))
       );
       const grouped = {};
       results.forEach((data, i) => {

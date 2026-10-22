@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { MapPin, Clock, User, Plus, ExternalLink, Search, Eye, Wrench, ClipboardList, Trash2, Shield, RotateCcw } from 'lucide-react';
 import VisitaFormModal from '@/components/VisitaFormModal.jsx';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -299,13 +300,7 @@ const ScheduleSurveysPage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const onRt = (e) => {
-      if (e.detail?.entity === 'relevamiento') fetchData();
-    };
-    window.addEventListener('hs-realtime', onRt);
-    return () => window.removeEventListener('hs-realtime', onRt);
-  }, [fetchData]);
+  useRealtimeEntities(['relevamiento'], () => fetchData());
 
   // Unique tecnicos and sucursales for filter dropdowns
   const uniqueTecnicos = useMemo(() => {

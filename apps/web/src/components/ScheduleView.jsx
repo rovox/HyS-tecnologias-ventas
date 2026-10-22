@@ -18,6 +18,7 @@ import ScheduleFormModal from './ScheduleFormModal.jsx';
 import ScheduleWeeklyView from './ScheduleWeeklyView.jsx';
 import ScheduleMonthlyView from './ScheduleMonthlyView.jsx';
 import CronogramaQuickModal from './CronogramaQuickModal.jsx';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 const ScheduleView = ({ types = [], title, embedded = false }) => {
   const { userRole } = useAuth();
@@ -35,6 +36,9 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
   const [usersMap, setUsersMap] = useState({});
   const [tecnicosMap, setTecnicosMap] = useState({});
   const [loading, setLoading] = useState(true);
+  // Only the first load replaces the calendar with skeletons; later reloads (e.g. realtime) keep it mounted,
+  // so an open job detail is not closed by its own change.
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
@@ -86,6 +90,7 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
     setQuotations(quoteRows || []);
     setVisits(visitRows || []);
     setLoading(false);
+    setHasLoaded(true);
     setRefreshKey(prev => prev + 1);
   };
 
@@ -94,17 +99,7 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [types.join(',')]);
 
-  useEffect(() => {
-    const onRt = (e) => {
-      const ent = e.detail?.entity;
-      if (ent === 'schedule' || ent === 'relevamiento' || ent === 'payment' || ent === 'task') {
-        loadSchedules();
-      }
-    };
-    window.addEventListener('hs-realtime', onRt);
-    return () => window.removeEventListener('hs-realtime', onRt);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [types.join(',')]);
+  useRealtimeEntities(['schedule', 'relevamiento', 'payment', 'task', 'quotation'], () => loadSchedules());
 
   const handleDateChange = async (jobId, newDate) => {
     try {
@@ -189,7 +184,7 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
         'flex-1 min-h-0 w-full relative bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col',
         embedded ? 'min-h-[22rem] max-h-[32rem]' : '',
       )}>
-        {loading ? (
+        {loading && !hasLoaded ? (
           <div className="p-8 w-full h-full flex flex-col gap-4">
             <Skeleton className="h-10 w-1/3" />
             <div className="grid grid-cols-1 gap-4 h-full">

@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { LayoutDashboard, Database, BarChart3, TrendingUp, AlertCircle, ArrowDownRight, ArrowUpRight, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { reportLoadError } from '@/lib/loadError.js';
 
 const ManagementPanelPage = () => {
   const { currentUser } = useAuth();
@@ -39,9 +40,9 @@ const ManagementPanelPage = () => {
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
 
       const [usersRes, schedulesRes, metricsRes] = await Promise.all([
-        apiClient.get('users', { token: authToken() }).catch(() => []),
-        apiClient.get('schedules', { token: authToken(), query: { estado: 'terminado', from: firstDay } }).catch(() => []),
-        apiClient.get('metrics/sales', { token: authToken() }).catch(() => null),
+        apiClient.get('users', { token: authToken() }).catch(reportLoadError('los usuarios', [])),
+        apiClient.get('schedules', { token: authToken(), query: { estado: 'terminado', from: firstDay } }).catch(reportLoadError('los trabajos terminados', [])),
+        apiClient.get('metrics/sales', { token: authToken() }).catch(reportLoadError('las métricas', null)),
       ]);
 
       const userMap = (usersRes || []).reduce((acc, u) => ({ ...acc, [u.id]: u }), {});
@@ -66,7 +67,7 @@ const ManagementPanelPage = () => {
     try {
       const query = { limit: 50 };
       if (auditActionFilter !== 'all') query.action = auditActionFilter;
-      const records = await apiClient.get('activity', { token: authToken(), query }).catch(() => []);
+      const records = await apiClient.get('activity', { token: authToken(), query }).catch(reportLoadError('la actividad', []));
       setAuditLogs(records || []);
     } catch (err) {
       console.error('Error fetching audit logs:', err);

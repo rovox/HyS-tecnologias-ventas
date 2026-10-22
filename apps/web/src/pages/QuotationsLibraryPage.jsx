@@ -42,6 +42,8 @@ import {
 } from '@/components/ui/dropdown-menu.jsx';
 import schedulesService from '@/services/schedules/index.js';
 import { deadlineChipClass, deadlineLabel, deadlineTone } from '@/lib/deadline.js';
+import { reportLoadError } from '@/lib/loadError.js';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 const QuotationsLibraryPage = () => {
   const { currentUser, userRole } = useAuth();
@@ -69,9 +71,9 @@ const QuotationsLibraryPage = () => {
       const [quotes, cli, usersRes, cats, allJobs] = await Promise.all([
         quotationsService.getAll(),
         clientsService.getAll(),
-        authService.listUsers().catch(() => []),
+        authService.listUsers().catch(reportLoadError('los usuarios', [])),
         categoriesService.getAll().catch(() => QUOTATION_MAIN_CATEGORIES),
-        schedulesService.getAll().catch(() => []),
+        schedulesService.getAll().catch(reportLoadError('los trabajos', [])),
       ]);
       setQuotations(quotes);
       setClients(cli);
@@ -93,6 +95,7 @@ const QuotationsLibraryPage = () => {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  useRealtimeEntities(['quotation', 'schedule', 'category', 'client'], () => fetchAll());
 
   const pseudoCats = useMemo(
     () => categories.filter(

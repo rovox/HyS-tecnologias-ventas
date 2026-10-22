@@ -51,3 +51,22 @@ export function useRealtimeRefresh() {
     };
   }, []);
 }
+
+/**
+ * Runs `onChange(event)` when the API reports a change to one of `entities` (e.g. ['schedule', 'payment']).
+ * The single way a screen reacts to realtime until the TanStack Query invalidation of docs/rules/frontend.md exists.
+ */
+export function useRealtimeEntities(entities, onChange) {
+  const handlerRef = useRef(onChange);
+  handlerRef.current = onChange;
+  const key = entities.join(',');
+
+  useEffect(() => {
+    const watched = new Set(key.split(','));
+    const onEvent = (e) => {
+      if (watched.has(e.detail?.entity)) handlerRef.current(e.detail);
+    };
+    window.addEventListener('hs-realtime', onEvent);
+    return () => window.removeEventListener('hs-realtime', onEvent);
+  }, [key]);
+}
