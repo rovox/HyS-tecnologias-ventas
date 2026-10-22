@@ -76,6 +76,13 @@ export function taskWhere(actor: Actor, tipo?: string) {
   return NO_ROWS;
 }
 
+/** Seller goals: admin sees all, ventas only their own, other roles none. */
+export function goalWhere(actor: Actor) {
+  if (isAdmin(actor)) return {};
+  if (isVentas(actor)) return { usuarioId: actor.id };
+  return NO_ROWS;
+}
+
 /** Whose sales metrics an actor may read: admin any (or all), everyone else only their own. */
 export function metricsUserId(actor: Actor, requested?: string) {
   return isAdmin(actor) ? requested : actor.id;

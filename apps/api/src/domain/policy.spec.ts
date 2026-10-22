@@ -5,6 +5,7 @@ import {
   canMutateRelevamientos,
   canSeeQuotations,
   canViewUser,
+  goalWhere,
   metricsUserId,
   quotationWhere,
   relevamientoWhere,
@@ -50,6 +51,12 @@ describe('policy', () => {
     expect([admin, ventas, tec, none].map(canMutateRelevamientos)).toEqual([true, true, true, false]);
     expect(relevamientoWhere(tec, 'q1')).toEqual({ cotizacionId: 'q1', OR: [{ usuarioId: 't' }, { tecnicoId: 't' }] });
     expect(relevamientoWhere(none)).toEqual({ id: '__none__' });
+  });
+
+  it('shows seller goals to admin, own goals to ventas and none to other roles', () => {
+    expect(goalWhere(admin)).toEqual({});
+    expect(goalWhere(ventas)).toEqual({ usuarioId: 'v' });
+    expect(goalWhere(tec)).toEqual({ id: '__none__' });
   });
 
   it('lets only admin read another seller metrics', () => {

@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { UpsertGoalDto } from './dto/goal.dto';
-import { assertAdmin, isAdmin, isVentas } from '../auth/roles';
+import { assertAdmin, goalWhere } from '../auth/roles';
 
 function monthStart(month?: string) {
   const prefix = month || new Date().toISOString().slice(0, 7);
@@ -24,7 +24,7 @@ export class GoalsService {
   list(user: User, month?: string) {
     const { start } = monthStart(month);
     return this.prisma.sellerGoal.findMany({
-      where: { mes: start, ...(isVentas(user) && !isAdmin(user) ? { usuarioId: user.id } : {}) },
+      where: { mes: start, ...goalWhere(user) },
       include: { usuario: { select: { id: true, name: true, role: true } } },
     });
   }
