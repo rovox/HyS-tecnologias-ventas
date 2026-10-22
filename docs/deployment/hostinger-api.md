@@ -282,8 +282,8 @@ This API syncs sucursales, users/sessions, clients, quotations (cliente optional
 
 **Outcome (verified):**  
 
-- `GET /api/health` → `{"ok":true,"service":"sales"}`  
-- `GET /api/health/db` → `{"ok":true,"service":"sales","db":true}`  
+- `GET /api/health` → `{"ok":true,"service":"hs-erp"}`  
+- `GET /api/health/db` → `{"ok":true,"service":"hs-erp","db":true}`  
 
 SPA white-goat uses **`VITE_API_MODE=api`** against lime-chamois once the SPA Git branch is `migration/backend-api` and Actions has refreshed `apps/web/dist`.
 

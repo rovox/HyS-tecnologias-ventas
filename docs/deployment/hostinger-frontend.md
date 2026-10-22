@@ -25,7 +25,7 @@ So the split is:
 
 | Step | Where it runs | Why |
 |------|----------------|-----|
-| `pnpm --filter web build` (`vite build`) | GitHub Actions (`ubuntu-latest`) | Needs esbuild; Hostinger is `noexec` |
+| `pnpm --filter @hs-erp/web build` (`vite build`) | GitHub Actions (`ubuntu-latest`) | Needs esbuild; Hostinger is `noexec` |
 | Commit `apps/web/dist/` | GitHub Actions (`[skip ci]`) | The compiled HTML/JS/CSS **is** the deployable |
 | GitHub → Hostinger | Hostinger | Pulls the repo and **publishes** `dist/` after `pnpm install` |
 

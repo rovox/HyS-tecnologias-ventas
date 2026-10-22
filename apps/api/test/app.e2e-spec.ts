@@ -4,7 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ROLE_ACCOUNTS, credentialsFor } from '../../../config/users';
 
-describe('Sales API (e2e)', () => {
+describe('hs-erp API (e2e)', () => {
   let app: INestApplication;
   let ventasToken = '';
   let adminToken = '';

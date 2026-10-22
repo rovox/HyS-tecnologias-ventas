@@ -10,7 +10,7 @@ alwaysApply: false
 
 - Keep the full `apps/api/prisma/migrations/` history. **Do not squash** folders already applied on Hostinger or local DBs.
 - One migration folder = **one schema change**. Prefer names with a **domain prefix**: `…_clients_…`, `…_quotations_…`, `…_tasks_…`, `…_schedules_…`, `…_relevamientos_…`. Do not mix unrelated entities in one SQL file.
-- Create with `pnpm --filter api prisma:migrate` (`migrate dev`). Never `db push` for shared environments.
+- Create with `pnpm --filter @hs-erp/api prisma:migrate` (`migrate dev`). Never `db push` for shared environments.
 
 ## Hostinger (empty MySQL)
 

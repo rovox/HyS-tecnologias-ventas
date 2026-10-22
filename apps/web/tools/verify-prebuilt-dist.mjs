@@ -8,6 +8,6 @@ try {
   accessSync(distIndex);
   console.log('pre-built dist present; skipping vite (Hostinger cannot execute esbuild)');
 } catch {
-  console.error(`Missing ${distIndex}. Build locally with: pnpm --filter web build`);
+  console.error(`Missing ${distIndex}. Build locally with: pnpm --filter @hs-erp/web build`);
   process.exit(1);
 }

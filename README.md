@@ -1,8 +1,8 @@
-# H&S Tecnologías — ERP Operativo
+# hs-erp — ERP de H&S Tecnologías
 
-Monorepo del sistema de gestión para **H&S Tecnologías**: ventas, cronograma de instalaciones, relevamientos, cotizaciones, logística interna y finanzas.
+Monorepo (`hs-erp`: `@hs-erp/api` + `@hs-erp/web`) del sistema de gestión para **H&S Tecnologías**: ventas, cronograma de instalaciones, relevamientos, cotizaciones, logística interna y finanzas.
 
-**Milestone actual:** frontend POC en mock. NestJS sales corre en local (`pnpm dev:api`); Hostinger aún no publica esa API.
+**Estado:** MVP en la rama `mvp`, verificado en el stack local (Docker). Avance y decisiones: [`docs/STATUS.md`](./docs/STATUS.md).
 
 ---
 
@@ -90,25 +90,20 @@ Lista completa: [`docs/getting-started/demo-accounts.md`](./docs/getting-started
 
 ---
 
-## Arquitectura POC
+## Arquitectura
 
 ```
-React (pages/hooks)
-      ↓
-services/*          ← contrato futuro NestJS
-      ↓
-mocks/store.js      ← datos en memoria por sesión
+apps/web  React (pages → features/hooks → services)   →  HTTP + SSE realtime
+apps/api  NestJS (controllers → services → domain/)    →  Prisma → MySQL 8
 ```
 
-Detalle: [`docs/architecture/frontend-poc.md`](./docs/architecture/frontend-poc.md)
-
-Backend objetivo: NestJS + Prisma + MySQL — [`docs/migration/backend-status.md`](./docs/migration/backend-status.md)
+Reglas: [`docs/rules/architecture.md`](./docs/rules/architecture.md). Negocio y vocabulario: [`docs/domain/business-design.md`](./docs/domain/business-design.md).
 
 ---
 
 ## Deploy
 
-Static frontend on Hostinger from `apps/web/dist`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md). Sales API (separate Node Web App + MySQL): [`docs/deployment/hostinger-api.md`](./docs/deployment/hostinger-api.md). Do not flip `VITE_API_MODE=api` until `GET /api/health` succeeds.
+Static frontend on Hostinger from `apps/web/dist`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md). API (separate Node Web App + MySQL): [`docs/deployment/hostinger-api.md`](./docs/deployment/hostinger-api.md). Do not flip `VITE_API_MODE=api` until `GET /api/health` succeeds.
 
 ```bash
 git push origin migration/frontend-poc

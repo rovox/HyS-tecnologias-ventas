@@ -54,5 +54,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, '0.0.0.0', () => {
-  console.log(`POC static server on ${port} → ${dist}`);
+  console.log(`hs-erp static server on ${port} → ${dist}`);
 });
