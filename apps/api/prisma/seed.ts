@@ -1,20 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { USERS, passwordFor } from '../../../config/users';
 
 const prisma = new PrismaClient();
-
-/** Contraseña simple = primer nombre en minúsculas */
-const PASSWORDS: Record<string, string> = {
-  'julio.admin@demo.hs.local': 'julio',
-  'dennis.ventas@demo.hs.local': 'dennis',
-  'wilson.ventas@demo.hs.local': 'wilson',
-  'vanesa.ventas@demo.hs.local': 'vanesa',
-  'giovanni.ventas@demo.hs.local': 'giovanni',
-  'elias.ops@demo.hs.local': 'elias',
-  'estefany.admin@demo.hs.local': 'estefany',
-  'mabel.admin@demo.hs.local': 'mabel',
-  'marcos.tec@demo.hs.local': 'marcos',
-};
 
 const BRANCHES = [
   { id: 'suc_central', nombre: 'Central' },
@@ -34,21 +22,9 @@ async function main() {
     });
   }
 
-  const users = [
-    { id: 'usr_admin', email: 'julio.admin@demo.hs.local', name: 'Julio', role: 'ADMINISTRADOR', monthlyGoalBs: 12000, phone: '70000001', sucursalId: 'suc_central' },
-    { id: 'usr_ventas', email: 'dennis.ventas@demo.hs.local', name: 'Dennis', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 18000, phone: '70000002', sucursalId: 'suc_central' },
-    { id: 'usr_wilson', email: 'wilson.ventas@demo.hs.local', name: 'Wilson', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 14000, phone: '70000005', sucursalId: 'suc_punata' },
-    { id: 'usr_vanesa', email: 'vanesa.ventas@demo.hs.local', name: 'Vanesa', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 14000, phone: '70000006', sucursalId: 'suc_quillacollo' },
-    { id: 'usr_giovanni', email: 'giovanni.ventas@demo.hs.local', name: 'Giovanni', role: 'VENTAS / ADMINISTRACIÓN', monthlyGoalBs: 14000, phone: '70000007', sucursalId: 'suc_central' },
-    { id: 'usr_tec', email: 'elias.ops@demo.hs.local', name: 'Elias', role: 'ADMINISTRADOR', monthlyGoalBs: 0, phone: '70000003', sucursalId: 'suc_central' },
-    { id: 'usr_conta', email: 'estefany.admin@demo.hs.local', name: 'Estefany', role: 'ADMINISTRADOR', monthlyGoalBs: 0, phone: '70000004', sucursalId: 'suc_central' },
-    { id: 'usr_mabel', email: 'mabel.admin@demo.hs.local', name: 'Mabel', role: 'ADMINISTRADOR', monthlyGoalBs: 0, phone: '70000008', sucursalId: 'suc_central' },
-    { id: 'usr_tecnico', email: 'marcos.tec@demo.hs.local', name: 'Marcos', role: 'SEGURIDAD ELECTRÓNICA', monthlyGoalBs: 0, phone: '70000009', sucursalId: 'suc_central' },
-  ];
-
-  for (const row of users) {
-    const passwordHash = await bcrypt.hash(PASSWORDS[row.email], 10);
-    const { id, ...rest } = row;
+  for (const row of USERS) {
+    const passwordHash = await bcrypt.hash(passwordFor(row.email), 10);
+    const { id, localOnly: _localOnly, ...rest } = row;
     await prisma.user.upsert({
       where: { email: row.email },
       update: { ...rest, passwordHash, active: true },
@@ -167,7 +143,7 @@ async function main() {
     },
   });
 
-  const salesUsers = users.filter((row) => row.role === 'VENTAS / ADMINISTRACIÓN' || row.role === 'ADMINISTRADOR');
+  const salesUsers = USERS.filter((row) => row.role === 'VENTAS / ADMINISTRACIÓN' || row.role === 'ADMINISTRADOR');
   for (const row of salesUsers) {
     await prisma.sellerGoal.upsert({
       where: { usuarioId_mes: { usuarioId: row.id, mes } },
@@ -330,7 +306,7 @@ async function main() {
     });
   }
 
-  console.log('Seed OK — passwords: julio / dennis / wilson / vanesa / giovanni / elias / estefany / mabel / marcos (técnico)');
+  console.log('Seed OK — users from config/users.json (password: config/users.passwords.local.json, else lowercase first name)');
 }
 
 main()

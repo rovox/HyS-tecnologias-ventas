@@ -1,25 +1,23 @@
 # Demo accounts and roles
 
-Each demo user has a **simple personal password** (first name, lowercase) and also accepts the shared mock password `Demo1234!`. Local seed only — not production secrets.
+The single roster is [`config/users.json`](../../config/users.json): the same emails as production, used by the local seed, the login chips, the e2e fixtures and the production users SQL. `localOnly` users (Marcos, técnico) exist only in the local seed and are hidden from the production chips.
 
-| Email | Password | Role | Name |
-|-------|----------|------|------|
-| `julio.admin@demo.hs.local` | `julio` | ADMINISTRADOR | Julio |
-| `elias.ops@demo.hs.local` | `elias` | ADMINISTRADOR | Elias |
-| `estefany.admin@demo.hs.local` | `estefany` | ADMINISTRADOR | Estefany |
-| `mabel.admin@demo.hs.local` | `mabel` | ADMINISTRADOR | Mabel |
-| `dennis.ventas@demo.hs.local` | `dennis` | VENTAS / ADMINISTRACIÓN | Dennis |
-| `wilson.ventas@demo.hs.local` | `wilson` | VENTAS / ADMINISTRACIÓN | Wilson |
-| `vanesa.ventas@demo.hs.local` | `vanesa` | VENTAS / ADMINISTRACIÓN | Vanesa |
-| `giovanni.ventas@demo.hs.local` | `giovanni` | VENTAS / ADMINISTRACIÓN | Giovanni |
+Passwords never go to git. Locally, `config/users.passwords.local.json` (gitignored, `{ "email": "password" }`) sets the real ones; any user missing there gets the lowercase first name (`julio`, `dennis`, `marcos`…), which is what CI uses. There is no shared fallback password.
 
-There are **four** administrators: Julio, Elias, Estefany and Mabel. The role **Contadora** was removed from the system — Estefany (previously the accounting demo user) is now a full administrator and validates income/expense movements like any other admin. Sales users only see their own quotations and their branch clients.
+| Role | Users |
+|------|-------|
+| ADMINISTRADOR | Julio, Mavel, Elias, Estefany Gonzales |
+| VENTAS / ADMINISTRACIÓN | Dennis, Giovanni, Vanessa, Wilson |
+| SIN ACCESO | Marcelo, Ronald, Rodrigo |
+| SEGURIDAD ELECTRÓNICA | Marcos (local only) |
+
+There are **four** administrators: Julio, Mavel, Elias and Estefany. The role **Contadora** was removed from the system — Estefany (previously the accounting demo user) is now a full administrator and validates income/expense movements like any other admin. Sales users only see their own quotations and their branch clients.
 
 ## Auth
 
 - Mock (`VITE_API_MODE=mock`): `poc.*` tokens. **Remember me** uses `localStorage`; unchecked uses `sessionStorage`.
 - Nest (`VITE_API_MODE=api`): JWT 8h with required `sessionId`. Logout ends the session row; the guard rejects ended sessions or tokens without `sessionId`.
-- Defined in `apps/api/prisma/seed.ts` and `apps/web/src/services/auth/`.
+- Users in `config/users.json` (seeded by `apps/api/prisma/seed.ts`); client in `apps/web/src/services/auth/`.
 
 Do **not** run `prisma seed` on Hostinger (it overwrites password hashes). Apply additive migrations only.
 

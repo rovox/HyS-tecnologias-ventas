@@ -11,6 +11,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import users from '../config/users.js';
+
+const { ROLE_ACCOUNTS, credentialsFor } = users;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -21,12 +24,8 @@ const WEB = args.web ?? process.env.SWEEP_WEB ?? 'http://localhost:3000';
 const API = args.api ?? process.env.SWEEP_API ?? 'http://localhost:3001/api';
 const TIMEOUT = Number(args.timeout ?? 8000);
 
-// Demo users from apps/api/prisma/seed.ts (local seed only, never production).
-const ROLES = {
-  admin: { email: 'julio.admin@demo.hs.local', password: 'julio' },
-  ventas: { email: 'dennis.ventas@demo.hs.local', password: 'dennis' },
-  tecnico: { email: 'marcos.tec@demo.hs.local', password: 'marcos' },
-};
+// One account per role from the shared roster (config/users.json), local stack only.
+const ROLES = Object.fromEntries(Object.entries(ROLE_ACCOUNTS).map(([role, email]) => [role, credentialsFor(email)]));
 const roleNames = (args.roles ?? 'admin,ventas,tecnico').split(',');
 
 // Mirrors routeRoles in apps/web/src/config/nav.js (A = admin, V = ventas, T = técnico).

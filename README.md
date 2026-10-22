@@ -17,7 +17,7 @@ pnpm install
 pnpm dev:web
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `dennis.ventas@demo.hs.local` / `dennis` (o `Demo1234!`).
+Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con un botón rápido (por ejemplo Dennis, `dennis@hscontrol.com`). Cuentas en [`config/users.json`](./config/users.json).
 
 | Comando | Descripción |
 |---------|-------------|
@@ -84,18 +84,7 @@ Manuales extendidos:
 
 ## Cuentas demo
 
-Contraseña: nombre en minúsculas (ej. `julio`), también funciona `Demo1234!` para cualquier cuenta.
-
-| Email | Rol |
-|-------|-----|
-| `julio.admin@demo.hs.local` | Administrador |
-| `elias.ops@demo.hs.local` | Administrador |
-| `estefany.admin@demo.hs.local` | Administrador |
-| `mabel.admin@demo.hs.local` | Administrador |
-| `dennis.ventas@demo.hs.local` | Ventas |
-| `wilson.ventas@demo.hs.local` | Ventas |
-| `vanesa.ventas@demo.hs.local` | Ventas |
-| `giovanni.ventas@demo.hs.local` | Ventas |
+Una sola lista de usuarios para local, tests y producción: [`config/users.json`](./config/users.json) (mismos correos que producción). En local la contraseña es la de `config/users.passwords.local.json` (fuera de git) o, si no está, el nombre de pila en minúsculas (ej. `julio`).
 
 Lista completa: [`docs/getting-started/demo-accounts.md`](./docs/getting-started/demo-accounts.md)
 

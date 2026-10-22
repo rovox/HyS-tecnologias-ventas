@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import users from '../config/users.js';
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -36,7 +37,7 @@ try { ({ chromium } = await import('@playwright/test')); } catch {
 const login = await fetch(`${API}/auth/login`, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ email: 'julio.admin@demo.hs.local', password: 'julio' }),
+  body: JSON.stringify(users.credentialsFor(users.ROLE_ACCOUNTS.admin)),
 });
 if (!login.ok) { console.error(`Login failed: HTTP ${login.status}`); process.exit(2); }
 const { accessToken, user } = await login.json();

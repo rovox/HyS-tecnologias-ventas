@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { ROLE_ACCOUNTS, credentialsFor } from '../../../config/users';
 
 describe('Sales API (e2e)', () => {
   let app: INestApplication;
@@ -25,12 +26,12 @@ describe('Sales API (e2e)', () => {
 
     const ventas = await request(app.getHttpServer())
       .post('/api/auth/login')
-      .send({ email: 'dennis.ventas@demo.hs.local', password: 'dennis' });
+      .send(credentialsFor(ROLE_ACCOUNTS.ventas));
     ventasToken = ventas.body?.accessToken || ventas.body?.token || '';
 
     const admin = await request(app.getHttpServer())
       .post('/api/auth/login')
-      .send({ email: 'julio.admin@demo.hs.local', password: 'julio' });
+      .send(credentialsFor(ROLE_ACCOUNTS.admin));
     adminToken = admin.body?.accessToken || admin.body?.token || '';
   });
 
@@ -107,7 +108,7 @@ describe('Sales API (e2e)', () => {
       process.env.WEB_LEADS_KEY = key;
       const tec = await request(app.getHttpServer())
         .post('/api/auth/login')
-        .send({ email: 'marcos.tec@demo.hs.local', password: 'marcos' });
+        .send(credentialsFor(ROLE_ACCOUNTS.tecnico));
       tecToken = tec.body?.accessToken || tec.body?.token || '';
     });
 
@@ -166,7 +167,7 @@ describe('Sales API (e2e)', () => {
     beforeAll(async () => {
       const tec = await request(app.getHttpServer())
         .post('/api/auth/login')
-        .send({ email: 'marcos.tec@demo.hs.local', password: 'marcos' });
+        .send(credentialsFor(ROLE_ACCOUNTS.tecnico));
       tecToken = tec.body?.accessToken || tec.body?.token || '';
     });
 
