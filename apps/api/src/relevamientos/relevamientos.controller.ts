@@ -86,9 +86,10 @@ export class RelevamientoFilesController {
   @ApiOperation({ summary: 'Download relevamiento photo' })
   async getFile(
     @Param('name') name: string,
+    @CurrentUser() user: User,
     @Res() res: { sendFile: (path: string) => unknown },
   ) {
-    const full = await this.relevamientos.filePath(name);
+    const full = await this.relevamientos.filePath(name, user);
     return res.sendFile(full);
   }
 }

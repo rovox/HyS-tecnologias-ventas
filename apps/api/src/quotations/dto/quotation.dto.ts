@@ -214,3 +214,34 @@ export class StatusDto {
   @Transform(emptyToUndef)
   fechaEnvio?: string;
 }
+
+/** Optional data for the project (schedule) created when the quotation is accepted. */
+export class AcceptQuotationDto {
+  @ApiPropertyOptional({ enum: ['seguridad', 'proyectos'] })
+  @IsOptional()
+  @IsIn(['seguridad', 'proyectos'])
+  type?: string;
+
+  @ApiPropertyOptional({ description: 'ISO date; today when omitted' })
+  @IsOptional()
+  @IsDateString()
+  @Transform(emptyToUndef)
+  fechaProgramada?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  lugar?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  tecnicoId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  horario?: string;
+}

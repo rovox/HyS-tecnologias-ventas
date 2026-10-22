@@ -5,6 +5,7 @@ import {
   canManageWebLeads,
   canMutateClients,
   canMutateQuotes,
+  canMutateRelevamientos,
   canMutateSchedules,
   isAdmin,
 } from '../domain/policy';
@@ -44,6 +45,10 @@ export function assertCanManageWebLeads(user: User) {
 
 export function assertCanMutateSchedules(user: User) {
   if (!canMutateSchedules(user)) throw new ForbiddenException('No puedes modificar el cronograma');
+}
+
+export function assertCanMutateRelevamientos(user: User) {
+  if (!canMutateRelevamientos(user)) throw new ForbiddenException('No puedes registrar relevamientos');
 }
 
 export function assertCanCreateSchedules(user: User) {

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { PAYMENT_TIPOS } from '../../domain/schedules';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
@@ -175,8 +176,8 @@ export class ScheduleStatusDto {
 }
 
 export class CreateSchedulePaymentDto {
-  @ApiProperty({ enum: ['adelanto', 'cobro', 'extra_asistencia'] })
-  @IsIn(['adelanto', 'cobro', 'extra_asistencia'])
+  @ApiProperty({ enum: PAYMENT_TIPOS, description: 'descuento = saldo perdonado (no es dinero recibido)' })
+  @IsIn(PAYMENT_TIPOS)
   tipo: string;
 
   @ApiProperty()

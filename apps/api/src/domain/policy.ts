@@ -26,6 +26,8 @@ export const canManageWebLeads = isCommercial;
 export const canSeeQuotations = isCommercial;
 export const canCreateSchedules = isCommercial;
 export const canMutateSchedules = (actor: Actor) => isCommercial(actor) || isTec(actor);
+/** Surveys and visits (relevamientos): commercial roles and técnico. */
+export const canMutateRelevamientos = (actor: Actor) => isCommercial(actor) || isTec(actor);
 /** Internal orders (pedidos internos): requested and managed by admin and ventas. */
 export const canManagePedidos = isCommercial;
 /** Full user list (email, phone, goal): admin and ventas. */
@@ -60,7 +62,7 @@ export function saleWhere(actor: Actor) {
 export function relevamientoWhere(actor: Actor, cotizacionId?: string) {
   const base = cotizacionId ? { cotizacionId } : {};
   if (isCommercial(actor)) return base;
-  if (isTec(actor)) return { ...base, usuarioId: actor.id };
+  if (isTec(actor)) return { ...base, OR: [{ usuarioId: actor.id }, { tecnicoId: actor.id }] };
   return NO_ROWS;
 }
 

@@ -2,10 +2,12 @@ import {
   canListUserDirectory,
   canListUsers,
   canManagePedidos,
+  canMutateRelevamientos,
   canSeeQuotations,
   canViewUser,
   metricsUserId,
   quotationWhere,
+  relevamientoWhere,
   ROLES,
   scheduleWhere,
   taskWhere,
@@ -42,6 +44,12 @@ describe('policy', () => {
     expect(scheduleWhere(none)).toEqual({ id: '__none__' });
     expect(taskWhere(tec, 'cotizacion')).toEqual({ id: '__none__' });
     expect(taskWhere(tec)).toEqual({ OR: [{ asignadoId: 't' }, { creadorId: 't' }] });
+  });
+
+  it('lets every role with access register relevamientos; técnico sees the ones he made or is assigned to', () => {
+    expect([admin, ventas, tec, none].map(canMutateRelevamientos)).toEqual([true, true, true, false]);
+    expect(relevamientoWhere(tec, 'q1')).toEqual({ cotizacionId: 'q1', OR: [{ usuarioId: 't' }, { tecnicoId: 't' }] });
+    expect(relevamientoWhere(none)).toEqual({ id: '__none__' });
   });
 
   it('lets only admin read another seller metrics', () => {

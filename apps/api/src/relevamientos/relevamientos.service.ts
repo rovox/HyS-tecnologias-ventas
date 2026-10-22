@@ -5,7 +5,7 @@ import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
 import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
-import { isTec, isVentas, relevamientoWhere } from '../auth/roles';
+import { assertCanMutateRelevamientos, isTec, isVentas, relevamientoWhere } from '../auth/roles';
 import { RealtimeService } from '../realtime/realtime.service';
 
 const ESTADOS = ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'];
@@ -49,6 +49,7 @@ export class RelevamientosService {
   }
 
   async create(dto: UpsertRelevamientoDto, user: User, sessionId?: string) {
+    assertCanMutateRelevamientos(user);
     let clienteId: string;
     let sucursalId: string | null = null;
     let cotizacionId: string | null = null;
@@ -99,6 +100,7 @@ export class RelevamientosService {
   }
 
   async update(id: string, dto: Partial<UpsertRelevamientoDto>, user: User, sessionId?: string) {
+    assertCanMutateRelevamientos(user);
     const current = await this.get(id, user);
     if (dto.estado && !ESTADOS.includes(dto.estado)) {
       throw new BadRequestException('Estado de visita no válido');
@@ -142,6 +144,7 @@ export class RelevamientosService {
     user: User,
     sessionId?: string,
   ) {
+    assertCanMutateRelevamientos(user);
     const current = await this.get(id, user);
     if (!file?.buffer?.length) throw new BadRequestException('Archivo de imagen requerido');
     const mime = String(file.mimetype || '');
@@ -167,8 +170,13 @@ export class RelevamientosService {
     return row;
   }
 
-  async filePath(name: string) {
+  /** A photo is served only to someone who can see a relevamiento that references it. */
+  async filePath(name: string, user: User) {
     const safe = path.basename(name);
+    const visible = await this.prisma.relevamiento.findMany({ where: relevamientoWhere(user), select: { fotosUrl: true } });
+    if (!visible.some((row) => fotosList(row.fotosUrl).some((url) => path.basename(url) === safe))) {
+      throw new ForbiddenException('Sin acceso a esta foto');
+    }
     const full = path.join(uploadDir(), safe);
     if (!fs.existsSync(full)) throw new NotFoundException('Foto no encontrada');
     return full;
