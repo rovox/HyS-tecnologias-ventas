@@ -65,7 +65,7 @@ pnpm --filter api prisma:seed   # solo local; nunca en Hostinger (reescribe pass
 pnpm --filter api dev
 ```
 
-Demo: `dennis.ventas@demo.hs.local` / `Demo1234!`. El frontend en Hostinger sigue en `mock` hasta que Actions compile con `VITE_API_MODE=api`.
+Demo: `dennis@hscontrol.com` / `dennis` (ver `config/users.json`). El frontend en Hostinger sigue en `mock` hasta que Actions compile con `VITE_API_MODE=api`.
 
 ## Estructura del monorepo
 

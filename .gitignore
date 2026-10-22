@@ -84,3 +84,6 @@ playwright-report/
 
 # graphify knowledge-graph output (local tool)
 graphify-out/
+
+# Real passwords for the shared roster (config/users.js), never committed
+config/users.passwords.local.json

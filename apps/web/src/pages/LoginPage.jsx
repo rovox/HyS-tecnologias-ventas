@@ -9,18 +9,19 @@ import { Helmet } from 'react-helmet';
 import { toast } from 'sonner';
 import authService from '@/services/auth/index.js';
 import { ROLES } from '@/constants/roles.js';
+import USERS from '../../../../config/users.json';
 
-/** Chips en producción: solo rellenan el correo (cada usuario tiene su propia clave). */
-const API_ACCOUNT_CHIPS = [
-  { email: 'julio@hscontrol.com', name: 'Julio', role: 'Admin' },
-  { email: 'mavel@hscontrol.com', name: 'Mavel', role: 'Admin' },
-  { email: 'vanessa@hscontrol.com', name: 'Vanessa', role: 'Ventas' },
-  { email: 'wilson@hscontrol.com', name: 'Wilson', role: 'Ventas' },
-  { email: 'stephany@hscontrol.com', name: 'Stephany', role: 'Finanzas' },
-  { email: 'marcelo@hscontrol.com', name: 'Marcelo', role: 'Sin acceso' },
-  { email: 'ronald@hscontrol.com', name: 'Ronald', role: 'Sin acceso' },
-  { email: 'rodrigo@hscontrol.com', name: 'Rodrigo', role: 'Sin acceso' },
-];
+/** Chips: solo rellenan el correo (cada usuario tiene su propia clave). Lista única en config/users.json. */
+const CHIP_ROLE_LABEL = {
+  [ROLES.ADMIN]: 'Admin',
+  [ROLES.VENTAS]: 'Ventas',
+  [ROLES.TEC]: 'Técnico',
+  [ROLES.NONE]: 'Sin acceso',
+};
+
+const API_ACCOUNT_CHIPS = USERS
+  .filter((u) => !(u.localOnly && import.meta.env.PROD))
+  .map((u) => ({ email: u.email, name: u.name.split(' ')[0], role: CHIP_ROLE_LABEL[u.role] ?? u.role }));
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -235,7 +236,7 @@ const LoginPage = () => {
                       className="text-left text-[11px] rounded-lg px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[#d6e8f5] min-h-11"
                     >
                       <span className="block font-bold truncate">{account.name}</span>
-                      <span className="block opacity-70 truncate">{String(account.role || '').split('/')[0]}</span>
+                      <span className="block opacity-70 truncate">{account.role}</span>
                     </button>
                   ))}
                 </div>

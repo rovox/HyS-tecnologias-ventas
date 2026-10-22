@@ -1,19 +1,14 @@
 import { test as base, expect, type Page } from '@playwright/test';
+import { ROLE_ACCOUNTS, credentialsFor } from '../../config/users';
 
-// Demo users from apps/api/prisma/seed.ts (local seed only). `RoleName` is the contract
+// One account per role from the shared roster (config/users.json). `RoleName` is the contract
 // the specs use; the real role strings stay in the API (common/constants once ARCH-01a exists).
-export const ROLE_USERS = {
-  admin: { email: 'julio.admin@demo.hs.local', password: 'julio' },
-  ventas: { email: 'dennis.ventas@demo.hs.local', password: 'dennis' },
-  tecnico: { email: 'marcos.tec@demo.hs.local', password: 'marcos' },
-} as const;
-
-export type RoleName = keyof typeof ROLE_USERS;
+export type RoleName = keyof typeof ROLE_ACCOUNTS;
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001/api';
 
 export async function loginAs(page: Page, role: RoleName) {
-  const res = await page.request.post(`${API_URL}/auth/login`, { data: ROLE_USERS[role] });
+  const res = await page.request.post(`${API_URL}/auth/login`, { data: credentialsFor(ROLE_ACCOUNTS[role]) });
   expect(res.ok(), `login as ${role} failed: HTTP ${res.status()}`).toBeTruthy();
   const { accessToken, user } = await res.json();
   await page.addInitScript(

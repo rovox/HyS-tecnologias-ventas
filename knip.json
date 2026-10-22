@@ -6,7 +6,7 @@
 	"workspaces": {
 		".": {
 			"entry": ["e2e/**/*.ts", "scripts/*.mjs"],
-			"project": ["e2e/**/*.ts", "scripts/*.mjs"]
+			"project": ["e2e/**/*.ts", "scripts/*.mjs", "config/*.js"]
 		},
 		"apps/web": {
 			"entry": ["tools/*.{js,mjs}"],
