@@ -18,10 +18,10 @@ describe('quotations domain', () => {
 
   it('builds the project from the quotation total', () => {
     const now = new Date('2026-10-21T00:00:00Z');
-    const quote = { id: 'q1', numero: 'COT-1', titulo: 'CCTV', monto: 1500, clienteId: 'c1', sucursalId: 's1', vendedorId: 'v1' };
+    const quote = { id: 'q1', numero: 'COT-1', titulo: 'CCTV', categoriaId: 'seguridad_electronica', monto: 1500, clienteId: 'c1', sucursalId: 's1', vendedorId: 'v1' };
     const project = projectFromQuotation(quote, 'Av. Siempre Viva', {}, now);
     expect(project).toMatchObject({
-      type: 'seguridad',
+      categoriaId: 'seguridad_electronica',
       lugar: 'Av. Siempre Viva',
       descripcionTrabajo: 'CCTV (COT-1)',
       monto: 1500,
@@ -32,8 +32,7 @@ describe('quotations domain', () => {
       quotationId: 'q1',
       vendedorId: 'v1',
     });
-    expect(projectFromQuotation(quote, '', { type: 'proyectos', lugar: ' Obra ', fechaProgramada: '2026-11-01' }, now)).toMatchObject({
-      type: 'proyectos',
+    expect(projectFromQuotation(quote, '', { lugar: ' Obra ', fechaProgramada: '2026-11-01' }, now)).toMatchObject({
       lugar: 'Obra',
       fechaProgramada: new Date('2026-11-01'),
     });

@@ -303,7 +303,7 @@ const ClientDetailPage = () => {
                               <td className="px-4 py-3 text-xs whitespace-normal max-w-[320px] align-top">
                                 {s.descripcion_trabajo || s.descripcion || s.observacion || s.notes || 'Sin descripción registrada'}
                               </td>
-                              <td className="px-4 py-3 text-xs font-bold text-primary">{s.tipo_trabajo || s.type || '—'}</td>
+                              <td className="px-4 py-3 text-xs font-bold text-primary">{s.categoria || '—'}</td>
                               <td className="px-4 py-3"><Badge variant="outline" className="text-[9px] font-extrabold">{s.estado?.replace('_',' ') || '—'}</Badge></td>
                               <td className="px-4 py-3 text-xs">{fmtDate(s.fecha_programada)}</td>
                               <td className="px-4 py-3 text-xs">{s.vendedor_nombre || s.vendedor || '—'}</td>
@@ -401,7 +401,7 @@ const ClientDetailPage = () => {
                           return (
                             <tr key={s.id} className="hover:bg-muted/30">
                               <td className="px-4 py-3"><span className="font-mono text-xs text-muted-foreground">#{s.id.slice(-6)}</span> <span className="ml-1 text-sm font-bold truncate max-w-[120px] inline-block align-middle">{s.lugar || '—'}</span></td>
-                              <td className="px-4 py-3 text-xs font-bold text-primary">{s.tipo_trabajo || s.type || '—'}</td>
+                              <td className="px-4 py-3 text-xs font-bold text-primary">{s.categoria || '—'}</td>
                               <td className="px-4 py-3 text-xs">{fmtDate(s.fecha_programada)}</td>
                               <td className="px-4 py-3 text-xs font-bold">{gh ? fmtDate(gh.toISOString()) : '—'}</td>
                               <td className={cn("px-4 py-3 text-xs font-bold", g.cls)}>{g.label}</td>

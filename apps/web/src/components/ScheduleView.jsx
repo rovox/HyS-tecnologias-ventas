@@ -20,7 +20,7 @@ import ScheduleMonthlyView from './ScheduleMonthlyView.jsx';
 import CronogramaQuickModal from './CronogramaQuickModal.jsx';
 import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
-const ScheduleView = ({ types = [], title, embedded = false }) => {
+const ScheduleView = ({ title, embedded = false }) => {
   const { userRole } = useAuth();
   const { tecnicos } = useTecnicosList();
   const { getSchedules, rescheduleWork } = useSchedules();
@@ -82,7 +82,6 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
     // Solo trabajos Schedule (seguridad/proyectos). Visitas no son eventos del calendario.
     const filteredData = (data || []).filter((s) => {
       if (s.tipo_entrada === 'asistencia' || s.tipo_entrada === 'relevamiento') return false;
-      if (types.length > 0) return types.includes(s.tipo_trabajo || s.type);
       return true;
     });
     setSchedules(filteredData);
@@ -97,7 +96,7 @@ const ScheduleView = ({ types = [], title, embedded = false }) => {
   useEffect(() => {
     loadSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [types.join(',')]);
+  }, []);
 
   useRealtimeEntities(['schedule', 'relevamiento', 'payment', 'task', 'quotation'], () => loadSchedules());
 

@@ -20,6 +20,7 @@ import VisitaFormModal from '@/components/VisitaFormModal.jsx';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { QUOTATION_MAIN_CATEGORIES } from '@/constants/quotations.js';
 
 const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const { isAdmin } = useAuth();
@@ -48,7 +49,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     sucursal_id: '',
     vendedor_responsable_id: '',
     tecnico_responsable_id: '',
-    type: 'seguridad',
+    categoria_id: '',
     lugar: '',
     descripcion_trabajo: '',
     fecha_programada: format(new Date(), 'yyyy-MM-dd'),
@@ -125,7 +126,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
           sucursal_id: initialData.sucursal_id || '',
           vendedor_responsable_id: initialData.vendedor_id || initialData.vendedor_responsable_id || '',
           tecnico_responsable_id: initialData.tecnico_id || initialData.tecnico_responsable_id || '',
-          type: initialData.tipo_trabajo || initialData.type || 'seguridad',
+          categoria_id: initialData.categoria_id || '',
           lugar: initialData.lugar || '',
           descripcion_trabajo: initialData.descripcion_trabajo || '',
           fecha_programada: initialData.fecha_programada || format(new Date(), 'yyyy-MM-dd'),
@@ -154,7 +155,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
           sucursal_id: '',
           vendedor_responsable_id: '',
           tecnico_responsable_id: '',
-          type: 'seguridad',
+          categoria_id: '',
           lugar: '',
           descripcion_trabajo: '',
           fecha_programada: format(new Date(), 'yyyy-MM-dd'),
@@ -282,7 +283,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
       return; 
     }
 
-    if (!formData.type) { toast.error("Selecciona un tipo de trabajo."); return; }
+    if (!formData.categoria_id && !initialData?.quotation_id) { toast.error('Selecciona la categoría del trabajo.'); return; }
     if (!formData.fecha_programada) { toast.error("La fecha programada es obligatoria."); return; }
     if (!formData.lugar?.trim()) { toast.error("El lugar del trabajo es obligatorio."); return; }
     if (formData.monto === '' || formData.monto === null) { toast.error("El costo total es obligatorio."); return; }
@@ -301,7 +302,7 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     const data = new FormData();
     data.append('cliente_id', selectedClientId);
     data.append('cliente', clientName);
-    data.append('type', formData.type);
+    if (formData.categoria_id) data.append('categoria_id', formData.categoria_id);
     data.append('lugar', formData.lugar);
     data.append('fecha_programada', formData.fecha_programada);
     data.append('monto', costo_total);
@@ -612,16 +613,22 @@ const ScheduleFormModal = ({ isOpen, onClose, onSave, initialData = null }) => {
             </div>
             
             <div className="space-y-2">
-              <Label>Tipo de Trabajo <span className="text-destructive">*</span></Label>
-              <Select value={formData.type} onValueChange={(val) => handleChange({ target: { name: 'type', value: val }})} disabled={isSubmitting}>
+              <Label>Categoría <span className="text-destructive">*</span></Label>
+              <Select
+                value={formData.categoria_id}
+                onValueChange={(val) => handleChange({ target: { name: 'categoria_id', value: val } })}
+                disabled={isSubmitting || Boolean(initialData?.quotation_id)}
+              >
                 <SelectTrigger className="bg-card font-bold">
-                  <SelectValue />
+                  <SelectValue placeholder="Selecciona la división" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="seguridad" className="font-medium text-blue-600 focus:bg-blue-50">Seguridad Electrónica</SelectItem>
-                  <SelectItem value="proyectos" className="font-medium text-red-600 focus:bg-red-50">Proyecto</SelectItem>
+                  {QUOTATION_MAIN_CATEGORIES.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {initialData?.quotation_id && <p className="text-xs text-muted-foreground">Viene de la cotización.</p>}
             </div>
 
             <div className="space-y-2">

@@ -14,18 +14,20 @@ export const QUOTATION_STATUS_CLASS = {
   rechazado: 'bg-red-100 text-red-700',
 };
 
-export const EQUIPOS_TECNOLOGIA_ID = 'insumos_tecnologicos';
+/** Division whose subcategory is free text (equipment, software, telephony…). */
+export const EQUIPOS_TECNOLOGIA_ID = 'computo_comunicacion';
 
+/** The 3 divisions, the mandatory category (CAT-01). The API (GET /categories, principal) is the source of truth. */
 export const QUOTATION_MAIN_CATEGORIES = [
-  { id: 'seguridad_electronica', label: 'Seguridad Electrónica' },
-  { id: EQUIPOS_TECNOLOGIA_ID, label: 'Equipos y tecnología' },
-  { id: 'proyectos', label: 'Proyectos' },
+  { id: 'computo_comunicacion', label: 'Cómputo y comunicación' },
+  { id: 'seguridad_electronica', label: 'Seguridad electrónica' },
+  { id: 'cableado_estructurado', label: 'Cableado estructurado' },
 ];
 
 export const QUOTATION_SUBCATEGORIES = {
+  computo_comunicacion: [],
   seguridad_electronica: ['Instalaciones', 'Asistencias'],
-  insumos_tecnologicos: [],
-  proyectos: ['Redes/Datos', 'Eléctrico'],
+  cableado_estructurado: ['Redes/Datos', 'Eléctrico', 'Certificación'],
 };
 
 export const QUOTATION_FLOW = {

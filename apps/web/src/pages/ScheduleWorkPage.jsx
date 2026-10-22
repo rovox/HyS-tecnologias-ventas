@@ -9,7 +9,7 @@ const ScheduleWorkPage = () => (
       <title>Cronograma - H&S Tecnologías</title>
     </Helmet>
     <div className="content-container py-6 w-full">
-      <ScheduleView types={['seguridad', 'proyectos']} title="Cronograma de Trabajos" />
+      <ScheduleView title="Cronograma de Trabajos" />
     </div>
   </Layout>
 );

@@ -22,7 +22,7 @@ Never run `prisma migrate deploy`, `db push` or `seed` against Hostinger. Never 
 
 - Status and role columns are `String` validated against constants in `common/` (no MySQL enums, to avoid migration churn). Allowed values are listed in the module's `domain/<x>.rules.ts` / `common/policy/policy.ts` only.
 - Money: `Decimal(12,2)`. Never `Float`.
-- Every foreign key is a real Prisma relation (missing today: `QuotationSeller.userId`, `SaleJob.asignadoId`, `Quotation.categoriaId`).
+- Every foreign key is a real Prisma relation (missing today: `QuotationSeller.userId`, `SaleJob.asignadoId`).
 - Totals stored on a parent (e.g. `Schedule.saldo`) are **recomputed in the same transaction** that writes the children.
 - Timestamps in UTC; the UI formats to local time.
 

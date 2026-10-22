@@ -27,7 +27,6 @@ export function acceptError(quote: AcceptableQuote): string | null {
 }
 
 export type ProjectOptions = {
-  type?: string;
   fechaProgramada?: string;
   lugar?: string;
   tecnicoId?: string;
@@ -38,6 +37,7 @@ type QuoteForProject = {
   id: string;
   numero: string;
   titulo: string;
+  categoriaId: string;
   monto: number;
   clienteId: string;
   sucursalId: string;
@@ -48,7 +48,7 @@ type QuoteForProject = {
 export function projectFromQuotation(quote: QuoteForProject, clientAddress: string, options: ProjectOptions, now: Date) {
   const monto = Number(quote.monto);
   return {
-    type: options.type || 'seguridad',
+    categoriaId: quote.categoriaId,
     clienteId: quote.clienteId,
     lugar: options.lugar?.trim() || clientAddress || 'Por definir',
     descripcionTrabajo: `${quote.titulo} (${quote.numero})`,

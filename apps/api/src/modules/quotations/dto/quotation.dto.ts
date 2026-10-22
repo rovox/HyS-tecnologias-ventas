@@ -1,16 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
@@ -44,15 +34,10 @@ export class CreateQuotationDto {
   @Transform(emptyToUndef)
   clienteId?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'One of the 3 divisions (GET /categories, principal = true)' })
   @IsString()
-  categoria?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  categoriaId?: string;
+  @IsNotEmpty({ message: 'Selecciona la categoría' })
+  categoriaId: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -128,12 +113,7 @@ export class UpdateQuotationDto {
   @IsString()
   titulo?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  categoria?: string;
-
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'One of the 3 divisions' })
   @IsOptional()
   @IsString()
   categoriaId?: string;
@@ -217,11 +197,6 @@ export class StatusDto {
 
 /** Optional data for the project (schedule) created when the quotation is accepted. */
 export class AcceptQuotationDto {
-  @ApiPropertyOptional({ enum: ['seguridad', 'proyectos'] })
-  @IsOptional()
-  @IsIn(['seguridad', 'proyectos'])
-  type?: string;
-
   @ApiPropertyOptional({ description: 'ISO date; today when omitted' })
   @IsOptional()
   @IsDateString()

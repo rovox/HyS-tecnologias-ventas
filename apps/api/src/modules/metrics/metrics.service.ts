@@ -2,12 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { quotationWhere, relevamientoWhere, scheduleWhere, taskWhere } from '../../common/policy/roles';
 import type { User } from '@prisma/client';
+import { DIVISIONS } from '../categories';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  seguridad_electronica: 'Seguridad Electrónica',
-  insumos_tecnologicos: 'Tecnología',
-  proyectos: 'Proyectos',
-};
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(DIVISIONS.map((d) => [d.id, d.label]));
 
 function emptyBucket(id: string, nombre: string) {
   return {
@@ -43,7 +40,7 @@ function categoryInsights(
   quotes: Array<{
     estado: string;
     categoriaId: string;
-    categoria: string;
+    categoria?: { label: string } | null;
     sucursalId: string;
     sucursalNombre?: string;
     sucursal?: { nombre: string } | null;
@@ -58,7 +55,7 @@ function categoryInsights(
   for (const quote of quotes) {
     if (quote.estado === 'rechazado') continue;
     const catId = CATEGORY_LABELS[quote.categoriaId] ? quote.categoriaId : quote.categoriaId || 'otros';
-    const catLabel = CATEGORY_LABELS[catId] || quote.categoria || catId;
+    const catLabel = CATEGORY_LABELS[catId] || quote.categoria?.label || catId;
     const sucId = quote.sucursalId || 'sin_sucursal';
     const sucLabel = quote.sucursal?.nombre || quote.sucursalNombre || sucId;
     const vendId = quote.vendedorId || 'sin_vendedor';
@@ -163,7 +160,7 @@ export class MetricsService {
         createdAt: { gte: start, lt: end },
         ...(userId ? { vendedorId: userId } : {}),
       },
-      include: { sucursal: true, vendedor: true, relevamientos: true, sale: true },
+      include: { sucursal: true, vendedor: true, relevamientos: true, sale: true, categoria: { select: { label: true } } },
     });
 
     const byVendedorMap = new Map<string, ReturnType<typeof emptyBucket>>();
@@ -217,7 +214,7 @@ export class MetricsService {
       bySucursalMap.set(quote.sucursalId, sucursal);
 
       const catId = CATEGORY_LABELS[quote.categoriaId] ? quote.categoriaId : quote.categoriaId || 'otros';
-      const cat = byCategoriaMap.get(catId) || emptyBucket(catId, CATEGORY_LABELS[catId] || quote.categoria || catId);
+      const cat = byCategoriaMap.get(catId) || emptyBucket(catId, CATEGORY_LABELS[catId] || quote.categoria?.label || catId);
       bump(cat, quote);
       byCategoriaMap.set(catId, cat);
     }

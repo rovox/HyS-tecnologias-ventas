@@ -7,6 +7,9 @@ import { AcceptQuotationDto, CreateQuotationDto, UpdateQuotationDto } from './dt
 import { assertCanMutateQuotes, isTec, quotationWhere } from '../../common/policy/roles';
 import { AuditService } from '../../common/audit/audit.service';
 import { acceptError, checkQuotationTransition, projectFromQuotation } from './domain/quotations.rules';
+import { CategoriesService } from '../categories';
+
+const CATEGORY = { select: { id: true, label: true } } as const;
 
 function uploadDir() {
   return path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
@@ -17,6 +20,7 @@ export class QuotationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly categories: CategoriesService,
   ) {}
 
   private async nextNumero() {
@@ -54,7 +58,7 @@ export class QuotationsService {
         ...(filters.vendedorId ? { vendedorId: filters.vendedorId } : {}),
         ...(filters.sucursalId ? { sucursalId: filters.sucursalId } : {}),
       },
-      include: { sellers: true, cliente: true, sucursal: true, sale: true },
+      include: { sellers: true, cliente: true, sucursal: true, sale: true, categoria: CATEGORY },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -62,7 +66,7 @@ export class QuotationsService {
   async get(id: string, user?: User) {
     const row = await this.prisma.quotation.findFirst({
       where: { id, ...(user ? quotationWhere(user) : {}) },
-      include: { sellers: true, cliente: true, sucursal: true, sale: { include: { jobs: true, payments: true } } },
+      include: { sellers: true, cliente: true, sucursal: true, categoria: CATEGORY, sale: { include: { jobs: true, payments: true } } },
     });
     if (!row) throw new NotFoundException('Cotización no encontrada');
     return row;
@@ -77,6 +81,7 @@ export class QuotationsService {
     const sucursalId = dto.sucursalId || user.sucursalId;
     if (!sucursalId) throw new BadRequestException('Sucursal no válida');
     const sucursal = await this.requireSucursal(sucursalId);
+    await this.categories.assertDivision(dto.categoriaId);
     const vendors = (dto.vendedores || []).filter((row) => row.userId);
     const resolvedVendors = vendors.length
       ? vendors
@@ -89,8 +94,7 @@ export class QuotationsService {
       data: {
         numero,
         titulo,
-        categoria: dto.categoria || 'Sin categoría',
-        categoriaId: dto.categoriaId || '',
+        categoriaId: dto.categoriaId,
         subcategoria: dto.subcategoria || '',
         sucursalId: sucursal.id,
         sucursalNombre: sucursal.nombre,
@@ -112,7 +116,7 @@ export class QuotationsService {
           })),
         },
       },
-      include: { sellers: true, cliente: true, sucursal: true },
+      include: { sellers: true, cliente: true, sucursal: true, categoria: CATEGORY },
     });
     await this.prisma.touchClientActivity(dto.clienteId);
     await this.audit.record({ user, sessionId, action: 'quotation.create', entity: 'quotation', id: quote.id, patch: { estado: quote.estado } });
@@ -142,6 +146,7 @@ export class QuotationsService {
   async update(id: string, dto: UpdateQuotationDto, user: User, sessionId?: string) {
     assertCanMutateQuotes(user);
     const current = await this.get(id, user);
+    if (dto.categoriaId !== undefined) await this.categories.assertDivision(dto.categoriaId);
     const vendors = dto.vendedores?.filter((row) => row.userId);
     if (vendors) {
       if (vendors.length === 0) throw new BadRequestException('Selecciona al menos un vendedor');
@@ -173,7 +178,6 @@ export class QuotationsService {
         where: { id },
         data: {
           ...(dto.titulo !== undefined ? { titulo: dto.titulo.trim() } : {}),
-          ...(dto.categoria !== undefined ? { categoria: dto.categoria } : {}),
           ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId } : {}),
           ...(dto.subcategoria !== undefined ? { subcategoria: dto.subcategoria || '' } : {}),
           ...(dto.monto !== undefined ? { monto: dto.monto } : {}),
@@ -186,7 +190,7 @@ export class QuotationsService {
           ...(dto.plazoFinal !== undefined ? { plazoFinal: dto.plazoFinal ? new Date(dto.plazoFinal) : null } : {}),
           ...(vendors ? { vendedorId: vendors[0].userId } : {}),
         },
-        include: { sellers: true, cliente: true, sucursal: true },
+        include: { sellers: true, cliente: true, sucursal: true, categoria: CATEGORY },
       });
     });
     const finalClientId = dto.clienteId || current.clienteId;
@@ -233,7 +237,7 @@ export class QuotationsService {
             }] as Prisma.InputJsonValue,
           }
         : { archivo: file.originalname || stored, archivoPdfUrl },
-      include: { sellers: true, cliente: true, sucursal: true },
+      include: { sellers: true, cliente: true, sucursal: true, categoria: CATEGORY },
     });
     await this.audit.record({
       user,

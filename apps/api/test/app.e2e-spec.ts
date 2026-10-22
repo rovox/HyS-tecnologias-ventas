@@ -206,6 +206,35 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('mandatory division (CAT-01)', () => {
+    const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const base = { titulo: 'E2E categoría', clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 500 };
+
+    it('lists the 3 divisions first', async () => {
+      const res = await request(app.getHttpServer()).get('/api/categories').set(auth()).expect(200);
+      expect(res.body.filter((c: { principal: boolean }) => c.principal).map((c: { id: string }) => c.id)).toEqual([
+        'computo_comunicacion',
+        'seguridad_electronica',
+        'cableado_estructurado',
+      ]);
+    });
+
+    it('rejects a quotation without a division or with a subcategory chip', async () => {
+      await request(app.getHttpServer()).post('/api/quotations').set(auth()).send(base).expect(400);
+      const chip = await request(app.getHttpServer()).post('/api/categories').set(auth()).send({ label: `Chip ${Date.now()}` }).expect(201);
+      const res = await request(app.getHttpServer()).post('/api/quotations').set(auth()).send({ ...base, categoriaId: chip.body.id }).expect(400);
+      expect(res.body.message).toMatch(/principales/);
+    });
+
+    it('rejects a job without a division and keeps the divisions fixed', async () => {
+      const job = { clienteId: 'cli_andina', sucursalId: 'suc_central', descripcionTrabajo: 'E2E', fechaProgramada: '2026-11-02' };
+      await request(app.getHttpServer()).post('/api/schedules').set(auth()).send(job).expect(400);
+      const ok = await request(app.getHttpServer()).post('/api/schedules').set(auth()).send({ ...job, categoriaId: 'computo_comunicacion' }).expect(201);
+      expect(ok.body.categoriaId).toBe('computo_comunicacion');
+      await request(app.getHttpServer()).patch('/api/categories/seguridad_electronica').set(auth()).send({ active: false }).expect(400);
+    });
+  });
+
   describe('quotation → project → payments (MVP-6)', () => {
     const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
     let quoteId = '';
@@ -215,7 +244,7 @@ describe('hs-erp API (e2e)', () => {
       const quote = await request(app.getHttpServer())
         .post('/api/quotations')
         .set(auth())
-        .send({ titulo: `E2E proyecto ${Date.now()}`, clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 1000 })
+        .send({ titulo: `E2E proyecto ${Date.now()}`, categoriaId: 'cableado_estructurado', clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 1000 })
         .expect(201);
       quoteId = quote.body.id;
       await request(app.getHttpServer())
@@ -236,6 +265,7 @@ describe('hs-erp API (e2e)', () => {
       expect(Number(list.body[0].monto)).toBe(1000);
       expect(Number(list.body[0].saldo)).toBe(1000);
       expect(again.body.schedule.id).toBe(list.body[0].id);
+      expect(list.body[0].categoria).toEqual({ id: 'cableado_estructurado', label: 'Cableado estructurado' });
       scheduleId = list.body[0].id;
     });
 

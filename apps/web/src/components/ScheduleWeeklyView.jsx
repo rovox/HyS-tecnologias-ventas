@@ -161,7 +161,6 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
             
             mergedData.cliente_id = mergedData.cliente_id;
             mergedData.cliente_nombre = clientData?.nombre || mergedData.cliente || 'Sin cliente';
-            mergedData.tipo_trabajo = mergedData.type;
             mergedData.lugar = finalLugar;
             mergedData.fecha_programada = dateStr;
             mergedData.vendedor_id = mergedData.vendedor_responsable_id;
@@ -400,7 +399,7 @@ const ScheduleWeeklyView = ({ currentDate, onJobClick, usersMap, tecnicosMap, re
                   );
                 })}
                 {daySchedules.map(job => {
-                    const isProject = job.tipo_trabajo === 'proyectos';
+                    const isProject = job.categoria_id === 'cableado_estructurado';
                     const isDragging = draggedJobId === job.id;
                     const dynamicStyles = getDynamicStyles(job.estado);
                     

@@ -16,7 +16,8 @@ describe('SchedulesService', () => {
     touchClientActivity: jest.fn(),
   };
   const audit = { record: jest.fn(), log: jest.fn() };
-  const service = new SchedulesService(prisma as never, audit as never);
+  const categories = { assertDivision: jest.fn() };
+  const service = new SchedulesService(prisma as never, audit as never, categories as never);
 
   const admin = {
     id: 'usr_admin',
@@ -47,7 +48,7 @@ describe('SchedulesService', () => {
     prisma.schedule.create.mockResolvedValue({ id: 'sch_new', clienteId: 'cli_1' });
     const row = await service.create(
       {
-        type: 'seguridad',
+        categoriaId: 'seguridad_electronica',
         clienteId: 'cli_1',
         descripcionTrabajo: 'Instalación',
         sucursalId: 'suc_central',
@@ -59,6 +60,7 @@ describe('SchedulesService', () => {
       'sess_1',
     );
     expect(row.id).toBe('sch_new');
+    expect(categories.assertDivision).toHaveBeenCalledWith('seguridad_electronica');
     expect(prisma.touchClientActivity).toHaveBeenCalledWith('cli_1');
     expect(audit.record).toHaveBeenCalled();
   });

@@ -112,7 +112,7 @@ const ScheduleMonthlyView = ({ schedules, visits = [], currentDate, onJobClick, 
               
               <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar min-h-0">
                 {daySchedules.map(job => {
-                  const isProject = job.tipo_trabajo === 'proyectos';
+                  const isProject = job.categoria_id === 'cableado_estructurado';
                   return (
                     <div 
                       key={job.id}

@@ -28,7 +28,6 @@ const quotationsService = {
     const row = await apiClient.post('quotations', {
       titulo: data.titulo,
       ...(data.cliente_id ? { clienteId: data.cliente_id } : {}),
-      categoria: data.categoria,
       categoriaId: data.categoria_id,
       subcategoria: data.subcategoria,
       sucursalId: data.sucursal_id,
@@ -69,7 +68,6 @@ const quotationsService = {
   async update(id, data) {
     return mapQuote(await apiClient.patch(`quotations/${id}`, {
       ...(data.titulo !== undefined ? { titulo: data.titulo } : {}),
-      ...(data.categoria !== undefined ? { categoria: data.categoria } : {}),
       ...(data.categoriaId !== undefined || data.categoria_id !== undefined ? { categoriaId: data.categoriaId || data.categoria_id } : {}),
       ...(data.subcategoria !== undefined ? { subcategoria: data.subcategoria } : {}),
       ...(data.monto !== undefined ? { monto: Number(data.monto) } : {}),
