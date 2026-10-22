@@ -1,21 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { ClientsModule } from './clients/clients.module';
-import { QuotationsModule } from './quotations/quotations.module';
-import { SucursalesModule } from './sucursales/sucursales.module';
-import { RelevamientosModule } from './relevamientos/relevamientos.module';
-import { GoalsModule } from './goals/goals.module';
-import { SalesModule } from './sales/sales.module';
-import { MetricsModule } from './metrics/metrics.module';
-import { TasksModule } from './tasks/tasks.module';
-import { SchedulesModule } from './schedules/schedules.module';
-import { CategoriesModule } from './categories/categories.module';
-import { RealtimeModule } from './realtime/realtime.module';
-import { PedidosInternosModule } from './pedidos-internos/pedidos-internos.module';
-import { SolicitudesWebModule } from './solicitudes-web/solicitudes-web.module';
+import { CommonModule } from './common/common.module';
+import { AuthModule } from './modules/auth';
+import { ClientsModule } from './modules/clients';
+import { QuotationsModule } from './modules/quotations';
+import { SucursalesModule } from './modules/sucursales';
+import { RelevamientosModule } from './modules/relevamientos';
+import { GoalsModule } from './modules/goals';
+import { SalesModule } from './modules/sales';
+import { MetricsModule } from './modules/metrics';
+import { TasksModule } from './modules/tasks';
+import { SchedulesModule } from './modules/schedules';
+import { CategoriesModule } from './modules/categories';
+import { PedidosInternosModule } from './modules/pedidos-internos';
+import { SolicitudesWebModule } from './modules/solicitudes-web';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -37,7 +36,7 @@ import { HealthController } from './health.controller';
         };
       },
     }),
-    PrismaModule,
+    CommonModule,
     AuthModule,
     ClientsModule,
     QuotationsModule,
@@ -49,7 +48,6 @@ import { HealthController } from './health.controller';
     TasksModule,
     SchedulesModule,
     CategoriesModule,
-    RealtimeModule,
     PedidosInternosModule,
     SolicitudesWebModule,
   ],

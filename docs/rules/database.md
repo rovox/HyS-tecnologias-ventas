@@ -12,7 +12,7 @@ All current data is test data. Until go-live, production is not a testing ground
 ## Schema changes
 
 1. Edit `apps/api/prisma/schema.prisma`.
-2. `pnpm --filter @hs-erp/api prisma migrate dev --name <change>` (local only).
+2. `pnpm --filter @hs-erp/api prisma migrate dev --name <change>` (local only). If the local DB user cannot create the shadow database, write `prisma/migrations/<ts>_<change>/migration.sql` by hand (check it with `prisma migrate diff --from-url $DATABASE_URL --to-schema-datamodel prisma/schema.prisma --script`) and apply it with `prisma migrate deploy` on the local DB.
 3. Commit the migration **and** a copy of its SQL in `docs/deployment/sql/<date>_<change>.sql`.
 4. Ask for approval before: dropping/renaming tables or columns, changing stored role/status values.
 
@@ -20,7 +20,7 @@ Never run `prisma migrate deploy`, `db push` or `seed` against Hostinger. Never 
 
 ## Conventions
 
-- Status and role columns are `String` validated against constants in `common/` (no MySQL enums, to avoid migration churn). Allowed values are listed in `common/state-machine.ts` / `common/policy/roles.ts` only.
+- Status and role columns are `String` validated against constants in `common/` (no MySQL enums, to avoid migration churn). Allowed values are listed in the module's `domain/<x>.rules.ts` / `common/policy/policy.ts` only.
 - Money: `Decimal(12,2)`. Never `Float`.
 - Every foreign key is a real Prisma relation (missing today: `QuotationSeller.userId`, `SaleJob.asignadoId`, `Quotation.categoriaId`).
 - Totals stored on a parent (e.g. `Schedule.saldo`) are **recomputed in the same transaction** that writes the children.

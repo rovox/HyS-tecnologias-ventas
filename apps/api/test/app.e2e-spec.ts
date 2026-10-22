@@ -252,6 +252,18 @@ describe('hs-erp API (e2e)', () => {
       expect(last.body.payments).toHaveLength(3);
     });
 
+    it('records who changed which field, with the value before (ARCH-01)', async () => {
+      await request(app.getHttpServer()).patch(`/api/quotations/${quoteId}`).set(auth()).send({ titulo: 'Título auditado' }).expect(200);
+      const log = await request(app.getHttpServer())
+        .get('/api/activity')
+        .query({ action: 'quotation.update' })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const row = log.body.find((r: { entityId: string }) => r.entityId === quoteId);
+      expect(row.detalle.titulo).toEqual({ antes: expect.any(String), despues: 'Título auditado' });
+      expect(row.user.id).toBeTruthy();
+    });
+
     it('does not change the official amount of a project', async () => {
       const res = await request(app.getHttpServer()).patch(`/api/schedules/${scheduleId}`).set(auth()).send({ monto: 1200 }).expect(400);
       expect(res.body.message).toContain('no se modifica');
