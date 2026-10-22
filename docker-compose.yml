@@ -47,9 +47,9 @@ services:
       UPLOAD_DIR: /app/apps/api/uploads
       API_STRICT_DTO: "1"
     command: >
-      sh -c "pnpm --filter api exec prisma migrate deploy
-      && pnpm --filter api exec prisma db seed
-      && pnpm --filter api dev"
+      sh -c "pnpm --filter @hs-erp/api exec prisma migrate deploy
+      && pnpm --filter @hs-erp/api exec prisma db seed
+      && pnpm --filter @hs-erp/api dev"
     ports:
       - "3001:3001"
     healthcheck:
@@ -66,7 +66,7 @@ services:
         condition: service_healthy
     environment:
       VITE_API_URL: http://localhost:3001/api
-    command: pnpm --filter web dev
+    command: pnpm --filter @hs-erp/web dev
     ports:
       - "3000:3000"
     healthcheck:

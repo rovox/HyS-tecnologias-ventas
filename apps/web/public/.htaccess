@@ -7,7 +7,7 @@
 </IfModule>
 
 <IfModule mod_headers.c>
-	Header set X-App "H&S Tecnologías ERP POC"
+	Header set X-App "hs-erp"
 
 	# Cache everything on CDN by default
 	Header set Cache-Control "public, s-maxage=604800, max-age=0"

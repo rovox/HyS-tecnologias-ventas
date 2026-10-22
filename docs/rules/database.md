@@ -12,7 +12,7 @@ All current data is test data. Until go-live, production is not a testing ground
 ## Schema changes
 
 1. Edit `apps/api/prisma/schema.prisma`.
-2. `pnpm --filter api prisma migrate dev --name <change>` (local only).
+2. `pnpm --filter @hs-erp/api prisma migrate dev --name <change>` (local only).
 3. Commit the migration **and** a copy of its SQL in `docs/deployment/sql/<date>_<change>.sql`.
 4. Ask for approval before: dropping/renaming tables or columns, changing stored role/status values.
 

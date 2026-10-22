@@ -20,11 +20,11 @@ Out of scope: finance/caja, TypeORM.
 ## Commands
 
 ```bash
-pnpm --filter api dev
-pnpm --filter api prisma:deploy
-pnpm --filter api prisma:seed
-pnpm --filter api test
-pnpm --filter api test:e2e
+pnpm --filter @hs-erp/api dev
+pnpm --filter @hs-erp/api prisma:deploy
+pnpm --filter @hs-erp/api prisma:seed
+pnpm --filter @hs-erp/api test
+pnpm --filter @hs-erp/api test:e2e
 ```
 
 SPA: `apps/web/src/services/*` with `VITE_API_MODE=api`.

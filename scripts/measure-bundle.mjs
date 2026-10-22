@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// LOCAL-03: bundle budget for apps/web/dist (run `pnpm --filter web build` first).
+// LOCAL-03: bundle budget for apps/web/dist (run `pnpm --filter @hs-erp/web build` first).
 //   node scripts/measure-bundle.mjs [--json out.json]
 // Budgets (docs/rules/performance.md, raw bytes / 1000): entry JS (index + shell/Layout) <= 300 kB,
 // any route chunk <= 100 kB, CSS <= 60 kB. Entry = index.html script chain plus the shell, i.e. the chunks
@@ -18,7 +18,7 @@ let html;
 try {
   html = readFileSync(path.join(DIST, 'index.html'), 'utf8');
 } catch {
-  console.error(`No build found at ${DIST}. Run: pnpm --filter web build`);
+  console.error(`No build found at ${DIST}. Run: pnpm --filter @hs-erp/web build`);
   process.exit(2);
 }
 

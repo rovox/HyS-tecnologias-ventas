@@ -1,4 +1,4 @@
-# apps/api — sales microservice
+# apps/api — hs-erp API (`@hs-erp/api`)
 
 NestJS + Prisma + **MySQL**. Commercial registration: sucursales, users, clients, quotations (PDF), relevamientos, goals, **schedules (cronograma)**, tasks, metrics. Sales/jobs/payments stay frozen (admin-only writes).
 
@@ -9,10 +9,10 @@ Not included: finance, TypeORM, PocketBase, quotation biblioteca.
 ```bash
 cp apps/api/.env.example apps/api/.env
 docker compose up -d db   # root docker-compose.yml (or `pnpm local:up` for db + api + web)
-pnpm --filter api prisma:generate
-pnpm --filter api prisma:deploy
-pnpm --filter api prisma:seed
-pnpm --filter api dev
+pnpm --filter @hs-erp/api prisma:generate
+pnpm --filter @hs-erp/api prisma:deploy
+pnpm --filter @hs-erp/api prisma:seed
+pnpm --filter @hs-erp/api dev
 ```
 
 Swagger pulls `@scarf/scarf`; its postinstall is denied in `pnpm-workspace.yaml` so install does not ask for `pnpm approve-builds`.
@@ -27,7 +27,7 @@ VITE_API_MODE=api
 VITE_API_URL=http://localhost:3001/api
 ```
 
-Tests: `pnpm --filter api test` · `pnpm --filter api test:e2e` (needs MySQL + seed).
+Tests: `pnpm --filter @hs-erp/api test` · `pnpm --filter @hs-erp/api test:e2e` (needs MySQL + seed).
 
 Default SPA production build stays `mock` until Hostinger API is healthy.
 

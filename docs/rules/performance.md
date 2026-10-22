@@ -36,7 +36,7 @@ The app must stay light on old laptops and phones used in the field.
 ## How to measure
 
 ```bash
-pnpm --filter web build          # prints chunk sizes
+pnpm --filter @hs-erp/web build          # prints chunk sizes
 npx vite-bundle-visualizer -c apps/web/vite.config.js   # optional, one-off
 ```
 

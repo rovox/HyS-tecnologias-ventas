@@ -23,8 +23,8 @@ With the Docker stack (`pnpm local:up`) the api container runs `nest start --wat
 
 ```bash
 pnpm check
-# = pnpm --filter api build && pnpm --filter api test && pnpm --filter api test:e2e
-#   && pnpm --filter web lint && pnpm --filter web build && npx knip
+# = pnpm --filter @hs-erp/api build && pnpm --filter @hs-erp/api test && pnpm --filter @hs-erp/api test:e2e
+#   && pnpm --filter @hs-erp/web lint && pnpm --filter @hs-erp/web build && npx knip
 ```
 
 In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWhitelisted: true`: if the UI sends a field the API does not know, you get a 400 instead of a silent drop. This is how "works only in the frontend" bugs are found.

@@ -59,10 +59,10 @@ VITE_API_URL=http://localhost:3001/api
 ```bash
 cp apps/api/.env.example apps/api/.env
 docker compose up -d db   # root docker-compose.yml (or `pnpm local:up` for db + api + web)
-pnpm --filter api prisma:generate
-pnpm --filter api prisma:deploy
-pnpm --filter api prisma:seed   # solo local; nunca en Hostinger (reescribe passwordHash)
-pnpm --filter api dev
+pnpm --filter @hs-erp/api prisma:generate
+pnpm --filter @hs-erp/api prisma:deploy
+pnpm --filter @hs-erp/api prisma:seed   # solo local; nunca en Hostinger (reescribe passwordHash)
+pnpm --filter @hs-erp/api dev
 ```
 
 Demo: `dennis@hscontrol.com` / `dennis` (ver `config/users.json`). El frontend en Hostinger sigue en `mock` hasta que Actions compile con `VITE_API_MODE=api`.
