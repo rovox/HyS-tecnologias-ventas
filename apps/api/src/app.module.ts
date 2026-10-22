@@ -1,21 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { ClientsModule } from './clients/clients.module';
-import { QuotationsModule } from './quotations/quotations.module';
-import { SucursalesModule } from './sucursales/sucursales.module';
-import { RelevamientosModule } from './relevamientos/relevamientos.module';
-import { GoalsModule } from './goals/goals.module';
-import { SalesModule } from './sales/sales.module';
-import { MetricsModule } from './metrics/metrics.module';
-import { TasksModule } from './tasks/tasks.module';
-import { SchedulesModule } from './schedules/schedules.module';
-import { CategoriesModule } from './categories/categories.module';
-import { RealtimeModule } from './realtime/realtime.module';
-import { PedidosInternosModule } from './pedidos-internos/pedidos-internos.module';
-import { SolicitudesWebModule } from './solicitudes-web/solicitudes-web.module';
+import { PrismaModule } from './common/prisma/prisma.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { ClientsModule } from './modules/clients/clients.module';
+import { QuotationsModule } from './modules/quotations/quotations.module';
+import { SucursalesModule } from './modules/sucursales/sucursales.module';
+import { RelevamientosModule } from './modules/relevamientos/relevamientos.module';
+import { GoalsModule } from './modules/goals/goals.module';
+import { SalesModule } from './modules/sales/sales.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { SchedulesModule } from './modules/schedules/schedules.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { RealtimeModule } from './common/realtime/realtime.module';
+import { PedidosInternosModule } from './modules/pedidos-internos/pedidos-internos.module';
+import { SolicitudesWebModule } from './modules/solicitudes-web/solicitudes-web.module';
 import { HealthController } from './health.controller';
 
 @Module({
