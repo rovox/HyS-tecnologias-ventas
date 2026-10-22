@@ -14,6 +14,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { Download, Loader2, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { reportLoadError } from '@/lib/loadError.js';
 
 const COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
@@ -67,12 +68,12 @@ const ReportsPage = () => {
 
         const token = authToken();
         const [schedules, allSchedules, users, goals, pedidos, sucursales] = await Promise.all([
-          apiClient.get('schedules', { query: { from: start, to: end }, token }).catch(() => []),
-          apiClient.get('schedules', { token }).catch(() => []),
-          apiClient.get('users', { token }).catch(() => []),
-          goalsService.listSellerGoals().catch(() => []),
-          apiClient.get('pedidos-internos', { query: { from: start, to: end }, token }).catch(() => []),
-          apiClient.get('sucursales', { token }).catch(() => []),
+          apiClient.get('schedules', { query: { from: start, to: end }, token }).catch(reportLoadError('los trabajos del periodo', [])),
+          apiClient.get('schedules', { token }).catch(reportLoadError('los trabajos', [])),
+          apiClient.get('users', { token }).catch(reportLoadError('los usuarios', [])),
+          goalsService.listSellerGoals().catch(reportLoadError('las metas', [])),
+          apiClient.get('pedidos-internos', { query: { from: start, to: end }, token }).catch(reportLoadError('los pedidos internos', [])),
+          apiClient.get('sucursales', { token }).catch(reportLoadError('las sucursales', [])),
         ]);
         const tecnicos = users.filter(u => u.role === ROLES.TEC).map(u => ({ id: u.id, nombre: u.name }));
         const detalles = [], visitas = [], materiales = [], equipos = [], gastos = [], pagos = [], movimientos = [];

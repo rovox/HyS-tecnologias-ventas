@@ -247,6 +247,7 @@ export class QuotationsService {
       'quotation',
       id,
     );
+    this.realtime.emit('quotation.updated', 'quotation', id, { byUserId: user.id, patch: { archivo: updated.archivo } });
     return updated;
   }
 

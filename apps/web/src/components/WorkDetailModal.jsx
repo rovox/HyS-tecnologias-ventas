@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog.jsx';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { MapPin, User, Wrench, Clock, CheckCircle2, XCircle, Calendar, MessageSquare as MessageSquareText, FileText, Landmark, Trash2, Loader2, MapPinned, Copy } from 'lucide-react';
+import { MapPin, User, Wrench, Clock, CheckCircle2, PlayCircle, XCircle, Calendar, MessageSquare as MessageSquareText, FileText, Landmark, Loader2, MapPinned, Copy } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import schedulesService, { calculateBalance } from '@/services/schedules/index.js';
-import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils.js';
 import PaymentModal from '@/components/PaymentModal.jsx';
 import CancelWorkModal from '@/components/CancelWorkModal.jsx';
 import AddObservationModal from '@/components/AddObservationModal.jsx';
 import RescheduleWorkModal from '@/components/RescheduleWorkModal.jsx';
+import { reportLoadError } from '@/lib/loadError.js';
 
 const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWorkDeleted }) => {
   const { isAdmin, isVentas } = useAuth();
   
   const [trabajo, setTrabajo] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [observaciones, setObservaciones] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   const [loadingObs, setLoadingObs] = useState(false);
@@ -48,18 +44,14 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
         vendedorData: data.vendedor_nombre ? { name: data.vendedor_nombre } : null,
         vendedorNombre: data.vendedor_nombre || null,
       });
-      try {
-        const pays = await schedulesService.getPayments(id);
-        setPayments(pays || []);
-      } catch {
-        setPayments([]);
-      }
+      setPayments(await schedulesService.getPayments(id).catch(reportLoadError('el historial de cobros', [])));
     } catch (err) {
-      console.error('Error loading work details:', err);
       if (err?.status === 404) {
         toast.error('Este trabajo ya no existe.');
         if (onWorkDeleted) onWorkDeleted(id);
         onClose();
+      } else {
+        toast.error(err?.message || 'No se pudo cargar el trabajo');
       }
       setTrabajo(null);
       setPayments([]);
@@ -109,8 +101,8 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     try {
       const pays = await schedulesService.getPayments(updatedWork.id || workId);
       setPayments(pays || []);
-    } catch {
-      /* keep previous */
+    } catch (err) {
+      reportLoadError('el historial de cobros', null)(err);
     }
     
     setTrabajo(fullyUpdatedWork);
@@ -122,21 +114,20 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     setModalView(null);
   };
 
-  // Marcar como Completado: cambio de estado instantáneo, sin modales ni cobros.
-  // El dinero se gestiona aparte en "Registrar Cobro / Ajuste".
-  const handleMarkCompleted = async () => {
+  // Next step of the job (programado → en_proceso → terminado); the API validates the transition.
+  // Money is handled apart, in "Registrar Cobro / Ajuste".
+  const handleAdvanceStatus = async (estado) => {
     if (!trabajo?.id) return;
     setIsCompleting(true);
     try {
-      await schedulesService.updateStatus(trabajo.id, 'terminado', {
-        fecha_finalizacion: new Date().toISOString().slice(0, 10),
-      });
-      toast.success('Marcado como terminado');
+      await schedulesService.updateStatus(trabajo.id, estado, estado === 'terminado'
+        ? { fecha_finalizacion: new Date().toISOString().slice(0, 10) }
+        : {});
+      toast.success(estado === 'terminado' ? 'Marcado como terminado' : 'Trabajo iniciado');
       await loadWorkDetails(workId);
       if (onWorkUpdated) onWorkUpdated(workId);
     } catch (err) {
-      console.error('Error al marcar como completado:', err);
-      toast.error(err?.message || 'Error al marcar como completado');
+      toast.error(err?.message || 'No se pudo cambiar el estado del trabajo');
     } finally {
       setIsCompleting(false);
     }
@@ -158,23 +149,6 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
     setModalView(null);
     await loadWorkDetails(workId);
     if (onWorkUpdated) onWorkUpdated(workId);
-  };
-
-  const handleDeleteWork = async () => {
-    if (!trabajo?.id) return;
-    setIsDeleting(true);
-    try {
-      await apiClient.delete(`schedules/${trabajo.id}`, { token: authToken() });
-      toast.success('Trabajo eliminado correctamente');
-      setIsDeleteDialogOpen(false);
-      if (onWorkDeleted) onWorkDeleted(trabajo.id);
-      onClose();
-    } catch (err) {
-      console.error('Error deleting work:', err);
-      toast.error(err.message || 'Error al eliminar el trabajo');
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   const handleCopyLocation = async () => {
@@ -208,7 +182,8 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'completado': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 shadow-none border-green-200 border">Completado</Badge>;
+      case 'terminado':
+      case 'completado': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 shadow-none border-green-200 border">Terminado</Badge>;
       case 'en_proceso': return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 shadow-none border-orange-200 border">En Proceso</Badge>;
       case 'cancelado': return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 shadow-none border-gray-200 border">Cancelado</Badge>;
       case 'programado': 
@@ -368,11 +343,17 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
 
           <DialogFooter className="p-6 border-t border-border bg-slate-50 dark:bg-slate-900/50 flex-col sm:flex-row gap-3 sm:gap-0 sticky bottom-0">
             <div className="flex flex-wrap gap-2 w-full justify-center sm:justify-start">
-              {trabajo.estado !== 'completado' && trabajo.estado !== 'cancelado' && (
+              {(trabajo.estado === 'programado' || trabajo.estado === 'en_proceso') && (
                 <>
-                  <Button variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 font-bold shadow-sm" onClick={handleMarkCompleted} disabled={isCompleting}>
-                    {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />} Marcar Completado
-                  </Button>
+                  {trabajo.estado === 'programado' ? (
+                    <Button variant="default" className="font-bold shadow-sm" onClick={() => handleAdvanceStatus('en_proceso')} disabled={isCompleting}>
+                      {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PlayCircle className="h-4 w-4 mr-2" />} Iniciar trabajo
+                    </Button>
+                  ) : (
+                    <Button variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 font-bold shadow-sm" onClick={() => handleAdvanceStatus('terminado')} disabled={isCompleting}>
+                      {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />} Marcar Completado
+                    </Button>
+                  )}
                   <Button variant="outline" className="font-bold bg-white dark:bg-transparent shadow-sm" onClick={() => setModalView('reschedule')}>
                     <Clock className="h-4 w-4 mr-2" /> Reprogramar
                   </Button>
@@ -383,17 +364,12 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
                 <MessageSquareText className="h-4 w-4 mr-2" /> Agregar Nota
               </Button>
               
-              {trabajo.estado !== 'cancelado' && trabajo.estado !== 'completado' && (
-                <Button variant="ghost" className={cn("font-bold text-red-600 hover:text-red-700 hover:bg-red-50", !isAdmin() && "ml-auto")} onClick={() => setModalView('cancel')}>
+              {(trabajo.estado === 'programado' || trabajo.estado === 'en_proceso') && (
+                <Button variant="ghost" className="font-bold text-red-600 hover:text-red-700 hover:bg-red-50 ml-auto" onClick={() => setModalView('cancel')}>
                   <XCircle className="h-4 w-4 mr-2" /> Cancelar Trabajo
                 </Button>
               )}
 
-              {isAdmin() && (
-                <Button variant="ghost" className="font-bold ml-auto text-red-700 hover:text-white hover:bg-red-600 border border-red-200" onClick={() => setIsDeleteDialogOpen(true)}>
-                  <Trash2 className="h-4 w-4 mr-2" /> Eliminar Trabajo
-                </Button>
-              )}
             </div>
           </DialogFooter>
         </DialogContent>
@@ -428,27 +404,6 @@ const WorkDetailModal = ({ isOpen, onClose, workId, onEdit, onWorkUpdated, onWor
         onSuccess={handleWorkRescheduled}
       />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => !isDeleting && setIsDeleteDialogOpen(open)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar trabajo</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Seguro que deseas eliminar este trabajo? Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleDeleteWork(); }}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

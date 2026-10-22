@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { UpsertGoalDto } from './dto/goal.dto';
 import { assertAdmin, isAdmin, isVentas } from '../auth/roles';
 
@@ -17,6 +18,7 @@ export class GoalsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   list(user: User, month?: string) {
@@ -36,6 +38,7 @@ export class GoalsService {
       create: { usuarioId: dto.usuarioId, mes: start, metaMonto: dto.metaMonto, metaCotiz: dto.metaCotiz },
     });
     await this.activity.log(user.id, sessionId, 'goal.upsert', 'seller_goal', row.id);
+    this.realtime.emit('goal.updated', 'goal', row.id, { byUserId: user.id });
     return row;
   }
 }

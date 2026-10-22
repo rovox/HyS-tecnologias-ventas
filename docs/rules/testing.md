@@ -17,6 +17,8 @@ Root scripts `db:up`, `db:reset`, `dev` (api + web) and `check` exist (item `ENV
 
 Seed accounts come from `config/users.json` (`ROLE_ACCOUNTS` in `config/users.js`): admin `julio@hscontrol.com`, ventas `dennis@hscontrol.com`, técnico `marcos.tec@demo.hs.local`. Password: `config/users.passwords.local.json` if present, else the lowercase first name (`julio`, `dennis`, `marcos`). Uploads go to `apps/api/uploads/` (git-ignored).
 
+With the Docker stack (`pnpm local:up`) the api container runs `nest start --watch`. When many files change at once the watcher can restart while the old process still holds port 3001 (`EADDRINUSE` in `docker compose logs api`) and the old code keeps serving: run `docker compose restart api`. Every api container start also re-runs the seed (upserts).
+
 ## Checks
 
 ```bash

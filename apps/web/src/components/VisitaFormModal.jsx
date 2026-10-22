@@ -17,6 +17,7 @@ import { apiClient, authToken } from '@/api/http.js';
 import { ROLES } from '@/constants/roles.js';
 import { toast } from 'sonner';
 import { Check, ChevronsUpDown, Search, UserPlus, Loader2 } from 'lucide-react';
+import { reportLoadError } from '@/lib/loadError.js';
 
 const calcGarantiaHasta = (fechaInstalacion) => {
   if (!fechaInstalacion) return '';
@@ -173,10 +174,10 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
   useEffect(() => {
     const load = async () => {
       const [c, users, s, tr] = await Promise.all([
-        clientsService.getAll().catch(() => []),
-        authService.listUsers().catch(() => []),
-        apiClient.get('sucursales', { token: authToken() }).catch(() => []),
-        schedulesService.getAll({}).catch(() => []),
+        clientsService.getAll().catch(reportLoadError('los clientes', [])),
+        authService.userDirectory().catch(reportLoadError('los usuarios', [])),
+        apiClient.get('sucursales', { token: authToken() }).catch(reportLoadError('las sucursales', [])),
+        schedulesService.getAll({}).catch(reportLoadError('los trabajos', [])),
       ]);
       setClientes(c || []);
       const active = (users || []).filter((u) => u.active !== false);
@@ -268,7 +269,7 @@ const VisitaFormModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
         tipo: 'Seguridad Electrónica',
         sucursal_id: form.sucursal_id || currentUser?.sucursalId || currentUser?.department || 'suc_central',
       });
-      const refreshed = await clientsService.getAll().catch(() => []);
+      const refreshed = await clientsService.getAll().catch(reportLoadError('los clientes', []));
       setClientes(refreshed);
       setForm((prev) => ({ ...prev, cliente_id: record.id, lugar: prev.lugar || newClient.direccion || '' }));
       setShowNewClientModal(false);

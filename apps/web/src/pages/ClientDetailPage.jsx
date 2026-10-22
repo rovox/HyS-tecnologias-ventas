@@ -16,6 +16,8 @@ import ClientFormModal from '@/components/ClientFormModal.jsx';
 import ScheduleFormModal from '@/components/ScheduleFormModal.jsx';
 import { canWriteClients } from '@/config/nav.js';
 import { cn } from '@/lib/utils.js';
+import { reportLoadError } from '@/lib/loadError.js';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -69,7 +71,7 @@ const ClientDetailPage = () => {
     setClientData(data);
 
     const [vis, history] = await Promise.all([
-      surveysService.getAll().then((rows) => rows.filter((row) => row.cliente_id === id || row.clienteId === id)).catch(() => []),
+      surveysService.getAll().then((rows) => rows.filter((row) => row.cliente_id === id || row.clienteId === id)).catch(reportLoadError('los relevamientos', [])),
       clientsService.getHistory(id).catch(() => ({ events: [] })),
     ]);
     setEquipos([]);
@@ -80,6 +82,7 @@ const ClientDetailPage = () => {
   }, [id, navigate, getClientById]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtimeEntities(['client', 'quotation', 'schedule', 'payment', 'relevamiento'], () => loadData());
 
   const handleCreateWork = () => { setSelectedSchedule({ cliente_id: id }); setIsScheduleModalOpen(true); };
   const handleEditWork = (schedule) => { setSelectedSchedule(schedule); setIsScheduleModalOpen(true); };

@@ -12,6 +12,7 @@ import quotationsService from '@/services/quotations/index.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import authService from '@/services/auth/index.js';
 import { cn } from '@/lib/utils.js';
+import { reportLoadError } from '@/lib/loadError.js';
 
 const TABS = [
   { id: 'trabajo', label: 'Trabajo', primary: true },
@@ -35,7 +36,7 @@ const CronogramaQuickModal = ({ open, onOpenChange, date, quotations = [], onWor
     setTask({ titulo: '', descripcion: '', asignadoId: '', horario: '', cotizacionId: '' });
     setQuoteId('');
     setWorkQuoteId('');
-    authService.listUsers().then((rows) => setUsers((rows || []).filter((u) => u.active !== false))).catch(() => setUsers([]));
+    authService.userDirectory().then(setUsers).catch((err) => setUsers(reportLoadError('los usuarios', [])(err)));
   }, [open, day]);
 
   const save = async (e) => {

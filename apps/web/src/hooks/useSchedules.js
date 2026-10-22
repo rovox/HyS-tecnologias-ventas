@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import schedulesService, { calculateBalance } from '@/services/schedules/index.js';
 import clientsService from '@/services/clients/index.js';
+import { reportLoadError } from '@/lib/loadError.js';
 
 export { calculateBalance };
 
@@ -86,8 +87,7 @@ export const useSchedules = () => {
     try {
       return await schedulesService.getObservations(trabajo_id);
     } catch (err) {
-      console.error('Error fetching observations:', err);
-      return [];
+      return reportLoadError('las observaciones', [])(err);
     }
   };
 
@@ -95,8 +95,7 @@ export const useSchedules = () => {
     try {
       return await schedulesService.getPayments(trabajo_id);
     } catch (err) {
-      console.error('Error fetching payments:', err);
-      return [];
+      return reportLoadError('el historial de cobros', [])(err);
     }
   };
 

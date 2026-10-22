@@ -19,6 +19,7 @@ import authService from '@/services/auth/index.js';
 import { ROLES } from '@/constants/roles.js';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { toast } from 'sonner';
+import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
 
 const PedidoInternoDetailPage = () => {
   const { id: pedido_id } = useParams();
@@ -62,6 +63,7 @@ const PedidoInternoDetailPage = () => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedido_id]);
+  useRealtimeEntities(['pedido_interno'], (e) => { if (e.id === pedido_id) loadData(); });
 
   const getStatusClass = (status) => {
     switch(status) {

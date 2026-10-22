@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../auth/activity.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { assertCanMutateQuotes } from '../auth/roles';
 import { CreateCategoryDto, PatchCategoryDto } from './dto/category.dto';
 
@@ -21,6 +22,7 @@ export class CategoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   list() {
@@ -49,6 +51,7 @@ export class CategoriesService {
       },
     });
     await this.activity.log(user.id, sessionId, 'category.create', 'quotation_category', row.id);
+    this.realtime.emit('category.created', 'category', row.id, { byUserId: user.id });
     return row;
   }
 
@@ -62,6 +65,7 @@ export class CategoriesService {
         data: { active: false },
       });
       await this.activity.log(user.id, sessionId, 'category.deactivate', 'quotation_category', id);
+      this.realtime.emit('category.updated', 'category', id, { byUserId: user.id });
       return updated;
     }
     const updated = await this.prisma.quotationCategory.update({
@@ -69,6 +73,7 @@ export class CategoriesService {
       data: { active: dto.active },
     });
     await this.activity.log(user.id, sessionId, 'category.update', 'quotation_category', id);
+    this.realtime.emit('category.updated', 'category', id, { byUserId: user.id });
     return updated;
   }
 }
