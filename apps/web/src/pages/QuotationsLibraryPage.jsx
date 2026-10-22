@@ -167,7 +167,7 @@ const QuotationsLibraryPage = () => {
   const changeStatus = async (quote, estado) => {
     try {
       await quotationsService.updateStatus(quote.id, estado);
-      toast.success(`Estado: ${QUOTATION_STATUS_LABEL[estado]}`);
+      toast.success(estado === 'aceptado' ? 'Cotización aceptada: proyecto creado en el cronograma' : `Estado: ${QUOTATION_STATUS_LABEL[estado]}`);
       fetchAll();
     } catch (err) {
       toast.error(err.message);
@@ -176,11 +176,8 @@ const QuotationsLibraryPage = () => {
 
   const convertQuote = async (quote) => {
     try {
-      const result = await quotationsService.convertToSchedule(quote.id, {
-        sucursal_id: quote.sucursal_id || clients.find((row) => row.id === quote.cliente_id)?.sucursal_id,
-        vendedor_responsable_id: quote.vendedor_id || currentUser?.id,
-      });
-      toast.success(result.alreadyConverted ? 'La venta ya existía' : `Trabajo ${result.schedule.id} creado`);
+      const result = await quotationsService.convertToSchedule(quote.id);
+      toast.success(result.alreadyConverted ? 'El proyecto ya estaba en el cronograma' : 'Proyecto creado en el cronograma');
       fetchAll();
       navigate('/schedule');
     } catch (err) {
