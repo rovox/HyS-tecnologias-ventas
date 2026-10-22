@@ -81,3 +81,6 @@ docs/decisiones-tecnicas/
 # Playwright
 test-results/
 playwright-report/
+
+# graphify knowledge-graph output (local tool)
+graphify-out/
