@@ -184,6 +184,8 @@ describe('Sales API (e2e)', () => {
 
     it('keeps pedidos internos for admin and ventas', async () => {
       await request(app.getHttpServer()).get('/api/pedidos-internos').set('Authorization', `Bearer ${tecToken}`).expect(403);
+      const goals = await request(app.getHttpServer()).get('/api/goals').set('Authorization', `Bearer ${tecToken}`).expect(200);
+      expect(goals.body).toEqual([]);
       const res = await request(app.getHttpServer())
         .get('/api/pedidos-internos/ped_seed_1')
         .set('Authorization', `Bearer ${ventasToken}`)

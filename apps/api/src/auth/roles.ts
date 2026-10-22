@@ -15,6 +15,7 @@ import {
 export {
   ROLES,
   clientWhere,
+  goalWhere,
   isAdmin,
   isTec,
   isVentas,
