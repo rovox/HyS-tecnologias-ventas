@@ -47,11 +47,16 @@ export const PROJECT_TRANSITION = {
   }),
 };
 
+/** Ledger concepts shown on a project (payments and expenses). */
 export const PAYMENT_TYPE = {
   adelanto: 'Adelanto',
   cobro: 'Cobro',
-  extra_asistencia: 'Adicional',
-  descuento: 'Condonado',
+  adicional: 'Adicional',
+  material: 'Material',
+  combustible: 'Combustible',
+  viaticos: 'Viáticos',
+  servicios: 'Servicios',
+  otro: 'Otro',
 };
 
 export const PROJECT_FIELDS = {

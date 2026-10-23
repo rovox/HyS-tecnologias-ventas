@@ -20,16 +20,17 @@ function CardList({ columns, rows = [], rowKey = (r) => r.id, onRowClick, loadin
       {loading && <Skeleton className="h-20 w-full" />}
       {!loading && rows.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{empty}</p>}
       {!loading &&
-        rows.map((row) => (
-          <button
-            key={rowKey(row)}
-            type="button"
-            onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className="w-full rounded-md border border-border bg-card p-3 text-left shadow-sm"
-          >
-            {renderCard(row)}
-          </button>
-        ))}
+        rows.map((row) =>
+          onRowClick ? (
+            <button key={rowKey(row)} type="button" onClick={() => onRowClick(row)} className="w-full rounded-md border border-border bg-card p-3 text-left shadow-sm">
+              {renderCard(row)}
+            </button>
+          ) : (
+            <div key={rowKey(row)} className="rounded-md border border-border bg-card p-3 shadow-sm">
+              {renderCard(row)}
+            </div>
+          ),
+        )}
       {!loading && totalColumn && rows.length > 0 && (
         <div className="flex justify-between rounded-md bg-muted/60 px-3 py-2 text-sm font-semibold">
           <span>Total</span>

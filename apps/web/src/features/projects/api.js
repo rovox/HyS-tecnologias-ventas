@@ -6,8 +6,9 @@ import { authToken } from '@/api/http.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
 
-export function useProjects() {
-  return useQuery({ queryKey: ['project', 'list'], queryFn: () => apiClient.get('projects', opts()) });
+/** `enabled: false` for roles without access to projects (técnico). */
+export function useProjects(enabled = true) {
+  return useQuery({ queryKey: ['project', 'list'], queryFn: () => apiClient.get('projects', opts()), enabled });
 }
 
 export function useProject(id) {

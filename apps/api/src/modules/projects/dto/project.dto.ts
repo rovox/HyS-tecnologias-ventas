@@ -79,11 +79,24 @@ export class CreateProjectJobDto {
   lugar?: string;
 }
 
-/** Until the ledger (FIN-01): a payment of the project, booked on its main job. */
+export class ProjectAmountDto {
+  @ApiProperty({ minimum: 0.01 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01, { message: 'El monto debe ser mayor a 0' })
+  montoOficial: number;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty({ message: 'Indica el motivo del cambio de monto' })
+  motivo: string;
+}
+
+/** A payment of the project: advance, payment against the balance, or an additional charge on top (adicional). */
 export class ProjectPaymentDto {
-  @ApiProperty({ enum: ['adelanto', 'cobro', 'extra_asistencia'] })
-  @IsIn(['adelanto', 'cobro', 'extra_asistencia'], { message: 'Tipo de cobro no válido' })
-  tipo: string;
+  @ApiProperty({ enum: ['adelanto', 'cobro', 'adicional'] })
+  @IsIn(['adelanto', 'cobro', 'adicional'], { message: 'Tipo de cobro no válido' })
+  concepto: string;
 
   @ApiProperty({ minimum: 0.01 })
   @Type(() => Number)

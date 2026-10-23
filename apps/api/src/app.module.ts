@@ -16,6 +16,7 @@ import { CategoriesModule } from './modules/categories';
 import { PedidosInternosModule } from './modules/pedidos-internos';
 import { SolicitudesWebModule } from './modules/solicitudes-web';
 import { ProjectsModule } from './modules/projects';
+import { FinanceModule } from './modules/finance';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -52,6 +53,7 @@ import { HealthController } from './health.controller';
     PedidosInternosModule,
     SolicitudesWebModule,
     ProjectsModule,
+    FinanceModule,
   ],
   controllers: [HealthController],
 })

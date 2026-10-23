@@ -5,7 +5,7 @@ import { AuthGuard } from '../../common/auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../../common/auth/current-user.decorator';
 import { Roles, RolesGuard } from '../../common/auth/roles.guard';
 import { ROLES } from '../../common/policy/roles';
-import { CreateProjectJobDto, ListProjectsQuery, ProjectPaymentDto, ProjectStatusDto, UpdateProjectDto } from './dto/project.dto';
+import { CreateProjectJobDto, ListProjectsQuery, ProjectAmountDto, ProjectPaymentDto, ProjectStatusDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectsService } from './projects.service';
 
 @ApiTags('projects')
@@ -46,8 +46,15 @@ export class ProjectsController {
     return this.projects.addJob(id, dto, user, sessionId);
   }
 
+  @Patch(':id/monto')
+  @ApiOperation({ summary: 'Change the official amount (Gerencia, with a reason)' })
+  amount(@Param('id') id: string, @Body() dto: ProjectAmountDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.projects.changeAmount(id, dto, user, sessionId);
+  }
+
   @Post(':id/cobros')
-  @ApiOperation({ summary: 'Register a payment of the project' })
+  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC)
+  @ApiOperation({ summary: 'Register a payment of the project (to be validated)' })
   pay(@Param('id') id: string, @Body() dto: ProjectPaymentDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.projects.registerPayment(id, dto, user, sessionId);
   }

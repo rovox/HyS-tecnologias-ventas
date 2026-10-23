@@ -10,17 +10,9 @@ import {
 } from '../../common/policy/roles';
 import { CreateScheduleDto, CreateSchedulePaymentDto, ScheduleStatusDto, UpdateScheduleDto } from './dto/schedule.dto';
 import { AuditService } from '../../common/audit/audit.service';
-import {
-  adelantoChange,
-  budgetPaid,
-  checkScheduleTransition,
-  legacyAdvance,
-  montoChangeError,
-  paymentError,
-  saldo,
-  categoryChangeError,
-} from './domain/schedules.rules';
+import { categoryChangeError, checkScheduleTransition, montoChangeError } from './domain/schedules.rules';
 import { CategoriesService } from '../categories';
+import { IncomeService, balanceOf, incomeOf } from '../finance';
 
 type Tx = Prisma.TransactionClient;
 
@@ -32,8 +24,24 @@ const include = {
   quotation: { select: { id: true, numero: true, titulo: true, monto: true } },
   categoria: { select: { id: true, label: true } },
   project: { select: { id: true, codigo: true, estado: true } },
-  payments: true,
-} as const;
+  movements: {
+    where: { tipo: 'ingreso' },
+    select: { id: true, concepto: true, monto: true, estado: true, metodo: true, nota: true, fecha: true, tipo: true },
+    orderBy: { fecha: 'desc' },
+  },
+} satisfies Prisma.ScheduleInclude;
+
+type ScheduleRow = Prisma.ScheduleGetPayload<{ include: typeof include }>;
+
+/**
+ * A stand-alone job owes its own amount, computed from the ledger; a job of a project carries no money (the project
+ * does). `adelanto` and `saldo` keep their names for the cronograma screens.
+ */
+function present(row: ScheduleRow) {
+  const { movements, ...job } = row;
+  const cobrado = row.projectId ? 0 : incomeOf(movements).cobrado;
+  return { ...job, adelanto: cobrado, saldo: row.projectId ? 0 : balanceOf(Number(row.monto), cobrado, row.estado === 'cancelado'), movements };
+}
 
 /** Jobs of a project move the project's lists and totals too. */
 const affectsOf = (row: { projectId?: string | null }, base: string[] = []) => (row.projectId ? [...base, 'project'] : base);
@@ -44,6 +52,7 @@ export class SchedulesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly categories: CategoriesService,
+    private readonly income: IncomeService,
   ) {}
 
   list(
@@ -77,7 +86,7 @@ export class SchedulesService {
       },
       include,
       orderBy: { fechaProgramada: 'asc' },
-    });
+    }).then((rows) => rows.map(present));
   }
 
   async get(id: string, user: User) {
@@ -86,7 +95,7 @@ export class SchedulesService {
       include,
     });
     if (!row) throw new NotFoundException('Trabajo no encontrado');
-    return row;
+    return present(row);
   }
 
   /** `projectId` is set by the projects module when it adds a job to a project. */
@@ -114,8 +123,6 @@ export class SchedulesService {
         lugar: dto.lugar || client.direccion || '',
         descripcionTrabajo: dto.descripcionTrabajo.trim(),
         monto,
-        adelanto,
-        saldo: saldo(monto, adelanto),
         fechaProgramada: new Date(dto.fechaProgramada),
         horario: dto.horario || null,
         estado: dto.estado || 'programado',
@@ -126,23 +133,11 @@ export class SchedulesService {
         projectId: options.projectId || null,
         observaciones: dto.observaciones || '',
         mapsLink: dto.mapsLink || '',
-        ...(adelanto > 0
-          ? {
-              payments: {
-                create: {
-                  tipo: 'adelanto',
-                  monto: adelanto,
-                  metodo: '',
-                  nota: 'Adelanto al crear trabajo',
-                  cobradoPorId: user.id,
-                  quotationId: dto.quotationId || null,
-                },
-              },
-            }
-          : {}),
       },
       include,
     });
+    // An advance given when the job is created is its first payment (projects take payments on the project).
+    if (adelanto > 0 && !options.projectId) await this.income.register({ scheduleId: row.id }, { concepto: 'adelanto', monto: adelanto, nota: 'Adelanto al crear el trabajo' }, user, sessionId);
     await this.prisma.touchClientActivity(dto.clienteId);
     await this.audit.record({
       user,
@@ -151,9 +146,9 @@ export class SchedulesService {
       entity: 'schedule',
       id: row.id,
       affects: affectsOf(row),
-      patch: { estado: row.estado, saldo: Number(row.saldo) },
+      patch: { estado: row.estado },
     });
-    return row;
+    return this.get(row.id, user);
   }
 
   async update(id: string, dto: UpdateScheduleDto, user: User, sessionId?: string) {
@@ -169,32 +164,22 @@ export class SchedulesService {
       const transition = checkScheduleTransition(current.estado, dto.estado);
       if (!transition.ok) throw new BadRequestException(transition.reason);
     }
-    const montoError = montoChangeError({ quotationId: current.quotationId, monto: Number(current.monto) }, dto.monto);
+    const montoError = montoChangeError(current, dto.monto);
     if (montoError) throw new BadRequestException(montoError);
     const categoryError = categoryChangeError(current, dto.categoriaId);
     if (categoryError) throw new BadRequestException(categoryError);
     if (dto.categoriaId !== undefined && dto.categoriaId !== current.categoriaId) await this.categories.assertDivision(dto.categoriaId);
-    const legacy = legacyAdvance(Number(current.adelanto), current.payments);
-    const paid = budgetPaid(current.payments) + legacy;
-    const advance = adelantoChange(paid, paid > 0 && legacy === 0, dto.adelanto);
-    if (!advance.ok) throw new BadRequestException(advance.reason);
-    const monto = dto.monto !== undefined ? Number(dto.monto) : Number(current.monto);
-    const row = await this.prisma.$transaction(async (tx) => {
-      if (advance.payment > 0) {
-        await this.materializeLegacy(tx, current, legacy, user.id);
-        await tx.schedulePayment.create({
-          data: { scheduleId: id, quotationId: current.quotationId, tipo: 'adelanto', monto: advance.payment, nota: 'Adelanto', cobradoPorId: user.id },
-        });
-      }
-      const newPaid = paid + advance.payment;
-      return tx.schedule.update({
+    if (dto.adelanto !== undefined && Number(dto.adelanto) !== Number(current.adelanto)) {
+      throw new BadRequestException('Registra el adelanto como un cobro del trabajo');
+    }
+    const row = await this.prisma.schedule
+      .update({
         where: { id },
         data: {
           ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId } : {}),
           ...(dto.lugar !== undefined ? { lugar: dto.lugar } : {}),
           ...(dto.descripcionTrabajo ? { descripcionTrabajo: dto.descripcionTrabajo.trim() } : {}),
-          ...(dto.monto !== undefined ? { monto } : {}),
-          ...(dto.monto !== undefined || advance.payment > 0 ? { adelanto: newPaid, saldo: saldo(monto, newPaid) } : {}),
+          ...(dto.monto !== undefined ? { monto: Number(dto.monto) } : {}),
           ...(dto.fechaProgramada ? { fechaProgramada: new Date(dto.fechaProgramada) } : {}),
           ...(dto.horario !== undefined ? { horario: dto.horario || null } : {}),
           ...(dto.vendedorId !== undefined ? { vendedorId: dto.vendedorId || null } : {}),
@@ -207,8 +192,8 @@ export class SchedulesService {
             : {}),
         },
         include,
-      });
-    });
+      })
+      .then(present);
     await this.prisma.touchClientActivity(current.clienteId);
     await this.audit.record({
       user,
@@ -219,7 +204,7 @@ export class SchedulesService {
       before: current,
       after: row,
       affects: affectsOf(row),
-      patch: { estado: row.estado, saldo: Number(row.saldo), adelanto: Number(row.adelanto) },
+      patch: { estado: row.estado, saldo: row.saldo },
     });
     return row;
   }
@@ -228,50 +213,27 @@ export class SchedulesService {
     return this.update(id, { estado: dto.estado, fechaFinalizacion: dto.fechaFinalizacion }, user, sessionId);
   }
 
-  listPayments(scheduleId: string, user: User) {
-    return this.get(scheduleId, user).then((row) => row.payments || []);
+  /** Payments of the job as the cronograma screens read them (`tipo`, `at`), from the ledger. */
+  async listPayments(scheduleId: string, user: User) {
+    const job = await this.get(scheduleId, user);
+    return job.movements.map((m) => ({
+      id: m.id,
+      tipo: m.concepto === 'adicional' ? 'extra_asistencia' : m.concepto,
+      monto: m.monto,
+      metodo: m.metodo,
+      nota: m.nota,
+      estado: m.estado,
+      at: m.fecha,
+    }));
   }
 
+  /** A payment taken on a job: booked in the ledger on the job, or on its project when it belongs to one. */
   async registerPayment(scheduleId: string, dto: CreateSchedulePaymentDto, user: User, sessionId?: string) {
     assertCanMutateSchedules(user);
-    const schedule = await this.get(scheduleId, user);
-    const legacy = legacyAdvance(Number(schedule.adelanto), schedule.payments);
-    const paid = budgetPaid(schedule.payments) + legacy;
-    const error = paymentError({ estado: schedule.estado, monto: Number(schedule.monto), paid }, { tipo: dto.tipo, monto: Number(dto.monto) });
-    if (error) throw new BadRequestException(error);
-    const payment = await this.prisma.$transaction(async (tx) => {
-      await this.materializeLegacy(tx, schedule, legacy, user.id);
-      const created = await tx.schedulePayment.create({
-        data: {
-          scheduleId,
-          relevamientoId: dto.relevamientoId || null,
-          quotationId: dto.quotationId || schedule.quotationId || null,
-          tipo: dto.tipo,
-          monto: Number(dto.monto),
-          metodo: dto.metodo || '',
-          nota: dto.nota || '',
-          cobradoPorId: user.id,
-        },
-      });
-      const rows = await tx.schedulePayment.findMany({ where: { scheduleId } });
-      const newPaid = budgetPaid(rows);
-      await tx.schedule.update({
-        where: { id: scheduleId },
-        data: { adelanto: newPaid, saldo: saldo(Number(schedule.monto), newPaid) },
-      });
-      return created;
-    });
-    const updated = await this.get(scheduleId, user);
-    await this.audit.record({
-      user,
-      sessionId,
-      action: 'schedule.payment',
-      entity: 'payment',
-      id: payment.id,
-      affects: affectsOf(schedule, ['schedule', 'client']),
-      patch: { scheduleId, tipo: dto.tipo, monto: Number(dto.monto), saldo: Number(updated.saldo) },
-    });
-    return updated;
+    await this.get(scheduleId, user);
+    const concepto = dto.tipo === 'extra_asistencia' ? 'adicional' : dto.tipo;
+    await this.income.register({ scheduleId }, { concepto, monto: Number(dto.monto), metodo: dto.metodo, nota: dto.nota }, user, sessionId);
+    return this.get(scheduleId, user);
   }
 
   /** First job of a project, created inside the transaction that approves the quotation. */
@@ -284,14 +246,6 @@ export class SchedulesService {
     return tx.schedule.updateMany({
       where: { projectId, estado: { in: ['programado', 'en_proceso'] } },
       data: { estado: 'cancelado' },
-    });
-  }
-
-  /** An advance stored only in `schedule.adelanto` (old rows) becomes a payment row before any new payment. */
-  private async materializeLegacy(tx: Tx, schedule: { id: string; quotationId: string | null }, legacy: number, userId: string) {
-    if (legacy <= 0) return;
-    await tx.schedulePayment.create({
-      data: { scheduleId: schedule.id, quotationId: schedule.quotationId, tipo: 'adelanto', monto: legacy, nota: 'Adelanto registrado antes del historial de cobros', cobradoPorId: userId },
     });
   }
 }

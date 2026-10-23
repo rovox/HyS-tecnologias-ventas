@@ -8,10 +8,8 @@ import {
   Settings,
   CalendarDays,
   Package,
-  Receipt,
   CarFront,
   Megaphone,
-  Calculator,
   Wallet,
   Inbox,
 } from 'lucide-react';
@@ -49,6 +47,7 @@ const operationalMenuSections = [
       { to: '/solicitudes-web', icon: Inbox, label: 'Solicitudes web', allowedRoles: SOLICITUDES_WEB_ROLES },
       { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
+      { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
       { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
     ],
   },
@@ -67,11 +66,8 @@ const adminExtraMenuSections = [
   {
     title: 'GESTIÓN ADMIN',
     items: [
-      { to: '/gastos-operativos', icon: Receipt, label: 'Gastos Operativos', allowedRoles: ADMIN_ONLY },
       { to: '/vehicle-control', icon: CarFront, label: 'Control Vehicular', allowedRoles: ADMIN_ONLY },
       { to: '/marketing', icon: Megaphone, label: 'Marketing', allowedRoles: ADMIN_ONLY },
-      { to: '/accounting', icon: Calculator, label: 'Costos Operativos', allowedRoles: ADMIN_ONLY },
-      { to: '/finanzas', icon: Wallet, label: 'Finanzas y Contabilidad', allowedRoles: ADMIN_ONLY },
     ],
   },
 ];
@@ -98,6 +94,7 @@ export const routeRoles = {
   solicitudesWeb: SOLICITUDES_WEB_ROLES,
   frozen: ADMIN_ONLY,
   users: ALL_ROLES,
+  finanzas: ALL_ROLES,
 };
 
 export function canWriteQuotations(role) {

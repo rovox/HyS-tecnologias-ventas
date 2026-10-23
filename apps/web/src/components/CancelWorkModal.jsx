@@ -12,10 +12,9 @@ import { Loader2, XCircle } from 'lucide-react';
 
 const CancelWorkModal = ({ isOpen, onClose, work, onSuccess }) => {
   const [motivo, setMotivo] = useState('');
-  const [saldoCancelado, setSaldoCancelado] = useState('');
   const [observacion, setObservacion] = useState('');
   
-  const { updateScheduleStatus, registerPayment, addObservation, loading } = useSchedules();
+  const { updateScheduleStatus, addObservation, loading } = useSchedules();
   const { currentUser } = useAuth();
 
   if (!work) return null;
@@ -29,19 +28,7 @@ const CancelWorkModal = ({ isOpen, onClose, work, onSuccess }) => {
     }
 
     try {
-      const descuento = parseFloat(saldoCancelado || 0);
-
-      // Forgiven debt is a `descuento` payment: the API lowers the saldo (it cannot exceed it).
-      if (descuento > 0) {
-        await registerPayment({
-          trabajo_id: work.id,
-          tipo: 'descuento',
-          monto: descuento,
-          metodo: 'otro',
-          nota: `Ajuste por cancelación: ${motivo}. ${observacion}`.trim(),
-        });
-      }
-
+      // A cancelled job owes nothing: the API stops counting its balance (FIN-01), no adjustment is needed.
       // The hook already shows the API error and returns null when the change is rejected.
       if (!(await updateScheduleStatus(work.id, { estado: 'cancelado' }))) return;
 
@@ -50,7 +37,6 @@ const CancelWorkModal = ({ isOpen, onClose, work, onSuccess }) => {
       toast.success('Trabajo cancelado correctamente');
       
       setMotivo('');
-      setSaldoCancelado('');
       setObservacion('');
       if (onSuccess) onSuccess();
       onClose();
@@ -92,32 +78,20 @@ const CancelWorkModal = ({ isOpen, onClose, work, onSuccess }) => {
             </Select>
           </div>
 
-          <div className="space-y-2 p-3 bg-muted/20 border border-border rounded-lg">
-            <Label className="flex justify-between items-center">
-              <span>Saldo Perdonado / Cancelado</span>
-              <span className="text-xs text-muted-foreground font-normal">Saldo actual: ${work.saldo?.toFixed(2) || '0.00'}</span>
-            </Label>
-            <Input 
-              type="number" 
-              step="0.01" 
-              min="0"
-              placeholder="0.00"
-              value={saldoCancelado}
-              onChange={e => setSaldoCancelado(e.target.value)}
-              disabled={loading}
-            />
-            <p className="text-[10px] text-muted-foreground">Si el cliente ya no debe pagar el saldo restante, ingrésalo aquí para saldar la cuenta.</p>
-          </div>
+          {Number(work.saldo) > 0 && (
+            <p className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+              Saldo pendiente: Bs {Number(work.saldo).toFixed(2)}. Al cancelar, el trabajo deja de deber ese saldo.
+            </p>
+          )}
 
           <div className="space-y-2">
-            <Label>Observación Adicional {parseFloat(saldoCancelado || 0) > 0 && <span className="text-destructive">*</span>}</Label>
+            <Label>Observación Adicional</Label>
             <Textarea 
               placeholder="Detalla la razón..."
               value={observacion}
               onChange={(e) => setObservacion(e.target.value)}
               className="min-h-[80px] resize-none"
               disabled={loading}
-              required={parseFloat(saldoCancelado || 0) > 0}
             />
           </div>
 

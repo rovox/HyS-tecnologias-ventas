@@ -4,8 +4,9 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { assertCanManageProjects, isAdmin } from '../../common/policy/roles';
 import { SchedulesService } from '../schedules';
-import { CreateProjectJobDto, ListProjectsQuery, ProjectPaymentDto, ProjectStatusDto, UpdateProjectDto } from './dto/project.dto';
-import { checkProjectTransition, firstJobFromQuotation, newJobError, projectCode, type JobOptions } from './domain/projects.rules';
+import { IncomeService } from '../finance';
+import { CreateProjectJobDto, ListProjectsQuery, ProjectAmountDto, ProjectPaymentDto, ProjectStatusDto, UpdateProjectDto } from './dto/project.dto';
+import { checkProjectTransition, firstJobFromQuotation, montoChangeError, newJobError, projectCode, type JobOptions } from './domain/projects.rules';
 import { PROJECT_DETAIL, presentProject } from './project.presenter';
 
 type Tx = Prisma.TransactionClient;
@@ -29,6 +30,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly schedules: SchedulesService,
+    private readonly income: IncomeService,
   ) {}
 
   async list(query: ListProjectsQuery, user: User) {
@@ -149,14 +151,30 @@ export class ProjectsService {
     return this.get(id, user);
   }
 
-  /** Until the ledger (FIN-01) a project's payment is booked on its main job (the one carrying the amount). */
+  /** A payment of the project, registered in the ledger to be validated (técnicos of its jobs may register it too). */
   async registerPayment(id: string, dto: ProjectPaymentDto, user: User, sessionId?: string) {
+    await this.income.register({ projectId: id }, dto, user, sessionId);
+    return presentProject(await this.row(id));
+  }
+
+  /** Only Gerencia changes the official amount (the contract value), always with a reason kept in the history. */
+  async changeAmount(id: string, dto: ProjectAmountDto, user: User, sessionId?: string) {
     assertCanManageProjects(user);
-    const project = await this.row(id);
-    if (project.estado === 'anulado') throw new BadRequestException('El proyecto está anulado');
-    const main = project.schedules.find((s) => Number(s.monto) > 0) ?? project.schedules[0];
-    if (!main) throw new BadRequestException('El proyecto no tiene trabajos');
-    await this.schedules.registerPayment(main.id, dto, user, sessionId);
-    return this.get(id, user);
+    const before = await this.row(id);
+    const error = montoChangeError({ isAdmin: isAdmin(user), estado: before.estado }, dto.montoOficial, dto.motivo);
+    if (error) throw new BadRequestException(error);
+    const after = await this.prisma.project.update({ where: { id }, data: { montoOficial: dto.montoOficial }, include: PROJECT_DETAIL });
+    await this.audit.record({
+      user,
+      sessionId,
+      action: 'project.amount',
+      entity: 'project',
+      id,
+      before,
+      after,
+      affects: ['client'],
+      patch: { motivo: dto.motivo.trim() },
+    });
+    return presentProject(after);
   }
 }

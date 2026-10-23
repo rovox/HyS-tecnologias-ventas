@@ -86,6 +86,8 @@ await step('create a draft from the form', async () => {
 });
 await step('the other session lists it without reload', () => B.page.getByText(title).first().waitFor({ timeout: 3000 }));
 await step('attach the PDF', async () => {
+  await p.getByRole('button', { name: 'Adjuntar PDF' }).waitFor(T);
+  await p.waitForLoadState('networkidle');
   await p.locator('input[type=file][accept="application/pdf"]').setInputFiles({ name: 'cot.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 smoke') });
   await p.getByText('PDF adjuntado').waitFor(T);
 });

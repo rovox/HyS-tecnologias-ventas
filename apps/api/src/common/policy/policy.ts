@@ -24,6 +24,11 @@ export const canMutateClients = isCommercial;
 /** Web contact-form requests (WEB-01). */
 export const canManageWebLeads = isCommercial;
 export const canSeeQuotations = isCommercial;
+/** Rendición: validate, observe, reverse movements and manage cash boxes. Gerencia until a CONTABILIDAD role exists. */
+export const canValidateMovements = isAdmin;
+/** Everyone with access registers money (a técnico only on his own jobs, checked by the service); commercial roles see the whole ledger. */
+export const canRegisterMovements = (actor: Actor) => isCommercial(actor) || isTec(actor);
+export const canSeeLedger = isCommercial;
 /** Projects (approved quotations, with money): commercial roles. */
 export const canManageProjects = isCommercial;
 export const canCreateSchedules = isCommercial;

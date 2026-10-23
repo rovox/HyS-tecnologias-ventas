@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout.jsx';
 import { Chatter } from '@/features/activity';
 import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBar } from '@/shared/views';
-import { formatBs, formatDateTime, formatDay } from '@/shared/lib/format.js';
+import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useProject } from '../api.js';
 import { PAYMENT_TYPE, PROJECT_FIELDS, PROJECT_TRANSITION, formatProjectValue, projectStages } from '../constants.js';
@@ -26,13 +26,17 @@ const jobColumns = [
   { key: 'estado', header: 'Estado', cell: (t) => JOB_STATE[t.estado] || t.estado },
 ];
 
-const paymentColumns = [
-  { key: 'fecha', header: 'Fecha', cell: (c) => formatDateTime(c.at) },
-  { key: 'tipo', header: 'Tipo', cell: (c) => PAYMENT_TYPE[c.tipo] || c.tipo },
-  { key: 'metodo', header: 'Método', cell: (c) => c.metodo || '—' },
-  { key: 'por', header: 'Registró', cell: (c) => c.cobradoPor?.name || '—' },
-  { key: 'nota', header: 'Nota', cell: (c) => c.nota || '—' },
-  { key: 'monto', header: 'Monto', align: 'right', cell: (c) => formatBs(c.monto) },
+const MOVEMENT_STATE = { por_validar: 'Por validar', validado: 'Validado', observado: 'Observado' };
+const total = (rows) => formatBs(rows.reduce((s, m) => s + Number(m.monto), 0));
+
+const movementColumns = [
+  { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+  { key: 'concepto', header: 'Concepto', cell: (m) => PAYMENT_TYPE[m.concepto] || m.concepto },
+  { key: 'metodo', header: 'Método', cell: (m) => m.metodo || '—' },
+  { key: 'por', header: 'Registró', cell: (m) => m.registradoPor?.name || '—' },
+  { key: 'estado', header: 'Estado', cell: (m) => MOVEMENT_STATE[m.estado] || m.estado },
+  { key: 'nota', header: 'Nota', cell: (m) => m.nota || '—' },
+  { key: 'monto', header: 'Monto', align: 'right', cell: (m) => formatBs(m.monto), total },
 ];
 
 export default function ProjectDetailPage() {
@@ -105,7 +109,12 @@ export default function ProjectDetailPage() {
             <span className={project.saldo > 0 ? 'font-semibold text-destructive' : 'font-semibold'}>{formatBs(project.saldo)}</span>
           </Field>
           <Field label="Cobrado"><div className="flex items-center gap-3">{formatBs(project.cobrado)} <CollectedBar pct={project.pctCobrado} /></div></Field>
-          <Field label="Costo y margen">Con Finanzas e Inventario</Field>
+          <Field label="Por validar">{formatBs(project.porValidar)}</Field>
+          <Field label="Costo (gastos)">{formatBs(project.costo)}</Field>
+          <Field label="Margen">
+            <span className={project.margen < 0 ? 'font-semibold text-destructive' : 'font-semibold'}>{formatBs(project.margen)}</span>
+          </Field>
+          {project.adicionales > 0 && <Field label="Adicionales cobrados">{formatBs(project.adicionales)}</Field>}
           <Field label="Categoría">{project.categoria.label}</Field>
           <Field label="Sucursal">{project.sucursal.nombre}</Field>
           <Field label="Responsable">{project.responsable?.name}</Field>
@@ -123,12 +132,16 @@ export default function ProjectDetailPage() {
           <TabsList>
             <TabsTrigger value="trabajos">Trabajos ({project.trabajos.length})</TabsTrigger>
             <TabsTrigger value="cobros">Cobros ({project.cobros.length})</TabsTrigger>
+            <TabsTrigger value="gastos">Gastos ({project.gastos.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="trabajos">
             <ListView columns={jobColumns} rows={project.trabajos} empty="Sin trabajos" />
           </TabsContent>
           <TabsContent value="cobros">
-            <ListView columns={paymentColumns} rows={project.cobros} empty="Sin cobros registrados" />
+            <ListView columns={movementColumns} rows={project.cobros} empty="Sin cobros registrados" />
+          </TabsContent>
+          <TabsContent value="gastos">
+            <ListView columns={movementColumns} rows={project.gastos} empty="Sin gastos: regístralos en Finanzas › Registrar gasto, eligiendo este proyecto" />
           </TabsContent>
         </Tabs>
       </FormView>

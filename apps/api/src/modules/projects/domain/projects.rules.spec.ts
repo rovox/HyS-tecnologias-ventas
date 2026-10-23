@@ -5,7 +5,6 @@ import {
   newJobError,
   nextProjectStates,
   projectCode,
-  projectMoney,
   warranty,
 } from './projects.rules';
 
@@ -41,18 +40,6 @@ describe('projects rules', () => {
     expect(checkProjectTransition({ estado: 'en_ejecucion' }, 'anulado', { ...ctx, isAdmin: true, motivo: 'Cliente desistió' })).toEqual({ ok: true });
   });
 
-  it('computes collected, owed and share from the payments', () => {
-    const payments = [
-      { tipo: 'adelanto', monto: 1000 },
-      { tipo: 'cobro', monto: '500.50' },
-      { tipo: 'extra_asistencia', monto: 300 },
-    ];
-    expect(projectMoney(2500, payments, 'en_ejecucion')).toEqual({ cobrado: 1500.5, saldo: 999.5, pctCobrado: 60 });
-    expect(projectMoney(2500, [...payments, { tipo: 'descuento', monto: 999.5 }], 'en_ejecucion').saldo).toBe(0);
-    expect(projectMoney(2500, payments, 'anulado').saldo).toBe(0);
-    expect(projectMoney(1000, [{ tipo: 'cobro', monto: 1200 }], 'entregado')).toEqual({ cobrado: 1200, saldo: 0, pctCobrado: 100 });
-  });
-
   it('runs the warranty from the delivery date', () => {
     const now = new Date('2026-10-23T00:00:00Z');
     expect(warranty(null, 12, now)).toEqual({ hasta: null, vigente: false });
@@ -73,16 +60,16 @@ describe('projects rules', () => {
     expect(projectCode('COT-102326-2')).toBe('PRY-102326-2');
   });
 
-  it('builds the first job from the quotation total and division', () => {
+  it('builds the first job with the division and no money of its own', () => {
     const now = new Date('2026-10-21T00:00:00Z');
     const quote = { id: 'q1', numero: 'COT-1', titulo: 'CCTV', categoriaId: 'seguridad_electronica', monto: 1500, clienteId: 'c1', sucursalId: 's1', vendedorId: 'v1' };
     expect(firstJobFromQuotation(quote, 'Av. Siempre Viva', {}, now)).toMatchObject({
       categoriaId: 'seguridad_electronica',
       lugar: 'Av. Siempre Viva',
       descripcionTrabajo: 'CCTV (COT-1)',
-      monto: 1500,
+      monto: 0,
       adelanto: 0,
-      saldo: 1500,
+      saldo: 0,
       fechaProgramada: now,
       estado: 'programado',
       quotationId: 'q1',

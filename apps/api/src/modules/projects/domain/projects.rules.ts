@@ -42,22 +42,6 @@ export function checkProjectTransition(
   return { ok: true };
 }
 
-type PaymentRow = { tipo: string; monto: number | string | { toString(): string } };
-
-/** Received against the official amount: advances and payments (an additional charge or a write-off are not). */
-const RECEIVED = ['adelanto', 'cobro'];
-/** Debt forgiven when a job is cancelled. */
-const FORGIVEN = ['descuento'];
-
-/** Money of a project from its payments: what was collected, what is still owed and the share collected. */
-export function projectMoney(montoOficial: number, payments: PaymentRow[], estado: string) {
-  const sum = (tipos: string[]) => cents(payments.filter((p) => tipos.includes(p.tipo)).reduce((s, p) => s + Number(p.monto), 0));
-  const cobrado = sum(RECEIVED);
-  const monto = Number(montoOficial);
-  const saldo = estado === 'anulado' ? 0 : Math.max(0, cents(monto - cobrado - sum(FORGIVEN)));
-  return { cobrado, saldo, pctCobrado: monto > 0 ? Math.min(100, Math.round((cobrado / monto) * 100)) : 0 };
-}
-
 /** Warranty starts when the project is delivered and lasts `meses` months. */
 export function warranty(entregadoAt: Date | string | null | undefined, meses: number, now: Date) {
   if (!entregadoAt) return { hasta: null, vigente: false };
@@ -102,17 +86,16 @@ type QuoteForProject = {
   vendedorId?: string | null;
 };
 
-/** First job of the project in the cronograma: carries the quotation total until the ledger (FIN-01). */
+/** First job of the project in the cronograma. The money is the project's (official amount and ledger), not the job's. */
 export function firstJobFromQuotation(quote: QuoteForProject, clientAddress: string, options: JobOptions, now: Date) {
-  const monto = Number(quote.monto);
   return {
     categoriaId: quote.categoriaId,
     clienteId: quote.clienteId,
     lugar: options.lugar?.trim() || clientAddress || 'Por definir',
     descripcionTrabajo: `${quote.titulo} (${quote.numero})`,
-    monto,
+    monto: 0,
     adelanto: 0,
-    saldo: monto,
+    saldo: 0,
     fechaProgramada: options.fechaProgramada ? new Date(options.fechaProgramada) : now,
     horario: options.horario || null,
     estado: 'programado',

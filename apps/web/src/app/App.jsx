@@ -23,20 +23,18 @@ const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
 const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
 const ProjectsPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectsPage })));
 const ProjectDetailPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectDetailPage })));
+const FinancePage = lazy(() => import('@/features/finance').then((m) => ({ default: m.FinancePage })));
 const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
 const ScheduleWorkPage = lazy(() => import('@/pages/ScheduleWorkPage.jsx'));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
 const PedidoInternoDetailPage = lazy(() => import('@/pages/PedidoInternoDetailPage.jsx'));
-const GastosOperativosPage = lazy(() => import('@/pages/GastosOperativosPage.jsx'));
 const VehicleControlPage = lazy(() => import('@/pages/VehicleControlPage.jsx'));
 const VehicleDetailPage = lazy(() => import('@/pages/VehicleDetailPage.jsx'));
 const VehiclesPage = lazy(() => import('@/pages/VehiclesPage.jsx'));
 const MaintenancePage = lazy(() => import('@/pages/MaintenancePage.jsx'));
 const MarketingPage = lazy(() => import('@/pages/MarketingPage.jsx'));
 const CampaignPage = lazy(() => import('@/pages/CampaignPage.jsx'));
-const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
-const FinanzasPage = lazy(() => import('@/pages/FinanzasPage.jsx'));
 const UserProfilePage = lazy(() => import('@/pages/UserProfilePage.jsx'));
 
 function RouteFallback() {
@@ -203,19 +201,9 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/accounting" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <AccountingPage />
-              </ProtectedRoute>
-            } />
             <Route path="/finanzas" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <FinanzasPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/gastos-operativos" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <GastosOperativosPage />
+              <ProtectedRoute allowedRoles={routeRoles.finanzas}>
+                <FinancePage />
               </ProtectedRoute>
             } />
             <Route path="/usuarios/:id" element={

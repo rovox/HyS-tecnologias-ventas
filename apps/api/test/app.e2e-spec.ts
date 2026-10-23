@@ -359,7 +359,7 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('collects payments on the project and adds jobs to the cronograma', async () => {
-      const paid = (await http().post(`/api/projects/${projectId}/cobros`).set(ventas()).send({ tipo: 'adelanto', monto: 1000, metodo: 'efectivo' }).expect(201)).body;
+      const paid = (await http().post(`/api/projects/${projectId}/cobros`).set(ventas()).send({ concepto: 'adelanto', monto: 1000, metodo: 'efectivo' }).expect(201)).body;
       expect(paid).toMatchObject({ cobrado: 1000, saldo: 2000, pctCobrado: 33 });
       expect(paid.cobros).toHaveLength(1);
       const withJob = (await http().post(`/api/projects/${projectId}/trabajos`).set(ventas()).send({ descripcionTrabajo: 'Certificación Fluke', fechaProgramada: '2026-11-10' }).expect(201)).body;
@@ -383,7 +383,7 @@ describe('hs-erp API (e2e)', () => {
       expect(delivered.garantiaHasta).toBeTruthy();
       const blocked = await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'cerrado' }).expect(400);
       expect(blocked.body.message).toMatch(/saldo pendiente/);
-      await http().post(`/api/projects/${projectId}/cobros`).set(ventas()).send({ tipo: 'cobro', monto: 2000 }).expect(201);
+      await http().post(`/api/projects/${projectId}/cobros`).set(ventas()).send({ concepto: 'cobro', monto: 2000 }).expect(201);
       const closed = (await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'cerrado' }).expect(201)).body;
       expect(closed).toMatchObject({ estado: 'cerrado', saldo: 0, transicionesValidas: [] });
     });
@@ -400,6 +400,101 @@ describe('hs-erp API (e2e)', () => {
       const cancelled = (await http().post(`/api/projects/${id}/estado`).set(admin()).send({ estado: 'anulado', motivo: 'Cliente desistió' }).expect(201)).body;
       expect(cancelled).toMatchObject({ estado: 'anulado', saldo: 0, motivoAnulacion: 'Cliente desistió' });
       expect(cancelled.trabajos.every((t: { estado: string }) => t.estado === 'cancelado')).toBe(true);
+    });
+  });
+
+  describe('money ledger and rendición (FIN-01)', () => {
+    const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const admin = () => ({ Authorization: `Bearer ${adminToken}` });
+    let tecToken = '';
+    let tecId = '';
+    const tec = () => ({ Authorization: `Bearer ${tecToken}` });
+    const http = () => request(app.getHttpServer());
+    const box = async (id: string) => (await http().get('/api/finance/cajas').set(admin()).expect(200)).body.find((b: { id: string }) => b.id === id).saldo;
+
+    beforeAll(async () => {
+      const res = await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico));
+      tecToken = res.body.accessToken;
+      tecId = res.body.user.id;
+    });
+
+    it('a stand-alone job owes its amount; payments wait for validation; a cancelled job owes nothing', async () => {
+      const job = (await http().post('/api/schedules').set(ventas())
+        .send({ categoriaId: 'seguridad_electronica', clienteId: 'cli_andina', sucursalId: 'suc_central', descripcionTrabajo: 'Asistencia E2E', fechaProgramada: '2026-11-03', monto: 1000, adelanto: 200, tecnicoId: tecId })
+        .expect(201)).body;
+      expect(Number(job.saldo)).toBe(800);
+      await http().post(`/api/schedules/${job.id}/payments`).set(ventas()).send({ tipo: 'cobro', monto: 900 }).expect(400);
+      const paid = (await http().post(`/api/schedules/${job.id}/payments`).set(tec()).send({ tipo: 'cobro', monto: 300 }).expect(201)).body;
+      expect(Number(paid.saldo)).toBe(500);
+      const history = (await http().get(`/api/schedules/${job.id}/payments`).set(ventas()).expect(200)).body;
+      expect(history.map((p: { estado: string }) => p.estado)).toEqual(['por_validar', 'por_validar']);
+      await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ estado: 'cancelado' }).expect(200);
+      expect(Number((await http().get(`/api/schedules/${job.id}`).set(ventas()).expect(200)).body.saldo)).toBe(0);
+    });
+
+    it('validates into a box (Gerencia only); a validated movement is reversed, never edited', async () => {
+      const pending = (await http().get('/api/finance/movements').query({ estado: 'por_validar', tipo: 'ingreso' }).set(ventas()).expect(200)).body;
+      const m = pending[0];
+      expect(m.transicionesValidas).toEqual(['validado', 'observado', 'anulado']);
+      await http().post(`/api/finance/movements/${m.id}/validar`).set(ventas()).send({ cajaId: 'caja_central' }).expect(403);
+      await http().post(`/api/finance/movements/${m.id}/validar`).set(admin()).send({}).expect(400);
+      const before = await box('caja_central');
+      const ok = (await http().post(`/api/finance/movements/${m.id}/validar`).set(admin()).send({ cajaId: 'caja_central' }).expect(201)).body;
+      expect(ok).toMatchObject({ estado: 'validado', caja: { id: 'caja_central' } });
+      expect(await box('caja_central')).toBeCloseTo(before + Number(m.monto), 2);
+      await http().patch(`/api/finance/movements/${m.id}`).set(admin()).send({ monto: 1 }).expect(400);
+      await http().post(`/api/finance/movements/${m.id}/anular`).set(admin()).send({ motivo: 'x' }).expect(400);
+      const reversal = (await http().post(`/api/finance/movements/${m.id}/revertir`).set(admin()).send({ motivo: 'Cobro duplicado' }).expect(201)).body;
+      expect(reversal).toMatchObject({ tipo: 'egreso', estado: 'validado', reversaDeId: m.id });
+      expect(await box('caja_central')).toBeCloseTo(before, 2);
+      await http().post(`/api/finance/movements/${m.id}/revertir`).set(admin()).send({ motivo: 'otra vez' }).expect(400);
+    });
+
+    it('an employee expense: observed, corrected, validated and refunded; the técnico sees only his movements', async () => {
+      await http().post('/api/finance/movements').set(tec()).send({ tipo: 'egreso', concepto: 'combustible', monto: 80 }).expect(400);
+      const e = (await http().post('/api/finance/movements').set(tec()).send({ tipo: 'egreso', concepto: 'combustible', monto: 80, pagadoPor: 'empleado', nota: 'Viaje E2E' }).expect(201)).body;
+      expect(e).toMatchObject({ estado: 'por_validar', reembolsoPendiente: true });
+      const mine = (await http().get('/api/finance/movements').set(tec()).expect(200)).body;
+      expect(mine.every((r: { registradoPor: { id: string } }) => r.registradoPor.id === tecId)).toBe(true);
+      await http().post(`/api/finance/movements/${e.id}/observar`).set(admin()).send({}).expect(400);
+      await http().post(`/api/finance/movements/${e.id}/observar`).set(admin()).send({ motivo: 'Falta factura' }).expect(201);
+      const fixed = (await http().patch(`/api/finance/movements/${e.id}`).set(tec()).send({ monto: 85, nota: 'Con factura' }).expect(200)).body;
+      expect(fixed).toMatchObject({ estado: 'por_validar', motivo: null });
+      await http().post(`/api/finance/movements/${e.id}/validar`).set(admin()).send({ cajaId: 'caja_central' }).expect(201);
+      const refunded = (await http().post(`/api/finance/movements/${e.id}/reembolsar`).set(admin()).expect(201)).body;
+      expect(refunded.reembolsoPendiente).toBe(false);
+      await http().post(`/api/finance/movements`).set(tec()).send({ tipo: 'ingreso', concepto: 'otro', monto: 10 }).expect(403);
+      await http().post(`/api/finance/movements`).set(ventas()).send({ tipo: 'ingreso', concepto: 'cobro', monto: 10 }).expect(400);
+    });
+
+    it('transfers between boxes are Gerencia only and move both balances', async () => {
+      const body = { tipo: 'transferencia', concepto: 'deposito', monto: 50, cajaId: 'caja_central', cajaDestinoId: 'caja_chica_punata', sucursalId: 'suc_central' };
+      await http().post('/api/finance/movements').set(ventas()).send(body).expect(403);
+      const [central, punata] = [await box('caja_central'), await box('caja_chica_punata')];
+      await http().post('/api/finance/movements').set(admin()).send(body).expect(201);
+      expect(await box('caja_central')).toBeCloseTo(central - 50, 2);
+      expect(await box('caja_chica_punata')).toBeCloseTo(punata + 50, 2);
+    });
+
+    it('project expenses are its cost; only Gerencia changes the official amount; a técnico pays only on his projects', async () => {
+      const q = (await http().post('/api/quotations').set(ventas())
+        .send({ titulo: `E2E FIN ${Date.now()}`, categoriaId: 'computo_comunicacion', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 2000 }).expect(201)).body;
+      await http().post(`/api/quotations/${q.id}/files`).set(ventas()).attach('file', Buffer.from('%PDF-1.4 e2e'), 'c.pdf').expect(201);
+      await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
+      const id = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
+      await http().post('/api/finance/movements').set(ventas()).send({ tipo: 'egreso', concepto: 'material', monto: 600, pagadoPor: 'empresa', projectId: id }).expect(201);
+      const p = (await http().get(`/api/projects/${id}`).set(ventas()).expect(200)).body;
+      expect(p).toMatchObject({ costo: 600, margen: 1400, saldo: 2000 });
+      expect(p.gastos).toHaveLength(1);
+      await http().patch(`/api/projects/${id}/monto`).set(ventas()).send({ montoOficial: 2500, motivo: 'Ampliación' }).expect(400);
+      await http().patch(`/api/projects/${id}/monto`).set(admin()).send({ montoOficial: 2500 }).expect(400);
+      const bigger = (await http().patch(`/api/projects/${id}/monto`).set(admin()).send({ montoOficial: 2500, motivo: 'Ampliación de puntos' }).expect(200)).body;
+      expect(bigger).toMatchObject({ saldo: 2500, margen: 1900 });
+      await http().post(`/api/projects/${id}/cobros`).set(tec()).send({ concepto: 'cobro', monto: 100 }).expect(403);
+      const job = bigger.trabajos[0];
+      await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ tecnicoId: tecId }).expect(200);
+      const paid = (await http().post(`/api/projects/${id}/cobros`).set(tec()).send({ concepto: 'cobro', monto: 100 }).expect(201)).body;
+      expect(paid).toMatchObject({ cobrado: 100, porValidar: 100, saldo: 2400 });
     });
   });
 
@@ -430,24 +525,27 @@ describe('hs-erp API (e2e)', () => {
       expect(again.body.alreadyConverted).toBe(true);
       const list = await request(app.getHttpServer()).get('/api/schedules').query({ quotationId: quoteId }).set(auth()).expect(200);
       expect(list.body).toHaveLength(1);
-      expect(Number(list.body[0].monto)).toBe(1000);
-      expect(Number(list.body[0].saldo)).toBe(1000);
+      expect(Number(list.body[0].monto)).toBe(0); // the money lives in the project (FIN-01)
+      expect(list.body[0].projectId).toBeTruthy();
       expect(again.body.schedule.id).toBe(list.body[0].id);
       expect(list.body[0].categoria).toEqual({ id: 'cableado_estructurado', label: 'Cableado estructurado' });
       scheduleId = list.body[0].id;
     });
 
-    it('keeps the balance in the API: cobros, adicional, overpayment and descuento', async () => {
+    it('books a payment taken on a project job in the project ledger (FIN-01)', async () => {
       const pay = (body: object, status = 201) =>
         request(app.getHttpServer()).post(`/api/schedules/${scheduleId}/payments`).set(auth()).send(body).expect(status);
-      expect(Number((await pay({ tipo: 'adelanto', monto: 400 })).body.saldo)).toBe(600);
+      const job = (await pay({ tipo: 'adelanto', monto: 400 })).body;
+      expect(Number(job.saldo)).toBe(0); // a project job owes nothing itself
+      const project = (await request(app.getHttpServer()).get(`/api/projects/${job.projectId}`).set(auth()).expect(200)).body;
+      expect(project).toMatchObject({ cobrado: 400, porValidar: 400, saldo: 600 });
       const over = await pay({ tipo: 'cobro', monto: 700 }, 400);
       expect(over.body.message).toContain('supera el saldo pendiente (600)');
-      expect(Number((await pay({ tipo: 'extra_asistencia', monto: 50, nota: 'Material extra' })).body.saldo)).toBe(600);
-      const last = await pay({ tipo: 'descuento', monto: 600, nota: 'Saldo perdonado' });
-      expect(Number(last.body.saldo)).toBe(0);
-      expect(Number(last.body.adelanto)).toBe(1000);
-      expect(last.body.payments).toHaveLength(3);
+      await pay({ tipo: 'extra_asistencia', monto: 50, nota: 'Material extra' });
+      await pay({ tipo: 'descuento', monto: 600 }, 400);
+      const after = (await request(app.getHttpServer()).get(`/api/projects/${job.projectId}`).set(auth()).expect(200)).body;
+      expect(after).toMatchObject({ cobrado: 400, adicionales: 50, saldo: 600 });
+      expect(after.cobros).toHaveLength(2);
     });
 
     it('records who changed which field, with the value before (ARCH-01)', async () => {
@@ -464,7 +562,7 @@ describe('hs-erp API (e2e)', () => {
 
     it('does not change the official amount of a project', async () => {
       const res = await request(app.getHttpServer()).patch(`/api/schedules/${scheduleId}`).set(auth()).send({ monto: 1200 }).expect(400);
-      expect(res.body.message).toContain('no se modifica');
+      expect(res.body.message).toContain('El monto es del proyecto');
     });
 
     it('keeps relevamientos away from users without access', async () => {

@@ -23,6 +23,15 @@ async function main() {
     });
   }
 
+  // Cash boxes (FIN-01): central box in Cochabamba, petty cash per branch.
+  for (const b of BRANCHES) {
+    const central = b.id === 'suc_central';
+    const id = central ? 'caja_central' : `caja_chica_${b.id.replace('suc_', '')}`;
+    const box = { nombre: central ? 'Caja central Cochabamba' : `Caja chica ${b.nombre}`, tipo: central ? 'caja' : 'caja_chica', sucursalId: b.id };
+    await prisma.cashBox.upsert({ where: { id }, update: box, create: { id, ...box } });
+  }
+  const boxOf = (sucursalId: string) => (sucursalId === 'suc_central' ? 'caja_central' : `caja_chica_${sucursalId.replace('suc_', '')}`);
+
   for (const row of USERS) {
     const passwordHash = await bcrypt.hash(passwordFor(row.email), 10);
     const { id, localOnly: _localOnly, ...rest } = row;
@@ -229,15 +238,12 @@ async function main() {
     ] },
   ];
   for (const job of jobs) {
-    const paid = job.payments.reduce((sum, p) => sum + p.monto, 0);
     const data = {
       categoriaId: job.categoriaId,
       clienteId: job.clienteId,
       lugar: 'Dirección demo',
       descripcionTrabajo: job.descripcionTrabajo,
       monto: job.monto,
-      adelanto: Math.min(paid, job.monto),
-      saldo: Math.max(job.monto - paid, 0),
       fechaProgramada: at(job.day),
       horario: '09:00–12:00',
       estado: job.estado,
@@ -249,17 +255,34 @@ async function main() {
       ...(job.estado === 'terminado' ? { fechaFinalizacion: at(job.day, 17) } : {}),
     };
     await prisma.schedule.upsert({ where: { id: job.id }, update: data, create: { id: job.id, ...data } });
+    // Payments are validated incomes of the ledger, in the branch's box.
     for (const p of job.payments) {
-      const row = { scheduleId: job.id, tipo: p.tipo, monto: p.monto, metodo: p.metodo, cobradoPorId: 'usr_ventas', at: at(job.day) };
-      await prisma.schedulePayment.upsert({ where: { id: p.id }, update: row, create: { id: p.id, ...row } });
+      const row = {
+        tipo: 'ingreso',
+        concepto: p.tipo === 'extra_asistencia' ? 'adicional' : p.tipo,
+        monto: p.monto,
+        metodo: p.metodo,
+        fecha: at(job.day),
+        estado: 'validado',
+        scheduleId: job.id,
+        clienteId: job.clienteId,
+        sucursalId: job.sucursalId,
+        cajaId: boxOf(job.sucursalId),
+        registradoPorId: 'usr_ventas',
+        validadoPorId: 'usr_admin',
+        validadoAt: at(job.day),
+      };
+      await prisma.cashMovement.upsert({ where: { id: p.id }, update: row, create: { id: p.id, ...row } });
     }
   }
   // Pago del trabajo sembrado originalmente (sch_andina: adelanto 5000).
-  await prisma.schedulePayment.upsert({
-    where: { id: 'pay_an_1' },
-    update: {},
-    create: { id: 'pay_an_1', scheduleId: 'sch_andina', tipo: 'adelanto', monto: 5000, metodo: 'transferencia', cobradoPorId: 'usr_ventas' },
-  });
+  const andina = { tipo: 'ingreso', concepto: 'adelanto', monto: 5000, metodo: 'transferencia', estado: 'validado', scheduleId: 'sch_andina', clienteId: 'cli_andina', sucursalId: 'suc_central', cajaId: 'caja_central', registradoPorId: 'usr_ventas', validadoPorId: 'usr_admin', validadoAt: new Date() };
+  await prisma.cashMovement.upsert({ where: { id: 'pay_an_1' }, update: andina, create: { id: 'pay_an_1', ...andina } });
+  // Pending validation and an employee's expense, so the rendición inbox and refunds have rows.
+  const pending = { tipo: 'ingreso', concepto: 'cobro', monto: 300, metodo: 'efectivo', estado: 'por_validar', scheduleId: 'sch_terminado_deuda', clienteId: 'cli_mall', sucursalId: 'suc_quillacollo', registradoPorId: 'usr_tecnico' };
+  await prisma.cashMovement.upsert({ where: { id: 'mov_por_validar' }, update: pending, create: { id: 'mov_por_validar', ...pending } });
+  const fuel = { tipo: 'egreso', concepto: 'combustible', monto: 120, metodo: 'efectivo', estado: 'por_validar', pagadoPor: 'empleado', sucursalId: 'suc_central', registradoPorId: 'usr_tecnico', nota: 'Viaje a Punata' };
+  await prisma.cashMovement.upsert({ where: { id: 'mov_combustible' }, update: fuel, create: { id: 'mov_combustible', ...fuel } });
 
   // Visitas/relevamientos en cada estado.
   const visitas = ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'];
@@ -322,7 +345,9 @@ async function main() {
         responsableId: q.vendedorId,
       },
     });
-    await prisma.schedule.updateMany({ where: { quotationId: q.id }, data: { projectId: project.id } });
+    await prisma.schedule.updateMany({ where: { quotationId: q.id }, data: { projectId: project.id, monto: 0, adelanto: 0, saldo: 0 } });
+    const jobs = await prisma.schedule.findMany({ where: { projectId: project.id }, select: { id: true } });
+    await prisma.cashMovement.updateMany({ where: { scheduleId: { in: jobs.map((j) => j.id) } }, data: { projectId: project.id } });
   }
 
   console.log('Seed OK — users from config/users.json (password: config/users.passwords.local.json, else lowercase first name)');

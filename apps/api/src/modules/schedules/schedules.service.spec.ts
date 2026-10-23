@@ -17,7 +17,8 @@ describe('SchedulesService', () => {
   };
   const audit = { record: jest.fn(), log: jest.fn() };
   const categories = { assertDivision: jest.fn() };
-  const service = new SchedulesService(prisma as never, audit as never, categories as never);
+  const income = { register: jest.fn() };
+  const service = new SchedulesService(prisma as never, audit as never, categories as never, income as never);
 
   const admin = {
     id: 'usr_admin',
@@ -34,8 +35,9 @@ describe('SchedulesService', () => {
       id: 'sch_1',
       estado: 'terminado',
       monto: 100,
-      adelanto: 0,
       clienteId: 'cli_1',
+      projectId: null,
+      movements: [],
     });
     await expect(
       service.update('sch_1', { estado: 'programado' }, admin),
@@ -46,6 +48,7 @@ describe('SchedulesService', () => {
     prisma.client.findUnique.mockResolvedValue({ id: 'cli_1', direccion: 'X' });
     prisma.sucursal.findUnique.mockResolvedValue({ id: 'suc_central' });
     prisma.schedule.create.mockResolvedValue({ id: 'sch_new', clienteId: 'cli_1' });
+    prisma.schedule.findFirst.mockResolvedValue({ id: 'sch_new', projectId: null, monto: 1000, estado: 'programado', movements: [] });
     const row = await service.create(
       {
         categoriaId: 'seguridad_electronica',
@@ -61,6 +64,7 @@ describe('SchedulesService', () => {
     );
     expect(row.id).toBe('sch_new');
     expect(categories.assertDivision).toHaveBeenCalledWith('seguridad_electronica');
+    expect(income.register).toHaveBeenCalledWith({ scheduleId: 'sch_new' }, expect.objectContaining({ concepto: 'adelanto', monto: 200 }), admin, 'sess_1');
     expect(prisma.touchClientActivity).toHaveBeenCalledWith('cli_1');
     expect(audit.record).toHaveBeenCalled();
   });
