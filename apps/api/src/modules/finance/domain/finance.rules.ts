@@ -5,7 +5,7 @@ import type { TransitionCheck } from '../../../common/domain/state-machine';
 
 export const MOVEMENT_TIPOS = ['ingreso', 'egreso', 'transferencia'] as const;
 
-export const CONCEPTOS: Record<string, readonly string[]> = {
+const CONCEPTOS: Record<string, readonly string[]> = {
   ingreso: ['adelanto', 'cobro', 'adicional', 'venta_directa', 'otro'],
   egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'otro'],
   transferencia: ['deposito', 'retiro'],
@@ -20,7 +20,6 @@ const MOVEMENT_FLOW: Record<string, readonly string[]> = {
 };
 
 export const MOVEMENT_ESTADOS = Object.keys(MOVEMENT_FLOW);
-export const CASH_BOX_TIPOS = ['caja', 'caja_chica', 'banco', 'qr'] as const;
 
 /** Money received against the official amount (an "adicional" is charged on top and does not reduce the balance). */
 const BUDGET_INCOME = ['adelanto', 'cobro'];

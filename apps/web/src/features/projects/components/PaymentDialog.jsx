@@ -12,12 +12,12 @@ const METHODS = ['efectivo', 'transferencia', 'QR', 'tarjeta', 'otro'];
 /** Register a payment of a project. The API rejects a cobro above the balance (the excess is an "adicional"). */
 export function PaymentDialog({ project, open, onOpenChange }) {
   const pay = useRegisterProjectPayment();
-  const [form, setForm] = useState({ tipo: 'cobro', monto: '', metodo: 'efectivo', nota: '' });
+  const [form, setForm] = useState({ concepto: 'cobro', monto: '', metodo: 'efectivo', nota: '' });
   useEffect(() => {
-    if (open) setForm({ tipo: project.cobrado > 0 ? 'cobro' : 'adelanto', monto: '', metodo: 'efectivo', nota: '' });
+    if (open) setForm({ concepto: project.cobrado > 0 ? 'cobro' : 'adelanto', monto: '', metodo: 'efectivo', nota: '' });
   }, [open, project.cobrado]);
 
-  const reducesBalance = form.tipo !== 'extra_asistencia';
+  const reducesBalance = form.concepto !== 'adicional';
   const monto = Number(form.monto);
   const error = !(monto > 0) ? 'Ingresa el monto' : reducesBalance && monto > project.saldo ? `Supera el saldo (${formatBs(project.saldo)}): registra el excedente como adicional` : null;
 
@@ -25,8 +25,8 @@ export function PaymentDialog({ project, open, onOpenChange }) {
     e.preventDefault();
     if (error) return notify.error(error);
     try {
-      await pay.mutateAsync({ id: project.id, tipo: form.tipo, monto, metodo: form.metodo, nota: form.nota || undefined });
-      notify.success(`${form.tipo === 'extra_asistencia' ? 'Adicional' : 'Cobro'} de ${formatBs(monto)} registrado`);
+      await pay.mutateAsync({ id: project.id, concepto: form.concepto, monto, metodo: form.metodo, nota: form.nota || undefined });
+      notify.success(`${form.concepto === 'adicional' ? 'Adicional' : 'Cobro'} de ${formatBs(monto)} registrado: queda por validar`);
       onOpenChange(false);
     } catch {
       /* shown by the query client */
@@ -42,8 +42,8 @@ export function PaymentDialog({ project, open, onOpenChange }) {
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tipo">
-            {[['adelanto', 'Adelanto'], ['cobro', 'Cobro'], ['extra_asistencia', 'Adicional']].map(([key, label]) => (
-              <Button key={key} type="button" role="radio" aria-checked={form.tipo === key} variant={form.tipo === key ? 'default' : 'outline'} onClick={() => setForm({ ...form, tipo: key })}>
+            {[['adelanto', 'Adelanto'], ['cobro', 'Cobro'], ['adicional', 'Adicional']].map(([key, label]) => (
+              <Button key={key} type="button" role="radio" aria-checked={form.concepto === key} variant={form.concepto === key ? 'default' : 'outline'} onClick={() => setForm({ ...form, concepto: key })}>
                 {label}
               </Button>
             ))}

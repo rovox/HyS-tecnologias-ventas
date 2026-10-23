@@ -40,6 +40,7 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 | S5 | ventas | Project: advance + payment, new job, deliver (jobs done), close (no debt) | Balance from the API, refused transitions explain why, other tab updates live (`node scripts/smoke-projects.mjs`) |
 | S6 | técnico/admin | Create internal order → approve → deliver | Status flow respected |
 | S7 | técnico | Try `/quotations`, `/reports` | Redirected; API returns 403 |
+| S9 | técnico, admin, ventas | Expense paid by the técnico → observed → corrected → validated into a box → refunded; a project payment reaches the admin inbox live | `node scripts/smoke-finance.mjs` |
 | S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)
