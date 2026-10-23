@@ -1,11 +1,5 @@
 import { apiClient, authToken } from '@/api/http.js';
 
-/** The API computes the balance from the payments; the web only reads it. */
-export function calculateBalance(trabajo) {
-  const saldo = Number(trabajo?.saldo ?? 0);
-  return { saldo, estado_pago: saldo <= 0 ? 'Pagado' : 'Pendiente' };
-}
-
 function mapApiSchedule(row) {
   if (!row) return row;
   const monto = Number(row.monto ?? 0);
@@ -48,7 +42,7 @@ function mapApiSchedule(row) {
   };
 }
 
-export const schedulesService = {
+const schedulesService = {
   async getAll(filters = {}) {
     const rows = await apiClient.get('schedules', {
       token: authToken(),

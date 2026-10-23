@@ -48,11 +48,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const openActivity = () => {
-    window.dispatchEvent(new CustomEvent('hs-open-activity'));
-    handleLinkClick();
-  };
-
   const linkClass = ({ isActive }) =>
     cn(
       'flex items-center gap-3 px-3 min-h-11 rounded-xl text-sm font-semibold transition-colors',
@@ -156,20 +151,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             </div>
                           ) : null}
                         </div>
-                      );
-                    }
-
-                    if (item.action === 'open-activity') {
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={openActivity}
-                          className="w-full flex items-center gap-3 px-3 min-h-11 rounded-xl text-sm font-semibold text-primary-foreground/80 hover:text-white hover:bg-white/10 transition-colors"
-                        >
-                          {item.icon ? <item.icon className="h-5 w-5 shrink-0" /> : null}
-                          <span className="truncate">{item.label}</span>
-                        </button>
                       );
                     }
 

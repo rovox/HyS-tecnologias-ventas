@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
-import schedulesService, { calculateBalance } from '@/services/schedules/index.js';
+import schedulesService from '@/services/schedules/index.js';
 import clientsService from '@/services/clients/index.js';
 import { reportLoadError } from '@/lib/loadError.js';
 
-export { calculateBalance };
 
 export const useSchedules = () => {
   const [loading, setLoading] = useState(false);

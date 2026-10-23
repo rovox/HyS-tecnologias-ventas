@@ -6,6 +6,10 @@
 
 @layer base {
   :root {
+    /* The 3 divisions (CAT-01): one hue each for the cronograma and charts. */
+    --division-computo: 199 89% 38%;
+    --division-seguridad: 262 52% 47%;
+    --division-cableado: 28 90% 42%;
     --background: 228 100% 99%;
     --foreground: 213 61% 12%;
     
@@ -92,6 +96,9 @@
   }
 
   .dark {
+    --division-computo: 199 89% 58%;
+    --division-seguridad: 262 70% 70%;
+    --division-cableado: 28 90% 60%;
     --background: 220 100% 10%;
     --foreground: 0 0% 100%;
     

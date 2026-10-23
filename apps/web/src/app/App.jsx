@@ -25,7 +25,7 @@ const ProjectsPage = lazy(() => import('@/features/projects').then((m) => ({ def
 const ProjectDetailPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectDetailPage })));
 const FinancePage = lazy(() => import('@/features/finance').then((m) => ({ default: m.FinancePage })));
 const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
-const ScheduleWorkPage = lazy(() => import('@/pages/ScheduleWorkPage.jsx'));
+const SchedulePage = lazy(() => import('@/features/schedule').then((m) => ({ default: m.SchedulePage })));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
 const PedidoInternoDetailPage = lazy(() => import('@/pages/PedidoInternoDetailPage.jsx'));
@@ -118,7 +118,7 @@ function App() {
 
             <Route path="/schedule" element={
               <ProtectedRoute allowedRoles={routeRoles.schedule}>
-                <ScheduleWorkPage />
+                <SchedulePage />
               </ProtectedRoute>
             } />
 
