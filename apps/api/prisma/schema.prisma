@@ -20,6 +20,8 @@ model Sucursal {
   schedules     Schedule[]
   pedidosOrigen PedidoInterno[] @relation("SucursalPedidosOrigen")
   projects      Project[]
+  cashBoxes     CashBox[]
+  movements     CashMovement[]
 
   @@map("sucursales")
 }
@@ -52,6 +54,8 @@ model User {
   comentariosPedidos  PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
   quotationsDeleted   Quotation[]               @relation("QuotationsDeleted")
   projectsResponsable Project[]                 @relation("ProjectResponsable")
+  movementsRegistered CashMovement[]            @relation("MovementRegisteredBy")
+  movementsValidated  CashMovement[]            @relation("MovementValidatedBy")
 
   @@index([sucursalId])
   @@map("users")
@@ -110,6 +114,7 @@ model Client {
   schedules      Schedule[]
   tasks          Task[]
   projects       Project[]
+  movements      CashMovement[]
 
   @@index([sucursalId])
   @@index([nombre])
@@ -303,6 +308,7 @@ model Schedule {
   updatedAt          DateTime          @updatedAt
   tasks              Task[]
   payments           SchedulePayment[]
+  movements          CashMovement[]
 
   @@index([fechaProgramada])
   @@index([sucursalId, estado])
@@ -509,9 +515,76 @@ model Project {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   schedules       Schedule[]
+  movements       CashMovement[]
 
   @@index([estado])
   @@index([clienteId])
   @@index([categoriaId])
   @@map("projects")
+}
+
+/// Where validated money is (FIN-01): central box in Cochabamba, petty cash per branch; banks and QR later.
+model CashBox {
+  id         String         @id @db.VarChar(64)
+  nombre     String         @db.VarChar(120)
+  /// caja | caja_chica | banco | qr
+  tipo       String         @db.VarChar(32)
+  sucursalId String
+  sucursal   Sucursal       @relation(fields: [sucursalId], references: [id])
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  movements  CashMovement[] @relation("CashBoxOrigin")
+  incoming   CashMovement[] @relation("CashBoxDestination")
+
+  @@map("cash_boxes")
+}
+
+/// The single money ledger (FIN-01): ingreso | egreso | transferencia, validated into a cash box (rendición).
+model CashMovement {
+  id              String        @id @default(uuid())
+  tipo            String        @db.VarChar(16)
+  concepto        String        @db.VarChar(40)
+  monto           Decimal       @db.Decimal(12, 2)
+  fecha           DateTime      @default(now())
+  metodo          String        @default("") @db.VarChar(40)
+  nota            String        @default("") @db.VarChar(500)
+  /// por_validar → validado | observado | anulado (domain/finance.rules.ts).
+  estado          String        @default("por_validar") @db.VarChar(16)
+  motivo          String?       @db.Text
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id])
+  scheduleId      String?
+  schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
+  clienteId       String?
+  cliente         Client?       @relation(fields: [clienteId], references: [id])
+  cajaId          String?       @db.VarChar(64)
+  caja            CashBox?      @relation("CashBoxOrigin", fields: [cajaId], references: [id])
+  cajaDestinoId   String?       @db.VarChar(64)
+  cajaDestino     CashBox?      @relation("CashBoxDestination", fields: [cajaDestinoId], references: [id])
+  /// Expenses only: empresa | empleado (an employee's expense is refunded later).
+  pagadoPor       String?       @db.VarChar(16)
+  reembolsadoAt   DateTime?
+  comprobanteUrl  String?       @db.VarChar(500)
+  /// Validated movement this one reverses (a validated movement is never edited).
+  reversaDeId     String?       @unique
+  reversaDe       CashMovement? @relation("Reversal", fields: [reversaDeId], references: [id])
+  reversa         CashMovement? @relation("Reversal")
+  sucursalId      String
+  sucursal        Sucursal      @relation(fields: [sucursalId], references: [id])
+  registradoPorId String
+  registradoPor   User          @relation("MovementRegisteredBy", fields: [registradoPorId], references: [id])
+  validadoPorId   String?
+  validadoPor     User?         @relation("MovementValidatedBy", fields: [validadoPorId], references: [id])
+  validadoAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([estado])
+  @@index([projectId])
+  @@index([scheduleId])
+  @@index([clienteId])
+  @@index([cajaId])
+  @@index([fecha])
+  @@map("cash_movements")
 }
