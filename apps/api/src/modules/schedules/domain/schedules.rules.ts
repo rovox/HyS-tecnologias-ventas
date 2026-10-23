@@ -15,6 +15,12 @@ export function checkScheduleTransition(from: string, to: string): TransitionChe
   return { ok: true };
 }
 
+/** A job from a quotation has the quotation's division: it cannot be changed on the job. */
+export function categoryChangeError(current: { quotationId?: string | null; categoriaId: string }, requested?: string): string | null {
+  if (requested === undefined || requested === current.categoriaId || !current.quotationId) return null;
+  return 'La categoría de un trabajo de cotización es la de la cotización';
+}
+
 /** Payment types that reduce the balance: money received against the budget, or forgiven debt (descuento). */
 const BUDGET_TIPOS = ['adelanto', 'cobro', 'descuento'] as const;
 export const PAYMENT_TIPOS = [...BUDGET_TIPOS, 'extra_asistencia'] as const;

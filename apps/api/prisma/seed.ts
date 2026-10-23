@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { USERS, passwordFor } from '../../../config/users';
+import { DIVISIONS } from '../src/modules/categories/domain/categories.rules';
 
 const prisma = new PrismaClient();
 
@@ -32,6 +33,15 @@ async function main() {
     });
   }
 
+  // The 3 divisions (CAT-01): every quotation, job, project and product has one.
+  for (const row of DIVISIONS) {
+    await prisma.quotationCategory.upsert({
+      where: { id: row.id },
+      update: { label: row.label, sortOrder: row.sortOrder, active: true, principal: true },
+      create: { ...row, active: true, principal: true },
+    });
+  }
+
   const clients = [
     { id: 'cli_andina', nombre: 'Comercial Andina SRL', tipo: 'Seguridad Electrónica', contacto: 'Patricia Nieto', direccion: 'Av. Arce 2450, La Paz', sucursalId: 'suc_central' },
     { id: 'cli_hospital', nombre: 'Clínica Horizonte', tipo: 'Proyectos', contacto: 'Dr. Iván Paz', direccion: 'Punata centro', sucursalId: 'suc_punata' },
@@ -47,18 +57,17 @@ async function main() {
 
   await prisma.quotation.upsert({
     where: { numero: 'COT-080426' },
-    update: { estado: 'aceptado', sucursalId: 'suc_central', sucursalNombre: 'Central' },
+    update: { estado: 'aprobado', sucursalId: 'suc_central', sucursalNombre: 'Central' },
     create: {
       id: 'quo_andina',
       numero: 'COT-080426',
       titulo: 'CCTV 16 canales — Comercial Andina',
-      categoria: 'Seguridad Electrónica',
       categoriaId: 'seguridad_electronica',
       subcategoria: 'Instalaciones',
       sucursalId: 'suc_central',
       sucursalNombre: 'Central',
       clienteId: 'cli_andina',
-      estado: 'aceptado',
+      estado: 'aprobado',
       monto: 18500,
       vendedorId: 'usr_ventas',
       sellers: { create: [{ userId: 'usr_ventas', nombre: 'Dennis', commissionPct: 100 }] },
@@ -84,7 +93,7 @@ async function main() {
     },
     create: {
       id: 'sch_andina',
-      type: 'seguridad',
+      categoriaId: 'seguridad_electronica',
       clienteId: 'cli_andina',
       lugar: 'Av. Arce 2450, La Paz',
       descripcionTrabajo: 'Instalación CCTV 16 canales según COT-080426',
@@ -107,7 +116,7 @@ async function main() {
     update: { estado: 'programado', tecnicoId: 'usr_tecnico' },
     create: {
       id: 'sch_mall',
-      type: 'seguridad',
+      categoriaId: 'seguridad_electronica',
       clienteId: 'cli_mall',
       lugar: 'Av. Juan Pablo II, El Alto',
       descripcionTrabajo: 'Mantenimiento DVR y recambio de 4 cámaras',
@@ -152,19 +161,6 @@ async function main() {
     });
   }
 
-  const categories = [
-    { id: 'seguridad_electronica', label: 'Seguridad Electrónica', sortOrder: 1 },
-    { id: 'insumos_tecnologicos', label: 'Equipos y tecnología', sortOrder: 2 },
-    { id: 'proyectos', label: 'Proyectos', sortOrder: 3 },
-  ];
-  for (const row of categories) {
-    await prisma.quotationCategory.upsert({
-      where: { id: row.id },
-      update: { label: row.label, sortOrder: row.sortOrder, active: true },
-      create: { ...row, active: true },
-    });
-  }
-
   // ── Cobertura de estados (ENV-04): cotizaciones, trabajos, cobros, visitas ──
   const day = 24 * 60 * 60 * 1000;
   const at = (offsetDays: number, hour = 9) => {
@@ -174,7 +170,6 @@ async function main() {
   };
 
   const quoteBase = {
-    categoria: 'Seguridad Electrónica',
     categoriaId: 'seguridad_electronica',
     subcategoria: 'Instalaciones',
     sucursalId: 'suc_central',
@@ -183,14 +178,16 @@ async function main() {
   };
   const quotes = [
     { id: 'quo_borrador', numero: 'COT-SEED-001', titulo: 'Alarma perimetral — borrador', clienteId: 'cli_andina', estado: 'borrador', monto: 6200 },
-    { id: 'quo_enviado', numero: 'COT-SEED-002', titulo: 'Control de acceso biométrico — enviado', clienteId: 'cli_hospital', estado: 'enviado', monto: 9800, fechaEnvio: at(-3), archivoPdfUrl: 'seed/cotizacion-enviada.pdf' },
-    { id: 'quo_rechazado', numero: 'COT-SEED-003', titulo: 'Cableado estructurado — rechazado', clienteId: 'cli_mall', estado: 'rechazado', monto: 15400, motivoRechazo: 'Presupuesto fuera de rango (seed)' },
-    { id: 'quo_aceptado_2', numero: 'COT-SEED-004', titulo: 'Cámaras IP en depósito — aceptado', clienteId: 'cli_hospital', estado: 'aceptado', monto: 7300 },
+    { id: 'quo_enviado', numero: 'COT-SEED-002', titulo: 'Control de acceso biométrico — enviado', categoriaId: 'computo_comunicacion', subcategoria: 'Equipos', clienteId: 'cli_hospital', estado: 'enviado', monto: 9800, fechaEnvio: at(-3), archivoPdfUrl: 'seed/cotizacion-enviada.pdf' },
+    { id: 'quo_rechazado', numero: 'COT-SEED-003', titulo: 'Cableado estructurado — rechazado', categoriaId: 'cableado_estructurado', subcategoria: 'Redes/Datos', clienteId: 'cli_mall', estado: 'rechazado', monto: 15400, motivoRechazo: 'Presupuesto fuera de rango (seed)' },
+    { id: 'quo_aceptado_2', numero: 'COT-SEED-004', titulo: 'Cableado y cámaras IP en depósito — aprobado', categoriaId: 'cableado_estructurado', subcategoria: 'Redes/Datos', clienteId: 'cli_hospital', estado: 'aprobado', monto: 7300 },
+    { id: 'quo_vencido', numero: 'COT-SEED-005', titulo: 'Red WiFi oficinas — vencida', categoriaId: 'computo_comunicacion', subcategoria: 'Redes', clienteId: 'cli_mall', estado: 'vencido', monto: 4300, fechaEnvio: at(-20), archivoPdfUrl: 'seed/cotizacion-vencida.pdf' },
+    { id: 'quo_eliminado', numero: 'COT-SEED-006', titulo: 'Duplicado de alarma perimetral — eliminada', clienteId: 'cli_andina', estado: 'borrador', monto: 6200, eliminadaAt: at(-1), eliminadaPorId: 'usr_ventas', motivoEliminacion: 'Duplicada (seed)' },
   ];
   for (const q of quotes) {
     await prisma.quotation.upsert({
       where: { numero: q.numero },
-      update: { estado: q.estado },
+      update: { estado: q.estado, eliminadaAt: q.eliminadaAt ?? null },
       create: {
         ...quoteBase,
         ...q,
@@ -202,7 +199,7 @@ async function main() {
   // Trabajos en todos los estados + cobros de cada tipo. adelanto/saldo coinciden con la suma de sus pagos.
   type SeedJob = {
     id: string;
-    type: 'seguridad' | 'proyectos';
+    categoriaId: 'computo_comunicacion' | 'seguridad_electronica' | 'cableado_estructurado';
     clienteId: string;
     sucursalId: string;
     estado: 'programado' | 'en_proceso' | 'terminado' | 'cancelado';
@@ -213,28 +210,28 @@ async function main() {
     payments: { id: string; tipo: 'adelanto' | 'cobro' | 'extra_asistencia'; monto: number; metodo: string }[];
   };
   const jobs: SeedJob[] = [
-    { id: 'sch_terminado_pagado', type: 'seguridad', clienteId: 'cli_andina', sucursalId: 'suc_central', estado: 'terminado', descripcionTrabajo: 'Instalación DVR 8 canales (pagado completo)', monto: 3200, day: -10, payments: [
+    { id: 'sch_terminado_pagado', categoriaId: 'seguridad_electronica', clienteId: 'cli_andina', sucursalId: 'suc_central', estado: 'terminado', descripcionTrabajo: 'Instalación DVR 8 canales (pagado completo)', monto: 3200, day: -10, payments: [
       { id: 'pay_tp_1', tipo: 'adelanto', monto: 1000, metodo: 'efectivo' },
       { id: 'pay_tp_2', tipo: 'cobro', monto: 2200, metodo: 'transferencia' },
     ] },
-    { id: 'sch_terminado_deuda', type: 'seguridad', clienteId: 'cli_mall', sucursalId: 'suc_quillacollo', estado: 'terminado', descripcionTrabajo: 'Reubicación de cámaras (saldo pendiente)', monto: 2800, day: -6, payments: [
+    { id: 'sch_terminado_deuda', categoriaId: 'seguridad_electronica', clienteId: 'cli_mall', sucursalId: 'suc_quillacollo', estado: 'terminado', descripcionTrabajo: 'Reubicación de cámaras (saldo pendiente)', monto: 2800, day: -6, payments: [
       { id: 'pay_td_1', tipo: 'adelanto', monto: 800, metodo: 'efectivo' },
     ] },
-    { id: 'sch_terminado_extra', type: 'seguridad', clienteId: 'cli_hospital', sucursalId: 'suc_punata', estado: 'terminado', descripcionTrabajo: 'Asistencia técnica con visita adicional', monto: 1500, day: -4, payments: [
+    { id: 'sch_terminado_extra', categoriaId: 'seguridad_electronica', clienteId: 'cli_hospital', sucursalId: 'suc_punata', estado: 'terminado', descripcionTrabajo: 'Asistencia técnica con visita adicional', monto: 1500, day: -4, payments: [
       { id: 'pay_te_1', tipo: 'cobro', monto: 1500, metodo: 'efectivo' },
       { id: 'pay_te_2', tipo: 'extra_asistencia', monto: 300, metodo: 'efectivo' },
     ] },
-    { id: 'sch_cancelado', type: 'seguridad', clienteId: 'cli_andina', sucursalId: 'suc_central', estado: 'cancelado', descripcionTrabajo: 'Instalación cancelada por el cliente', monto: 2100, day: -2, payments: [
+    { id: 'sch_cancelado', categoriaId: 'seguridad_electronica', clienteId: 'cli_andina', sucursalId: 'suc_central', estado: 'cancelado', descripcionTrabajo: 'Instalación cancelada por el cliente', monto: 2100, day: -2, payments: [
       { id: 'pay_ca_1', tipo: 'adelanto', monto: 500, metodo: 'efectivo' },
     ] },
-    { id: 'sch_proyecto', type: 'proyectos', clienteId: 'cli_hospital', sucursalId: 'suc_punata', estado: 'programado', descripcionTrabajo: 'Proyecto cableado estructurado clínica', monto: 7300, day: 5, quotationId: 'quo_aceptado_2', payments: [
+    { id: 'sch_proyecto', categoriaId: 'cableado_estructurado', clienteId: 'cli_hospital', sucursalId: 'suc_punata', estado: 'programado', descripcionTrabajo: 'Proyecto cableado estructurado clínica', monto: 7300, day: 5, quotationId: 'quo_aceptado_2', payments: [
       { id: 'pay_pr_1', tipo: 'adelanto', monto: 2000, metodo: 'transferencia' },
     ] },
   ];
   for (const job of jobs) {
     const paid = job.payments.reduce((sum, p) => sum + p.monto, 0);
     const data = {
-      type: job.type,
+      categoriaId: job.categoriaId,
       clienteId: job.clienteId,
       lugar: 'Dirección demo',
       descripcionTrabajo: job.descripcionTrabajo,

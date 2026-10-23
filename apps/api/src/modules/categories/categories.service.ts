@@ -4,6 +4,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { assertCanMutateQuotes } from '../../common/policy/roles';
 import { CreateCategoryDto, PatchCategoryDto } from './dto/category.dto';
+import { chipChangeError, divisionError } from './domain/categories.rules';
 
 function slugify(label: string) {
   return label
@@ -23,11 +24,20 @@ export class CategoriesService {
     private readonly audit: AuditService,
   ) {}
 
+  /** Active categories: the 3 divisions first, then the subcategory chips. */
   list() {
     return this.prisma.quotationCategory.findMany({
       where: { active: true },
-      orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
+      orderBy: [{ principal: 'desc' }, { sortOrder: 'asc' }, { label: 'asc' }],
     });
+  }
+
+  /** Used by quotations and jobs: the category must be one of the active divisions (400 otherwise). */
+  async assertDivision(id: string | undefined | null) {
+    const row = id ? await this.prisma.quotationCategory.findUnique({ where: { id } }) : null;
+    const error = divisionError(row);
+    if (error) throw new BadRequestException(error);
+    return row!;
   }
 
   async create(dto: CreateCategoryDto, user: User, sessionId?: string) {
@@ -56,6 +66,8 @@ export class CategoriesService {
     assertCanMutateQuotes(user);
     const row = await this.prisma.quotationCategory.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Categoría no encontrada');
+    const fixed = chipChangeError(row);
+    if (fixed) throw new BadRequestException(fixed);
     if (dto.active === false || dto.active === undefined) {
       const updated = await this.prisma.quotationCategory.update({
         where: { id },

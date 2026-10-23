@@ -21,6 +21,12 @@ export class TasksController {
     return this.tasks.list(user, tipo);
   }
 
+  @Get('resumen')
+  @ApiOperation({ summary: 'Pending counters for the tasks badge (mine, unassigned, overdue)' })
+  summary(@CurrentUser() user: User) {
+    return this.tasks.summary(user);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get task by id' })
   get(@Param('id') id: string, @CurrentUser() user: User) {

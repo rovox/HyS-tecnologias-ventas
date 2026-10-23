@@ -102,7 +102,7 @@ export class ClientsService {
         || openSales > 0
         || row.schedules.some((s) => s.estado !== 'terminado' && s.estado !== 'cancelado');
       const esClienteContratado =
-        row.quotations.some((q) => q.estado === 'aceptado')
+        row.quotations.some((q) => q.estado === 'aprobado')
         || row.schedules.some((s) => s.estado !== 'cancelado');
       const { quotations: _q, schedules: _s, ...client } = row;
       return {

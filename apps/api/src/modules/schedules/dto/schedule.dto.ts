@@ -6,9 +6,10 @@ import { PAYMENT_TIPOS } from '../domain/schedules.rules';
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
 export class CreateScheduleDto {
-  @ApiProperty({ enum: ['seguridad', 'proyectos'] })
-  @IsIn(['seguridad', 'proyectos'])
-  type: string;
+  @ApiPropertyOptional({ description: 'One of the 3 divisions; taken from the quotation when quotationId is set' })
+  @IsOptional()
+  @IsString()
+  categoriaId?: string;
 
   @ApiProperty()
   @IsString()
@@ -89,6 +90,11 @@ export class CreateScheduleDto {
 }
 
 export class UpdateScheduleDto {
+  @ApiPropertyOptional({ description: 'One of the 3 divisions (not for jobs that come from a quotation)' })
+  @IsOptional()
+  @IsString()
+  categoriaId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

@@ -47,7 +47,8 @@ services:
       UPLOAD_DIR: /app/apps/api/uploads
       API_STRICT_DTO: "1"
     command: >
-      sh -c "pnpm --filter @hs-erp/api exec prisma migrate deploy
+      sh -c "pnpm --filter @hs-erp/api exec prisma generate
+      && pnpm --filter @hs-erp/api exec prisma migrate deploy
       && pnpm --filter @hs-erp/api exec prisma db seed
       && pnpm --filter @hs-erp/api dev"
     ports:

@@ -53,4 +53,3 @@ export const tasksService = {
   },
 };
 
-export default tasksService;

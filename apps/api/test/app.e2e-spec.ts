@@ -206,6 +206,132 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('mandatory division (CAT-01)', () => {
+    const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const base = { titulo: 'E2E categoría', clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 500 };
+
+    it('lists the 3 divisions first', async () => {
+      const res = await request(app.getHttpServer()).get('/api/categories').set(auth()).expect(200);
+      expect(res.body.filter((c: { principal: boolean }) => c.principal).map((c: { id: string }) => c.id)).toEqual([
+        'computo_comunicacion',
+        'seguridad_electronica',
+        'cableado_estructurado',
+      ]);
+    });
+
+    it('rejects a quotation without a division or with a subcategory chip', async () => {
+      await request(app.getHttpServer()).post('/api/quotations').set(auth()).send(base).expect(400);
+      const chip = await request(app.getHttpServer()).post('/api/categories').set(auth()).send({ label: `Chip ${Date.now()}` }).expect(201);
+      const res = await request(app.getHttpServer()).post('/api/quotations').set(auth()).send({ ...base, categoriaId: chip.body.id }).expect(400);
+      expect(res.body.message).toMatch(/principales/);
+    });
+
+    it('rejects a job without a division and keeps the divisions fixed', async () => {
+      const job = { clienteId: 'cli_andina', sucursalId: 'suc_central', descripcionTrabajo: 'E2E', fechaProgramada: '2026-11-02' };
+      await request(app.getHttpServer()).post('/api/schedules').set(auth()).send(job).expect(400);
+      const ok = await request(app.getHttpServer()).post('/api/schedules').set(auth()).send({ ...job, categoriaId: 'computo_comunicacion' }).expect(201);
+      expect(ok.body.categoriaId).toBe('computo_comunicacion');
+      await request(app.getHttpServer()).patch('/api/categories/seguridad_electronica').set(auth()).send({ active: false }).expect(400);
+    });
+  });
+
+  describe('quotation states, expiry, delete and restore (QUO-02)', () => {
+    const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const http = () => request(app.getHttpServer());
+    const create = async (extra: object = {}) =>
+      (await http().post('/api/quotations').set(auth())
+        .send({ titulo: `E2E QUO-02 ${Date.now()}`, categoriaId: 'computo_comunicacion', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 800, ...extra })
+        .expect(201)).body;
+    const attachPdf = (id: string) => http().post(`/api/quotations/${id}/files`).set(auth()).attach('file', Buffer.from('%PDF-1.4 e2e'), 'c.pdf').expect(201);
+    const ids = async (vista: string) => (await http().get('/api/quotations').query({ vista }).set(auth()).expect(200)).body.map((q: { id: string }) => q.id);
+
+    it('needs an amount above 0', async () => {
+      await http().post('/api/quotations').set(auth()).send({ titulo: 'x', categoriaId: 'computo_comunicacion', sucursalId: 'suc_central', monto: 0 }).expect(400);
+      await http().post('/api/quotations').set(auth()).send({ titulo: 'x', categoriaId: 'computo_comunicacion', sucursalId: 'suc_central' }).expect(400);
+    });
+
+    it('returns the allowed transitions and asks a reason to reject', async () => {
+      const q = await create();
+      expect(q.transicionesValidas).toEqual(['enviado']);
+      await attachPdf(q.id);
+      const sent = await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'enviado' }).expect(201);
+      expect(sent.body.transicionesValidas).toEqual(['aprobado', 'rechazado', 'borrador']);
+      expect(sent.body.venceEl).toBeTruthy();
+      await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'rechazado' }).expect(400);
+      const rejected = await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'rechazado', motivoRechazo: 'Precio' }).expect(201);
+      expect(rejected.body.motivoRechazo).toBe('Precio');
+      expect(await ids('cerradas')).toContain(q.id);
+      expect(await ids('abiertas')).not.toContain(q.id);
+      const reopened = await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'borrador' }).expect(201);
+      expect(reopened.body.motivoRechazo).toBeNull();
+    });
+
+    it('expires a quotation sent more than 15 days ago', async () => {
+      const q = await create();
+      await attachPdf(q.id);
+      const old = new Date(Date.now() - 20 * 24 * 3600 * 1000).toISOString();
+      await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'enviado', fechaEnvio: old }).expect(201);
+      expect(await ids('cerradas')).toContain(q.id);
+      const row = (await http().get(`/api/quotations/${q.id}`).set(auth()).expect(200)).body;
+      expect(row.estado).toBe('vencido');
+      expect(row.transicionesValidas).toEqual(['aprobado', 'borrador']);
+    });
+
+    it('deletes with a reason (kept in cerradas, read-only) and restores', async () => {
+      const q = await create();
+      await http().post(`/api/quotations/${q.id}/eliminar`).set(auth()).send({}).expect(400);
+      const del = await http().post(`/api/quotations/${q.id}/eliminar`).set(auth()).send({ motivo: 'Duplicada' }).expect(201);
+      expect(del.body.eliminadaAt).toBeTruthy();
+      expect(del.body.motivoEliminacion).toBe('Duplicada');
+      expect(del.body.transicionesValidas).toEqual([]);
+      expect(await ids('abiertas')).not.toContain(q.id);
+      expect(await ids('cerradas')).toContain(q.id);
+      await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ titulo: 'No' }).expect(400);
+      await http().post(`/api/quotations/${q.id}/restaurar`).set(auth()).expect(201);
+      expect(await ids('abiertas')).toContain(q.id);
+    });
+
+    it('keeps an approved quotation final: no delete, no reject, fixed amount', async () => {
+      const q = await create();
+      await attachPdf(q.id);
+      await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'enviado' }).expect(201);
+      const ok = await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'aprobado' }).expect(201);
+      expect(ok.body.proyectoId).toBeTruthy();
+      expect(ok.body.puedeEliminar).toBe(false);
+      await http().post(`/api/quotations/${q.id}/eliminar`).set(auth()).send({ motivo: 'x' }).expect(400);
+      await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'rechazado', motivoRechazo: 'x' }).expect(400);
+      await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ monto: 900 }).expect(400);
+      await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ titulo: 'Título nuevo' }).expect(200);
+    });
+  });
+
+  describe('minimal tasks and conversion to a quotation (TSK-01)', () => {
+    const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const http = () => request(app.getHttpServer());
+
+    it('counts my pending tasks and validates the state', async () => {
+      const before = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
+      const task = (await http().post('/api/tasks').set(auth()).send({ titulo: 'Llamar a la clínica', clienteId: 'cli_hospital', plazo: '2020-01-01' }).expect(201)).body;
+      expect(task.cliente).toEqual({ id: 'cli_hospital', nombre: 'Clínica Horizonte' });
+      const after = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
+      expect(after.mias).toBe(before.mias + 1);
+      expect(after.vencidas).toBe(before.vencidas + 1);
+      await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'hecha' }).expect(400);
+      await http().post('/api/tasks').set(auth()).send({ titulo: 'x', clienteId: 'no-existe' }).expect(400);
+    });
+
+    it('converts a pending task into a quotation once', async () => {
+      const task = (await http().post('/api/tasks').set(auth()).send({ titulo: 'Cotizar CCTV', clienteId: 'cli_mall' }).expect(201)).body;
+      const quote = { titulo: 'CCTV desde tarea', categoriaId: 'seguridad_electronica', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 1200, tareaId: task.id };
+      const created = (await http().post('/api/quotations').set(auth()).send(quote).expect(201)).body;
+      const linked = (await http().get(`/api/tasks/${task.id}`).set(auth()).expect(200)).body;
+      expect(linked.estado).toBe('completada');
+      expect(linked.quotation.id).toBe(created.id);
+      const again = await http().post('/api/quotations').set(auth()).send(quote).expect(400);
+      expect(again.body.message).toMatch(/ya tiene una cotización/);
+    });
+  });
+
   describe('quotation → project → payments (MVP-6)', () => {
     const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
     let quoteId = '';
@@ -215,7 +341,7 @@ describe('hs-erp API (e2e)', () => {
       const quote = await request(app.getHttpServer())
         .post('/api/quotations')
         .set(auth())
-        .send({ titulo: `E2E proyecto ${Date.now()}`, clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 1000 })
+        .send({ titulo: `E2E proyecto ${Date.now()}`, categoriaId: 'cableado_estructurado', clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 1000 })
         .expect(201);
       quoteId = quote.body.id;
       await request(app.getHttpServer())
@@ -227,8 +353,8 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('accepting through the status creates exactly one project with the quotation total', async () => {
-      const res = await request(app.getHttpServer()).post(`/api/quotations/${quoteId}/status`).set(auth()).send({ estado: 'aceptado' }).expect(201);
-      expect(res.body.estado).toBe('aceptado');
+      const res = await request(app.getHttpServer()).post(`/api/quotations/${quoteId}/status`).set(auth()).send({ estado: 'aprobado' }).expect(201);
+      expect(res.body.estado).toBe('aprobado');
       const again = await request(app.getHttpServer()).post(`/api/quotations/${quoteId}/accept`).set(auth()).send({}).expect(201);
       expect(again.body.alreadyConverted).toBe(true);
       const list = await request(app.getHttpServer()).get('/api/schedules').query({ quotationId: quoteId }).set(auth()).expect(200);
@@ -236,6 +362,7 @@ describe('hs-erp API (e2e)', () => {
       expect(Number(list.body[0].monto)).toBe(1000);
       expect(Number(list.body[0].saldo)).toBe(1000);
       expect(again.body.schedule.id).toBe(list.body[0].id);
+      expect(list.body[0].categoria).toEqual({ id: 'cableado_estructurado', label: 'Cableado estructurado' });
       scheduleId = list.body[0].id;
     });
 

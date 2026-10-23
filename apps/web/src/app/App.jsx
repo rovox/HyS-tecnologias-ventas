@@ -5,6 +5,10 @@ import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 import { routeRoles } from '@/config/nav.js';
 import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queryClient.js';
+import { RealtimeProvider } from './RealtimeProvider.jsx';
+import { ConfirmProvider } from '@/shared/views';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
@@ -16,7 +20,8 @@ const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
 const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
 const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
-const QuotationsLibraryPage = lazy(() => import('@/pages/QuotationsLibraryPage.jsx'));
+const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
+const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
 const ScheduleWorkPage = lazy(() => import('@/pages/ScheduleWorkPage.jsx'));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
@@ -45,7 +50,10 @@ function RouteFallback() {
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
+    <RealtimeProvider>
+    <ConfirmProvider>
       <Router>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -67,7 +75,12 @@ function App() {
 
             <Route path="/quotations" element={
               <ProtectedRoute allowedRoles={routeRoles.quotations}>
-                <QuotationsLibraryPage />
+                <QuotationsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/quotations/:id" element={
+              <ProtectedRoute allowedRoles={routeRoles.quotations}>
+                <QuotationDetailPage />
               </ProtectedRoute>
             } />
 
@@ -212,7 +225,10 @@ function App() {
         </Suspense>
         <Toaster position="top-center" richColors closeButton />
       </Router>
+    </ConfirmProvider>
+    </RealtimeProvider>
     </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -1,22 +1,24 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma, User } from '@prisma/client';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AcceptQuotationDto, CreateQuotationDto, UpdateQuotationDto } from './dto/quotation.dto';
-import { assertCanMutateQuotes, isTec, quotationWhere } from '../../common/policy/roles';
 import { AuditService } from '../../common/audit/audit.service';
-import { acceptError, checkQuotationTransition, projectFromQuotation } from './domain/quotations.rules';
+import { assertCanMutateQuotes, isTec, quotationWhere } from '../../common/policy/roles';
+import { CategoriesService } from '../categories';
+import { TasksService } from '../tasks';
+import { CreateQuotationDto, ListQuotationsQuery, UpdateQuotationDto } from './dto/quotation.dto';
+import { editError, vistaFilter } from './domain/quotations.rules';
+import { DETAIL, present } from './quotation.presenter';
+import { QuotationFlowService } from './quotation-flow.service';
 
-function uploadDir() {
-  return path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
-}
-
+/** Quotations: lists, detail, create and edit. State changes live in QuotationFlowService. */
 @Injectable()
 export class QuotationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly categories: CategoriesService,
+    private readonly flow: QuotationFlowService,
+    private readonly tasks: TasksService,
   ) {}
 
   private async nextNumero() {
@@ -45,27 +47,46 @@ export class QuotationsService {
     }
   }
 
-  list(filters: { estado?: string; vendedorId?: string; sucursalId?: string }, user: User) {
+  async list(filters: ListQuotationsQuery, user: User) {
     if (isTec(user)) throw new ForbiddenException('Sin acceso a cotizaciones');
-    return this.prisma.quotation.findMany({
+    await this.flow.expireOverdue();
+    const vista = vistaFilter(filters.vista);
+    const q = filters.q?.trim();
+    const rows = await this.prisma.quotation.findMany({
       where: {
         ...quotationWhere(user),
+        ...(vista && filters.vista === 'abiertas' ? { estado: { in: [...vista.estados] }, eliminadaAt: null } : {}),
+        ...(vista && filters.vista === 'cerradas'
+          ? { OR: [{ estado: { in: [...vista.estados] } }, { eliminadaAt: { not: null } }] }
+          : {}),
         ...(filters.estado ? { estado: filters.estado } : {}),
+        ...(filters.categoriaId ? { categoriaId: filters.categoriaId } : {}),
         ...(filters.vendedorId ? { vendedorId: filters.vendedorId } : {}),
         ...(filters.sucursalId ? { sucursalId: filters.sucursalId } : {}),
+        ...(filters.clienteId ? { clienteId: filters.clienteId } : {}),
+        ...(q
+          ? { AND: [{ OR: [{ numero: { contains: q } }, { titulo: { contains: q } }, { cliente: { nombre: { contains: q } } }] }] }
+          : {}),
       },
-      include: { sellers: true, cliente: true, sucursal: true, sale: true },
+      include: DETAIL,
       orderBy: { createdAt: 'desc' },
+      take: 500,
     });
+    return rows.map(present);
   }
 
-  async get(id: string, user?: User) {
+  /** Raw row with relations (internal use). */
+  async row(id: string, user?: User) {
     const row = await this.prisma.quotation.findFirst({
       where: { id, ...(user ? quotationWhere(user) : {}) },
-      include: { sellers: true, cliente: true, sucursal: true, sale: { include: { jobs: true, payments: true } } },
+      include: DETAIL,
     });
     if (!row) throw new NotFoundException('Cotización no encontrada');
     return row;
+  }
+
+  async get(id: string, user?: User) {
+    return present(await this.row(id, user));
   }
 
   async create(dto: CreateQuotationDto, user: User, sessionId?: string) {
@@ -77,6 +98,8 @@ export class QuotationsService {
     const sucursalId = dto.sucursalId || user.sucursalId;
     if (!sucursalId) throw new BadRequestException('Sucursal no válida');
     const sucursal = await this.requireSucursal(sucursalId);
+    await this.categories.assertDivision(dto.categoriaId);
+    if (dto.tareaId) await this.tasks.assertConvertible(dto.tareaId, user);
     const vendors = (dto.vendedores || []).filter((row) => row.userId);
     const resolvedVendors = vendors.length
       ? vendors
@@ -89,14 +112,13 @@ export class QuotationsService {
       data: {
         numero,
         titulo,
-        categoria: dto.categoria || 'Sin categoría',
-        categoriaId: dto.categoriaId || '',
+        categoriaId: dto.categoriaId,
         subcategoria: dto.subcategoria || '',
         sucursalId: sucursal.id,
         sucursalNombre: sucursal.nombre,
         clienteId: dto.clienteId || null,
         estado: 'borrador',
-        monto: dto.monto ?? 1,
+        monto: dto.monto,
         observacion: dto.observacion || '',
         archivo: dto.archivo || '',
         tieneLicitacion: Boolean(dto.tieneLicitacion),
@@ -112,50 +134,28 @@ export class QuotationsService {
           })),
         },
       },
-      include: { sellers: true, cliente: true, sucursal: true },
+      include: DETAIL,
     });
     await this.prisma.touchClientActivity(dto.clienteId);
     await this.audit.record({ user, sessionId, action: 'quotation.create', entity: 'quotation', id: quote.id, patch: { estado: quote.estado } });
-    return quote;
-  }
-
-  async updateStatus(id: string, estado: string, user: User, sessionId?: string, motivoRechazo?: string, fechaEnvio?: string) {
-    assertCanMutateQuotes(user);
-    const current = await this.get(id, user);
-    const transition = checkQuotationTransition(current.estado, estado, Boolean(current.archivoPdfUrl));
-    if (!transition.ok) throw new BadRequestException(transition.reason);
-    // One path to accept: the status change also creates the project.
-    if (estado === 'aceptado') return (await this.accept(id, {}, user, sessionId)).quotation;
-    const quote = await this.prisma.quotation.update({
-      where: { id },
-      data: {
-        estado,
-        ...(estado === 'rechazado' ? { motivoRechazo: motivoRechazo || current.motivoRechazo } : {}),
-        ...(fechaEnvio ? { fechaEnvio: new Date(fechaEnvio) } : {}),
-      },
-    });
-    await this.prisma.touchClientActivity(current.clienteId);
-    await this.audit.record({ user, sessionId, action: 'quotation.status', entity: 'quotation', id, patch: { estado } });
-    return quote;
+    if (dto.tareaId) await this.tasks.markConverted(dto.tareaId, quote.id, user, sessionId);
+    return present(quote);
   }
 
   async update(id: string, dto: UpdateQuotationDto, user: User, sessionId?: string) {
     assertCanMutateQuotes(user);
-    const current = await this.get(id, user);
+    const current = await this.row(id, user);
+    const blocked = editError(current, dto as Record<string, unknown>);
+    if (blocked) throw new BadRequestException(blocked);
+    if (dto.categoriaId !== undefined) await this.categories.assertDivision(dto.categoriaId);
     const vendors = dto.vendedores?.filter((row) => row.userId);
     if (vendors) {
       if (vendors.length === 0) throw new BadRequestException('Selecciona al menos un vendedor');
       this.assertCommission(vendors);
     }
     if (dto.clienteId && dto.clienteId !== current.clienteId) {
-      if (current.estado === 'aceptado' || current.estado === 'rechazado') {
-        throw new BadRequestException('No se puede cambiar el cliente de una cotización cerrada');
-      }
       const client = await this.prisma.client.findUnique({ where: { id: dto.clienteId } });
       if (!client) throw new BadRequestException('Cliente no encontrado');
-    }
-    if (dto.monto !== undefined && (current.estado === 'aceptado' || current.estado === 'rechazado')) {
-      throw new BadRequestException('No se puede cambiar el monto de una cotización cerrada');
     }
     const quote = await this.prisma.$transaction(async (tx) => {
       if (vendors) {
@@ -173,7 +173,6 @@ export class QuotationsService {
         where: { id },
         data: {
           ...(dto.titulo !== undefined ? { titulo: dto.titulo.trim() } : {}),
-          ...(dto.categoria !== undefined ? { categoria: dto.categoria } : {}),
           ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId } : {}),
           ...(dto.subcategoria !== undefined ? { subcategoria: dto.subcategoria || '' } : {}),
           ...(dto.monto !== undefined ? { monto: dto.monto } : {}),
@@ -186,7 +185,7 @@ export class QuotationsService {
           ...(dto.plazoFinal !== undefined ? { plazoFinal: dto.plazoFinal ? new Date(dto.plazoFinal) : null } : {}),
           ...(vendors ? { vendedorId: vendors[0].userId } : {}),
         },
-        include: { sellers: true, cliente: true, sucursal: true },
+        include: DETAIL,
       });
     });
     const finalClientId = dto.clienteId || current.clienteId;
@@ -201,114 +200,6 @@ export class QuotationsService {
       after: quote,
       patch: { estado: quote.estado },
     });
-    return quote;
-  }
-
-  async attachFile(id: string, file: { buffer?: Buffer; path?: string; originalname?: string }, user: User, sessionId?: string, kind = 'pdf') {
-    assertCanMutateQuotes(user);
-    const quote = await this.get(id, user);
-    const bytes = file?.buffer?.length ? file.buffer : file?.path ? await fs.readFile(file.path) : null;
-    if (!bytes?.length) throw new BadRequestException('Archivo vacío');
-    const ext = path.extname(file.originalname || '').toLowerCase() || '.bin';
-    const safeExt = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'].includes(ext) ? ext : '.bin';
-    const stored = `${id}-${Date.now()}${safeExt}`;
-    const dir = uploadDir();
-    await fs.mkdir(dir, { recursive: true });
-    const full = path.join(dir, stored);
-    await fs.writeFile(full, bytes);
-    const archivoPdfUrl = `/api/files/quotations/${stored}`;
-    const isDocPack = kind === 'licitacion' || kind === 'prerequisito';
-    const existing = Array.isArray(quote.licitacionArchivos)
-      ? (quote.licitacionArchivos as { name?: string; url?: string; kind?: string }[])
-      : [];
-    const updated = await this.prisma.quotation.update({
-      where: { id },
-      data: isDocPack
-        ? {
-            ...(kind === 'licitacion' ? { tieneLicitacion: true } : {}),
-            licitacionArchivos: [...existing, {
-              name: file.originalname || stored,
-              url: archivoPdfUrl,
-              kind,
-            }] as Prisma.InputJsonValue,
-          }
-        : { archivo: file.originalname || stored, archivoPdfUrl },
-      include: { sellers: true, cliente: true, sucursal: true },
-    });
-    await this.audit.record({
-      user,
-      sessionId,
-      action: kind === 'licitacion' ? 'quotation.licitacion-file' : kind === 'prerequisito' ? 'quotation.prerequisito-file' : 'quotation.file',
-      entity: 'quotation',
-      id,
-      patch: { archivo: updated.archivo },
-    });
-    return updated;
-  }
-
-  async filePath(name: string, user: User) {
-    const safe = path.basename(name);
-    const full = path.join(uploadDir(), safe);
-    const quote = await this.prisma.quotation.findFirst({
-      where: {
-        ...quotationWhere(user),
-        OR: [{ archivoPdfUrl: { contains: safe } }, { archivo: safe }],
-      },
-    });
-    const licensed = quote || (await this.prisma.quotation.findMany({
-      where: quotationWhere(user),
-      select: { id: true, licitacionArchivos: true },
-    })).find((row) => JSON.stringify(row.licitacionArchivos || '').includes(safe));
-    if (!licensed) throw new ForbiddenException('Sin acceso a este archivo');
-    try {
-      await fs.access(full);
-    } catch {
-      throw new NotFoundException('Archivo no encontrado');
-    }
-    return full;
-  }
-
-  /** Accepting creates the sale and the project (schedule) in one transaction; repeating it returns what exists. */
-  async accept(id: string, dto: AcceptQuotationDto, user: User, sessionId?: string) {
-    assertCanMutateQuotes(user);
-    const current = await this.get(id, user);
-    const error = acceptError(current);
-    if (error) throw new BadRequestException(error);
-    const existing = await this.prisma.schedule.findFirst({ where: { quotationId: id }, orderBy: { createdAt: 'asc' } });
-    if (current.estado === 'aceptado' && current.sale && existing) {
-      return { quotation: current, sale: current.sale, schedule: existing, alreadyConverted: true };
-    }
-    const { sale, schedule } = await this.prisma.$transaction(async (tx) => {
-      await tx.quotation.update({ where: { id }, data: { estado: 'aceptado' } });
-      const sale = current.sale ?? await tx.sale.create({
-        data: {
-          quotationId: id,
-          total: current.monto,
-          jobs: { create: { titulo: current.titulo, estado: 'programado', monto: current.monto } },
-        },
-        include: { jobs: true, payments: true },
-      });
-      const schedule = existing ?? await tx.schedule.create({
-        data: projectFromQuotation(
-          { ...current, monto: Number(current.monto), clienteId: current.clienteId as string },
-          current.cliente?.direccion || '',
-          dto,
-          new Date(),
-        ),
-      });
-      return { sale, schedule };
-    });
-    await this.prisma.touchClientActivity(current.clienteId);
-    await this.audit.record({
-      user,
-      sessionId,
-      action: 'quotation.accept',
-      entity: 'quotation',
-      id,
-      patch: { estado: 'aceptado' },
-      affects: existing ? [] : ['schedule', 'client'],
-    });
-    const quotation = await this.get(id, user);
-    return { quotation, sale, schedule, alreadyConverted: Boolean(existing) };
+    return present(quote);
   }
 }

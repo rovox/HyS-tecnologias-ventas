@@ -23,6 +23,7 @@ export function mapQuote(row) {
     sucursal_id: row.sucursal_id || row.sucursalId,
     sucursal_nombre: row.sucursal_nombre || row.sucursalNombre,
     categoria_id: row.categoria_id || row.categoriaId,
+    categoria: row.categoria?.label ?? row.categoria ?? '',
     vendedor_id: row.vendedor_id || row.vendedorId,
     vendedor_nombre: row.vendedor_nombre || row.vendedor?.name || row.sellers?.[0]?.nombre || '',
     vendedores: row.vendedores || (row.sellers || []).map((s) => ({

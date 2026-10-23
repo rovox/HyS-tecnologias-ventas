@@ -16,7 +16,8 @@ function mapApiSchedule(row) {
   return {
     ...row,
     id: row.id,
-    type: row.type,
+    categoria_id: row.categoriaId,
+    categoria: row.categoria?.label || '',
     cliente_id: row.clienteId || row.cliente_id,
     cliente: row.cliente?.nombre || row.cliente || '',
     cliente_nombre: row.cliente?.nombre || row.cliente || 'Sin cliente',
@@ -44,7 +45,6 @@ function mapApiSchedule(row) {
     google_maps_link: row.mapsLink || row.google_maps_link || '',
     maps_link: row.mapsLink || row.maps_link || '',
     clientData: row.cliente || null,
-    tipo_trabajo: row.type,
   };
 }
 
@@ -72,7 +72,7 @@ export const schedulesService = {
   async create(data) {
     const payload = data instanceof FormData ? Object.fromEntries(data.entries()) : { ...data };
     return mapApiSchedule(await apiClient.post('schedules', {
-      type: payload.type || payload.tipo_trabajo || 'seguridad',
+      categoriaId: payload.categoriaId || payload.categoria_id || undefined,
       clienteId: payload.clienteId || payload.cliente_id,
       descripcionTrabajo: payload.descripcionTrabajo || payload.descripcion_trabajo || '',
       sucursalId: payload.sucursalId || payload.sucursal_id,
@@ -93,6 +93,7 @@ export const schedulesService = {
   async update(id, data) {
     const payload = data instanceof FormData ? Object.fromEntries(data.entries()) : { ...data };
     return mapApiSchedule(await apiClient.patch(`schedules/${id}`, {
+      categoriaId: payload.categoriaId || payload.categoria_id || undefined,
       lugar: payload.lugar,
       descripcionTrabajo: payload.descripcionTrabajo || payload.descripcion_trabajo,
       monto: payload.monto !== undefined ? Number(payload.monto) : undefined,

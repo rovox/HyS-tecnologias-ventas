@@ -35,12 +35,12 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 |---|---|---|---|
 | S1 | all | Login, open each menu item | Every screen loads, no console errors, no 404/400 in Network |
 | S2 | ventas | Create client → survey with photo → quotation with PDF | Appears in lists without reload |
-| S3 | ventas | Accept quotation | Job created in Schedule (other tab updates live) |
+| S3 | ventas | Quotation flow: send (PDF) → reject (reason) → reopen → delete (reason) → restore → approve | Each step confirmed and notified; approved one moves to Cerradas and creates the project; other tab updates live (`node scripts/smoke-quotations.mjs`) |
 | S4 | técnico | Open own job → `en_proceso` → `terminado` | Status changes live for admin |
 | S5 | ventas | Register advance + payment on a job | Balance updated by the API; job and reports update live; payment listed in job history |
 | S6 | técnico/admin | Create internal order → approve → deliver | Status flow respected |
 | S7 | técnico | Try `/quotations`, `/reports` | Redirected; API returns 403 |
-| S8 | all | Edit in tab A | Tab B updates with no reload |
+| S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)
 

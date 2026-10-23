@@ -18,7 +18,9 @@ import {
   montoChangeError,
   paymentError,
   saldo,
+  categoryChangeError,
 } from './domain/schedules.rules';
+import { CategoriesService } from '../categories';
 
 type Tx = Prisma.TransactionClient;
 
@@ -28,6 +30,7 @@ const include = {
   vendedor: { select: { id: true, name: true } },
   tecnico: { select: { id: true, name: true } },
   quotation: { select: { id: true, numero: true, titulo: true, monto: true } },
+  categoria: { select: { id: true, label: true } },
   payments: true,
 } as const;
 
@@ -36,6 +39,7 @@ export class SchedulesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly categories: CategoriesService,
   ) {}
 
   list(
@@ -87,15 +91,20 @@ export class SchedulesService {
     if (!client) throw new BadRequestException('Cliente no encontrado');
     const sucursal = await this.prisma.sucursal.findUnique({ where: { id: dto.sucursalId } });
     if (!sucursal) throw new BadRequestException('Sucursal no válida');
+    // A job from a quotation has the quotation's division; any other job needs one of the 3 divisions.
+    let categoriaId = dto.categoriaId;
     if (dto.quotationId) {
       const quote = await this.prisma.quotation.findUnique({ where: { id: dto.quotationId } });
       if (!quote) throw new BadRequestException('Cotización no encontrada');
+      categoriaId = quote.categoriaId;
+    } else {
+      await this.categories.assertDivision(categoriaId);
     }
     const monto = Number(dto.monto ?? 0);
     const adelanto = Number(dto.adelanto ?? 0);
     const row = await this.prisma.schedule.create({
       data: {
-        type: dto.type,
+        categoriaId: categoriaId!,
         clienteId: dto.clienteId,
         lugar: dto.lugar || client.direccion || '',
         descripcionTrabajo: dto.descripcionTrabajo.trim(),
@@ -148,6 +157,9 @@ export class SchedulesService {
     }
     const montoError = montoChangeError({ quotationId: current.quotationId, monto: Number(current.monto) }, dto.monto);
     if (montoError) throw new BadRequestException(montoError);
+    const categoryError = categoryChangeError(current, dto.categoriaId);
+    if (categoryError) throw new BadRequestException(categoryError);
+    if (dto.categoriaId !== undefined && dto.categoriaId !== current.categoriaId) await this.categories.assertDivision(dto.categoriaId);
     const legacy = legacyAdvance(Number(current.adelanto), current.payments);
     const paid = budgetPaid(current.payments) + legacy;
     const advance = adelantoChange(paid, paid > 0 && legacy === 0, dto.adelanto);
@@ -164,6 +176,7 @@ export class SchedulesService {
       return tx.schedule.update({
         where: { id },
         data: {
+          ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId } : {}),
           ...(dto.lugar !== undefined ? { lugar: dto.lugar } : {}),
           ...(dto.descripcionTrabajo ? { descripcionTrabajo: dto.descripcionTrabajo.trim() } : {}),
           ...(dto.monto !== undefined ? { monto } : {}),

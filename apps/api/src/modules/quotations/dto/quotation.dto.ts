@@ -1,16 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
@@ -33,6 +23,12 @@ export class VendorDto {
 }
 
 export class CreateQuotationDto {
+  @ApiPropertyOptional({ description: 'Task this quotation comes from: it is linked and completed' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  tareaId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -44,15 +40,10 @@ export class CreateQuotationDto {
   @Transform(emptyToUndef)
   clienteId?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'One of the 3 divisions (GET /categories, principal = true)' })
   @IsString()
-  categoria?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  categoriaId?: string;
+  @IsNotEmpty({ message: 'Selecciona la categoría' })
+  categoriaId: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -69,12 +60,11 @@ export class CreateQuotationDto {
   @IsString()
   sucursalNombre?: string;
 
-  @ApiPropertyOptional({ minimum: 0 })
-  @IsOptional()
+  @ApiProperty({ minimum: 0.01 })
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
-  monto?: number;
+  @Min(0.01, { message: 'El monto debe ser mayor a 0' })
+  monto: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -85,11 +75,6 @@ export class CreateQuotationDto {
   @IsOptional()
   @IsString()
   archivo?: string;
-
-  @ApiPropertyOptional({ enum: ['borrador', 'enviado'] })
-  @IsOptional()
-  @IsIn(['borrador', 'enviado'])
-  estado?: string;
 
   @ApiPropertyOptional({ type: [VendorDto] })
   @IsOptional()
@@ -128,12 +113,7 @@ export class UpdateQuotationDto {
   @IsString()
   titulo?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  categoria?: string;
-
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'One of the 3 divisions' })
   @IsOptional()
   @IsString()
   categoriaId?: string;
@@ -143,11 +123,11 @@ export class UpdateQuotationDto {
   @IsString()
   subcategoria?: string;
 
-  @ApiPropertyOptional({ minimum: 0 })
+  @ApiPropertyOptional({ minimum: 0.01 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
+  @Min(0.01, { message: 'El monto debe ser mayor a 0' })
   monto?: number;
 
   @ApiPropertyOptional()
@@ -198,9 +178,9 @@ export class UpdateQuotationDto {
 }
 
 export class StatusDto {
-  @ApiProperty({ enum: ['borrador', 'enviado', 'aceptado', 'rechazado'] })
+  @ApiProperty({ enum: ['borrador', 'enviado', 'aprobado', 'rechazado'] })
   @IsString()
-  @IsIn(['borrador', 'enviado', 'aceptado', 'rechazado'])
+  @IsIn(['borrador', 'enviado', 'aprobado', 'rechazado'])
   estado: string;
 
   @ApiPropertyOptional()
@@ -215,13 +195,52 @@ export class StatusDto {
   fechaEnvio?: string;
 }
 
-/** Optional data for the project (schedule) created when the quotation is accepted. */
-export class AcceptQuotationDto {
-  @ApiPropertyOptional({ enum: ['seguridad', 'proyectos'] })
-  @IsOptional()
-  @IsIn(['seguridad', 'proyectos'])
-  type?: string;
+export class DeleteQuotationDto {
+  @ApiProperty({ description: 'Why it is deleted (kept in the record)' })
+  @IsString()
+  @IsNotEmpty({ message: 'Indica el motivo de la eliminación' })
+  motivo: string;
+}
 
+export class ListQuotationsQuery {
+  @ApiPropertyOptional({ enum: ['abiertas', 'cerradas'] })
+  @IsOptional()
+  @IsIn(['abiertas', 'cerradas'])
+  vista?: 'abiertas' | 'cerradas';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  estado?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  categoriaId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vendedorId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sucursalId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  clienteId?: string;
+
+  @ApiPropertyOptional({ description: 'Number, title or client name' })
+  @IsOptional()
+  @IsString()
+  q?: string;
+}
+
+/** Optional data for the project (schedule) created when the quotation is approved. */
+export class AcceptQuotationDto {
   @ApiPropertyOptional({ description: 'ISO date; today when omitted' })
   @IsOptional()
   @IsDateString()

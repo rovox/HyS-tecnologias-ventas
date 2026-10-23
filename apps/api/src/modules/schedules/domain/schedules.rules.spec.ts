@@ -1,4 +1,5 @@
 import {
+  categoryChangeError,
   adelantoChange,
   budgetPaid,
   checkScheduleTransition,
@@ -65,5 +66,11 @@ describe('schedules domain', () => {
     expect(adelantoChange(0, false, 300)).toEqual({ ok: true, payment: 300 });
     expect(adelantoChange(200, true, 300).ok).toBe(false);
     expect(adelantoChange(200, false, 100).ok).toBe(false);
+  });
+
+  it('keeps the division of a job that comes from a quotation', () => {
+    expect(categoryChangeError({ quotationId: 'q1', categoriaId: 'seguridad_electronica' }, 'cableado_estructurado')).toMatch(/cotización/);
+    expect(categoryChangeError({ quotationId: 'q1', categoriaId: 'seguridad_electronica' }, 'seguridad_electronica')).toBeNull();
+    expect(categoryChangeError({ quotationId: null, categoriaId: 'seguridad_electronica' }, 'cableado_estructurado')).toBeNull();
   });
 });
