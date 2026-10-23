@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-/** Views of the commercial module. Proyectos and Informes join them with PRO-01. */
+/** Views of the commercial module: open and closed quotations, and the projects of the approved ones. */
 const TABS = [
-  { key: 'abiertas', label: 'Cotizaciones' },
-  { key: 'cerradas', label: 'Cerradas' },
+  { key: 'abiertas', label: 'Cotizaciones', to: '/quotations?vista=abiertas' },
+  { key: 'cerradas', label: 'Cerradas', to: '/quotations?vista=cerradas' },
+  { key: 'proyectos', label: 'Proyectos', to: '/projects' },
 ];
 
 export function QuotationTabs({ current }) {
@@ -13,7 +14,7 @@ export function QuotationTabs({ current }) {
       {TABS.map((tab) => (
         <NavLink
           key={tab.key}
-          to={`/quotations?vista=${tab.key}`}
+          to={tab.to}
           className={cn(
             '-mb-px border-b-2 px-3 py-2 text-sm font-medium',
             current === tab.key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',

@@ -19,6 +19,14 @@ describe('projects rules', () => {
     expect(nextProjectStates({ estado: 'cerrado' })).toEqual([]);
   });
 
+  it('delivers only when every job is finished or cancelled', () => {
+    expect(checkProjectTransition({ estado: 'en_ejecucion' }, 'entregado', { ...ctx, openJobs: 2 })).toEqual({
+      ok: false,
+      reason: 'Termina o cancela los trabajos pendientes antes de entregar (2)',
+    });
+    expect(checkProjectTransition({ estado: 'en_ejecucion' }, 'entregado', { ...ctx, openJobs: 0 })).toEqual({ ok: true });
+  });
+
   it('closes only with nothing owed', () => {
     expect(checkProjectTransition({ estado: 'entregado' }, 'cerrado', { ...ctx, saldo: 150 })).toEqual({
       ok: false,

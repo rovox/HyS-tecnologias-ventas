@@ -1,0 +1,140 @@
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { CalendarClock, FileText, HandCoins, Pencil, Plus, User, Wrench } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Layout from '@/components/Layout.jsx';
+import { Chatter } from '@/features/activity';
+import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBar } from '@/shared/views';
+import { formatBs, formatDateTime, formatDay } from '@/shared/lib/format.js';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
+import { useProject } from '../api.js';
+import { PAYMENT_TYPE, PROJECT_FIELDS, PROJECT_TRANSITION, formatProjectValue, projectStages } from '../constants.js';
+import { CollectedBar, ProjectStateBadge } from '../components/ProjectStateBadge.jsx';
+import { EditProjectDialog } from '../components/EditProjectDialog.jsx';
+import { JobDialog } from '../components/JobDialog.jsx';
+import { PaymentDialog } from '../components/PaymentDialog.jsx';
+import { useProjectActions } from '../components/useProjectActions.js';
+
+const JOB_STATE = { programado: 'Programado', en_proceso: 'En proceso', terminado: 'Terminado', cancelado: 'Cancelado' };
+
+const jobColumns = [
+  { key: 'trabajo', header: 'Trabajo', cell: (t) => t.descripcionTrabajo },
+  { key: 'fecha', header: 'Fecha', cell: (t) => `${formatDay(t.fechaProgramada)}${t.horario ? ` · ${t.horario}` : ''}` },
+  { key: 'tecnico', header: 'Técnico', cell: (t) => t.tecnico?.name || 'Sin asignar' },
+  { key: 'estado', header: 'Estado', cell: (t) => JOB_STATE[t.estado] || t.estado },
+];
+
+const paymentColumns = [
+  { key: 'fecha', header: 'Fecha', cell: (c) => formatDateTime(c.at) },
+  { key: 'tipo', header: 'Tipo', cell: (c) => PAYMENT_TYPE[c.tipo] || c.tipo },
+  { key: 'metodo', header: 'Método', cell: (c) => c.metodo || '—' },
+  { key: 'por', header: 'Registró', cell: (c) => c.cobradoPor?.name || '—' },
+  { key: 'nota', header: 'Nota', cell: (c) => c.nota || '—' },
+  { key: 'monto', header: 'Monto', align: 'right', cell: (c) => formatBs(c.monto) },
+];
+
+export default function ProjectDetailPage() {
+  const { id } = useParams();
+  const { data: project, isLoading } = useProject(id);
+  const actions = useProjectActions();
+  const [dialog, setDialog] = useState(null);
+  useDocumentTitle(project?.codigo || 'Proyecto');
+
+  if (isLoading || !project) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-6xl space-y-4 p-6">
+          <Skeleton className="h-10 w-1/3" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const open = !['cerrado', 'anulado'].includes(project.estado);
+  const close = () => setDialog(null);
+
+  return (
+    <Layout>
+      <ControlPanel breadcrumbs={[{ label: 'Proyectos', to: '/projects' }, { label: project.codigo }]} />
+      <FormView
+        actions={
+          <>
+            {open && (
+              <Button size="sm" onClick={() => setDialog('pago')}>
+                <HandCoins /> Registrar cobro
+              </Button>
+            )}
+            {open && (
+              <Button size="sm" variant="outline" onClick={() => setDialog('trabajo')}>
+                <Plus /> Nuevo trabajo
+              </Button>
+            )}
+            {project.transicionesValidas.map((estado) => (
+              <Button key={estado} size="sm" variant={estado === 'anulado' ? 'ghost' : 'outline'} className={estado === 'anulado' ? 'text-destructive' : ''} disabled={actions.busy} onClick={() => actions.changeStatus(project, estado)}>
+                {PROJECT_TRANSITION[estado](project).label}
+              </Button>
+            ))}
+            {open && (
+              <Button size="sm" variant="ghost" onClick={() => setDialog('editar')}>
+                <Pencil /> Editar
+              </Button>
+            )}
+          </>
+        }
+        statusBar={<StatusBar stages={projectStages(project.estado)} current={project.estado} allowed={project.transicionesValidas} onSelect={(estado) => actions.changeStatus(project, estado)} />}
+        smartButtons={[
+          { key: 'cotizacion', icon: FileText, label: 'Cotización', value: project.quotation.numero, to: `/quotations/${project.quotation.id}` },
+          { key: 'cliente', icon: User, label: 'Cliente', value: project.cliente.nombre, to: `/clientes/${project.cliente.id}` },
+          { key: 'trabajos', icon: Wrench, label: 'Trabajos', value: project.trabajos.length, to: '/schedule' },
+          { key: 'cobrado', icon: HandCoins, label: `Cobrado · ${project.pctCobrado} %`, value: formatBs(project.cobrado) },
+        ]}
+        subtitle={project.codigo}
+        title={project.titulo}
+        badge={<ProjectStateBadge project={project} className="text-sm" />}
+        chatter={<Chatter entity="project" id={project.id} fieldLabels={PROJECT_FIELDS} formatValue={formatProjectValue} />}
+      >
+        {project.estado === 'anulado' && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">Anulado. Motivo: {project.motivoAnulacion}</div>
+        )}
+        <FieldGrid>
+          <Field label="Monto oficial"><span className="font-semibold">{formatBs(project.montoOficial)}</span></Field>
+          <Field label="Saldo pendiente">
+            <span className={project.saldo > 0 ? 'font-semibold text-destructive' : 'font-semibold'}>{formatBs(project.saldo)}</span>
+          </Field>
+          <Field label="Cobrado"><div className="flex items-center gap-3">{formatBs(project.cobrado)} <CollectedBar pct={project.pctCobrado} /></div></Field>
+          <Field label="Costo y margen">Con Finanzas e Inventario</Field>
+          <Field label="Categoría">{project.categoria.label}</Field>
+          <Field label="Sucursal">{project.sucursal.nombre}</Field>
+          <Field label="Responsable">{project.responsable?.name}</Field>
+          <Field label="Garantía">
+            {project.garantiaHasta ? (
+              <span className="inline-flex items-center gap-1">
+                <CalendarClock className="h-4 w-4" /> hasta {formatDay(project.garantiaHasta)} {project.garantiaVigente ? '' : '(vencida)'}
+              </span>
+            ) : (
+              `${project.garantiaMeses} meses desde la entrega`
+            )}
+          </Field>
+        </FieldGrid>
+        <Tabs defaultValue="trabajos">
+          <TabsList>
+            <TabsTrigger value="trabajos">Trabajos ({project.trabajos.length})</TabsTrigger>
+            <TabsTrigger value="cobros">Cobros ({project.cobros.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="trabajos">
+            <ListView columns={jobColumns} rows={project.trabajos} empty="Sin trabajos" />
+          </TabsContent>
+          <TabsContent value="cobros">
+            <ListView columns={paymentColumns} rows={project.cobros} empty="Sin cobros registrados" />
+          </TabsContent>
+        </Tabs>
+      </FormView>
+      <PaymentDialog project={project} open={dialog === 'pago'} onOpenChange={(o) => !o && close()} />
+      <JobDialog project={project} open={dialog === 'trabajo'} onOpenChange={(o) => !o && close()} />
+      <EditProjectDialog project={project} open={dialog === 'editar'} onOpenChange={(o) => !o && close()} />
+    </Layout>
+  );
+}

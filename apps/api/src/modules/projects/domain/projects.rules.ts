@@ -13,7 +13,6 @@ const PROJECT_FLOW: Record<string, readonly string[]> = {
 };
 
 export const PROJECT_ESTADOS = Object.keys(PROJECT_FLOW);
-export const DEFAULT_WARRANTY_MONTHS = 12;
 
 const cents = (value: number) => Math.round(value * 100) / 100;
 
@@ -23,14 +22,20 @@ export function nextProjectStates(project: ProjectState): readonly string[] {
   return PROJECT_FLOW[project.estado] ?? [];
 }
 
-/** Closing needs the work delivered and nothing owed; cancelling is for Gerencia, with a reason. */
+/**
+ * Delivering needs every job finished or cancelled; closing needs nothing owed; cancelling is for Gerencia, with a
+ * reason. `openJobs` = jobs still programado or en_proceso.
+ */
 export function checkProjectTransition(
   project: ProjectState,
   to: string,
-  ctx: { saldo: number; isAdmin: boolean; motivo?: string | null },
+  ctx: { saldo: number; isAdmin: boolean; motivo?: string | null; openJobs?: number },
 ): TransitionCheck {
   if (!PROJECT_ESTADOS.includes(to)) return { ok: false, reason: `Estado desconocido: ${to}` };
   if (!nextProjectStates(project).includes(to)) return { ok: false, reason: `Transición inválida: ${project.estado} → ${to}` };
+  if (to === 'entregado' && (ctx.openJobs ?? 0) > 0) {
+    return { ok: false, reason: `Termina o cancela los trabajos pendientes antes de entregar (${ctx.openJobs})` };
+  }
   if (to === 'cerrado' && ctx.saldo > 0) return { ok: false, reason: `No se cierra un proyecto con saldo pendiente (Bs ${cents(ctx.saldo)})` };
   if (to === 'anulado' && !ctx.isAdmin) return { ok: false, reason: 'Solo Gerencia anula un proyecto' };
   if (to === 'anulado' && !ctx.motivo?.trim()) return { ok: false, reason: 'Indica el motivo de la anulación' };

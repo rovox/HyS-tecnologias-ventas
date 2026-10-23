@@ -95,7 +95,8 @@ export class ProjectsService {
     assertCanManageProjects(user);
     const before = await this.row(id);
     const { saldo } = presentProject(before);
-    const check = checkProjectTransition(before, dto.estado, { saldo, isAdmin: isAdmin(user), motivo: dto.motivo });
+    const openJobs = before.schedules.filter((s) => ['programado', 'en_proceso'].includes(s.estado)).length;
+    const check = checkProjectTransition(before, dto.estado, { saldo, isAdmin: isAdmin(user), motivo: dto.motivo, openJobs });
     if (!check.ok) throw new BadRequestException(check.reason);
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {

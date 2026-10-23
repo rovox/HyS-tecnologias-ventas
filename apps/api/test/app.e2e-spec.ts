@@ -369,8 +369,15 @@ describe('hs-erp API (e2e)', () => {
       expect(jobs.every((s: { categoriaId: string }) => s.categoriaId === 'cableado_estructurado')).toBe(true);
     });
 
-    it('delivers (warranty starts) and closes only without debt', async () => {
+    it('delivers only with its jobs done (warranty starts) and closes only without debt', async () => {
       await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'en_ejecucion' }).expect(201);
+      const pending = await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'entregado' }).expect(400);
+      expect(pending.body.message).toMatch(/trabajos pendientes/);
+      const { trabajos } = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body;
+      for (const t of trabajos) {
+        await http().patch(`/api/schedules/${t.id}`).set(ventas()).send({ estado: 'en_proceso' }).expect(200);
+        await http().patch(`/api/schedules/${t.id}`).set(ventas()).send({ estado: 'terminado' }).expect(200);
+      }
       const delivered = (await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'entregado' }).expect(201)).body;
       expect(delivered.garantiaVigente).toBe(true);
       expect(delivered.garantiaHasta).toBeTruthy();

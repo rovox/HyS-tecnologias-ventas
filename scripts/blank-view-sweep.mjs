@@ -30,7 +30,7 @@ const roleNames = (args.roles ?? 'admin,ventas,tecnico').split(',');
 // Replaced by generated constants in FE-03; `checkRouteTable` fails if App.jsx and this table drift.
 const ALL = 'AVT', AV = 'AV', A = 'A';
 const ROUTES = [
-  ['/dashboard', ALL], ['/quotations', AV], ['/quotations/:quotationId', AV], ['/clientes', ALL], ['/clientes/:clientId', ALL],
+  ['/dashboard', ALL], ['/quotations', AV], ['/quotations/:quotationId', AV], ['/projects', AV], ['/projects/:projectId', AV], ['/clientes', ALL], ['/clientes/:clientId', ALL],
   ['/surveys', ALL], ['/schedule', ALL], ['/activity-wall', ALL], ['/reports', A],
   ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AV],
   ['/pedidos-internos', AV], ['/pedidos-internos/:pedidoId', AV],
@@ -112,7 +112,7 @@ async function main() {
   const rows = [];
   for (const role of roleNames) {
     const { token, user } = await login(role);
-    const ids = { clientId: await firstId(token, 'clients'), quotationId: await firstId(token, 'quotations'), pedidoId: await firstId(token, 'pedidos-internos'), userId: user?.id, id: 'sweep' };
+    const ids = { clientId: await firstId(token, 'clients'), quotationId: await firstId(token, 'quotations'), projectId: await firstId(token, 'projects'), pedidoId: await firstId(token, 'pedidos-internos'), userId: user?.id, id: 'sweep' };
     const context = await browser.newContext();
     await context.addInitScript(([t, u]) => { localStorage.setItem('hs_token', t); localStorage.setItem('hs_user', u); }, [token, JSON.stringify(user)]);
     for (const [pattern, roles] of ROUTES) {
