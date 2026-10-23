@@ -22,6 +22,8 @@ model Sucursal {
   projects      Project[]
   cashBoxes     CashBox[]
   movements     CashMovement[]
+  stockOut      StockMovement[] @relation("StockOrigin")
+  stockIn       StockMovement[] @relation("StockDestination")
 
   @@map("sucursales")
 }
@@ -56,6 +58,7 @@ model User {
   projectsResponsable Project[]                 @relation("ProjectResponsable")
   movementsRegistered CashMovement[]            @relation("MovementRegisteredBy")
   movementsValidated  CashMovement[]            @relation("MovementValidatedBy")
+  stockRegistered     StockMovement[]           @relation("StockRegisteredBy")
 
   @@index([sucursalId])
   @@map("users")
@@ -402,6 +405,7 @@ model QuotationCategory {
   quotations Quotation[]
   schedules  Schedule[]
   projects   Project[]
+  products   Product[]
 
   @@unique([label])
   @@map("quotation_categories")
@@ -425,6 +429,7 @@ model PedidoInterno {
   updatedAt            DateTime                  @updatedAt
   items                PedidoInternoItem[]
   comentarios          PedidoInternoComentario[]
+  stockMovements       StockMovement[]
 
   @@index([responsableId])
   @@index([estado])
@@ -437,6 +442,9 @@ model PedidoInternoItem {
   pedidoId       String
   pedido         PedidoInterno @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   materialNombre String        @db.VarChar(200)
+  /// Catalog product (optional): when set, delivering the order moves its stock.
+  productoId     String?
+  producto       Product?      @relation(fields: [productoId], references: [id])
   cantidad       Float         @default(1)
   unidad         String        @default("unidades") @db.VarChar(32)
   costoUnitario  Float?
@@ -444,6 +452,7 @@ model PedidoInternoItem {
   createdAt      DateTime      @default(now())
 
   @@index([pedidoId])
+  @@index([productoId])
   @@map("pedido_interno_items")
 }
 
@@ -516,6 +525,7 @@ model Project {
   updatedAt       DateTime          @updatedAt
   schedules       Schedule[]
   movements       CashMovement[]
+  stockMovements  StockMovement[]
 
   @@index([estado])
   @@index([clienteId])
@@ -587,4 +597,59 @@ model CashMovement {
   @@index([cajaId])
   @@index([fecha])
   @@map("cash_movements")
+}
+
+/// Catalog item (INV-01): equipment, material or service. Stock is never stored: it comes from stock movements.
+model Product {
+  id          String              @id @default(uuid())
+  codigo      String              @unique @db.VarChar(40)
+  nombre      String              @db.VarChar(200)
+  marca       String              @default("") @db.VarChar(100)
+  /// One of the 3 divisions.
+  categoriaId String
+  categoria   QuotationCategory   @relation(fields: [categoriaId], references: [id])
+  /// equipo | material | servicio
+  tipo        String              @db.VarChar(16)
+  unidad      String              @default("unidad") @db.VarChar(20)
+  costo       Decimal             @default(0) @db.Decimal(12, 2)
+  precio      Decimal             @default(0) @db.Decimal(12, 2)
+  stockMinimo Decimal             @default(0) @db.Decimal(12, 2)
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  movements   StockMovement[]
+  pedidoItems PedidoInternoItem[]
+
+  @@index([categoriaId])
+  @@map("products")
+}
+
+/// A stock move (INV-01): entrada → destination; salida_proyecto → origin + project; transferencia → origin and
+/// destination; ajuste → origin (shortage) or destination (surplus), with a reason.
+model StockMovement {
+  id                String         @id @default(uuid())
+  productoId        String
+  producto          Product        @relation(fields: [productoId], references: [id])
+  tipo              String         @db.VarChar(20)
+  cantidad          Decimal        @db.Decimal(12, 2)
+  costoUnitario     Decimal        @default(0) @db.Decimal(12, 2)
+  sucursalOrigenId  String?
+  sucursalOrigen    Sucursal?      @relation("StockOrigin", fields: [sucursalOrigenId], references: [id])
+  sucursalDestinoId String?
+  sucursalDestino   Sucursal?      @relation("StockDestination", fields: [sucursalDestinoId], references: [id])
+  projectId         String?
+  project           Project?       @relation(fields: [projectId], references: [id])
+  pedidoInternoId   String?
+  pedidoInterno     PedidoInterno? @relation(fields: [pedidoInternoId], references: [id], onDelete: SetNull)
+  motivo            String?        @db.Text
+  nota              String         @default("") @db.VarChar(500)
+  registradoPorId   String
+  registradoPor     User           @relation("StockRegisteredBy", fields: [registradoPorId], references: [id])
+  fecha             DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+
+  @@index([productoId])
+  @@index([projectId])
+  @@index([pedidoInternoId])
+  @@map("stock_movements")
 }

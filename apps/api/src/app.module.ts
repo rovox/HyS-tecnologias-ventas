@@ -18,6 +18,7 @@ import { SolicitudesWebModule } from './modules/solicitudes-web';
 import { ProjectsModule } from './modules/projects';
 import { FinanceModule } from './modules/finance';
 import { ReportingModule } from './modules/reporting';
+import { InventoryModule } from './modules/inventory';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -56,6 +57,7 @@ import { HealthController } from './health.controller';
     ProjectsModule,
     FinanceModule,
     ReportingModule,
+    InventoryModule,
   ],
   controllers: [HealthController],
 })

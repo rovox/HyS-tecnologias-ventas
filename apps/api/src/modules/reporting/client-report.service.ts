@@ -70,9 +70,22 @@ export class ClientReportService {
         relevamientos: { select: { id: true, fecha: true, estado: true, lugar: true, tipoVisita: true }, orderBy: { fecha: 'desc' } },
       },
     });
+    // Equipment delivered to the client's projects (through internal orders), covered by the project's warranty.
+    const delivered = row
+      ? await this.prisma.stockMovement.findMany({
+          where: { tipo: 'salida_proyecto', project: { clienteId: row.id }, producto: { tipo: 'equipo' } },
+          select: { id: true, cantidad: true, fecha: true, projectId: true, producto: { select: { id: true, codigo: true, nombre: true, marca: true } } },
+          orderBy: { fecha: 'desc' },
+        })
+      : [];
     if (!row) throw new NotFoundException('Cliente no encontrado');
     const { projects: _p, schedules: _s, quotations, movements, relevamientos, ...client } = row;
     const { projects, jobs } = lines(row, new Date());
-    return { ...client, ...clientStatus(projects, jobs), proyectos: projects, trabajos: jobs, cotizaciones: quotations, cobros: movements, relevamientos };
+    const byProject = new Map(projects.map((p) => [p.id, p]));
+    const equipos = delivered.map((e) => {
+      const p = byProject.get(e.projectId!);
+      return { ...e, proyecto: p ? { id: p.id, codigo: p.codigo } : null, garantiaHasta: p?.garantiaHasta ?? null, garantiaVigente: p?.garantiaVigente ?? false };
+    });
+    return { ...client, ...clientStatus(projects, jobs), proyectos: projects, trabajos: jobs, cotizaciones: quotations, cobros: movements, relevamientos, equipos };
   }
 }

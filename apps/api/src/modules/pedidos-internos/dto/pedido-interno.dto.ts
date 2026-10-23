@@ -4,6 +4,10 @@ import { Type } from 'class-transformer';
 import { PEDIDO_ESTADOS } from '../domain/pedidos-internos.rules';
 
 export class PedidoItemDto {
+  @IsOptional()
+  @IsString()
+  productoId?: string;
+
   @ApiProperty()
   @IsString()
   materialNombre: string;
