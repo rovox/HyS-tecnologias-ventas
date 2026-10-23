@@ -5,3 +5,4 @@ export { KanbanView } from './KanbanView.jsx';
 export { StatusBar } from './StatusBar.jsx';
 export { FormView, FieldGrid, Field } from './FormView.jsx';
 export { ConfirmProvider, useConfirm } from './confirm.jsx';
+export { useListControls } from './useListControls.js';

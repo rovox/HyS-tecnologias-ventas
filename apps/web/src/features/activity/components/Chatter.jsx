@@ -25,13 +25,20 @@ const verbOf = (action) => {
   return VERBS[last] || action;
 };
 
-const show = (value) => (value === null || value === undefined || value === '' ? '—' : String(value));
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/;
+
+const show = (value) => {
+  if (value === null || value === undefined || value === '') return '—';
+  return ISO_DATE.test(String(value)) ? formatDateTime(value) : String(value);
+};
 
 /**
  * Odoo-style chatter: who changed what and when, newest first, live (realtime invalidates the history query).
- * fieldLabels maps API field names to labels; fields without a label are shown by name.
+ * fieldLabels maps API field names to labels; only those fields are listed (internal ids stay hidden).
+ * formatValue(field, value) may return a display value (e.g. a state label); otherwise dates are formatted.
  */
-export function Chatter({ entity, id, fieldLabels = {} }) {
+export function Chatter({ entity, id, fieldLabels = {}, formatValue = () => undefined }) {
+  const label = (value, field) => formatValue(field, value) ?? show(value);
   const { data = [], isLoading } = useRecordHistory(entity, id);
 
   return (
@@ -57,12 +64,14 @@ export function Chatter({ entity, id, fieldLabels = {} }) {
               </p>
               {row.detalle && (
                 <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                  {Object.entries(row.detalle).map(([field, change]) => (
-                    <li key={field}>
-                      {fieldLabels[field] || field}: <span className="line-through">{show(change.antes)}</span> →{' '}
-                      <span className="text-foreground">{show(change.despues)}</span>
-                    </li>
-                  ))}
+                  {Object.entries(row.detalle)
+                    .filter(([field]) => fieldLabels[field])
+                    .map(([field, change]) => (
+                      <li key={field}>
+                        {fieldLabels[field]}: <span className="line-through">{label(change.antes, field)}</span> →{' '}
+                        <span className="text-foreground">{label(change.despues, field)}</span>
+                      </li>
+                    ))}
                 </ul>
               )}
             </div>

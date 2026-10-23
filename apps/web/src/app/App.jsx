@@ -20,7 +20,8 @@ const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
 const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
 const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
-const QuotationsLibraryPage = lazy(() => import('@/pages/QuotationsLibraryPage.jsx'));
+const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
+const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
 const ScheduleWorkPage = lazy(() => import('@/pages/ScheduleWorkPage.jsx'));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
@@ -74,7 +75,12 @@ function App() {
 
             <Route path="/quotations" element={
               <ProtectedRoute allowedRoles={routeRoles.quotations}>
-                <QuotationsLibraryPage />
+                <QuotationsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/quotations/:id" element={
+              <ProtectedRoute allowedRoles={routeRoles.quotations}>
+                <QuotationDetailPage />
               </ProtectedRoute>
             } />
 

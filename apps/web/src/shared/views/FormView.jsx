@@ -19,7 +19,7 @@ export function FormView({ actions, statusBar, smartButtons = [], title, subtitl
 
       <article className="rounded-md border border-border bg-card shadow-sm">
         {smartButtons.length > 0 && (
-          <div className="flex flex-wrap justify-end border-b border-border">
+          <div className="grid grid-cols-2 border-b border-border sm:flex sm:flex-wrap sm:justify-end">
             {smartButtons.map((b) => (
               <SmartButton key={b.key} {...b} />
             ))}
@@ -52,7 +52,8 @@ function SmartButton({ icon: Icon, label, value, to, onClick }) {
       </span>
     </>
   );
-  const cls = 'flex min-h-14 min-w-[9rem] items-center gap-2 border-l border-border px-4 py-2 hover:bg-muted/60';
+  const cls =
+    'flex min-h-14 min-w-0 items-center gap-2 border-b border-border px-4 py-2 odd:border-r hover:bg-muted/60 sm:min-w-[9rem] sm:border-b-0 sm:border-l sm:odd:border-r-0';
   if (to) return <Link to={to} className={cls}>{body}</Link>;
   return (
     <button type="button" onClick={onClick} disabled={!onClick} className={cn(cls, !onClick && 'cursor-default hover:bg-transparent')}>

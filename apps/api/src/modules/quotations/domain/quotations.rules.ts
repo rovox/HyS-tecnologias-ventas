@@ -4,12 +4,12 @@
 import type { TransitionCheck } from '../../../common/domain/state-machine';
 
 /** Owner decision: a sent quotation is valid 15 days, then it expires (`vencido`). */
-export const VALIDITY_DAYS = 15;
+const VALIDITY_DAYS = 15;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const OPEN_ESTADOS = ['borrador', 'enviado'] as const;
-export const CLOSED_ESTADOS = ['aprobado', 'rechazado', 'vencido'] as const;
-export const QUOTATION_ESTADOS = [...OPEN_ESTADOS, ...CLOSED_ESTADOS];
+const OPEN_ESTADOS = ['borrador', 'enviado'] as const;
+const CLOSED_ESTADOS = ['aprobado', 'rechazado', 'vencido'] as const;
+const QUOTATION_ESTADOS = [...OPEN_ESTADOS, ...CLOSED_ESTADOS];
 
 /** What a user can do from each state. `vencido` is set by the system only; `aprobado` is final (cancel the project). */
 const QUOTATION_FLOW: Record<string, readonly string[]> = {
@@ -93,8 +93,6 @@ export function editError(quote: QuoteState, changes: Record<string, unknown>): 
 }
 
 /** "Abiertas" are in progress; "cerradas" are approved, rejected, expired or deleted. */
-export type Vista = 'abiertas' | 'cerradas';
-
 export function vistaFilter(vista?: string): { estados: readonly string[]; eliminadas: boolean | null } | null {
   if (vista === 'abiertas') return { estados: OPEN_ESTADOS, eliminadas: false };
   if (vista === 'cerradas') return { estados: CLOSED_ESTADOS, eliminadas: null };

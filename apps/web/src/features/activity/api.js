@@ -3,7 +3,7 @@ import { apiClient } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
 
 /** Query key invalidated by RealtimeProvider whenever this record changes. */
-export const historyKey = (entity, id) => ['history', entity, id];
+const historyKey = (entity, id) => ['history', entity, id];
 
 export function useRecordHistory(entity, id) {
   return useQuery({

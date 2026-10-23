@@ -23,7 +23,7 @@ export function StatusBar({ stages, current, allowed = [], onSelect }) {
                 'h-8 px-5 text-xs font-medium',
                 ARROW,
                 active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
-                clickable && 'bg-secondary text-foreground hover:bg-primary/15',
+                clickable && 'bg-primary/10 text-primary hover:bg-primary/20',
                 !clickable && !active && 'cursor-default',
               )}
             >

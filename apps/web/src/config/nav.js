@@ -104,11 +104,6 @@ export function canWriteQuotations(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
 }
 
-/** Quien puede ver /quotations también puede editar en esta vista. */
-export function canEditQuotationsView(role) {
-  return routeRoles.quotations.includes(role);
-}
-
 export function canWriteClients(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
 }
