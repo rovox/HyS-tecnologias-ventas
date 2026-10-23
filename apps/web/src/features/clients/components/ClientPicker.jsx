@@ -3,8 +3,8 @@ import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import ClientFormModal from '@/components/ClientFormModal.jsx';
-import { useClientOptions } from '../api.js';
+import { useClientOptions } from '@/features/catalogs';
+import { ClientFormDialog } from './ClientFormDialog.jsx';
 import { cn } from '@/lib/utils';
 
 /** Searchable client select with "Nuevo cliente" (creates it and selects it). */
@@ -52,13 +52,10 @@ export function ClientPicker({ value, onChange, disabled }) {
       <Button type="button" variant="outline" size="icon" title="Nuevo cliente" disabled={disabled} onClick={() => setCreating(true)}>
         <Plus />
       </Button>
-      <ClientFormModal
-        isOpen={creating}
-        onClose={() => setCreating(false)}
-        onSuccess={(client) => {
-          setCreating(false);
-          if (client?.id) onChange(client.id);
-        }}
+      <ClientFormDialog
+        open={creating}
+        onOpenChange={setCreating}
+        onSaved={(client) => client?.id && onChange(client.id)}
       />
     </div>
   );

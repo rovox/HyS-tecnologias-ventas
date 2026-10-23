@@ -41,6 +41,7 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 | S6 | técnico/admin | Create internal order → approve → deliver | Status flow respected |
 | S7 | técnico | Try `/quotations`, `/reports` | Redirected; API returns 403 |
 | S9 | técnico, admin, ventas | Expense paid by the técnico → observed → corrected → validated into a box → refunded; a project payment reaches the admin inbox live | `node scripts/smoke-finance.mjs` |
+| S10 | ventas, admin, técnico | Client list without tags, filters, create/edit (live in another session), client page with balance and warranty, quotation from the client | `node scripts/smoke-clients.mjs` |
 | S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)
