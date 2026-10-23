@@ -9,10 +9,10 @@ import {
   checkQuotationTransition,
   deleteError,
   expiryCutoff,
-  projectFromQuotation,
   restoreError,
 } from './domain/quotations.rules';
 import { DETAIL, present } from './quotation.presenter';
+import { ProjectsService } from '../projects';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -25,6 +25,7 @@ export class QuotationFlowService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly projects: ProjectsService,
   ) {}
 
   private async row(id: string, user: User) {
@@ -113,35 +114,27 @@ export class QuotationFlowService implements OnModuleInit, OnModuleDestroy {
     return present(quote);
   }
 
-  /** Approving creates the sale and the project (schedule) in one transaction; repeating it returns what exists. */
+  /** Approving creates the project and its first job in one transaction; repeating it returns what exists. */
   async accept(id: string, dto: AcceptQuotationDto, user: User, sessionId?: string) {
     assertCanMutateQuotes(user);
     const current = await this.row(id, user);
     const error = acceptError(current);
     if (error) throw new BadRequestException(error);
-    const existing = await this.prisma.schedule.findFirst({ where: { quotationId: id }, orderBy: { createdAt: 'asc' } });
-    if (current.estado === 'aprobado' && current.sale && existing) {
-      return { quotation: present(current), sale: current.sale, schedule: existing, alreadyConverted: true };
+    const existing = await this.prisma.project.findUnique({
+      where: { quotationId: id },
+      include: { schedules: { orderBy: { createdAt: 'asc' }, take: 1 } },
+    });
+    if (current.estado === 'aprobado' && existing) {
+      return { quotation: present(current), project: existing, schedule: existing.schedules[0] ?? null, alreadyConverted: true };
     }
-    const { sale, schedule } = await this.prisma.$transaction(async (tx) => {
+    const { project, schedule } = await this.prisma.$transaction(async (tx) => {
       await tx.quotation.update({ where: { id }, data: { estado: 'aprobado' } });
-      const sale = current.sale ?? await tx.sale.create({
-        data: {
-          quotationId: id,
-          total: current.monto,
-          jobs: { create: { titulo: current.titulo, estado: 'programado', monto: current.monto } },
-        },
-        include: { jobs: true, payments: true },
-      });
-      const schedule = existing ?? await tx.schedule.create({
-        data: projectFromQuotation(
-          { ...current, monto: Number(current.monto), clienteId: current.clienteId as string },
-          current.cliente?.direccion || '',
-          dto,
-          new Date(),
-        ),
-      });
-      return { sale, schedule };
+      if (existing) return { project: existing, schedule: existing.schedules[0] ?? null };
+      return this.projects.createFromQuotation(
+        tx,
+        { ...current, monto: Number(current.monto), clienteId: current.clienteId as string },
+        dto,
+      );
     });
     await this.prisma.touchClientActivity(current.clienteId);
     await this.audit.record({
@@ -151,9 +144,8 @@ export class QuotationFlowService implements OnModuleInit, OnModuleDestroy {
       entity: 'quotation',
       id,
       patch: { estado: 'aprobado' },
-      affects: existing ? [] : ['schedule', 'client'],
+      affects: existing ? [] : ['project', 'schedule', 'client'],
     });
-    const quotation = await this.get(id, user);
-    return { quotation, sale, schedule, alreadyConverted: Boolean(existing) };
+    return { quotation: await this.get(id, user), project, schedule, alreadyConverted: Boolean(existing) };
   }
 }

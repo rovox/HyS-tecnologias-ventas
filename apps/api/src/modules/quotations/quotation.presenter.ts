@@ -12,7 +12,7 @@ export const DETAIL = {
   vendedor: USER_NAME,
   eliminadaPor: USER_NAME,
   sale: true,
-  schedules: { select: { id: true, estado: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+  project: { select: { id: true, codigo: true, estado: true } },
   _count: { select: { relevamientos: true, tasks: true } },
 } satisfies Prisma.QuotationInclude;
 
@@ -22,7 +22,7 @@ export type QuotationRow = Prisma.QuotationGetPayload<{ include: typeof DETAIL }
 export function present(row: QuotationRow) {
   return {
     ...row,
-    proyectoId: row.schedules[0]?.id ?? null,
+    proyectoId: row.project?.id ?? null,
     venceEl: row.estado === 'enviado' ? expiresAt(row.fechaEnvio) : null,
     transicionesValidas: nextStates(row),
     puedeEliminar: !row.eliminadaAt && row.estado !== 'aprobado',

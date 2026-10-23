@@ -303,6 +303,28 @@ async function main() {
     });
   }
 
+  // Projects (PRO-01): one per approved quotation, linked to its jobs. sch_andina is in progress; the rest is planned.
+  const approved = await prisma.quotation.findMany({ where: { estado: 'aprobado', clienteId: { not: null } } });
+  for (const q of approved) {
+    const inProgress = await prisma.schedule.count({ where: { quotationId: q.id, estado: 'en_proceso' } });
+    const project = await prisma.project.upsert({
+      where: { quotationId: q.id },
+      update: {},
+      create: {
+        codigo: q.numero.replace(/^COT-/, 'PRY-'),
+        quotationId: q.id,
+        clienteId: q.clienteId as string,
+        categoriaId: q.categoriaId,
+        sucursalId: q.sucursalId,
+        titulo: q.titulo.slice(0, 300),
+        montoOficial: q.monto,
+        estado: inProgress ? 'en_ejecucion' : 'planificado',
+        responsableId: q.vendedorId,
+      },
+    });
+    await prisma.schedule.updateMany({ where: { quotationId: q.id }, data: { projectId: project.id } });
+  }
+
   console.log('Seed OK — users from config/users.json (password: config/users.passwords.local.json, else lowercase first name)');
 }
 

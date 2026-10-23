@@ -24,6 +24,8 @@ export const canMutateClients = isCommercial;
 /** Web contact-form requests (WEB-01). */
 export const canManageWebLeads = isCommercial;
 export const canSeeQuotations = isCommercial;
+/** Projects (approved quotations, with money): commercial roles. */
+export const canManageProjects = isCommercial;
 export const canCreateSchedules = isCommercial;
 export const canMutateSchedules = (actor: Actor) => isCommercial(actor) || isTec(actor);
 /** Surveys and visits (relevamientos): commercial roles and técnico. */

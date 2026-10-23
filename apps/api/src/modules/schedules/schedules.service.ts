@@ -31,8 +31,12 @@ const include = {
   tecnico: { select: { id: true, name: true } },
   quotation: { select: { id: true, numero: true, titulo: true, monto: true } },
   categoria: { select: { id: true, label: true } },
+  project: { select: { id: true, codigo: true, estado: true } },
   payments: true,
 } as const;
+
+/** Jobs of a project move the project's lists and totals too. */
+const affectsOf = (row: { projectId?: string | null }, base: string[] = []) => (row.projectId ? [...base, 'project'] : base);
 
 @Injectable()
 export class SchedulesService {
@@ -85,7 +89,8 @@ export class SchedulesService {
     return row;
   }
 
-  async create(dto: CreateScheduleDto, user: User, sessionId?: string) {
+  /** `projectId` is set by the projects module when it adds a job to a project. */
+  async create(dto: CreateScheduleDto, user: User, sessionId?: string, options: { projectId?: string } = {}) {
     assertCanCreateSchedules(user);
     const client = await this.prisma.client.findUnique({ where: { id: dto.clienteId } });
     if (!client) throw new BadRequestException('Cliente no encontrado');
@@ -118,6 +123,7 @@ export class SchedulesService {
         vendedorId: dto.vendedorId || (user.role.includes('VENTAS') ? user.id : null),
         tecnicoId: dto.tecnicoId || null,
         quotationId: dto.quotationId || null,
+        projectId: options.projectId || null,
         observaciones: dto.observaciones || '',
         mapsLink: dto.mapsLink || '',
         ...(adelanto > 0
@@ -138,7 +144,15 @@ export class SchedulesService {
       include,
     });
     await this.prisma.touchClientActivity(dto.clienteId);
-    await this.audit.record({ user, sessionId, action: 'schedule.create', entity: 'schedule', id: row.id, patch: { estado: row.estado, saldo: Number(row.saldo) } });
+    await this.audit.record({
+      user,
+      sessionId,
+      action: 'schedule.create',
+      entity: 'schedule',
+      id: row.id,
+      affects: affectsOf(row),
+      patch: { estado: row.estado, saldo: Number(row.saldo) },
+    });
     return row;
   }
 
@@ -204,6 +218,7 @@ export class SchedulesService {
       id,
       before: current,
       after: row,
+      affects: affectsOf(row),
       patch: { estado: row.estado, saldo: Number(row.saldo), adelanto: Number(row.adelanto) },
     });
     return row;
@@ -253,10 +268,23 @@ export class SchedulesService {
       action: 'schedule.payment',
       entity: 'payment',
       id: payment.id,
-      affects: ['schedule', 'client'],
+      affects: affectsOf(schedule, ['schedule', 'client']),
       patch: { scheduleId, tipo: dto.tipo, monto: Number(dto.monto), saldo: Number(updated.saldo) },
     });
     return updated;
+  }
+
+  /** First job of a project, created inside the transaction that approves the quotation. */
+  createFirstJob(tx: Tx, data: Prisma.ScheduleUncheckedCreateInput) {
+    return tx.schedule.create({ data });
+  }
+
+  /** A cancelled project cancels its jobs that have not finished. */
+  cancelOpenJobs(tx: Tx, projectId: string) {
+    return tx.schedule.updateMany({
+      where: { projectId, estado: { in: ['programado', 'en_proceso'] } },
+      data: { estado: 'cancelado' },
+    });
   }
 
   /** An advance stored only in `schedule.adelanto` (old rows) becomes a payment row before any new payment. */
