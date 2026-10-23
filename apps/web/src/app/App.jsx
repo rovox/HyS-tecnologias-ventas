@@ -21,6 +21,8 @@ const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx')
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
 const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
 const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
+const ProjectsPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectsPage })));
+const ProjectDetailPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectDetailPage })));
 const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
 const ScheduleWorkPage = lazy(() => import('@/pages/ScheduleWorkPage.jsx'));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
@@ -76,6 +78,16 @@ function App() {
             <Route path="/quotations" element={
               <ProtectedRoute allowedRoles={routeRoles.quotations}>
                 <QuotationsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/projects" element={
+              <ProtectedRoute allowedRoles={routeRoles.quotations}>
+                <ProjectsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/projects/:id" element={
+              <ProtectedRoute allowedRoles={routeRoles.quotations}>
+                <ProjectDetailPage />
               </ProtectedRoute>
             } />
             <Route path="/quotations/:id" element={

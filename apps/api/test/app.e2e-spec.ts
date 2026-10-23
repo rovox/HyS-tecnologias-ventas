@@ -184,6 +184,7 @@ describe('hs-erp API (e2e)', () => {
 
     it('keeps pedidos internos for admin and ventas', async () => {
       await request(app.getHttpServer()).get('/api/pedidos-internos').set('Authorization', `Bearer ${tecToken}`).expect(403);
+      await request(app.getHttpServer()).get('/api/projects').set('Authorization', `Bearer ${tecToken}`).expect(403);
       const goals = await request(app.getHttpServer()).get('/api/goals').set('Authorization', `Bearer ${tecToken}`).expect(200);
       expect(goals.body).toEqual([]);
       const res = await request(app.getHttpServer())
@@ -329,6 +330,76 @@ describe('hs-erp API (e2e)', () => {
       expect(linked.quotation.id).toBe(created.id);
       const again = await http().post('/api/quotations').set(auth()).send(quote).expect(400);
       expect(again.body.message).toMatch(/ya tiene una cotización/);
+    });
+  });
+
+  describe('projects from approved quotations (PRO-01)', () => {
+    const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const admin = () => ({ Authorization: `Bearer ${adminToken}` });
+    const http = () => request(app.getHttpServer());
+    let projectId = '';
+
+    beforeAll(async () => {
+      const q = (await http().post('/api/quotations').set(ventas())
+        .send({ titulo: `E2E PRO-01 ${Date.now()}`, categoriaId: 'cableado_estructurado', clienteId: 'cli_hospital', sucursalId: 'suc_central', monto: 3000 })
+        .expect(201)).body;
+      await http().post(`/api/quotations/${q.id}/files`).set(ventas()).attach('file', Buffer.from('%PDF-1.4 e2e'), 'c.pdf').expect(201);
+      await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
+      projectId = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
+    });
+
+    it('approving creates one planned project with the quotation amount and its first job', async () => {
+      const p = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body;
+      expect(p.codigo).toMatch(/^PRY-/);
+      expect(p).toMatchObject({ estado: 'planificado', cobrado: 0, saldo: 3000, pctCobrado: 0, garantiaMeses: 12, garantiaVigente: false });
+      expect(Number(p.montoOficial)).toBe(3000);
+      expect(p.trabajos).toHaveLength(1);
+      expect(p.transicionesValidas).toEqual(['en_ejecucion', 'anulado']);
+      expect((await http().get('/api/projects').set(ventas()).expect(200)).body.some((r: { id: string }) => r.id === projectId)).toBe(true);
+    });
+
+    it('collects payments on the project and adds jobs to the cronograma', async () => {
+      const paid = (await http().post(`/api/projects/${projectId}/cobros`).set(ventas()).send({ tipo: 'adelanto', monto: 1000, metodo: 'efectivo' }).expect(201)).body;
+      expect(paid).toMatchObject({ cobrado: 1000, saldo: 2000, pctCobrado: 33 });
+      expect(paid.cobros).toHaveLength(1);
+      const withJob = (await http().post(`/api/projects/${projectId}/trabajos`).set(ventas()).send({ descripcionTrabajo: 'Certificación Fluke', fechaProgramada: '2026-11-10' }).expect(201)).body;
+      expect(withJob.trabajos).toHaveLength(2);
+      const jobs = (await http().get('/api/schedules').set(ventas()).expect(200)).body.filter((s: { projectId: string }) => s.projectId === projectId);
+      expect(jobs).toHaveLength(2);
+      expect(jobs.every((s: { categoriaId: string }) => s.categoriaId === 'cableado_estructurado')).toBe(true);
+    });
+
+    it('delivers only with its jobs done (warranty starts) and closes only without debt', async () => {
+      await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'en_ejecucion' }).expect(201);
+      const pending = await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'entregado' }).expect(400);
+      expect(pending.body.message).toMatch(/trabajos pendientes/);
+      const { trabajos } = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body;
+      for (const t of trabajos) {
+        await http().patch(`/api/schedules/${t.id}`).set(ventas()).send({ estado: 'en_proceso' }).expect(200);
+        await http().patch(`/api/schedules/${t.id}`).set(ventas()).send({ estado: 'terminado' }).expect(200);
+      }
+      const delivered = (await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'entregado' }).expect(201)).body;
+      expect(delivered.garantiaVigente).toBe(true);
+      expect(delivered.garantiaHasta).toBeTruthy();
+      const blocked = await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'cerrado' }).expect(400);
+      expect(blocked.body.message).toMatch(/saldo pendiente/);
+      await http().post(`/api/projects/${projectId}/cobros`).set(ventas()).send({ tipo: 'cobro', monto: 2000 }).expect(201);
+      const closed = (await http().post(`/api/projects/${projectId}/estado`).set(ventas()).send({ estado: 'cerrado' }).expect(201)).body;
+      expect(closed).toMatchObject({ estado: 'cerrado', saldo: 0, transicionesValidas: [] });
+    });
+
+    it('is cancelled only by Gerencia with a reason, cancelling its open jobs', async () => {
+      const q = (await http().post('/api/quotations').set(ventas())
+        .send({ titulo: `E2E anular ${Date.now()}`, categoriaId: 'seguridad_electronica', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 500 })
+        .expect(201)).body;
+      await http().post(`/api/quotations/${q.id}/files`).set(ventas()).attach('file', Buffer.from('%PDF-1.4 e2e'), 'c.pdf').expect(201);
+      await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
+      const id = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
+      await http().post(`/api/projects/${id}/estado`).set(ventas()).send({ estado: 'anulado', motivo: 'x' }).expect(400);
+      await http().post(`/api/projects/${id}/estado`).set(admin()).send({ estado: 'anulado' }).expect(400);
+      const cancelled = (await http().post(`/api/projects/${id}/estado`).set(admin()).send({ estado: 'anulado', motivo: 'Cliente desistió' }).expect(201)).body;
+      expect(cancelled).toMatchObject({ estado: 'anulado', saldo: 0, motivoAnulacion: 'Cliente desistió' });
+      expect(cancelled.trabajos.every((t: { estado: string }) => t.estado === 'cancelado')).toBe(true);
     });
   });
 

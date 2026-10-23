@@ -7,6 +7,7 @@ import {
   canMutateQuotes,
   canMutateRelevamientos,
   canMutateSchedules,
+  canManageProjects,
   isAdmin,
 } from './policy';
 
@@ -54,4 +55,8 @@ export function assertCanMutateRelevamientos(user: User) {
 
 export function assertCanCreateSchedules(user: User) {
   if (!canCreateSchedules(user)) throw new ForbiddenException('Solo ventas o admin pueden crear trabajos');
+}
+
+export function assertCanManageProjects(user: User) {
+  if (!canManageProjects(user)) throw new ForbiddenException('Sin acceso a proyectos');
 }

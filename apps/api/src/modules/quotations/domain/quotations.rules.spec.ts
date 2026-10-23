@@ -6,7 +6,6 @@ import {
   expiresAt,
   isExpired,
   nextStates,
-  projectFromQuotation,
   restoreError,
   vistaFilter,
 } from './quotations.rules';
@@ -77,27 +76,5 @@ describe('quotations rules', () => {
     expect(vistaFilter('abiertas')).toEqual({ estados: ['borrador', 'enviado'], eliminadas: false });
     expect(vistaFilter('cerradas')).toEqual({ estados: ['aprobado', 'rechazado', 'vencido'], eliminadas: null });
     expect(vistaFilter()).toBeNull();
-  });
-
-  it('builds the project from the quotation total and division', () => {
-    const now = new Date('2026-10-21T00:00:00Z');
-    const quote = { id: 'q1', numero: 'COT-1', titulo: 'CCTV', categoriaId: 'seguridad_electronica', monto: 1500, clienteId: 'c1', sucursalId: 's1', vendedorId: 'v1' };
-    expect(projectFromQuotation(quote, 'Av. Siempre Viva', {}, now)).toMatchObject({
-      categoriaId: 'seguridad_electronica',
-      lugar: 'Av. Siempre Viva',
-      descripcionTrabajo: 'CCTV (COT-1)',
-      monto: 1500,
-      adelanto: 0,
-      saldo: 1500,
-      fechaProgramada: now,
-      estado: 'programado',
-      quotationId: 'q1',
-      vendedorId: 'v1',
-    });
-    expect(projectFromQuotation(quote, '', { lugar: ' Obra ', fechaProgramada: '2026-11-01' }, now)).toMatchObject({
-      lugar: 'Obra',
-      fechaProgramada: new Date('2026-11-01'),
-    });
-    expect(projectFromQuotation(quote, '', {}, now).lugar).toBe('Por definir');
   });
 });

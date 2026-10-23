@@ -38,7 +38,7 @@ export default function QuotationDetailPage() {
     quote.cliente && { key: 'cliente', icon: User, label: 'Cliente', value: quote.cliente.nombre, to: `/clientes/${quote.cliente.id}` },
     { key: 'relevamientos', icon: MapPin, label: 'Relevamientos', value: quote._count.relevamientos, to: '/surveys' },
     { key: 'tareas', icon: ClipboardList, label: 'Tareas', value: quote._count.tasks },
-    quote.proyectoId && { key: 'proyecto', icon: FolderKanban, label: 'Proyecto', value: 'Ver en cronograma', to: '/schedule' },
+    quote.project && { key: 'proyecto', icon: FolderKanban, label: 'Proyecto', value: quote.project.codigo, to: `/projects/${quote.project.id}` },
   ].filter(Boolean);
 
   return (

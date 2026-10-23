@@ -1,29 +1,76 @@
-# Projects (Proyectos) — priority 1
+# Proyectos
 
-**Status:** 🔴 the concept does not exist yet. Today it is split between `Schedule` (jobs) and the unused `Sale`/`SaleJob`/`SalePayment`. Nothing renders on the committed branch until PLAT-01 is fixed.
+> Una cotización aprobada es un Proyecto: monto oficial, trabajos en el cronograma, cobros, saldo y garantía · Rutas: `/projects` (pestaña Proyectos dentro de Cotizaciones), `/projects/:id` · Estado: 🟢 PRO-01 (2026-10-23); costo y margen llegan con Finanzas (FIN-01) e Inventario (INV-01)
 
-## Purpose
-A Proyecto is an accepted quotation: official amount, **Actividades** (the only thing shown in the Cronograma), material (internal orders), costs and **cobros**. It shows **% cobrado, saldo, costo acumulado and margen = monto oficial − costo**, all computed from Movimientos. States: `planificado → en_ejecucion → entregado → cerrado | anulado`. Nothing is deleted, only annulled with a reason. Only gerencia changes the official amount or annuls.
+## Roles
 
-## Today's behavior (to be replaced)
-- API: `POST /schedules/:id/payments` stores a `SchedulePayment` and recomputes `adelanto`/`saldo`. Types `adelanto`, `cobro`, `extra_asistencia`. Job flow `programado → en_proceso → terminado`, any → `cancelado`; técnico only changes status and notes on own jobs.
-- Web: `PaymentModal`, `CompleteWorkModal`, `FinalizeAssistanceModal`, `ScheduleFormModal` still go through `utils/cobrosRendicion.js` (fake success on 404) and compute balance in the browser. The `sales` API module duplicates Schedule and is unused.
+| Rol | Ve | Hace |
+|---|---|---|
+| Administrador | todos | cobrar, agregar trabajos, iniciar, entregar, cerrar, **anular**, editar |
+| Ventas | todos | lo mismo salvo anular |
+| Técnico | — (API 403); sus trabajos del proyecto en el cronograma | iniciar y terminar sus trabajos |
 
-## Health (S1, 2026-10-12, with the PLAT-01 temporary fix)
-| Screen | admin | ventas | técnico |
+## Estados
+
+`planificado → en_ejecucion → entregado → cerrado` · `anulado` desde cualquier estado abierto · `entregado → en_ejecucion` (volver).
+
+| Transición | Quién | Condición | Confirmación |
 |---|---|---|---|
-| `/schedule` | ✅ | ✅ | ⚠ loads, but 403 on `/api/quotations` and `/api/users` + 2 console errors |
-| Payment/status modals | not run | not run | not run |
+| (aprobar cotización) → planificado | comercial | crea el proyecto y su primer trabajo en una transacción, una sola vez | la de aprobar |
+| planificado → en_ejecucion | comercial | — | "¿Iniciar la ejecución…?" |
+| en_ejecucion → entregado | comercial | todos los trabajos terminados o cancelados; empieza la garantía | "Empieza la garantía de N meses" |
+| entregado → cerrado | comercial | saldo 0 | "Un proyecto cerrado ya no admite cambios" |
+| abierto → anulado | administrador | motivo; cancela los trabajos pendientes; el saldo deja de cobrarse | motivo en el diálogo |
 
-## Checklist
-- [ ] PLAT-01 Fix `ScheduleFormModal.jsx` (blocks everything).
-- [ ] PRO-01 Project, Activity, Assistance model (Phase C, needs approval); remove `sales` API module and its tables.
-- [ ] PRO-02 Accept quotation → Project; official amount immutable.
-- [ ] PRO-03 Project view: % cobrado, saldo, costo, margen, from the API.
-- [ ] PRO-04 Annul with reason (no delete); state machine in the API.
-- [ ] SCH-01 Técnico sees only own activities without 403 (Phase E).
+## Vistas
 
-## Smoke steps
-1. Ventas accepts a quotation → Project appears (S3).
-2. Técnico moves own activity `en_proceso → terminado`; admin sees it live (S4).
-3. Cobro on a project updates saldo/% in the API response, lists and reports without reload (S5).
+| Vista | Tipo | Filtros y agrupaciones | Smart buttons / enlaces |
+|---|---|---|---|
+| Proyectos (`/projects`) | lista (tarjetas en teléfono) | estado, categoría, con saldo, en garantía · agrupar por estado, categoría, cliente, responsable · totales de monto, cobrado y saldo · exportar CSV | clic → ficha |
+| Ficha (`/projects/:id`) | formulario Odoo | barra de estado con las transiciones de la API | Cotización, Cliente, Trabajos, Cobrado % · pestañas Trabajos y Cobros · historial |
+
+La lista con totales es el informe transparente de lo cotizado y aprobado frente a lo cobrado y lo adeudado: no hay una pestaña Informes aparte que lo repita.
+
+## Flujos
+
+| # | Tarea | Rol | Pasos (≤ 5) | Confirmación / notificación | Resultado y dónde se actualiza |
+|---|---|---|---|---|---|
+| 1 | Abrir el proyecto | comercial | 1. Cotización aprobada 2. smart button Proyecto | — | ficha del proyecto |
+| 2 | Registrar cobro | comercial | 1. Registrar cobro 2. Adelanto / Cobro / Adicional 3. monto, método 4. Registrar | el formulario impide superar el saldo; toast | cobrado, % y saldo en ficha, lista y otras sesiones |
+| 3 | Agregar trabajo | comercial | 1. Nuevo trabajo 2. trabajo, fecha, técnico 3. Agregar | toast | aparece en el cronograma con la categoría del proyecto |
+| 4 | Entregar | comercial | 1. Iniciar ejecución 2. (técnicos terminan los trabajos) 3. Marcar entregado | diálogo; error si hay trabajos pendientes | garantía "hasta …" |
+| 5 | Cerrar | comercial | 1. Cerrar 2. Confirmar | diálogo; error con el saldo si se debe | estado Cerrado, sin acciones |
+| 6 | Anular | administrador | 1. Anular 2. motivo 3. Confirmar | diálogo con motivo | trabajos pendientes cancelados, saldo 0 |
+| 7 | Editar | comercial | 1. Editar 2. título, responsable, meses de garantía 3. Guardar | toast | ficha e historial |
+
+## Reglas (API)
+
+| Regla | Archivo | Error que devuelve |
+|---|---|---|
+| Flujo de estados, entregar sin trabajos pendientes, cerrar sin saldo, anular solo admin con motivo | `apps/api/src/modules/projects/domain/projects.rules.ts` (`checkProjectTransition`) | 400 "Termina o cancela los trabajos pendientes…", "No se cierra un proyecto con saldo pendiente (Bs …)", "Solo Gerencia anula…", "Indica el motivo…" |
+| Cobrado = adelantos + cobros; saldo = monto − cobrado − condonado (anulado = 0); % cobrado | `projectMoney` | — |
+| Garantía desde la entrega por `garantiaMeses` (12 por defecto) | `warranty` | — |
+| Cobro no supera el saldo (el excedente es "adicional") | `modules/schedules/domain/schedules.rules.ts` `paymentError` (el cobro se registra en el trabajo principal hasta FIN-01) | 400 "…Registra el excedente como adicional." |
+| Trabajos nuevos solo en proyectos abiertos | `newJobError` | 400 |
+| Solo comerciales | `common/policy` `canManageProjects` | 403 |
+
+## Eventos en tiempo real
+
+| Acción | `entity` | `affects` | Qué se refresca en otras sesiones |
+|---|---|---|---|
+| aprobar cotización | `quotation` | `project`, `schedule`, `client` | listas de proyectos, cronograma, clientes |
+| cambiar estado, editar | `project` | `schedule`, `client` | lista, ficha, cronograma |
+| cobro de un trabajo del proyecto | `payment` | `schedule`, `client`, `project` | cobrado y saldo |
+| crear o mover un trabajo del proyecto | `schedule` | `project` | pestaña Trabajos |
+
+## Pruebas
+
+- Unit: `modules/projects/domain/projects.rules.spec.ts`.
+- e2e: `apps/api/test/app.e2e-spec.ts` › "projects from approved quotations (PRO-01)".
+- Smoke: `node scripts/smoke-projects.mjs` (dos sesiones).
+
+## Pendientes
+
+- [ ] FIN-01: los cobros pasan al libro de movimientos con `projectId`; el monto oficial deja de vivir en el primer trabajo; Gerencia cambia el monto oficial con motivo.
+- [ ] Costo (material entregado + gastos) y margen (FIN-01, INV-01).
+- [ ] Iniciar ejecución automáticamente cuando empieza el primer trabajo (hoy es manual).

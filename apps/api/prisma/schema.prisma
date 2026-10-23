@@ -19,37 +19,39 @@ model Sucursal {
   tasks         Task[]
   schedules     Schedule[]
   pedidosOrigen PedidoInterno[] @relation("SucursalPedidosOrigen")
+  projects      Project[]
 
   @@map("sucursales")
 }
 
 model User {
-  id                 String                    @id @default(uuid())
-  email              String                    @unique
-  passwordHash       String
-  name               String
-  role               String
-  phone              String                    @default("")
-  active             Boolean                   @default(true)
-  monthlyGoalBs      Decimal                   @default(0) @db.Decimal(12, 2)
-  sucursalId         String?
-  sucursal           Sucursal?                 @relation(fields: [sucursalId], references: [id])
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
-  sessions           Session[]
-  activities         Activity[]
-  quotations         Quotation[]               @relation("VendorQuotations")
-  sellerGoals        SellerGoal[]
-  relevamientos      Relevamiento[]
-  createdTasks       Task[]                    @relation("TaskCreator")
-  assignedTasks      Task[]                    @relation("TaskAssignee")
-  designatedTasks    Task[]                    @relation("TaskAssignedBy")
-  schedulesVendedor  Schedule[]                @relation("ScheduleVendedor")
-  schedulesTecnico   Schedule[]                @relation("ScheduleTecnico")
-  schedulePayments   SchedulePayment[]         @relation("PaymentCollector")
-  pedidosResponsable PedidoInterno[]           @relation("PedidoResponsable")
-  comentariosPedidos PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
-  quotationsDeleted  Quotation[]               @relation("QuotationsDeleted")
+  id                  String                    @id @default(uuid())
+  email               String                    @unique
+  passwordHash        String
+  name                String
+  role                String
+  phone               String                    @default("")
+  active              Boolean                   @default(true)
+  monthlyGoalBs       Decimal                   @default(0) @db.Decimal(12, 2)
+  sucursalId          String?
+  sucursal            Sucursal?                 @relation(fields: [sucursalId], references: [id])
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  sessions            Session[]
+  activities          Activity[]
+  quotations          Quotation[]               @relation("VendorQuotations")
+  sellerGoals         SellerGoal[]
+  relevamientos       Relevamiento[]
+  createdTasks        Task[]                    @relation("TaskCreator")
+  assignedTasks       Task[]                    @relation("TaskAssignee")
+  designatedTasks     Task[]                    @relation("TaskAssignedBy")
+  schedulesVendedor   Schedule[]                @relation("ScheduleVendedor")
+  schedulesTecnico    Schedule[]                @relation("ScheduleTecnico")
+  schedulePayments    SchedulePayment[]         @relation("PaymentCollector")
+  pedidosResponsable  PedidoInterno[]           @relation("PedidoResponsable")
+  comentariosPedidos  PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
+  quotationsDeleted   Quotation[]               @relation("QuotationsDeleted")
+  projectsResponsable Project[]                 @relation("ProjectResponsable")
 
   @@index([sucursalId])
   @@map("users")
@@ -107,6 +109,7 @@ model Client {
   relevamientos  Relevamiento[]
   schedules      Schedule[]
   tasks          Task[]
+  projects       Project[]
 
   @@index([sucursalId])
   @@index([nombre])
@@ -157,6 +160,7 @@ model Quotation {
   schedulePayments   SchedulePayment[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+  project            Project?
 
   @@index([vendedorId])
   @@index([clienteId])
@@ -289,6 +293,9 @@ model Schedule {
   tecnico            User?             @relation("ScheduleTecnico", fields: [tecnicoId], references: [id])
   quotationId        String?
   quotation          Quotation?        @relation(fields: [quotationId], references: [id])
+  /// Project this job belongs to (PRO-01). Jobs without a project are stand-alone work.
+  projectId          String?
+  project            Project?          @relation(fields: [projectId], references: [id])
   observaciones      String            @default("") @db.Text
   mapsLink           String            @default("") @db.VarChar(500)
   fotosUrl           Json?
@@ -304,6 +311,7 @@ model Schedule {
   @@index([clienteId])
   @@index([quotationId])
   @@index([categoriaId])
+  @@index([projectId])
   @@map("schedules")
 }
 
@@ -387,6 +395,7 @@ model QuotationCategory {
   updatedAt  DateTime    @updatedAt
   quotations Quotation[]
   schedules  Schedule[]
+  projects   Project[]
 
   @@unique([label])
   @@map("quotation_categories")
@@ -473,4 +482,36 @@ model SolicitudWeb {
   @@index([telefono])
   @@index([createdAt])
   @@map("solicitudes_web")
+}
+
+/// An approved quotation (PRO-01). Official amount, state, warranty; its jobs (trabajos) are schedules with projectId.
+model Project {
+  id              String            @id @default(uuid())
+  codigo          String            @unique
+  quotationId     String            @unique
+  quotation       Quotation         @relation(fields: [quotationId], references: [id])
+  clienteId       String
+  cliente         Client            @relation(fields: [clienteId], references: [id])
+  categoriaId     String
+  categoria       QuotationCategory @relation(fields: [categoriaId], references: [id])
+  sucursalId      String
+  sucursal        Sucursal          @relation(fields: [sucursalId], references: [id])
+  titulo          String            @db.VarChar(300)
+  montoOficial    Decimal           @db.Decimal(12, 2)
+  /// planificado → en_ejecucion → entregado → cerrado | anulado (domain/projects.rules.ts).
+  estado          String            @default("planificado") @db.VarChar(32)
+  motivoAnulacion String?           @db.Text
+  garantiaMeses   Int               @default(12)
+  entregadoAt     DateTime?
+  cerradoAt       DateTime?
+  responsableId   String?
+  responsable     User?             @relation("ProjectResponsable", fields: [responsableId], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  schedules       Schedule[]
+
+  @@index([estado])
+  @@index([clienteId])
+  @@index([categoriaId])
+  @@map("projects")
 }
