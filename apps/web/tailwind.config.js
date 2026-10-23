@@ -17,6 +17,11 @@ module.exports = {
     },
     extend: {
       colors: {
+        division: {
+          computo: "hsl(var(--division-computo))",
+          seguridad: "hsl(var(--division-seguridad))",
+          cableado: "hsl(var(--division-cableado))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

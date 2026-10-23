@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Activity } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { cn } from '@/lib/utils.js';
 import { TasksSystray } from '@/features/tasks';
 
-const Header = ({ onMenuClick, activityOpen = false, onToggleActivity }) => {
+const Header = ({ onMenuClick }) => {
   const { currentUser } = useAuth();
 
   return (
@@ -49,18 +48,6 @@ const Header = ({ onMenuClick, activityOpen = false, onToggleActivity }) => {
             {currentUser?.name?.charAt(0) || 'U'}
           </Link>
           <TasksSystray />
-          <Button
-            type="button"
-            variant={activityOpen ? 'default' : 'outline'}
-            size="default"
-            onClick={onToggleActivity}
-            aria-pressed={activityOpen}
-            aria-label={activityOpen ? 'Cerrar cronograma y actividad' : 'Abrir cronograma y actividad'}
-            className={cn('min-h-11 font-semibold', activityOpen && 'shadow-md')}
-          >
-            <Activity className="h-5 w-5" />
-            <span className="hidden xs:inline sm:inline">Actividad</span>
-          </Button>
         </div>
       </div>
     </header>

@@ -11,8 +11,8 @@ export function useProjects(enabled = true) {
   return useQuery({ queryKey: ['project', 'list'], queryFn: () => apiClient.get('projects', opts()), enabled });
 }
 
-export function useProject(id) {
-  return useQuery({ queryKey: ['project', 'detail', id], queryFn: () => apiClient.get(`projects/${id}`, opts()), enabled: Boolean(id) });
+export function useProject(id, enabled = true) {
+  return useQuery({ queryKey: ['project', 'detail', id], queryFn: () => apiClient.get(`projects/${id}`, opts()), enabled: Boolean(id) && enabled });
 }
 
 function useProjectMutation(fn) {

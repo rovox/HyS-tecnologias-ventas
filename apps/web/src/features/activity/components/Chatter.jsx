@@ -1,6 +1,6 @@
 import { History } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDateTime, formatRelative } from '@/shared/lib/format.js';
+import { formatDateTime, formatDay, formatRelative } from '@/shared/lib/format.js';
 import { useRecordHistory } from '../api.js';
 
 const VERBS = {
@@ -26,10 +26,14 @@ const verbOf = (action) => {
 };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/;
+/** Date-only fields (due date, scheduled day) are stored at UTC midnight. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}T00:00:00(\.000)?Z$/;
 
 const show = (value) => {
   if (value === null || value === undefined || value === '') return '—';
-  return ISO_DATE.test(String(value)) ? formatDateTime(value) : String(value);
+  const text = String(value);
+  if (DATE_ONLY.test(text)) return formatDay(text);
+  return ISO_DATE.test(text) ? formatDateTime(text) : text;
 };
 
 /**
