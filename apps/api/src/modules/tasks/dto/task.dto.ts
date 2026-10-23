@@ -1,10 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
+import { TASK_ESTADOS, TASK_PRIORIDADES } from '../domain/tasks.rules';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
 export class CreateTaskDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  clienteId?: string;
+
   @ApiPropertyOptional({ description: 'Si falta, se toma de la primera línea de descripcion' })
   @IsOptional()
   @IsString()
@@ -35,9 +42,9 @@ export class CreateTaskDto {
   @Transform(emptyToUndef)
   asignadoId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: TASK_PRIORIDADES })
   @IsOptional()
-  @IsString()
+  @IsIn(TASK_PRIORIDADES, { message: 'Prioridad no válida' })
   @Transform(emptyToUndef)
   prioridad?: string;
 
@@ -77,6 +84,12 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsString()
   @Transform(emptyToUndef)
+  clienteId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
   titulo?: string;
 
   @ApiPropertyOptional()
@@ -91,15 +104,15 @@ export class UpdateTaskDto {
   @Transform(emptyToUndef)
   asignadoId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: TASK_ESTADOS })
   @IsOptional()
-  @IsString()
+  @IsIn(TASK_ESTADOS, { message: 'Estado de tarea no válido' })
   @Transform(emptyToUndef)
   estado?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: TASK_PRIORIDADES })
   @IsOptional()
-  @IsString()
+  @IsIn(TASK_PRIORIDADES, { message: 'Prioridad no válida' })
   @Transform(emptyToUndef)
   prioridad?: string;
 

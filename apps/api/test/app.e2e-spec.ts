@@ -305,6 +305,33 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('minimal tasks and conversion to a quotation (TSK-01)', () => {
+    const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const http = () => request(app.getHttpServer());
+
+    it('counts my pending tasks and validates the state', async () => {
+      const before = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
+      const task = (await http().post('/api/tasks').set(auth()).send({ titulo: 'Llamar a la clínica', clienteId: 'cli_hospital', plazo: '2020-01-01' }).expect(201)).body;
+      expect(task.cliente).toEqual({ id: 'cli_hospital', nombre: 'Clínica Horizonte' });
+      const after = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
+      expect(after.mias).toBe(before.mias + 1);
+      expect(after.vencidas).toBe(before.vencidas + 1);
+      await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'hecha' }).expect(400);
+      await http().post('/api/tasks').set(auth()).send({ titulo: 'x', clienteId: 'no-existe' }).expect(400);
+    });
+
+    it('converts a pending task into a quotation once', async () => {
+      const task = (await http().post('/api/tasks').set(auth()).send({ titulo: 'Cotizar CCTV', clienteId: 'cli_mall' }).expect(201)).body;
+      const quote = { titulo: 'CCTV desde tarea', categoriaId: 'seguridad_electronica', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 1200, tareaId: task.id };
+      const created = (await http().post('/api/quotations').set(auth()).send(quote).expect(201)).body;
+      const linked = (await http().get(`/api/tasks/${task.id}`).set(auth()).expect(200)).body;
+      expect(linked.estado).toBe('completada');
+      expect(linked.quotation.id).toBe(created.id);
+      const again = await http().post('/api/quotations').set(auth()).send(quote).expect(400);
+      expect(again.body.message).toMatch(/ya tiene una cotización/);
+    });
+  });
+
   describe('quotation → project → payments (MVP-6)', () => {
     const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
     let quoteId = '';

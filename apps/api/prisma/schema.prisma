@@ -106,6 +106,7 @@ model Client {
   quotations     Quotation[]
   relevamientos  Relevamiento[]
   schedules      Schedule[]
+  tasks          Task[]
 
   @@index([sucursalId])
   @@index([nombre])
@@ -349,6 +350,9 @@ model Task {
   prioridadMotivo String?    @db.Text
   plazo           DateTime?
   cotizacionId    String?
+  /// Client the follow-up is about (optional); carried into the quotation when the task is converted.
+  clienteId       String?
+  cliente         Client?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   quotation       Quotation? @relation(fields: [cotizacionId], references: [id], onDelete: SetNull)
   scheduleId      String?
   schedule        Schedule?  @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
@@ -365,6 +369,7 @@ model Task {
   @@index([plazo])
   @@index([cotizacionId])
   @@index([scheduleId])
+  @@index([clienteId])
   @@index([tipo, asignadoId])
   @@index([tipo, estado])
   @@map("tasks")

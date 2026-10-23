@@ -6,20 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { useCategories, useSucursales } from '@/features/catalogs';
+import { ClientPicker, useCategories, useSucursales } from '@/features/catalogs';
 import { notify } from '@/shared/lib/notify.js';
 import { cn } from '@/lib/utils';
 import { useCreateQuotation, useUpdateQuotation } from '../api.js';
 import { SUBCATEGORY_SUGGESTIONS } from '../constants.js';
-import { ClientPicker } from './ClientPicker.jsx';
 import { SellersField } from './SellersField.jsx';
 
 const day = (value) => (value ? String(value).slice(0, 10) : '');
 
-function initialForm(quote, user) {
+function initialForm(quote, user, prefill = {}) {
   return {
-    titulo: quote?.titulo || '',
-    clienteId: quote?.clienteId || '',
+    titulo: quote?.titulo || prefill.titulo || '',
+    clienteId: quote?.clienteId || prefill.clienteId || '',
     categoriaId: quote?.categoriaId || '',
     subcategoria: quote?.subcategoria || '',
     monto: quote ? String(Number(quote.monto)) : '',
@@ -31,7 +30,7 @@ function initialForm(quote, user) {
     tieneLicitacion: Boolean(quote?.tieneLicitacion),
     licitacionNumero: quote?.licitacionNumero || '',
     licitacionEntidad: quote?.licitacionEntidad || '',
-    observacion: quote?.observacion || '',
+    observacion: quote?.observacion || prefill.observacion || '',
   };
 }
 
@@ -50,14 +49,17 @@ function formError(form, send, hasPdf) {
   return null;
 }
 
-/** Create or edit a quotation. Once approved, amount, client and division are the project's and stay fixed. */
-export function QuotationFormDialog({ open, onOpenChange, quote, onSaved }) {
+/**
+ * Create or edit a quotation. Once approved, amount, client and division are the project's and stay fixed.
+ * prefill: { titulo, clienteId, observacion, tareaId } when it comes from a task (the API links and completes it).
+ */
+export function QuotationFormDialog({ open, onOpenChange, quote, onSaved, prefill }) {
   const { currentUser } = useAuth();
   const { data: categories } = useCategories();
   const { data: sucursales = [] } = useSucursales();
   const create = useCreateQuotation();
   const update = useUpdateQuotation();
-  const [form, setForm] = useState(() => initialForm(quote, currentUser));
+  const [form, setForm] = useState(() => initialForm(quote, currentUser, prefill));
   const [pdf, setPdf] = useState(null);
   const [licitacion, setLicitacion] = useState([]);
   const locked = quote?.estado === 'aprobado';
@@ -65,11 +67,11 @@ export function QuotationFormDialog({ open, onOpenChange, quote, onSaved }) {
 
   useEffect(() => {
     if (open) {
-      setForm(initialForm(quote, currentUser));
+      setForm(initialForm(quote, currentUser, prefill));
       setPdf(null);
       setLicitacion([]);
     }
-  }, [open, quote, currentUser]);
+  }, [open, quote, currentUser, prefill]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const suggestions = [...(SUBCATEGORY_SUGGESTIONS[form.categoriaId] || []), ...(categories?.chips || []).map((c) => c.label)];
@@ -88,6 +90,7 @@ export function QuotationFormDialog({ open, onOpenChange, quote, onSaved }) {
       licitacionEntidad: form.tieneLicitacion ? form.licitacionEntidad : undefined,
       observacion: form.observacion,
       ...(locked ? {} : { clienteId: form.clienteId, categoriaId: form.categoriaId, monto: Number(form.monto) }),
+      ...(!quote && prefill?.tareaId ? { tareaId: prefill.tareaId } : {}),
     };
     if (quote) delete data.sucursalId;
     const files = { pdf, licitacion };

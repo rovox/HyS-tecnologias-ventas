@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Layout from '@/components/Layout.jsx';
 import { Chatter } from '@/features/activity';
 import { ControlPanel, Field, FieldGrid, FormView, StatusBar } from '@/shared/views';
-import { formatBs, formatDate, formatDateTime } from '@/shared/lib/format.js';
+import { formatBs, formatDate, formatDateTime, formatDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { openQuotationFile, useQuotation } from '../api.js';
@@ -91,7 +91,7 @@ export default function QuotationDetailPage() {
               <span className="inline-flex items-center gap-1"><CalendarDays className="h-4 w-4" /> {formatDate(quote.venceEl)}</span>
             ) : null}
           </Field>
-          <Field label="Plazo de entrega">{quote.plazoFinal ? formatDate(quote.plazoFinal) : null}</Field>
+          <Field label="Plazo de entrega">{quote.plazoFinal ? formatDay(quote.plazoFinal) : null}</Field>
           {quote.tieneLicitacion && <Field label="Licitación">{[quote.licitacionNumero, quote.licitacionEntidad].filter(Boolean).join(' · ') || 'Sí'}</Field>}
         </FieldGrid>
         {Array.isArray(quote.licitacionArchivos) && quote.licitacionArchivos.length > 0 && (

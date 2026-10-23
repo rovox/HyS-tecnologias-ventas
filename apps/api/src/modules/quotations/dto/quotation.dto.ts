@@ -23,6 +23,12 @@ export class VendorDto {
 }
 
 export class CreateQuotationDto {
+  @ApiPropertyOptional({ description: 'Task this quotation comes from: it is linked and completed' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  tareaId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

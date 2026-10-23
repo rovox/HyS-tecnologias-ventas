@@ -4,6 +4,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { assertCanMutateQuotes, isTec, quotationWhere } from '../../common/policy/roles';
 import { CategoriesService } from '../categories';
+import { TasksService } from '../tasks';
 import { CreateQuotationDto, ListQuotationsQuery, UpdateQuotationDto } from './dto/quotation.dto';
 import { editError, vistaFilter } from './domain/quotations.rules';
 import { DETAIL, present } from './quotation.presenter';
@@ -17,6 +18,7 @@ export class QuotationsService {
     private readonly audit: AuditService,
     private readonly categories: CategoriesService,
     private readonly flow: QuotationFlowService,
+    private readonly tasks: TasksService,
   ) {}
 
   private async nextNumero() {
@@ -97,6 +99,7 @@ export class QuotationsService {
     if (!sucursalId) throw new BadRequestException('Sucursal no válida');
     const sucursal = await this.requireSucursal(sucursalId);
     await this.categories.assertDivision(dto.categoriaId);
+    if (dto.tareaId) await this.tasks.assertConvertible(dto.tareaId, user);
     const vendors = (dto.vendedores || []).filter((row) => row.userId);
     const resolvedVendors = vendors.length
       ? vendors
@@ -135,6 +138,7 @@ export class QuotationsService {
     });
     await this.prisma.touchClientActivity(dto.clienteId);
     await this.audit.record({ user, sessionId, action: 'quotation.create', entity: 'quotation', id: quote.id, patch: { estado: quote.estado } });
+    if (dto.tareaId) await this.tasks.markConverted(dto.tareaId, quote.id, user, sessionId);
     return present(quote);
   }
 
