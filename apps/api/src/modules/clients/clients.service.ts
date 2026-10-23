@@ -12,113 +12,19 @@ export class ClientsService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(user: User, q?: string, active?: string) {
+  /** Clients for lists and pickers; balances and services in course come from the read model (GET /reporting/clients). */
+  list(user: User, q?: string) {
     const query = q?.trim();
-    const activeOnly = active === '1' || active === 'true';
-    const hace90 = new Date();
-    hace90.setDate(hace90.getDate() - 90);
-
-    const rows = await this.prisma.client.findMany({
+    return this.prisma.client.findMany({
       where: {
         ...clientWhere(user),
         ...(query
-          ? {
-              OR: [
-                { nombre: { contains: query } },
-                { telefono: { contains: query } },
-                { email: { contains: query } },
-                { contacto: { contains: query } },
-              ],
-            }
-          : {}),
-        ...(activeOnly
-          ? {
-              OR: [
-                { lastActivityAt: { gte: hace90 } },
-                { quotations: { some: { estado: { in: ['borrador', 'enviado'] } } } },
-                { quotations: { some: { sale: { status: 'abierta' } } } },
-              ],
-            }
+          ? { OR: [{ nombre: { contains: query } }, { telefono: { contains: query } }, { email: { contains: query } }, { contacto: { contains: query } }] }
           : {}),
       },
+      include: { sucursal: { select: { id: true, nombre: true } } },
       orderBy: [{ lastActivityAt: 'desc' }, { createdAt: 'desc' }],
-      take: query ? 10 : undefined,
-      include: {
-        quotations: {
-          select: {
-            id: true,
-            estado: true,
-            sale: { select: { id: true, status: true } },
-          },
-        },
-        schedules: {
-          select: { id: true, estado: true },
-        },
-      },
-    });
-
-    const quoteIds = rows.flatMap((row) => row.quotations.map((q) => q.id));
-    const scheduleIds = rows.flatMap((row) => row.schedules.map((s) => s.id));
-    const saleIds = rows.flatMap((row) =>
-      row.quotations.map((q) => q.sale?.id).filter(Boolean) as string[],
-    );
-    const tasks = quoteIds.length || saleIds.length || scheduleIds.length
-      ? await this.prisma.task.findMany({
-          where: {
-            OR: [
-              ...(quoteIds.length ? [{ cotizacionId: { in: quoteIds } }] : []),
-              ...(saleIds.length ? [{ scheduleId: { in: saleIds } }] : []),
-              ...(scheduleIds.length ? [{ scheduleId: { in: scheduleIds } }] : []),
-            ],
-          },
-          orderBy: { updatedAt: 'desc' },
-          select: {
-            id: true,
-            titulo: true,
-            estado: true,
-            plazo: true,
-            updatedAt: true,
-            createdAt: true,
-            cotizacionId: true,
-            scheduleId: true,
-          },
-        })
-      : [];
-
-    return rows.map((row) => {
-      const openSales = row.quotations.filter((q) => q.sale?.status === 'abierta').length;
-      const openQuotes = row.quotations.filter((q) => q.estado === 'borrador' || q.estado === 'enviado').length;
-      const ids = new Set(row.quotations.map((q) => q.id));
-      const sids = new Set([
-        ...row.quotations.map((q) => q.sale?.id).filter(Boolean) as string[],
-        ...row.schedules.map((s) => s.id),
-      ]);
-      const clientTasks = tasks.filter(
-        (t) => (t.cotizacionId && ids.has(t.cotizacionId)) || (t.scheduleId && sids.has(t.scheduleId)),
-      );
-      const esActivo =
-        (row.lastActivityAt && row.lastActivityAt >= hace90)
-        || openQuotes > 0
-        || openSales > 0
-        || row.schedules.some((s) => s.estado !== 'terminado' && s.estado !== 'cancelado');
-      const esClienteContratado =
-        row.quotations.some((q) => q.estado === 'aprobado')
-        || row.schedules.some((s) => s.estado !== 'cancelado');
-      const { quotations: _q, schedules: _s, ...client } = row;
-      return {
-        ...client,
-        esActivo,
-        esClienteContratado,
-        cotizacionesCount: row.quotations.length,
-        trabajosEnProceso: row.schedules.filter((s) => s.estado !== 'terminado' && s.estado !== 'cancelado').length,
-        tareasCount: clientTasks.length,
-        tareasRecientes: clientTasks.slice(0, 3).map((t) => ({
-          id: t.id,
-          titulo: t.titulo,
-          estado: t.estado,
-          at: t.plazo || t.updatedAt || t.createdAt,
-        })),
-      };
+      take: query ? 20 : undefined,
     });
   }
 
@@ -128,56 +34,6 @@ export class ClientsService {
     });
     if (!client) throw new NotFoundException('Cliente no encontrado');
     return client;
-  }
-
-  async history(id: string, user: User) {
-    const client = await this.get(id, user);
-    const [quotations, relevamientos, sales] = await Promise.all([
-      this.prisma.quotation.findMany({
-        where: { clienteId: id },
-        orderBy: { createdAt: 'desc' },
-        take: 40,
-        select: { id: true, numero: true, titulo: true, estado: true, monto: true, createdAt: true },
-      }),
-      this.prisma.relevamiento.findMany({
-        where: { clienteId: id },
-        orderBy: { fecha: 'desc' },
-        take: 40,
-        select: { id: true, fecha: true, lugar: true, notas: true, createdAt: true },
-      }),
-      this.prisma.sale.findMany({
-        where: { quotation: { clienteId: id } },
-        orderBy: { createdAt: 'desc' },
-        take: 40,
-        select: { id: true, total: true, status: true, createdAt: true, quotation: { select: { numero: true, titulo: true } } },
-      }),
-    ]);
-    const events = [
-      ...quotations.map((row) => ({
-        type: 'cotizacion',
-        id: row.id,
-        at: row.createdAt,
-        titulo: `${row.numero} · ${row.titulo}`,
-        detalle: row.estado,
-        monto: Number(row.monto),
-      })),
-      ...relevamientos.map((row) => ({
-        type: 'relevamiento',
-        id: row.id,
-        at: row.createdAt || row.fecha,
-        titulo: row.lugar,
-        detalle: row.notas || '',
-      })),
-      ...sales.map((row) => ({
-        type: 'venta',
-        id: row.id,
-        at: row.createdAt,
-        titulo: row.quotation?.numero || 'Venta',
-        detalle: row.status,
-        monto: Number(row.total),
-      })),
-    ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-    return { client, events };
   }
 
   async create(dto: UpsertClientDto, user: User, sessionId?: string) {

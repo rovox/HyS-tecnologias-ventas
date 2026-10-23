@@ -9,13 +9,12 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient.js';
 import { RealtimeProvider } from './RealtimeProvider.jsx';
 import { ConfirmProvider } from '@/shared/views';
+import { ClientDetailPage, ClientsPage } from '@/features/clients';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage.jsx'));
 const ScheduleSurveysPage = lazy(() => import('@/pages/ScheduleSurveysPage.jsx'));
-const ClientsPage = lazy(() => import('@/pages/ClientsPage.jsx'));
-const ClientDetailPage = lazy(() => import('@/pages/ClientDetailPage.jsx'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
 const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));

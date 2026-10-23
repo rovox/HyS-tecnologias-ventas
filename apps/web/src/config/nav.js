@@ -101,6 +101,3 @@ export function canWriteQuotations(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
 }
 
-export function canWriteClients(role) {
-  return role === ROLES.ADMIN || role === ROLES.VENTAS;
-}

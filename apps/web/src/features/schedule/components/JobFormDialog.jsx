@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { ClientPicker, useCategories, useSucursales, useUserDirectory } from '@/features/catalogs';
+import { useCategories, useSucursales, useUserDirectory } from '@/features/catalogs';
+import { ClientPicker } from '@/features/clients';
 import { notify } from '@/shared/lib/notify.js';
 import { cn } from '@/lib/utils';
 import { useCreateJob } from '../api.js';

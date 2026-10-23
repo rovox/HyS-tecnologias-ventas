@@ -498,6 +498,35 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('client read model (CLI-01)', () => {
+    const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const http = () => request(app.getHttpServer());
+
+    it('lists every client with what it owes and whether a service is in course (no Activo/Contratado tags)', async () => {
+      const rows = (await http().get('/api/reporting/clients').set(ventas()).expect(200)).body;
+      const hospital = rows.find((c: { id: string }) => c.id === 'cli_hospital');
+      expect(hospital).toMatchObject({ servicioEnCurso: true });
+      expect(hospital.saldoPendiente).toBeGreaterThan(0);
+      expect(hospital).not.toHaveProperty('esActivo');
+      const plain = (await http().get('/api/clients').set(ventas()).expect(200)).body[0];
+      expect(plain).not.toHaveProperty('esClienteContratado');
+    });
+
+    it('builds the client page from projects (warranty), jobs, quotations, payments and visits', async () => {
+      const c = (await http().get('/api/reporting/clients/cli_hospital').set(ventas()).expect(200)).body;
+      expect(c.proyectos.length).toBeGreaterThan(0);
+      expect(c.proyectos[0]).toHaveProperty('garantiaVigente');
+      expect(c.proyectos[0]).toHaveProperty('saldo');
+      expect(Array.isArray(c.trabajos)).toBe(true);
+      expect(c.cotizaciones.length).toBeGreaterThan(0);
+      expect(Array.isArray(c.cobros)).toBe(true);
+      expect(Array.isArray(c.relevamientos)).toBe(true);
+      const owed = [...c.proyectos, ...c.trabajos].reduce((sum: number, x: { saldo: number }) => sum + x.saldo, 0);
+      expect(c.saldoPendiente).toBeCloseTo(owed, 2);
+      await http().get('/api/reporting/clients/no-existe').set(ventas()).expect(404);
+    });
+  });
+
   describe('quotation → project → payments (MVP-6)', () => {
     const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
     let quoteId = '';

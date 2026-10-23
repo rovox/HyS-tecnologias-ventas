@@ -14,15 +14,9 @@ export class ClientsController {
   constructor(private readonly clients: ClientsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List clients (optional q / active filters)' })
-  list(@CurrentUser() user: User, @Query('q') q?: string, @Query('active') active?: string) {
-    return this.clients.list(user, q, active);
-  }
-
-  @Get(':id/history')
-  @ApiOperation({ summary: 'Client commercial history' })
-  history(@Param('id') id: string, @CurrentUser() user: User) {
-    return this.clients.history(id, user);
+  @ApiOperation({ summary: 'List clients (optional search q)' })
+  list(@CurrentUser() user: User, @Query('q') q?: string) {
+    return this.clients.list(user, q);
   }
 
   @Get(':id')
