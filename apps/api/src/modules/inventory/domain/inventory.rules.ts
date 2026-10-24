@@ -66,12 +66,13 @@ type DeliveredItem = { productoId?: string | null; cantidad: Qty; materialNombre
  * out to the project (material cost). Free-text items (no product) move nothing.
  */
 export function movementsForDelivery(
-  pedido: { sucursalOrigenId?: string | null; sucursalDestinoId?: string | null; projectId?: string | null },
+  pedido: { sucursalOrigenId?: string | null; sucursalDestinoId?: string | null; projectId?: string | null; forJob?: boolean },
   items: DeliveredItem[],
 ): { productoId: string; tipo: 'transferencia' | 'salida_proyecto'; cantidad: number; sucursalOrigenId: string; sucursalDestinoId: string | null; projectId: string | null }[] | string {
   const withProduct = items.filter((i) => i.productoId);
   if (!withProduct.length) return [];
   if (!pedido.sucursalOrigenId) return 'Indica la sucursal de origen del material';
+  if (pedido.forJob && !pedido.projectId) return 'El trabajo no es de un proyecto: su material no se descuenta del inventario (quita el producto o usa texto libre)';
   if (!pedido.projectId && !pedido.sucursalDestinoId) return 'Indica el trabajo de un proyecto o la sucursal de destino';
   if (!pedido.projectId && pedido.sucursalDestinoId === pedido.sucursalOrigenId) return 'La sucursal de origen y destino deben ser distintas';
   return withProduct.map((i) => ({

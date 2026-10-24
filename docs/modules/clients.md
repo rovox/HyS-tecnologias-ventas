@@ -1,6 +1,6 @@
 # Clientes
 
-> Ficha de cada cliente: qué contrató, qué debe, qué garantías tiene, sus cotizaciones, cobros y visitas · Rutas: `/clientes`, `/clientes/:id` · Estado: 🟢 CLI-01 (2026-10-23); equipos entregados llegan con Inventario (INV-01)
+> Ficha de cada cliente: qué contrató, qué debe, qué garantías tiene, sus cotizaciones, cobros y visitas · Rutas: `/clientes`, `/clientes/:id` · Estado: 🟢 CLI-01 (2026-10-23) · equipos INV-01 (2026-10-23)
 
 ## Roles
 
@@ -21,7 +21,7 @@ Sin etiquetas "Activo", "Inactivo" ni "Contratado" (decisión del dueño, 2026-1
 | Vista | Tipo | Filtros y agrupaciones | Smart buttons / enlaces |
 |---|---|---|---|
 | Clientes (`/clientes`) | lista (tarjetas en teléfono) | con servicio en curso, con saldo pendiente, sucursal · agrupar por sucursal o rubro · total adeudado · CSV | clic → ficha |
-| Ficha (`/clientes/:id`) | formulario Odoo | — | Cotizaciones, Proyectos (en curso), En garantía, Saldo pendiente · pestañas Proyectos y garantías, Trabajos, Cotizaciones, Cobros, Relevamientos · historial |
+| Ficha (`/clientes/:id`) | formulario Odoo | — | Cotizaciones, Proyectos (en curso), En garantía, Saldo pendiente · pestañas Proyectos y garantías, Equipos, Trabajos, Cotizaciones, Cobros, Relevamientos · historial |
 
 ## Flujos
 
@@ -31,6 +31,7 @@ Sin etiquetas "Activo", "Inactivo" ni "Contratado" (decisión del dueño, 2026-1
 | 2 | Registrar cliente desde otro formulario | comercial | 1. "+" junto al selector de cliente 2. Registrar | toast | queda elegido en la cotización, tarea o trabajo |
 | 3 | Editar | comercial | 1. Editar 2. cambiar 3. Guardar | toast | ficha e historial |
 | 4 | Ver qué debe y sus garantías | todos | 1. ficha 2. Proyectos y garantías | — | saldo por proyecto, garantía vigente o vencida |
+| 4b | Ver qué equipos tiene | todos | 1. ficha 2. Equipos | — | equipos entregados a sus proyectos (inventario) con la garantía del proyecto |
 | 5 | Nueva cotización para el cliente | comercial | 1. Nueva cotización (con el cliente) 2. completar 3. Guardar | toast | abre la cotización |
 | 6 | Encontrar a quién cobrar | comercial | 1. Filtros › Con saldo pendiente | — | lista con el total adeudado |
 
@@ -51,6 +52,7 @@ El modelo de lectura vive en el módulo `reporting` (`GET /reporting/clients`, `
 |---|---|---|---|
 | registrar, editar cliente | `client` | — | lista, ficha, selectores |
 | aprobar cotización, mover proyecto, cobrar, mover trabajo | (su entidad) | `client` | saldo y listas de la ficha |
+| salida de inventario a un proyecto, entregar pedido | `stock` / `pedido_interno` | `client` | pestaña Equipos |
 
 ## Pruebas
 
@@ -60,5 +62,4 @@ El modelo de lectura vive en el módulo `reporting` (`GET /reporting/clients`, `
 
 ## Pendientes
 
-- [ ] Equipos comprados o instalados (productos entregados por pedidos internos a sus proyectos) con su garantía — INV-01.
 - [ ] El formulario de relevamientos todavía usa el servicio anterior de clientes (`services/clients`).

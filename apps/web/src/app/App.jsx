@@ -10,6 +10,7 @@ import { queryClient } from './queryClient.js';
 import { RealtimeProvider } from './RealtimeProvider.jsx';
 import { ConfirmProvider } from '@/shared/views';
 import { ClientDetailPage, ClientsPage } from '@/features/clients';
+import { InventoryPage } from '@/features/inventory';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
@@ -200,6 +201,11 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/inventario" element={
+              <ProtectedRoute allowedRoles={routeRoles.inventario}>
+                <InventoryPage />
+              </ProtectedRoute>
+            } />
             <Route path="/finanzas" element={
               <ProtectedRoute allowedRoles={routeRoles.finanzas}>
                 <FinancePage />

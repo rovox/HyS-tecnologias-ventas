@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useInternalOrders } from '@/hooks/useInternalOrders.js';
-import PedidoInternoFormModal from '@/components/PedidoInternoFormModal.jsx';
+import { OrderFormDialog } from '@/features/orders';
 import EntregaPedidoModal from '@/components/EntregaPedidoModal.jsx';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.jsx';
 import RowActions from '@/components/RowActions.jsx';
@@ -540,12 +540,12 @@ const PedidosInternosPage = () => {
         </DialogContent>
       </Dialog>
 
-      <PedidoInternoFormModal 
-        isOpen={isFormOpen} 
-        onClose={() => setIsFormOpen(false)} 
-        onSuccess={loadData}
-        initialData={selectedPedido}
-        isViewOnly={isViewOnly}
+      <OrderFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        onSaved={loadData}
+        pedidoId={selectedPedido?.id}
+        readOnly={isViewOnly}
       />
 
       <EntregaPedidoModal

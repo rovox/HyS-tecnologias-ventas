@@ -11,6 +11,7 @@ import {
   CarFront,
   Megaphone,
   Wallet,
+  Boxes,
   Inbox,
 } from 'lucide-react';
 import { ROLES } from '@/constants/roles.js';
@@ -48,6 +49,7 @@ const operationalMenuSections = [
       { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
+      { to: '/inventario', icon: Boxes, label: 'Inventario', allowedRoles: ALL_ROLES },
       { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
     ],
   },
@@ -95,6 +97,7 @@ export const routeRoles = {
   frozen: ADMIN_ONLY,
   users: ALL_ROLES,
   finanzas: ALL_ROLES,
+  inventario: ALL_ROLES,
 };
 
 export function canWriteQuotations(role) {

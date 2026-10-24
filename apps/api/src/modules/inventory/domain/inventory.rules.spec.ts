@@ -48,6 +48,7 @@ describe('inventory rules', () => {
       { productoId: 'p1', tipo: 'salida_proyecto', cantidad: 3, sucursalOrigenId: 'c', sucursalDestinoId: null, projectId: 'pr1' },
     ]);
     expect(movementsForDelivery({ sucursalDestinoId: 'p' }, items)).toMatch(/origen/);
+    expect(movementsForDelivery({ sucursalOrigenId: 'c', forJob: true }, items)).toMatch(/no es de un proyecto/);
     expect(movementsForDelivery({}, [{ productoId: null, cantidad: 1, materialNombre: 'x' }])).toEqual([]);
   });
 

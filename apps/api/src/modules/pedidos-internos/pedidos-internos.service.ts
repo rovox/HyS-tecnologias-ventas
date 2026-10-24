@@ -177,7 +177,7 @@ export class PedidosInternosService {
       if (delivering) await this.deliver(tx, id, user);
     });
 
-    await this.emit('updated', id, user, delivering ? ['stock', 'product', 'project'] : []);
+    await this.emit('updated', id, user, delivering ? ['stock', 'product', 'project', 'client'] : []);
     return this.findOne(id, user);
   }
 

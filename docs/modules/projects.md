@@ -1,6 +1,6 @@
 # Proyectos
 
-> Una cotización aprobada es un Proyecto: monto oficial, trabajos en el cronograma, cobros, saldo y garantía · Rutas: `/projects` (pestaña Proyectos dentro de Cotizaciones), `/projects/:id` · Estado: 🟢 PRO-01 (2026-10-23); costo y margen llegan con Finanzas (FIN-01) e Inventario (INV-01)
+> Una cotización aprobada es un Proyecto: monto oficial, trabajos en el cronograma, cobros, saldo y garantía · Rutas: `/projects` (pestaña Proyectos dentro de Cotizaciones), `/projects/:id` · Estado: 🟢 PRO-01 (2026-10-23) · costo y margen FIN-01 + INV-01 (2026-10-23)
 
 ## Roles
 
@@ -27,7 +27,7 @@
 | Vista | Tipo | Filtros y agrupaciones | Smart buttons / enlaces |
 |---|---|---|---|
 | Proyectos (`/projects`) | lista (tarjetas en teléfono) | estado, categoría, con saldo, en garantía · agrupar por estado, categoría, cliente, responsable · totales de monto, cobrado y saldo · exportar CSV | clic → ficha |
-| Ficha (`/projects/:id`) | formulario Odoo | barra de estado con las transiciones de la API | Cotización, Cliente, Trabajos, Cobrado % · pestañas Trabajos y Cobros · historial |
+| Ficha (`/projects/:id`) | formulario Odoo | barra de estado con las transiciones de la API | Cotización, Cliente, Trabajos, Cobrado % · pestañas Trabajos, Cobros, Gastos, Material · historial |
 
 La lista con totales es el informe transparente de lo cotizado y aprobado frente a lo cobrado y lo adeudado: no hay una pestaña Informes aparte que lo repita.
 
@@ -50,7 +50,8 @@ La lista con totales es el informe transparente de lo cotizado y aprobado frente
 | Flujo de estados, entregar sin trabajos pendientes, cerrar sin saldo, anular solo admin con motivo | `apps/api/src/modules/projects/domain/projects.rules.ts` (`checkProjectTransition`) | 400 "Termina o cancela los trabajos pendientes…", "No se cierra un proyecto con saldo pendiente (Bs …)", "Solo Gerencia anula…", "Indica el motivo…" |
 | Cobrado = adelantos + cobros; saldo = monto − cobrado − condonado (anulado = 0); % cobrado | `projectMoney` | — |
 | Garantía desde la entrega por `garantiaMeses` (12 por defecto) | `warranty` | — |
-| Cobro no supera el saldo (el excedente es "adicional") | `modules/schedules/domain/schedules.rules.ts` `paymentError` (el cobro se registra en el trabajo principal hasta FIN-01) | 400 "…Registra el excedente como adicional." |
+| Cobro no supera el saldo (el excedente es "adicional") | `modules/finance/domain/finance.rules.ts` `incomeError` (libro) | 400 "…Registra el excedente como adicional." |
+| Costo = egresos del proyecto + material (salidas de inventario × costo); margen = monto + adicionales − costo | `finance` `expensesOf` + `inventory` `materialCost` · `project.presenter.ts` | — |
 | Trabajos nuevos solo en proyectos abiertos | `newJobError` | 400 |
 | Solo comerciales | `common/policy` `canManageProjects` | 403 |
 
@@ -71,6 +72,4 @@ La lista con totales es el informe transparente de lo cotizado y aprobado frente
 
 ## Pendientes
 
-- [ ] FIN-01: los cobros pasan al libro de movimientos con `projectId`; el monto oficial deja de vivir en el primer trabajo; Gerencia cambia el monto oficial con motivo.
-- [ ] Costo (material entregado + gastos) y margen (FIN-01, INV-01).
 - [ ] Iniciar ejecución automáticamente cuando empieza el primer trabajo (hoy es manual).

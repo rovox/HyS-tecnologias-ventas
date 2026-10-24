@@ -120,7 +120,7 @@ export class InventoryService {
         include: MOVEMENT_INCLUDE,
       });
     });
-    await this.audit.record({ user, sessionId, action: `stock.${dto.tipo}`, entity: 'stock', id: row.id, affects: ['product', ...(dto.projectId ? ['project'] : [])] });
+    await this.audit.record({ user, sessionId, action: `stock.${dto.tipo}`, entity: 'stock', id: row.id, affects: ['product', ...(dto.projectId ? ['project', 'client'] : [])] });
     return row;
   }
 
@@ -131,7 +131,7 @@ export class InventoryService {
   async deliverOrder(tx: Tx, pedido: { id: string; sucursalOrigenId: string | null; sucursalDestinoId: string | null; cronogramaId: string | null }, userId: string) {
     const items = await tx.pedidoInternoItem.findMany({ where: { pedidoId: pedido.id } });
     const job = pedido.cronogramaId ? await tx.schedule.findUnique({ where: { id: pedido.cronogramaId }, select: { projectId: true } }) : null;
-    const plan = movementsForDelivery({ ...pedido, projectId: job?.projectId ?? null }, items);
+    const plan = movementsForDelivery({ ...pedido, projectId: job?.projectId ?? null, forJob: Boolean(pedido.cronogramaId) }, items);
     if (typeof plan === 'string') throw new BadRequestException(plan);
     for (const move of plan) {
       const product = await this.product(move.productoId, tx);
