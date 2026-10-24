@@ -527,6 +527,87 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('inventory and internal orders (INV-01)', () => {
+    const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
+    const admin = () => ({ Authorization: `Bearer ${adminToken}` });
+    let tecToken = '';
+    const http = () => request(app.getHttpServer());
+    const stock = async (id: string) => (await http().get('/api/inventory/products').set(ventas()).expect(200)).body.find((p: { id: string }) => p.id === id);
+    const deliver = async (id: string) => {
+      for (const estado of ['aprobado', 'en_preparación', 'listo_para_entrega']) {
+        await http().patch(`/api/pedidos-internos/${id}/status`).set(admin()).send({ estado }).expect(200);
+      }
+      return http().patch(`/api/pedidos-internos/${id}/status`).set(admin()).send({ estado: 'entregado' });
+    };
+
+    beforeAll(async () => {
+      tecToken = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico))).body.accessToken;
+    });
+
+    it('lists products with stock per branch; técnico reads but does not manage the catalog', async () => {
+      const utp = await stock('prd_utp6');
+      expect(utp.stock.suc_punata).toBeGreaterThanOrEqual(200);
+      expect(utp).toHaveProperty('stockBajo');
+      await http().get('/api/inventory/products').set({ Authorization: `Bearer ${tecToken}` }).expect(200);
+      const body = { codigo: `E2E-${Date.now()}`, nombre: 'Producto E2E', categoriaId: 'computo_comunicacion', tipo: 'equipo', costo: 100 };
+      await http().post('/api/inventory/products').set({ Authorization: `Bearer ${tecToken}` }).send(body).expect(403);
+      await http().post('/api/inventory/products').set(ventas()).send(body).expect(201);
+      await http().post('/api/inventory/products').set(ventas()).send(body).expect(409);
+    });
+
+    it('moves stock: purchase (updates cost), transfer, never below zero, adjustments only by Gerencia', async () => {
+      const before = await stock('prd_dvr_8');
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'entrada', cantidad: 3, costoUnitario: 950, sucursalDestinoId: 'suc_central' }).expect(201);
+      const bought = await stock('prd_dvr_8');
+      expect(bought.stock.suc_central).toBe((before.stock.suc_central || 0) + 3);
+      expect(Number(bought.costo)).toBe(950);
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'transferencia', cantidad: 1, sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_quillacollo' }).expect(201);
+      const too = await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'transferencia', cantidad: 999, sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata' }).expect(400);
+      expect(too.body.message).toMatch(/Stock insuficiente/);
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado' }).expect(400);
+      await http().post('/api/inventory/movements').set(admin()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado en traslado' }).expect(201);
+      expect((await stock('prd_dvr_8')).stock.suc_quillacollo).toBe((before.stock.suc_quillacollo || 0));
+    });
+
+    it('a delivered order for a project job takes stock out to the project (material cost, client equipment)', async () => {
+      const q = (await http().post('/api/quotations').set(ventas())
+        .send({ titulo: `E2E INV ${Date.now()}`, categoriaId: 'seguridad_electronica', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 3000 }).expect(201)).body;
+      await http().post(`/api/quotations/${q.id}/files`).set(ventas()).attach('file', Buffer.from('%PDF-1.4 e2e'), 'c.pdf').expect(201);
+      await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
+      const projectId = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
+      const job = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body.trabajos[0];
+      const before = (await stock('prd_cam_ip')).stock.suc_central;
+      const pedido = (await http().post('/api/pedidos-internos').set(ventas())
+        .send({ sucursalOrigenId: 'suc_central', cronogramaId: job.id, items: [{ productoId: 'prd_cam_ip', materialNombre: 'Cámara IP 4MP domo', cantidad: 2 }, { materialNombre: 'Tornillos', cantidad: 10 }] })
+        .expect(201)).body;
+      await deliver(pedido.id).then((r) => expect(r.status).toBe(200));
+      expect((await stock('prd_cam_ip')).stock.suc_central).toBe(before - 2);
+      const project = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body;
+      expect(project.costoMaterial).toBe(900);
+      expect(project.material).toHaveLength(1);
+      const client = (await http().get('/api/reporting/clients/cli_mall').set(ventas()).expect(200)).body;
+      expect(client.equipos.some((e: { proyecto: { id: string } }) => e.proyecto?.id === projectId)).toBe(true);
+      await http().delete(`/api/pedidos-internos/${pedido.id}`).set(ventas()).expect(400);
+    });
+
+    it('a delivered branch order moves stock between branches; without stock the delivery is refused', async () => {
+      const before = await stock('prd_utp6');
+      const ok = (await http().post('/api/pedidos-internos').set(ventas())
+        .send({ sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ productoId: 'prd_utp6', materialNombre: 'Cable UTP Cat6', cantidad: 50 }] }).expect(201)).body;
+      await deliver(ok.id).then((r) => expect(r.status).toBe(200));
+      const after = await stock('prd_utp6');
+      expect(after.stock.suc_central).toBe(before.stock.suc_central - 50);
+      expect(after.stock.suc_punata).toBe(before.stock.suc_punata + 50);
+      const big = (await http().post('/api/pedidos-internos').set(ventas())
+        .send({ sucursalOrigenId: 'suc_quillacollo', sucursalDestinoId: 'suc_central', items: [{ productoId: 'prd_sw24', materialNombre: 'Switch', cantidad: 5 }] }).expect(201)).body;
+      const refused = await deliver(big.id);
+      expect(refused.status).toBe(400);
+      expect(refused.body.message).toMatch(/Switch 24 puertos PoE: Stock insuficiente/);
+      const still = (await http().get(`/api/pedidos-internos/${big.id}`).set(ventas()).expect(200)).body;
+      expect(still.pedido.estado).toBe('listo_para_entrega');
+    });
+  });
+
   describe('quotation → project → payments (MVP-6)', () => {
     const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
     let quoteId = '';

@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { User } from '@prisma/client';
-import { checkTransition, deliveryFields, itemTotal, nextStates, pedidoTotal } from './domain/pedidos-internos.rules';
+import type { Prisma, User } from '@prisma/client';
+import { checkTransition, deleteError, deliveryFields, itemTotal, nextStates, pedidoTotal } from './domain/pedidos-internos.rules';
+import { InventoryService } from '../inventory';
 import { canManagePedidos } from '../../common/policy/policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -11,14 +12,21 @@ export class PedidosInternosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly inventory: InventoryService,
   ) {}
 
   private assertCanManage(user: User) {
     if (!canManagePedidos(user)) throw new ForbiddenException('Sin acceso a pedidos internos');
   }
 
-  private emit(type: string, id: string, user: User) {
-    return this.audit.record({ user, action: `pedido_interno.${type}`, entity: 'pedido_interno', id });
+  private emit(type: string, id: string, user: User, affects: string[] = []) {
+    return this.audit.record({ user, action: `pedido_interno.${type}`, entity: 'pedido_interno', id, affects });
+  }
+
+  /** Delivering moves the stock of its catalog items in the same transaction (or nothing changes). */
+  private async deliver(tx: Prisma.TransactionClient, id: string, user: User) {
+    const pedido = await tx.pedidoInterno.findUniqueOrThrow({ where: { id } });
+    return this.inventory.deliverOrder(tx, pedido, user.id);
   }
 
   private assertTransition(from: string, to: string) {
@@ -84,6 +92,7 @@ export class PedidosInternosService {
   async create(dto: UpsertPedidoInternoDto, user: User) {
     this.assertCanManage(user);
     const { items, ...pedidoData } = dto;
+    await this.inventory.assertProducts((items || []).map((i) => i.productoId || ''));
 
     const pedido = await this.prisma.pedidoInterno.create({
       data: {
@@ -100,6 +109,7 @@ export class PedidosInternosService {
         items: items?.length
           ? {
               create: items.map((item) => ({
+                productoId: item.productoId || null,
                 materialNombre: item.materialNombre,
                 cantidad: item.cantidad,
                 unidad: item.unidad || 'unidades',
@@ -127,6 +137,8 @@ export class PedidosInternosService {
     if (dto.estado && dto.estado !== existing.estado) this.assertTransition(existing.estado, dto.estado);
 
     const { items, ...pedidoData } = dto;
+    if (items) await this.inventory.assertProducts(items.map((i) => i.productoId || ''));
+    const delivering = dto.estado === 'entregado' && existing.estado !== 'entregado';
 
     await this.prisma.$transaction(async (tx) => {
       if (items !== undefined) {
@@ -151,6 +163,7 @@ export class PedidosInternosService {
           ...(items !== undefined && {
             items: {
               create: items.map((item) => ({
+                productoId: item.productoId || null,
                 materialNombre: item.materialNombre,
                 cantidad: item.cantidad,
                 unidad: item.unidad || 'unidades',
@@ -161,9 +174,10 @@ export class PedidosInternosService {
           }),
         },
       });
+      if (delivering) await this.deliver(tx, id, user);
     });
 
-    await this.emit('updated', id, user);
+    await this.emit('updated', id, user, delivering ? ['stock', 'product', 'project', 'client'] : []);
     return this.findOne(id, user);
   }
 
@@ -171,6 +185,8 @@ export class PedidosInternosService {
     this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
+    const blocked = deleteError(existing.estado);
+    if (blocked) throw new BadRequestException(blocked);
 
     await this.prisma.pedidoInterno.delete({ where: { id } });
     await this.emit('deleted', id, user);
@@ -189,8 +205,12 @@ export class PedidosInternosService {
       ...(dto.observacion ? { observaciones: dto.observacion } : {}),
     };
 
-    await this.prisma.pedidoInterno.update({ where: { id }, data });
-    await this.emit('updated', id, user);
+    const delivering = dto.estado === 'entregado';
+    await this.prisma.$transaction(async (tx) => {
+      await tx.pedidoInterno.update({ where: { id }, data });
+      if (delivering) await this.deliver(tx, id, user);
+    });
+    await this.emit('updated', id, user, delivering ? ['stock', 'product', 'project'] : []);
     return this.findOne(id, user);
   }
 

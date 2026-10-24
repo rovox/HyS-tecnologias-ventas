@@ -284,6 +284,27 @@ async function main() {
   const fuel = { tipo: 'egreso', concepto: 'combustible', monto: 120, metodo: 'efectivo', estado: 'por_validar', pagadoPor: 'empleado', sucursalId: 'suc_central', registradoPorId: 'usr_tecnico', nota: 'Viaje a Punata' };
   await prisma.cashMovement.upsert({ where: { id: 'mov_combustible' }, update: fuel, create: { id: 'mov_combustible', ...fuel } });
 
+  // Inventory (INV-01): a small catalog and its first purchases; stock is always computed from these movements.
+  const products = [
+    { id: 'prd_cam_ip', codigo: 'CAM-IP-4MP', nombre: 'Cámara IP 4MP domo', marca: 'Hikvision', categoriaId: 'seguridad_electronica', tipo: 'equipo', unidad: 'unidad', costo: 450, precio: 650, stockMinimo: 5 },
+    { id: 'prd_dvr_8', codigo: 'DVR-8CH', nombre: 'DVR 8 canales', marca: 'Dahua', categoriaId: 'seguridad_electronica', tipo: 'equipo', unidad: 'unidad', costo: 900, precio: 1300, stockMinimo: 2 },
+    { id: 'prd_utp6', codigo: 'UTP-CAT6', nombre: 'Cable UTP Cat6', marca: 'Nexxt', categoriaId: 'cableado_estructurado', tipo: 'material', unidad: 'metro', costo: 4.5, precio: 7, stockMinimo: 300 },
+    { id: 'prd_sw24', codigo: 'SW-24P-POE', nombre: 'Switch 24 puertos PoE', marca: 'TP-Link', categoriaId: 'computo_comunicacion', tipo: 'equipo', unidad: 'unidad', costo: 1800, precio: 2500, stockMinimo: 1 },
+    { id: 'prd_inst_punto', codigo: 'INST-PUNTO', nombre: 'Instalación por punto de red', marca: '', categoriaId: 'cableado_estructurado', tipo: 'servicio', unidad: 'punto', costo: 0, precio: 80, stockMinimo: 0 },
+  ];
+  for (const { id, ...row } of products) await prisma.product.upsert({ where: { id }, update: row, create: { id, ...row } });
+  const purchases = [
+    { id: 'stk_cam_central', productoId: 'prd_cam_ip', cantidad: 20, costoUnitario: 450, sucursalDestinoId: 'suc_central' },
+    { id: 'stk_dvr_central', productoId: 'prd_dvr_8', cantidad: 4, costoUnitario: 900, sucursalDestinoId: 'suc_central' },
+    { id: 'stk_utp_central', productoId: 'prd_utp6', cantidad: 1000, costoUnitario: 4.5, sucursalDestinoId: 'suc_central' },
+    { id: 'stk_utp_punata', productoId: 'prd_utp6', cantidad: 200, costoUnitario: 4.5, sucursalDestinoId: 'suc_punata' },
+    { id: 'stk_sw_central', productoId: 'prd_sw24', cantidad: 2, costoUnitario: 1800, sucursalDestinoId: 'suc_central' },
+  ];
+  for (const { id, ...row } of purchases) {
+    const data = { ...row, tipo: 'entrada', registradoPorId: 'usr_admin', nota: 'Compra inicial (seed)' };
+    await prisma.stockMovement.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
   // Visitas/relevamientos en cada estado.
   const visitas = ['programado', 'en_camino', 'en_atencion', 'resuelto', 'pendiente', 'cancelado'];
   for (const [i, estado] of visitas.entries()) {
@@ -322,7 +343,7 @@ async function main() {
     await prisma.pedidoInternoItem.upsert({
       where: { id: `${id}_item` },
       update: {},
-      create: { id: `${id}_item`, pedidoId: id, materialNombre: 'Cable UTP Cat6 (m)', cantidad: 50 + i * 10, unidad: 'metros', costoUnitario: 4.5 },
+      create: { id: `${id}_item`, pedidoId: id, productoId: 'prd_utp6', materialNombre: 'Cable UTP Cat6 (m)', cantidad: 50 + i * 10, unidad: 'metros', costoUnitario: 4.5 },
     });
   }
 

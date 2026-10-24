@@ -29,6 +29,12 @@ const jobColumns = [
 const MOVEMENT_STATE = { por_validar: 'Por validar', validado: 'Validado', observado: 'Observado' };
 const total = (rows) => formatBs(rows.reduce((s, m) => s + Number(m.monto), 0));
 
+const materialColumns = [
+  { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+  { key: 'producto', header: 'Producto', cell: (m) => <div><p className="font-medium">{m.producto.nombre}</p><p className="text-xs text-muted-foreground">{m.producto.codigo}</p></div> },
+  { key: 'cantidad', header: 'Cantidad', align: 'right', cell: (m) => `${Number(m.cantidad)} ${m.producto.unidad}` },
+  { key: 'costo', header: 'Costo', align: 'right', cell: (m) => formatBs(Number(m.cantidad) * Number(m.costoUnitario)) },
+];
 const movementColumns = [
   { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
   { key: 'concepto', header: 'Concepto', cell: (m) => PAYMENT_TYPE[m.concepto] || m.concepto },
@@ -110,7 +116,7 @@ export default function ProjectDetailPage() {
           </Field>
           <Field label="Cobrado"><div className="flex items-center gap-3">{formatBs(project.cobrado)} <CollectedBar pct={project.pctCobrado} /></div></Field>
           <Field label="Por validar">{formatBs(project.porValidar)}</Field>
-          <Field label="Costo (gastos)">{formatBs(project.costo)}</Field>
+          <Field label="Costo (gastos + material)">{formatBs(project.costo)}{project.costoMaterial > 0 && <span className="text-xs text-muted-foreground"> · material {formatBs(project.costoMaterial)}</span>}</Field>
           <Field label="Margen">
             <span className={project.margen < 0 ? 'font-semibold text-destructive' : 'font-semibold'}>{formatBs(project.margen)}</span>
           </Field>
@@ -133,6 +139,7 @@ export default function ProjectDetailPage() {
             <TabsTrigger value="trabajos">Trabajos ({project.trabajos.length})</TabsTrigger>
             <TabsTrigger value="cobros">Cobros ({project.cobros.length})</TabsTrigger>
             <TabsTrigger value="gastos">Gastos ({project.gastos.length})</TabsTrigger>
+            <TabsTrigger value="material">Material ({project.material.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="trabajos">
             <ListView columns={jobColumns} rows={project.trabajos} empty="Sin trabajos" />
@@ -142,6 +149,9 @@ export default function ProjectDetailPage() {
           </TabsContent>
           <TabsContent value="gastos">
             <ListView columns={movementColumns} rows={project.gastos} empty="Sin gastos: regístralos en Finanzas › Registrar gasto, eligiendo este proyecto" />
+          </TabsContent>
+          <TabsContent value="material">
+            <ListView columns={materialColumns} rows={project.material} empty="Sin material: llega al entregar un pedido interno de un trabajo del proyecto, o con Inventario › Salida a proyecto" />
           </TabsContent>
         </Tabs>
       </FormView>

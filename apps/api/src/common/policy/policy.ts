@@ -29,6 +29,9 @@ export const canValidateMovements = isAdmin;
 /** Everyone with access registers money (a técnico only on his own jobs, checked by the service); commercial roles see the whole ledger. */
 export const canRegisterMovements = (actor: Actor) => isCommercial(actor) || isTec(actor);
 export const canSeeLedger = isCommercial;
+/** Inventory: everyone reads stock; commercial roles keep the catalog and move stock; only Gerencia adjusts it. */
+export const canManageInventory = isCommercial;
+export const canAdjustInventory = isAdmin;
 /** Projects (approved quotations, with money): commercial roles. */
 export const canManageProjects = isCommercial;
 export const canCreateSchedules = isCommercial;

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useInternalOrders } from '@/hooks/useInternalOrders.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import PhotoGallery from '@/components/PhotoGallery.jsx';
-import PedidoInternoFormModal from '@/components/PedidoInternoFormModal.jsx';
+import { OrderFormDialog } from '@/features/orders';
 import EntregaPedidoModal from '@/components/EntregaPedidoModal.jsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -427,13 +427,7 @@ const PedidoInternoDetailPage = () => {
         </div>
       </div>
 
-      <PedidoInternoFormModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-        onSuccess={loadData}
-        initialData={pedido}
-        isViewOnly={false}
-      />
+      <OrderFormDialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen} onSaved={loadData} pedidoId={pedido?.id} />
 
       <EntregaPedidoModal
         isOpen={isEntregaOpen}

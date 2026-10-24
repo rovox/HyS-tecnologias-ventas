@@ -35,7 +35,7 @@ const ROUTES = [
   ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AV],
   ['/pedidos-internos', AV], ['/pedidos-internos/:pedidoId', AV],
   ['/vehicle-control', A], ['/vehicle-control/:id', A], ['/vehicles', A], ['/vehicles/:id', A],
-  ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/usuarios/:userId', ALL],
+  ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/inventario', ALL], ['/usuarios/:userId', ALL],
 ];
 const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T' };
 // Routes that intentionally redirect (ActivityWallPage is `<Navigate to="/dashboard">`); classified `redirect-ok`, not failing.

@@ -81,38 +81,6 @@ export const useInternalOrders = () => {
     }
   };
 
-  const createPedidoWithDetails = async (pedidoData, detalles) => {
-    setLoading(true);
-    try {
-      const record = await apiClient.post('pedidos-internos', {
-        ...pedidoData,
-        items: detalles,
-      }, { token: authToken() });
-      return record;
-    } catch (err) {
-      console.error('Error createPedidoWithDetails:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updatePedidoWithDetails = async (pedidoId, pedidoData, detalles) => {
-    setLoading(true);
-    try {
-      const updated = await apiClient.patch(`pedidos-internos/${pedidoId}`, {
-        ...pedidoData,
-        items: detalles,
-      }, { token: authToken() });
-      return updated;
-    } catch (err) {
-      console.error('Error updatePedidoWithDetails:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const deletePedido = async (id) => {
     setLoading(true);
     try {
@@ -184,8 +152,6 @@ export const useInternalOrders = () => {
     error,
     fetchPedidos,
     getPedidoDetails,
-    createPedidoWithDetails,
-    updatePedidoWithDetails,
     deletePedido,
     addComment,
     fetchDetallesForPedidos,

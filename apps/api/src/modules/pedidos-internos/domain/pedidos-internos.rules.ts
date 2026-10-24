@@ -48,3 +48,8 @@ export function deliveryFields(
     entregadoPorId: input.entregadoPorId || actorId,
   };
 }
+
+/** A delivered order already moved stock: it is kept (cancel the movements with an inventory adjustment instead). */
+export function deleteError(estado: string): string | null {
+  return estado === 'entregado' ? 'Un pedido entregado no se elimina: ya movió stock' : null;
+}

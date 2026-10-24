@@ -45,6 +45,17 @@ const jobColumns = [
   { key: 'monto', header: 'Monto', align: 'right', cell: (j) => formatBs(j.monto), total: sum('monto') },
   { key: 'saldo', header: 'Saldo', align: 'right', cell: (j) => money(j.saldo, true), total: sum('saldo') },
 ];
+const equipmentColumns = [
+  { key: 'producto', header: 'Equipo', cell: (e) => <div><p className="font-medium">{e.producto.nombre}</p><p className="text-xs text-muted-foreground">{e.producto.codigo}{e.producto.marca ? ` · ${e.producto.marca}` : ''}</p></div> },
+  { key: 'cantidad', header: 'Cantidad', align: 'right', cell: (e) => Number(e.cantidad) },
+  { key: 'proyecto', header: 'Proyecto', cell: (e) => e.proyecto?.codigo },
+  { key: 'fecha', header: 'Entregado', cell: (e) => formatDay(e.fecha) },
+  {
+    key: 'garantia',
+    header: 'Garantía',
+    cell: (e) => (e.garantiaHasta ? <span className={e.garantiaVigente ? 'inline-flex items-center gap-1 text-secondary' : 'text-muted-foreground line-through'}>{e.garantiaVigente && <ShieldCheck className="h-4 w-4" />}{formatDay(e.garantiaHasta)}</span> : 'desde la entrega del proyecto'),
+  },
+];
 const quoteColumns = [
   { key: 'numero', header: 'Cotización', cell: (q) => <div><p className="font-medium">{q.numero}</p><p className="text-xs text-muted-foreground">{q.titulo}</p></div> },
   { key: 'categoria', header: 'Categoría', cell: (q) => q.categoria?.label },
@@ -122,6 +133,7 @@ export default function ClientDetailPage() {
         <Tabs defaultValue="proyectos">
           <TabsList className="flex-wrap">
             <TabsTrigger value="proyectos">Proyectos y garantías ({client.proyectos.length})</TabsTrigger>
+            <TabsTrigger value="equipos">Equipos ({client.equipos.length})</TabsTrigger>
             <TabsTrigger value="trabajos">Trabajos ({client.trabajos.length})</TabsTrigger>
             <TabsTrigger value="cotizaciones">Cotizaciones ({client.cotizaciones.length})</TabsTrigger>
             <TabsTrigger value="cobros">Cobros ({client.cobros.length})</TabsTrigger>
@@ -129,6 +141,9 @@ export default function ClientDetailPage() {
           </TabsList>
           <TabsContent value="proyectos">
             <ListView columns={projectColumns} rows={client.proyectos} empty="Sin proyectos" onRowClick={commercial ? (p) => navigate(`/projects/${p.id}`) : undefined} />
+          </TabsContent>
+          <TabsContent value="equipos">
+            <ListView columns={equipmentColumns} rows={client.equipos} empty="Sin equipos entregados por pedidos internos" />
           </TabsContent>
           <TabsContent value="trabajos">
             <ListView columns={jobColumns} rows={client.trabajos} empty="Sin trabajos sueltos" />
