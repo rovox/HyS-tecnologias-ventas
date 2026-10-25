@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import authService from '@/services/auth/index.js';
 import { authStore } from '@/lib/authStore.js';
+import { ROLES } from '@/constants/roles.js';
 
 const AuthContext = createContext(null);
 
@@ -45,10 +46,13 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  const isAdmin = () => currentUser?.role === 'ADMINISTRADOR';
-  const isVentas = () => currentUser?.role === 'VENTAS / ADMINISTRACIÓN';
-  const isSeguridad = () => currentUser?.role === 'SEGURIDAD ELECTRÓNICA';
+  const isAdmin = () => currentUser?.role === ROLES.ADMIN;
+  const isVentas = () => currentUser?.role === ROLES.VENTAS;
+  const isSeguridad = () => currentUser?.role === ROLES.TEC;
+  const isContabilidad = () => currentUser?.role === ROLES.CONTA;
   const isVentasLevel = () => isAdmin() || isVentas();
+  /** Gerencia and Contabilidad: validate, observe, edit and annul money; transfers, refunds, stock adjustments. */
+  const canManageMoney = () => isAdmin() || isContabilidad();
 
   const value = {
     currentUser,
@@ -62,14 +66,11 @@ export const AuthProvider = ({ children }) => {
     isVentas,
     isSeguridad,
     isVentasLevel,
-    // Solo administradores validan egresos/ingresos (ver egresos e ingresos: registran ventas/admin, validan solo admins).
-    canApproveExpenses: isAdmin,
-    canDeleteRecords: isAdmin,
-    canViewFinancialReports: isVentasLevel,
-    canRegisterFinancial: isVentasLevel,
+    isContabilidad,
+    canManageMoney,
+    /** Reads every record (commercial roles and Contabilidad); writes are decided per action. */
+    readsAll: () => isVentasLevel() || isContabilidad(),
     canAccessExecutivePanel: isAdmin,
-    canManageVehicles: () => isAdmin() || isVentas() || isSeguridad(),
-    canViewVehicleAnalytics: isAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

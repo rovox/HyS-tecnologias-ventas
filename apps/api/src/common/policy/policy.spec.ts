@@ -1,4 +1,11 @@
 import {
+  canAdjustInventory,
+  canManageInventory,
+  canRegisterMovements,
+  canSeeLedger,
+  canSeePedidos,
+  canValidateMovements,
+  clientWhere,
   canListUserDirectory,
   canListUsers,
   canManagePedidos,
@@ -18,8 +25,20 @@ const admin = { id: 'a', role: ROLES.ADMIN };
 const ventas = { id: 'v', role: ROLES.VENTAS };
 const tec = { id: 't', role: ROLES.TEC };
 const none = { id: 'n', role: ROLES.NONE };
+const conta = { id: 'c', role: ROLES.CONTA };
 
 describe('policy', () => {
+  it('Contabilidad reads everything, changes money and adjusts stock, but does not sell or manage orders (AUTH-01)', () => {
+    expect([admin, ventas, tec, conta].map(canValidateMovements)).toEqual([true, false, false, true]);
+    expect([admin, ventas, tec, conta].map(canAdjustInventory)).toEqual([true, false, false, true]);
+    expect([admin, ventas, tec, conta].map(canSeeLedger)).toEqual([true, true, false, true]);
+    expect(canRegisterMovements(conta)).toBe(true);
+    expect([canSeeQuotations(conta), canSeePedidos(conta), canListUsers(conta), canListUserDirectory(conta)]).toEqual([true, true, true, true]);
+    expect([canManagePedidos(conta), canManageInventory(conta), canMutateRelevamientos(conta)]).toEqual([false, false, false]);
+    expect([scheduleWhere(conta), quotationWhere(conta), clientWhere(conta), goalWhere(conta)]).toEqual([{}, {}, {}, {}]);
+    expect(metricsUserId(conta, 'v')).toBe('v');
+  });
+
   it('lets every role with access read the user directory, but only admin/ventas the full list', () => {
     expect([admin, ventas, tec, none].map(canListUserDirectory)).toEqual([true, true, true, false]);
     expect([admin, ventas, tec, none].map(canListUsers)).toEqual([true, true, false, false]);

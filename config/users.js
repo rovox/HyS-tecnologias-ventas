@@ -38,6 +38,7 @@ function credentialsFor(email) {
 const ROLE_ACCOUNTS = {
   admin: 'julio@hscontrol.com',
   ventas: 'dennis@hscontrol.com',
+  contabilidad: 'estefany@hscontrol.com',
   tecnico: 'marcos.tec@demo.hs.local',
 };
 

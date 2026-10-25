@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { CalendarDays, ClipboardList, FolderKanban, MapPin, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Layout from '@/components/Layout.jsx';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
 import { ControlPanel, Field, FieldGrid, FormView, StatusBar } from '@/shared/views';
 import { formatBs, formatDate, formatDateTime, formatDay } from '@/shared/lib/format.js';
@@ -18,6 +19,7 @@ import { useQuotationActions } from '../components/useQuotationActions.js';
 export default function QuotationDetailPage() {
   const { id } = useParams();
   const { data: quote, isLoading } = useQuotation(id);
+  const { isVentasLevel } = useAuth();
   const actions = useQuotationActions();
   const [editing, setEditing] = useState(false);
   useDocumentTitle(quote?.numero || 'Cotización');
@@ -56,7 +58,7 @@ export default function QuotationDetailPage() {
             entity="quotation"
             stages={statusStages(quote.estado)}
             current={quote.estado}
-            allowed={quote.transicionesValidas}
+            allowed={isVentasLevel() ? quote.transicionesValidas : []}
             onSelect={(estado) => actions.changeStatus(quote, estado)}
           />
         }

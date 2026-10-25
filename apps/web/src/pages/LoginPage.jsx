@@ -16,6 +16,7 @@ const CHIP_ROLE_LABEL = {
   [ROLES.ADMIN]: 'Admin',
   [ROLES.VENTAS]: 'Ventas',
   [ROLES.TEC]: 'Técnico',
+  [ROLES.CONTA]: 'Contabilidad',
   [ROLES.NONE]: 'Sin acceso',
 };
 

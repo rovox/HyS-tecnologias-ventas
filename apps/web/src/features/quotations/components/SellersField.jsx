@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserDirectory } from '@/features/catalogs';
 import { SearchSelect } from '@/shared/views';
+import { COMMERCIAL_ROLES } from '@/constants/roles.js';
 
-const COMMERCIAL = ['ADMINISTRADOR', 'VENTAS / ADMINISTRACIÓN'];
 
 /** Sellers of a quotation: one by default (100 %); with several, the commissions must add up to 100 %. */
 export function SellersField({ value, onChange, disabled }) {
   const { data: users = [] } = useUserDirectory();
-  const options = users.filter((u) => COMMERCIAL.includes(u.role));
+  const options = users.filter((u) => COMMERCIAL_ROLES.includes(u.role));
   const total = value.reduce((sum, row) => sum + (Number(row.commissionPct) || 0), 0);
   const set = (index, patch) => onChange(value.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 

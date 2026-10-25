@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import type { Prisma, User } from '@prisma/client';
 import { checkTransition, deleteError, deliveryFields, itemTotal, nextStates, pedidoTotal } from './domain/pedidos-internos.rules';
 import { InventoryService } from '../inventory';
-import { canManagePedidos } from '../../common/policy/policy';
+import { canManagePedidos, canSeePedidos } from '../../common/policy/policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { AddComentarioDto, UpdateEstadoPedidoDto, UpsertPedidoInternoDto } from './dto/pedido-interno.dto';
@@ -17,6 +17,10 @@ export class PedidosInternosService {
 
   private assertCanManage(user: User) {
     if (!canManagePedidos(user)) throw new ForbiddenException('Sin acceso a pedidos internos');
+  }
+
+  private assertCanSee(user: User) {
+    if (!canSeePedidos(user)) throw new ForbiddenException('Sin acceso a pedidos internos');
   }
 
   private emit(type: string, id: string, user: User, affects: string[] = []) {
@@ -35,7 +39,7 @@ export class PedidosInternosService {
   }
 
   async findAll(user: User, query: Record<string, string>) {
-    this.assertCanManage(user);
+    this.assertCanSee(user);
     const { estado, search, prioridad, sucursal } = query;
 
     const where: Record<string, unknown> = {};
@@ -64,7 +68,7 @@ export class PedidosInternosService {
   }
 
   async findOne(id: string, user: User) {
-    this.assertCanManage(user);
+    this.assertCanSee(user);
     const pedido = await this.prisma.pedidoInterno.findUnique({
       where: { id },
       include: {

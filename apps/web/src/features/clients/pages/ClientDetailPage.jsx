@@ -83,8 +83,8 @@ const FIELDS = { nombre: 'Nombre', tipo: 'Rubro', contacto: 'Contacto', telefono
 export default function ClientDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isVentasLevel } = useAuth();
-  const commercial = isVentasLevel();
+  const { readsAll, isVentasLevel } = useAuth();
+  const commercial = readsAll();
   const { data: client, isLoading } = useClientSummary(id);
   const [dialog, setDialog] = useState(null);
   useDocumentTitle(client?.nombre || 'Cliente');
@@ -103,7 +103,7 @@ export default function ClientDetailPage() {
       <ControlPanel breadcrumbs={[{ label: 'Clientes', to: '/clientes' }, { label: client.nombre }]} />
       <FormView
         actions={
-          commercial && (
+          isVentasLevel() && (
             <>
               <Button size="sm" onClick={() => setDialog('cotizacion')}><Plus /> Nueva cotización</Button>
               <Button size="sm" variant="outline" onClick={() => setDialog('editar')}><Pencil /> Editar</Button>

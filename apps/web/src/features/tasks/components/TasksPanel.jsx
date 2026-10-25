@@ -11,18 +11,18 @@ import { SearchSelect, useConfirm } from '@/shared/views';
 import { notify } from '@/shared/lib/notify.js';
 import { useCreateTask, useTasks, useUpdateTask } from '../api.js';
 import { TaskRow } from './TaskRow.jsx';
+import { COMMERCIAL_ROLES } from '@/constants/roles.js';
 
 // Loaded on demand: the panel lives in the header of every page.
 const QuotationFormDialog = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationFormDialog })));
 
-const COMMERCIAL = ['ADMINISTRADOR', 'VENTAS / ADMINISTRACIÓN'];
 const EMPTY = { titulo: '', clienteId: '', asignadoId: '', plazo: '' };
 
 /** Side panel with the tasks: quick add, mine, unassigned and (for commercial roles) the team's. */
 export function TasksPanel({ open, onOpenChange }) {
   const { currentUser } = useAuth();
   const userId = currentUser?.id;
-  const commercial = COMMERCIAL.includes(currentUser?.role);
+  const commercial = COMMERCIAL_ROLES.includes(currentUser?.role);
   const { data: tasks = [], isLoading } = useTasks(open);
   const { data: users = [] } = useUserDirectory();
   const create = useCreateTask();

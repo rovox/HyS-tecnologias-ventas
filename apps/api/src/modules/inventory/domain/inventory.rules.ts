@@ -40,7 +40,7 @@ export type StockInput = {
  * Where stock comes from and goes: entrada → destination; salida_proyecto → origin and a project; transferencia →
  * origin and destination; ajuste → destination (surplus) or origin (shortage), with a reason. Never below zero.
  */
-export function stockMovementError(input: StockInput, ctx: { productTipo: string; available: number; isAdmin: boolean }): string | null {
+export function stockMovementError(input: StockInput, ctx: { productTipo: string; available: number; canAdjust: boolean }): string | null {
   if (!STOCK_TIPOS.includes(input.tipo as never)) return `Tipo de movimiento no válido: ${input.tipo}`;
   if (ctx.productTipo === 'servicio') return 'Un servicio no tiene stock';
   if (!(Number(input.cantidad) > 0)) return 'La cantidad debe ser mayor a 0';
@@ -51,7 +51,7 @@ export function stockMovementError(input: StockInput, ctx: { productTipo: string
   if (input.tipo === 'transferencia' && (!from || !to)) return 'Una transferencia necesita sucursal de origen y de destino';
   if (input.tipo === 'transferencia' && from === to) return 'La sucursal de origen y destino deben ser distintas';
   if (input.tipo === 'ajuste') {
-    if (!ctx.isAdmin) return 'Solo Gerencia ajusta el inventario';
+    if (!ctx.canAdjust) return 'Solo Gerencia o Contabilidad ajustan el inventario';
     if (Boolean(from) === Boolean(to)) return 'Un ajuste es un sobrante (destino) o un faltante (origen)';
     if (!input.motivo?.trim()) return 'Indica el motivo del ajuste';
   }

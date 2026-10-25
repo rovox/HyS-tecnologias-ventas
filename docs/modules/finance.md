@@ -6,7 +6,7 @@
 
 | Rol | Ve | Hace |
 |---|---|---|
-| Administrador (Gerencia, valida mientras no exista el rol Contabilidad) | todo el libro, cajas, por cobrar | registrar, validar en caja, observar, anular, revertir, reembolsar, transferir |
+| Administrador (Gerencia) y Contabilidad (AUTH-01) | todo el libro, cajas, por cobrar | registrar, validar en caja, observar, anular, revertir, reembolsar, transferir |
 | Ventas | todo el libro, cajas, por cobrar | registrar gastos y otros ingresos; cobrar en proyectos y trabajos; corregir y anular lo suyo antes de validar |
 | Técnico | solo sus movimientos y las cajas | registrar sus gastos (p. ej. combustible pagado por él); cobrar en sus trabajos; corregir y anular lo suyo antes de validar |
 

@@ -44,7 +44,7 @@ export default function QuotationsPage() {
   const vista = params.get('vista') === 'cerradas' ? 'cerradas' : 'abiertas';
   const view = vista === 'abiertas' && params.get('view') === 'kanban' ? 'kanban' : 'list';
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isVentasLevel } = useAuth();
   const { data: categories } = useCategories();
   const { data: quotes = [], isLoading } = useQuotations(vista);
   const [creating, setCreating] = useState(false);
@@ -65,7 +65,7 @@ export default function QuotationsPage() {
       <ControlPanel
         breadcrumbs={[{ label: vista === 'abiertas' ? 'Cotizaciones' : 'Cotizaciones cerradas' }]}
         actions={
-          vista === 'abiertas' && (
+          vista === 'abiertas' && isVentasLevel() && (
             <Button onClick={() => setCreating(true)}>
               <Plus /> Nueva
             </Button>

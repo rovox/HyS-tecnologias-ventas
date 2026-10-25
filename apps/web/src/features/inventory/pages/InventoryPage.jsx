@@ -30,7 +30,7 @@ const movementColumns = [
 
 /** Inventario: products with stock per branch (computed from movements) and the movements themselves. */
 export default function InventoryPage() {
-  const { isAdmin, isVentasLevel } = useAuth();
+  const { canManageMoney, isVentasLevel } = useAuth();
   const manage = isVentasLevel();
   const [params] = useSearchParams();
   const vista = params.get('vista') === 'movimientos' ? 'movimientos' : 'productos';
@@ -92,7 +92,7 @@ export default function InventoryPage() {
               <DropdownMenuItem onSelect={() => setMoving({ product: p, tipo: 'entrada' })}>Entrada (compra)</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setMoving({ product: p, tipo: 'transferencia' })}>Transferir</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setMoving({ product: p, tipo: 'salida_proyecto' })}>Salida a proyecto</DropdownMenuItem>
-              {isAdmin() && <DropdownMenuItem onSelect={() => setMoving({ product: p, tipo: 'ajuste' })}>Ajustar</DropdownMenuItem>}
+              {canManageMoney() && <DropdownMenuItem onSelect={() => setMoving({ product: p, tipo: 'ajuste' })}>Ajustar</DropdownMenuItem>}
               <DropdownMenuSeparator />
             </>
           )}

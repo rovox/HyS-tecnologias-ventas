@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
-import { isAdmin, isTec, isVentas } from '../../common/policy/roles';
+import { isAdmin, isConta, isTec, isVentas } from '../../common/policy/roles';
 import { IncomeDto } from './dto/finance.dto';
 import { incomeError, incomeOf, movementError } from './domain/finance.rules';
 import { MOVEMENT_DETAIL, presentMovement } from './movement.presenter';
@@ -73,7 +73,7 @@ export class IncomeService {
   /** Registered as `por_validar`; Gerencia validates it into a cash box (rendición). */
   async register(ref: { projectId?: string; scheduleId?: string }, dto: IncomeDto, user: User, sessionId?: string) {
     const target = await this.target(ref);
-    const allowed = isAdmin(user) || isVentas(user) || (isTec(user) && target.technicians.includes(user.id));
+    const allowed = isAdmin(user) || isVentas(user) || isConta(user) || (isTec(user) && target.technicians.includes(user.id));
     if (!allowed) throw new ForbiddenException('Solo registras cobros de tus trabajos');
     const error =
       movementError({ tipo: 'ingreso', concepto: dto.concepto, monto: dto.monto }) ||

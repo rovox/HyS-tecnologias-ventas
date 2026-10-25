@@ -11,8 +11,9 @@ import { cn } from '@/lib/utils';
 import { useCreateJob } from '../api.js';
 import { today } from '../dates.js';
 import { LocationField, SearchSelect } from '@/shared/views';
+import { ROLES } from '@/constants/roles.js';
 
-const TECNICO = 'SEGURIDAD ELECTRÓNICA';
+const TECNICO = ROLES.TEC;
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
 const empty = (user, day) => ({

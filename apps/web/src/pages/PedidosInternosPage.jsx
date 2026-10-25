@@ -21,6 +21,7 @@ import { apiClient, authToken } from '@/api/http.js';
 import { toast } from 'sonner';
 import { reportLoadError } from '@/lib/loadError.js';
 import { useRealtimeEntities } from '@/hooks/useRealtimeRefresh.js';
+import { ROLES } from '@/constants/roles.js';
 
 const PRIORIDADES = ['Todas', 'Baja', 'Normal', 'Alta', 'Urgente'];
 const ESTADOS = ['Todos', 'solicitado', 'aprobado', 'en_preparación', 'entregado', 'rechazado', 'cancelado'];
@@ -38,7 +39,7 @@ const ESTADO_LABELS = {
 
 const PedidosInternosPage = () => {
   const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'ADMINISTRADOR';
+  const isAdmin = currentUser?.role === ROLES.ADMIN;
   const navigate = useNavigate();
 
   const { fetchPedidos, deletePedido, fetchDetallesForPedidos, updateEstadoPedido, error: pedidosError } = useInternalOrders();
@@ -226,9 +227,11 @@ const PedidosInternosPage = () => {
             </h1>
             <p className="text-muted-foreground mt-2 font-medium max-w-prose">Gestiona requerimientos de materiales entre sucursales y proyectos operativos.</p>
           </div>
-          <Button onClick={() => handleOpenForm()} className="gap-2 shadow-md font-bold px-6 py-5 rounded-xl text-md shrink-0">
-            <Plus className="h-5 w-5" /> Crear Pedido
-          </Button>
+          {currentUser?.role !== ROLES.CONTA && (
+            <Button onClick={() => handleOpenForm()} className="gap-2 shadow-md font-bold px-6 py-5 rounded-xl text-md shrink-0">
+              <Plus className="h-5 w-5" /> Crear Pedido
+            </Button>
+          )}
         </div>
 
         {/* Filtros */}

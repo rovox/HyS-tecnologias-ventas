@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout.jsx';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
 import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBadge, StatusBar } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
@@ -46,6 +47,8 @@ export default function ProjectDetailPage() {
   const { id } = useParams();
   const { data: project, isLoading } = useProject(id);
   const actions = useProjectActions();
+  const { isVentasLevel } = useAuth();
+  const write = isVentasLevel();
   const [dialog, setDialog] = useState(null);
   useDocumentTitle(project?.codigo || 'Proyecto');
 
@@ -74,24 +77,24 @@ export default function ProjectDetailPage() {
                 <HandCoins /> Registrar cobro
               </Button>
             )}
-            {open && (
+            {write && open && (
               <Button size="sm" variant="outline" onClick={() => setDialog('trabajo')}>
                 <Plus /> Nuevo trabajo
               </Button>
             )}
-            {project.transicionesValidas.map((estado) => (
+            {write && project.transicionesValidas.map((estado) => (
               <Button key={estado} size="sm" variant={estado === 'anulado' ? 'ghost' : 'outline'} className={estado === 'anulado' ? 'text-destructive' : ''} disabled={actions.busy} onClick={() => actions.changeStatus(project, estado)}>
                 {PROJECT_TRANSITION[estado](project).label}
               </Button>
             ))}
-            {open && (
+            {write && open && (
               <Button size="sm" variant="ghost" onClick={() => setDialog('editar')}>
                 <Pencil /> Editar
               </Button>
             )}
           </>
         }
-        statusBar={<StatusBar entity="project" stages={projectStages(project.estado)} current={project.estado} allowed={project.transicionesValidas} onSelect={(estado) => actions.changeStatus(project, estado)} />}
+        statusBar={<StatusBar entity="project" stages={projectStages(project.estado)} current={project.estado} allowed={write ? project.transicionesValidas : []} onSelect={(estado) => actions.changeStatus(project, estado)} />}
         smartButtons={[
           { key: 'cotizacion', icon: FileText, label: 'Cotización', value: project.quotation.numero, to: `/quotations/${project.quotation.id}` },
           { key: 'cliente', icon: User, label: 'Cliente', value: project.cliente.nombre, to: `/clientes/${project.cliente.id}` },

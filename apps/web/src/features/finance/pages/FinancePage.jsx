@@ -41,9 +41,9 @@ const GROUPS = [
 ];
 
 export default function FinancePage() {
-  const { isAdmin, isVentasLevel } = useAuth();
+  const { canManageMoney, readsAll } = useAuth();
   const [params] = useSearchParams();
-  const views = VIEWS.filter((v) => (!v.admin || isAdmin()) && (!v.commercial || isVentasLevel()));
+  const views = VIEWS.filter((v) => (!v.admin || canManageMoney()) && (!v.commercial || readsAll()));
   const view = views.find((v) => v.key === params.get('vista')) || views[0];
   const { data: movements = [], isLoading } = useMovements();
   const [dialog, setDialog] = useState(null);
@@ -80,12 +80,12 @@ export default function FinancePage() {
             <Button onClick={() => setDialog({ tipo: 'egreso' })}>
               <Plus /> Registrar gasto
             </Button>
-            {isVentasLevel() && (
+            {readsAll() && (
               <Button variant="outline" onClick={() => setDialog({ tipo: 'ingreso' })}>
                 Otro ingreso
               </Button>
             )}
-            {isAdmin() && (
+            {canManageMoney() && (
               <Button variant="outline" onClick={() => setDialog({ tipo: 'transferencia' })}>
                 Transferencia
               </Button>

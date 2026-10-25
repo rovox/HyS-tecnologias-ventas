@@ -17,12 +17,13 @@ import { DivisionTag } from './JobChip.jsx';
 import { JOB_ACTIONS, JOB_FIELDS, JOB_STATE, formatJobValue } from '../constants.js';
 import { jobDay } from '../dates.js';
 import { JobPaymentDialog } from './JobPaymentDialog.jsx';
+import { ROLES } from '@/constants/roles.js';
 
-const TECNICO = 'SEGURIDAD ELECTRÓNICA';
+const TECNICO = ROLES.TEC;
 
 /** Everything about one job in a side panel, the same from the week, month and list views. */
 export function JobDetailSheet({ jobId, onClose }) {
-  const { isVentasLevel } = useAuth();
+  const { isVentasLevel, readsAll } = useAuth();
   const commercial = isVentasLevel();
   const { data: job, isLoading } = useJob(jobId);
   const { data: users = [] } = useUserDirectory();
@@ -87,7 +88,7 @@ export function JobDetailSheet({ jobId, onClose }) {
               </Field>
               {job.project ? (
                 <Field label="Proyecto">
-                  {commercial ? <Link className="text-primary hover:underline" to={`/projects/${job.project.id}`}>{job.project.codigo}</Link> : job.project.codigo}
+                  {readsAll() ? <Link className="text-primary hover:underline" to={`/projects/${job.project.id}`}>{job.project.codigo}</Link> : job.project.codigo}
                   <span className="text-xs text-muted-foreground"> · el dinero es del proyecto</span>
                 </Field>
               ) : (
