@@ -15,10 +15,10 @@ const PROMPTS = {
 
 /** Row menu: only what this movement and this user allow. Validating opens the box picker (`onValidate`). */
 export function MovementActions({ movement: m, onValidate, onEdit }) {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, canManageMoney } = useAuth();
   const confirm = useConfirm();
   const action = useMovementAction();
-  const admin = isAdmin();
+  const admin = canManageMoney();
   const own = m.registradoPor?.id === currentUser?.id;
   const allowed = m.transicionesValidas;
 

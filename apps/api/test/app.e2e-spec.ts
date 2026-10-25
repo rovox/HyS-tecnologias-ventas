@@ -56,6 +56,22 @@ describe('hs-erp API (e2e)', () => {
       .expect(403);
   });
 
+  it('Contabilidad reads every module, validates money and adjusts stock, but does not sell (AUTH-01)', async () => {
+    const http = () => request(app.getHttpServer());
+    const conta = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.contabilidad)).expect(201)).body.accessToken;
+    const as = { Authorization: `Bearer ${conta}` };
+    for (const path of ['/api/projects', '/api/quotations', '/api/pedidos-internos', '/api/finance/movements', '/api/finance/cajas', '/api/inventory/products', '/api/schedules', '/api/users/directory', '/api/activity']) {
+      await http().get(path).set(as).expect(200);
+    }
+    await http().post('/api/quotations').set(as).send({ titulo: 'No vende', categoriaId: 'seguridad_electronica', clienteId: 'cli_andina', sucursalId: 'suc_central', monto: 100 }).expect(403);
+    await http().post('/api/pedidos-internos').set(as).send({ sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ materialNombre: 'x', cantidad: 1 }] }).expect(403);
+    const gasto = (await http().post('/api/finance/movements').set({ Authorization: `Bearer ${ventasToken}` }).send({ tipo: 'egreso', concepto: 'viaticos', monto: 25, pagadoPor: 'empresa', nota: 'Viáticos Punata' }).expect(201)).body;
+    const ok = (await http().post(`/api/finance/movements/${gasto.id}/validar`).set(as).send({ cajaId: 'caja_central' }).expect(201)).body;
+    expect(ok.estado).toBe('validado');
+    await http().post('/api/inventory/movements').set(as).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalDestinoId: 'suc_central', motivo: 'Sobrante en conteo' }).expect(201);
+    await http().post('/api/inventory/movements').set(as).send({ productoId: 'prd_dvr_8', tipo: 'entrada', cantidad: 1, costoUnitario: 1, sucursalDestinoId: 'suc_central' }).expect(403);
+  });
+
   it('clients have no DELETE route', async () => {
     await request(app.getHttpServer())
       .delete('/api/clients/cli_andina')
@@ -564,7 +580,7 @@ describe('hs-erp API (e2e)', () => {
       await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'transferencia', cantidad: 1, sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_quillacollo' }).expect(201);
       const too = await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'transferencia', cantidad: 999, sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata' }).expect(400);
       expect(too.body.message).toMatch(/Stock insuficiente/);
-      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado' }).expect(400);
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado' }).expect(403);
       await http().post('/api/inventory/movements').set(admin()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado en traslado' }).expect(201);
       expect((await stock('prd_dvr_8')).stock.suc_quillacollo).toBe((before.stock.suc_quillacollo || 0));
     });

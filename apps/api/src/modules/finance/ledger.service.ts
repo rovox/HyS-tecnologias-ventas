@@ -25,7 +25,7 @@ export class LedgerService {
   ) {}
 
   private assertValidator(user: User) {
-    if (!canValidateMovements(user)) throw new ForbiddenException('Solo Gerencia valida movimientos y gestiona cajas');
+    if (!canValidateMovements(user)) throw new ForbiddenException('Solo Gerencia o Contabilidad validan movimientos y gestionan cajas');
   }
 
   private async row(id: string) {
@@ -61,7 +61,7 @@ export class LedgerService {
     if (dto.tipo === 'ingreso' && ['adelanto', 'cobro', 'adicional'].includes(dto.concepto)) {
       throw new BadRequestException('Los cobros se registran desde el proyecto o el trabajo');
     }
-    if (dto.tipo === 'ingreso' && !canSeeLedger(user)) throw new ForbiddenException('Solo ventas o Gerencia registran otros ingresos');
+    if (dto.tipo === 'ingreso' && !canSeeLedger(user)) throw new ForbiddenException('Solo ventas, Gerencia o Contabilidad registran otros ingresos');
     if (dto.tipo === 'transferencia') this.assertValidator(user);
     const error = movementError(dto);
     if (error) throw new BadRequestException(error);
@@ -97,7 +97,7 @@ export class LedgerService {
   /** Correct a movement before validation; an observed one goes back to the validation inbox. */
   async update(id: string, dto: UpdateMovementDto, user: User, sessionId?: string) {
     const before = await this.row(id);
-    if (before.registradoPorId !== user.id && !canValidateMovements(user)) throw new ForbiddenException('Solo quien lo registró o Gerencia lo corrige');
+    if (before.registradoPorId !== user.id && !canValidateMovements(user)) throw new ForbiddenException('Solo quien lo registró, Gerencia o Contabilidad lo corrigen');
     const blocked = editMovementError(before);
     if (blocked) throw new BadRequestException(blocked);
     const next = { tipo: before.tipo, concepto: dto.concepto ?? before.concepto, monto: dto.monto ?? Number(before.monto), cajaId: before.cajaId, cajaDestinoId: before.cajaDestinoId, pagadoPor: dto.pagadoPor ?? before.pagadoPor };

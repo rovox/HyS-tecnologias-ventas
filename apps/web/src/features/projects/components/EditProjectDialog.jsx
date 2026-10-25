@@ -7,8 +7,8 @@ import { useUserDirectory } from '@/features/catalogs';
 import { notify } from '@/shared/lib/notify.js';
 import { useUpdateProject } from '../api.js';
 import { SearchSelect } from '@/shared/views';
+import { COMMERCIAL_ROLES } from '@/constants/roles.js';
 
-const COMMERCIAL = ['ADMINISTRADOR', 'VENTAS / ADMINISTRACIÓN'];
 
 /** Title, responsible and warranty months (the official amount is changed by Gerencia with the ledger, FIN-01). */
 export function EditProjectDialog({ project, open, onOpenChange }) {
@@ -56,7 +56,7 @@ export function EditProjectDialog({ project, open, onOpenChange }) {
                 value={form.responsableId || ''}
                 onChange={(responsableId) => setForm({ ...form, responsableId })}
                 emptyOption="Sin responsable"
-                options={users.filter((u) => COMMERCIAL.includes(u.role)).map((u) => ({ value: u.id, label: u.name }))}
+                options={users.filter((u) => COMMERCIAL_ROLES.includes(u.role)).map((u) => ({ value: u.id, label: u.name }))}
               />
             </div>
           </div>

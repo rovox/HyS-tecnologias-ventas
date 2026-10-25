@@ -4,6 +4,8 @@ export const ROLES = {
   ADMIN: 'ADMINISTRADOR',
   VENTAS: 'VENTAS / ADMINISTRACIÓN',
   TEC: 'SEGURIDAD ELECTRÓNICA',
+  /** Contabilidad (AUTH-01): reads everything, changes money (validates, edits, annuls) and adjusts stock. */
+  CONTA: 'CONTABILIDAD',
   NONE: 'SIN ACCESO',
 } as const;
 
@@ -16,53 +18,60 @@ const NO_ROWS = { id: '__none__' };
 export const isAdmin = (actor?: Actor | null) => actor?.role === ROLES.ADMIN;
 export const isVentas = (actor?: Actor | null) => actor?.role === ROLES.VENTAS;
 export const isTec = (actor?: Actor | null) => actor?.role === ROLES.TEC;
+export const isConta = (actor?: Actor | null) => actor?.role === ROLES.CONTA;
 const isNone = (actor?: Actor | null) => actor?.role === ROLES.NONE;
 const isCommercial = (actor?: Actor | null) => isAdmin(actor) || isVentas(actor);
+/** Who reads every record (commercial roles and Contabilidad); writing is decided per action. */
+const readsAll = (actor?: Actor | null) => isCommercial(actor) || isConta(actor);
+/** Gerencia and Contabilidad: the money and stock controls. */
+const isFinance = (actor?: Actor | null) => isAdmin(actor) || isConta(actor);
 
 export const canMutateQuotes = isCommercial;
 export const canMutateClients = isCommercial;
 /** Web contact-form requests (WEB-01). */
 export const canManageWebLeads = isCommercial;
-export const canSeeQuotations = isCommercial;
-/** Rendición: validate, observe, reverse movements and manage cash boxes. Gerencia until a CONTABILIDAD role exists. */
-export const canValidateMovements = isAdmin;
-/** Everyone with access registers money (a técnico only on his own jobs, checked by the service); commercial roles see the whole ledger. */
-export const canRegisterMovements = (actor: Actor) => isCommercial(actor) || isTec(actor);
-export const canSeeLedger = isCommercial;
-/** Inventory: everyone reads stock; commercial roles keep the catalog and move stock; only Gerencia adjusts it. */
+export const canSeeQuotations = readsAll;
+/** Rendición: validate, observe, annul and edit any movement, transfers, refunds and cash boxes: Gerencia and Contabilidad. */
+export const canValidateMovements = isFinance;
+/** Everyone with access registers money (a técnico only on his own jobs, checked by the service); commercial roles and Contabilidad see the whole ledger. */
+export const canRegisterMovements = (actor: Actor) => readsAll(actor) || isTec(actor);
+export const canSeeLedger = readsAll;
+/** Inventory: everyone reads stock; commercial roles keep the catalog and move stock; Gerencia and Contabilidad adjust it. */
 export const canManageInventory = isCommercial;
-export const canAdjustInventory = isAdmin;
+export const canAdjustInventory = isFinance;
 /** Projects (approved quotations, with money): commercial roles. */
 export const canManageProjects = isCommercial;
+export const canSeeProjects = readsAll;
 export const canCreateSchedules = isCommercial;
 export const canMutateSchedules = (actor: Actor) => isCommercial(actor) || isTec(actor);
 /** Surveys and visits (relevamientos): commercial roles and técnico. */
 export const canMutateRelevamientos = (actor: Actor) => isCommercial(actor) || isTec(actor);
-/** Internal orders (pedidos internos): requested and managed by admin and ventas. */
+/** Internal orders (pedidos internos): requested and managed by admin and ventas; Contabilidad reads them. */
 export const canManagePedidos = isCommercial;
-/** Full user list (email, phone, goal): admin and ventas. */
-export const canListUsers = isCommercial;
+export const canSeePedidos = readsAll;
+/** Full user list (email, phone, goal): admin, ventas and Contabilidad. */
+export const canListUsers = readsAll;
 /** Id, name and role of active users, to show names (e.g. in the schedule): every role with access. */
-export const canListUserDirectory = (actor: Actor) => isCommercial(actor) || isTec(actor);
-/** One user's profile: self, or admin and ventas. */
-export const canViewUser = (actor: Actor, targetId: string) => (!isNone(actor) && actor.id === targetId) || isCommercial(actor);
+export const canListUserDirectory = (actor: Actor) => readsAll(actor) || isTec(actor);
+/** One user's profile: self, or a role that reads everything. */
+export const canViewUser = (actor: Actor, targetId: string) => (!isNone(actor) && actor.id === targetId) || readsAll(actor);
 
 export function scheduleWhere(actor: Actor) {
-  if (isCommercial(actor)) return {};
+  if (readsAll(actor)) return {};
   if (isTec(actor)) return { tecnicoId: actor.id };
   return NO_ROWS;
 }
 
 export function quotationWhere(actor: Actor): { id?: string } {
-  return isCommercial(actor) ? {} : NO_ROWS;
+  return readsAll(actor) ? {} : NO_ROWS;
 }
 
 export function clientWhere(actor: Actor) {
-  return isCommercial(actor) || isTec(actor) ? {} : NO_ROWS;
+  return readsAll(actor) || isTec(actor) ? {} : NO_ROWS;
 }
 
 export function saleWhere(actor: Actor) {
-  if (isAdmin(actor)) return {};
+  if (isFinance(actor)) return {};
   if (isVentas(actor)) {
     return { quotation: { OR: [{ vendedorId: actor.id }, { sellers: { some: { userId: actor.id } } }] } };
   }
@@ -71,13 +80,13 @@ export function saleWhere(actor: Actor) {
 
 export function relevamientoWhere(actor: Actor, cotizacionId?: string) {
   const base = cotizacionId ? { cotizacionId } : {};
-  if (isCommercial(actor)) return base;
+  if (readsAll(actor)) return base;
   if (isTec(actor)) return { ...base, OR: [{ usuarioId: actor.id }, { tecnicoId: actor.id }] };
   return NO_ROWS;
 }
 
 export function taskWhere(actor: Actor, tipo?: string) {
-  if (isCommercial(actor)) return tipo ? { tipo } : {};
+  if (readsAll(actor)) return tipo ? { tipo } : {};
   if (isTec(actor)) {
     if (tipo === 'cotizacion') return NO_ROWS;
     const own = { OR: [{ asignadoId: actor.id }, { creadorId: actor.id }] };
@@ -86,14 +95,14 @@ export function taskWhere(actor: Actor, tipo?: string) {
   return NO_ROWS;
 }
 
-/** Seller goals: admin sees all, ventas only their own, other roles none. */
+/** Seller goals: Gerencia and Contabilidad see all, ventas only their own, other roles none. */
 export function goalWhere(actor: Actor) {
-  if (isAdmin(actor)) return {};
+  if (isFinance(actor)) return {};
   if (isVentas(actor)) return { usuarioId: actor.id };
   return NO_ROWS;
 }
 
-/** Whose sales metrics an actor may read: admin any (or all), everyone else only their own. */
+/** Whose sales metrics an actor may read: Gerencia and Contabilidad any (or all), everyone else only their own. */
 export function metricsUserId(actor: Actor, requested?: string) {
-  return isAdmin(actor) ? requested : actor.id;
+  return isFinance(actor) ? requested : actor.id;
 }

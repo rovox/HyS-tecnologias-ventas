@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
-import { assertCanManageProjects, isAdmin } from '../../common/policy/roles';
+import { assertCanManageProjects, assertCanSeeProjects, isAdmin } from '../../common/policy/roles';
 import { SchedulesService } from '../schedules';
 import { IncomeService } from '../finance';
 import { CreateProjectJobDto, ListProjectsQuery, ProjectAmountDto, ProjectPaymentDto, ProjectStatusDto, UpdateProjectDto } from './dto/project.dto';
@@ -34,7 +34,7 @@ export class ProjectsService {
   ) {}
 
   async list(query: ListProjectsQuery, user: User) {
-    assertCanManageProjects(user);
+    assertCanSeeProjects(user);
     const rows = await this.prisma.project.findMany({
       where: { ...(query.estado ? { estado: query.estado } : {}), ...(query.clienteId ? { clienteId: query.clienteId } : {}) },
       include: PROJECT_DETAIL,
@@ -52,7 +52,7 @@ export class ProjectsService {
   }
 
   async get(id: string, user: User) {
-    assertCanManageProjects(user);
+    assertCanSeeProjects(user);
     return presentProject(await this.row(id));
   }
 

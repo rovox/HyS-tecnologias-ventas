@@ -5,17 +5,19 @@
 //
 //   node apps/api/scripts/generate-users-sql.mjs \
 //     --insert dennis@hscontrol.com,giovanni@hscontrol.com \
-//     --rename stephany@hscontrol.com=estefany@hscontrol.com > ~/users.sql
+//     --rename stephany@hscontrol.com=estefany@hscontrol.com \
+//     --role estefany@hscontrol.com > ~/users.sql
 //
 // --insert: INSERT IGNORE, so an existing user (same email) is never touched. Production ids are
 //           `usr_<email local part>`, not the local seed ids, to avoid colliding with existing rows.
 // --rename: UPDATE email and name (from the roster entry of the new email); role and password stay.
+// --role:   UPDATE role from the roster (e.g. Estefany → CONTABILIDAD, AUTH-01); runs after the renames.
 // Review users.sql, then apply it once after a backup (one approved write session).
 
 import bcrypt from 'bcryptjs';
 import { findUser, localPasswordFor } from '../../../config/users.js';
 
-const ROLES = ['ADMINISTRADOR', 'VENTAS / ADMINISTRACIÓN', 'SEGURIDAD ELECTRÓNICA', 'SIN ACCESO'];
+const ROLES = ['ADMINISTRADOR', 'VENTAS / ADMINISTRACIÓN', 'SEGURIDAD ELECTRÓNICA', 'CONTABILIDAD', 'SIN ACCESO'];
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, all) => (a.startsWith('--') ? [...acc, [a.slice(2), all[i + 1]]] : acc), []),
@@ -23,8 +25,9 @@ const args = Object.fromEntries(
 const list = (value) => (value ? value.split(',').map((v) => v.trim()).filter(Boolean) : []);
 const inserts = list(args.insert);
 const renames = list(args.rename).map((pair) => pair.split('='));
-if (!inserts.length && !renames.length) {
-  console.error('Nothing to do: pass --insert a@x,b@x and/or --rename old@x=new@x');
+const roleChanges = list(args.role);
+if (!inserts.length && !renames.length && !roleChanges.length) {
+  console.error('Nothing to do: pass --insert a@x,b@x, --rename old@x=new@x and/or --role a@x');
   process.exit(1);
 }
 
@@ -53,7 +56,12 @@ for (const [from, to] of renames) {
   const u = findUser(to);
   out.push(`UPDATE \`users\` SET \`email\` = ${sql(u.email)}, \`name\` = ${sql(u.name)}, \`updatedAt\` = CURRENT_TIMESTAMP(3) WHERE \`email\` = ${sql(from)};`);
 }
-const touched = [...inserts, ...renames.flat()];
+for (const email of roleChanges) {
+  const u = findUser(email);
+  if (!ROLES.includes(u.role)) throw new Error(`${email}: unknown role "${u.role}"`);
+  out.push(`UPDATE \`users\` SET \`role\` = ${sql(u.role)}, \`updatedAt\` = CURRENT_TIMESTAMP(3) WHERE \`email\` = ${sql(u.email)};`);
+}
+const touched = [...new Set([...inserts, ...renames.flat(), ...roleChanges])];
 out.push(`SELECT \`email\`, \`name\`, \`role\`, \`active\` FROM \`users\` WHERE \`email\` IN (${touched.map(sql).join(', ')});`);
 out.push('COMMIT;');
 console.log(out.join('\n\n'));

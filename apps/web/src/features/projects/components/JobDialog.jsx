@@ -7,8 +7,9 @@ import { useUserDirectory } from '@/features/catalogs';
 import { notify } from '@/shared/lib/notify.js';
 import { useAddProjectJob } from '../api.js';
 import { SearchSelect } from '@/shared/views';
+import { ROLES } from '@/constants/roles.js';
 
-const TECNICO = 'SEGURIDAD ELECTRÓNICA';
+const TECNICO = ROLES.TEC;
 const EMPTY = { descripcionTrabajo: '', fechaProgramada: '', horario: '', tecnicoId: '', lugar: '' };
 
 /** A new job of the project in the cronograma (instalación, certificación, entrega…). */

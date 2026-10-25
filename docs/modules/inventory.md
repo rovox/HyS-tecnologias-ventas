@@ -29,7 +29,7 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 
 | Vista | Tipo | Filtros y agrupaciones | Acciones |
 |---|---|---|---|
-| Productos | lista (tarjetas en teléfono): una columna por sucursal + total, en rojo si está bajo el mínimo | stock bajo, archivados, tipo, categoría · agrupar por categoría, tipo, marca · CSV | Nuevo producto · menú por fila: Entrada, Transferir, Salida a proyecto, Ajustar (admin), Editar, Archivar |
+| Productos | lista (tarjetas en teléfono): una columna por sucursal + total, en rojo si está bajo el mínimo | stock bajo, archivados, tipo, categoría · agrupar por categoría, tipo, marca · CSV | Nuevo producto · menú por fila: Entrada, Transferir, Salida a proyecto, Ajustar (Gerencia y Contabilidad), Editar, Archivar |
 | Movimientos | lista | búsqueda por producto, nota, motivo, proyecto | — |
 | Proyecto › Material | pestaña de la ficha del proyecto | — | costo = Σ cantidad × costo unitario |
 | Cliente › Equipos | pestaña de la ficha del cliente | — | equipos entregados a sus proyectos, con la garantía del proyecto |
@@ -45,7 +45,7 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 | 4 | Pedido interno con productos | comercial o técnico | 1. Pedidos internos › Crear pedido 2. para un trabajo o una sucursal 3. ítems del inventario 4. Crear pedido | toast | pedido solicitado; no mueve stock todavía |
 | 5 | Entregar el pedido | comercial | 1. pedido 2. estado › Entregado | confirmación | **en la misma transacción**: a una sucursal → transferencia; a un trabajo de proyecto → salida al proyecto (costo y margen del proyecto, equipos del cliente) |
 | 6 | Salida directa a un proyecto | comercial | 1. ⋯ Salida a proyecto 2. sucursal, proyecto, cantidad 3. Registrar | toast | material y costo del proyecto; equipos del cliente |
-| 7 | Corregir un conteo | administrador | 1. ⋯ Ajustar 2. faltante o sobrante, sucursal, cantidad, motivo 3. Registrar | toast | stock; queda en Movimientos con el motivo |
+| 7 | Corregir un conteo | administrador o contabilidad | 1. ⋯ Ajustar 2. faltante o sobrante, sucursal, cantidad, motivo 3. Registrar | toast | stock; queda en Movimientos con el motivo |
 | 8 | Ver qué reponer | todos | 1. Filtros › Stock bajo | — | productos bajo su mínimo |
 
 ## Reglas (API)
@@ -59,7 +59,7 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 | Costo de material del proyecto = Σ salidas × costo unitario; costo = gastos + material | `materialCost` · `projects/project.presenter.ts` | — |
 | Código único; categoría = una de las 3 divisiones | `InventoryService` + `CategoriesService.assertDivision` | 409 / 400 |
 | Un pedido entregado no se borra | `pedidos-internos.rules.ts` `deleteError` | 400 |
-| Gestionar: comerciales; ajustar: Gerencia | `common/policy` `canManageInventory`, `canAdjustInventory` | 403 |
+| Gestionar: comerciales; ajustar: Gerencia y Contabilidad (403 para los demás) | `common/policy` `canManageInventory`, `canAdjustInventory` | 403 |
 
 API: `GET/POST /inventory/products`, `PATCH /inventory/products/:id`, `GET/POST /inventory/movements`.
 

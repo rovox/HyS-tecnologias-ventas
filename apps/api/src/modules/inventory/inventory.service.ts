@@ -90,13 +90,14 @@ export class InventoryService {
     });
   }
 
-  /** Entradas, transfers and outputs to a project (commercial); adjustments (Gerencia). Never below zero. */
+  /** Entradas, transfers and outputs to a project (commercial); adjustments (Gerencia, Contabilidad). Never below zero. */
   async registerMovement(dto: StockMovementDto, user: User, sessionId?: string) {
-    this.assertManage(user);
+    if (dto.tipo !== 'ajuste') this.assertManage(user);
+    else if (!canAdjustInventory(user)) throw new ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
     const row = await this.prisma.$transaction(async (tx) => {
       const product = await this.product(dto.productoId, tx);
       const available = dto.sucursalOrigenId ? (stockBySede(product.movements)[dto.sucursalOrigenId] ?? 0) : 0;
-      const error = stockMovementError(dto, { productTipo: product.tipo, available, isAdmin: canAdjustInventory(user) });
+      const error = stockMovementError(dto, { productTipo: product.tipo, available, canAdjust: canAdjustInventory(user) });
       if (error) throw new BadRequestException(error);
       if (dto.projectId) {
         const project = await tx.project.findUnique({ where: { id: dto.projectId } });
@@ -136,7 +137,7 @@ export class InventoryService {
     for (const move of plan) {
       const product = await this.product(move.productoId, tx);
       const available = stockBySede(product.movements)[move.sucursalOrigenId] ?? 0;
-      const error = stockMovementError(move, { productTipo: product.tipo, available, isAdmin: false });
+      const error = stockMovementError(move, { productTipo: product.tipo, available, canAdjust: false });
       if (error) throw new BadRequestException(`${product.nombre}: ${error}`);
       await tx.stockMovement.create({ data: { ...move, costoUnitario: product.costo, pedidoInternoId: pedido.id, registradoPorId: userId } });
     }

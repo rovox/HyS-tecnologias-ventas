@@ -41,7 +41,7 @@ El equipo trabaja de forma dinámica: **todos ven todo y editan casi todo**. La 
 | Perfil | Rol guardado | Pantalla principal |
 |---|---|---|
 | Dueño / Gerencia | ADMINISTRADOR | Dashboard general |
-| Contabilidad | CONTABILIDAD | Bandeja de rendición, cuentas por cobrar |
+| Contabilidad | CONTABILIDAD (existe desde AUTH-01, 2026-10-25: lee todo; valida, edita y anula dinero; ajusta stock) | Bandeja de rendición, cuentas por cobrar |
 | Comercial | VENTAS | Cotizaciones y proyectos |
 | Técnico | SEGURIDAD ELECTRÓNICA (renombrable a TÉCNICO) | Mis actividades y asistencias |
 

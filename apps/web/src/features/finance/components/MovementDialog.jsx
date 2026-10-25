@@ -35,12 +35,12 @@ function initial(tipo, movement, user) {
  * not validated yet. Payments of projects and jobs are registered on them, not here.
  */
 export function MovementDialog({ tipo, movement, open, onOpenChange }) {
-  const { currentUser, isVentasLevel } = useAuth();
+  const { currentUser, readsAll } = useAuth();
   const create = useCreateMovement();
   const update = useUpdateMovement();
   const { data: sucursales = [] } = useSucursales();
   const { data: boxes = [] } = useCashBoxes();
-  const { data: projects = [] } = useProjects(open && tipo === 'egreso' && isVentasLevel());
+  const { data: projects = [] } = useProjects(open && tipo === 'egreso' && readsAll());
   const kind = movement?.tipo || tipo;
   const [form, setForm] = useState(() => initial(kind, movement, currentUser));
   useEffect(() => {
@@ -115,7 +115,7 @@ export function MovementDialog({ tipo, movement, open, onOpenChange }) {
               </div>
             </div>
           )}
-          {kind === 'egreso' && !movement && isVentasLevel() && (
+          {kind === 'egreso' && !movement && readsAll() && (
             <div className="space-y-1.5">
               <Label htmlFor="mv-proyecto">Proyecto (suma a su costo)</Label>
               <SearchSelect

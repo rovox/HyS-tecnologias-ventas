@@ -1,6 +1,6 @@
 import { isLowStock, materialCost, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './inventory.rules';
 
-const ctx = { productTipo: 'material', available: 10, isAdmin: false };
+const ctx = { productTipo: 'material', available: 10, canAdjust: false };
 
 describe('inventory rules', () => {
   it('computes stock per branch from the movements', () => {
@@ -34,9 +34,9 @@ describe('inventory rules', () => {
   it('lets only Gerencia adjust, with a reason and a single direction', () => {
     const adj = { tipo: 'ajuste', cantidad: 2, sucursalOrigenId: 'c', motivo: 'Faltante en conteo' };
     expect(stockMovementError(adj, ctx)).toMatch(/Gerencia/);
-    expect(stockMovementError({ ...adj, motivo: '' }, { ...ctx, isAdmin: true })).toMatch(/motivo/);
-    expect(stockMovementError({ ...adj, sucursalDestinoId: 'p' }, { ...ctx, isAdmin: true })).toMatch(/sobrante/);
-    expect(stockMovementError(adj, { ...ctx, isAdmin: true })).toBeNull();
+    expect(stockMovementError({ ...adj, motivo: '' }, { ...ctx, canAdjust: true })).toMatch(/motivo/);
+    expect(stockMovementError({ ...adj, sucursalDestinoId: 'p' }, { ...ctx, canAdjust: true })).toMatch(/sobrante/);
+    expect(stockMovementError(adj, { ...ctx, canAdjust: true })).toBeNull();
   });
 
   it('turns a delivered order into transfers (branch order) or project outputs (job order)', () => {

@@ -1,13 +1,16 @@
 import { useRef } from 'react';
 import { FileText, Pencil, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { notify } from '@/shared/lib/notify.js';
 import { openQuotationFile, useAttachQuotationFile } from '../api.js';
 import { TRANSITION_LABEL } from '../constants.js';
 import { useQuotationActions } from './useQuotationActions.js';
 
-/** Header buttons of a quotation: only what the API allows for its current state. */
+/** Header buttons of a quotation: only what the API allows for its current state (Contabilidad only reads). */
 export function QuotationActions({ quote, onEdit }) {
+  const { isVentasLevel } = useAuth();
+  const write = isVentasLevel();
   const actions = useQuotationActions();
   const attach = useAttachQuotationFile();
   const fileInput = useRef(null);
@@ -25,7 +28,7 @@ export function QuotationActions({ quote, onEdit }) {
 
   return (
     <>
-      {quote.transicionesValidas.map((estado) => (
+      {write && quote.transicionesValidas.map((estado) => (
         <Button
           key={estado}
           size="sm"
@@ -36,12 +39,12 @@ export function QuotationActions({ quote, onEdit }) {
           {TRANSITION_LABEL[estado]}
         </Button>
       ))}
-      {!deleted && (
+      {write && !deleted && (
         <Button size="sm" variant="outline" onClick={onEdit}>
           <Pencil /> Editar
         </Button>
       )}
-      {!deleted && (
+      {write && !deleted && (
         <>
           <Button size="sm" variant="outline" disabled={attach.isPending} onClick={() => fileInput.current?.click()}>
             <Upload /> {quote.archivoPdfUrl ? 'Reemplazar PDF' : 'Adjuntar PDF'}
@@ -54,12 +57,12 @@ export function QuotationActions({ quote, onEdit }) {
           <FileText /> Ver PDF
         </Button>
       )}
-      {quote.puedeEliminar && (
+      {write && quote.puedeEliminar && (
         <Button size="sm" variant="ghost" className="text-destructive" disabled={actions.busy} onClick={() => actions.deleteQuote(quote)}>
           <Trash2 /> Eliminar
         </Button>
       )}
-      {deleted && (
+      {write && deleted && (
         <Button size="sm" variant="outline" disabled={actions.busy} onClick={() => actions.restoreQuote(quote)}>
           <RotateCcw /> Restaurar
         </Button>

@@ -2,7 +2,7 @@
 // RC-01 blank-view sweep: visits every route as every role and classifies the result.
 //
 //   node scripts/blank-view-sweep.mjs [--web http://localhost:3000] [--api http://localhost:3001/api]
-//                                     [--roles admin,ventas,tecnico] [--json out.json] [--timeout 8000]
+//                                     [--roles admin,ventas,tecnico,contabilidad] [--json out.json] [--timeout 8000]
 //
 // Needs the local stack running (`pnpm dev` or the compose stack) and `@playwright/test` installed (LOCAL-02).
 // Classification: pass | blank | error-boundary | spinner | redirect (unexpected) | redirect-ok | forbidden-ok (expected redirect)
@@ -24,20 +24,20 @@ const TIMEOUT = Number(args.timeout ?? 8000);
 
 // One account per role from the shared roster (config/users.json), local stack only.
 const ROLES = Object.fromEntries(Object.entries(ROLE_ACCOUNTS).map(([role, email]) => [role, credentialsFor(email)]));
-const roleNames = (args.roles ?? 'admin,ventas,tecnico').split(',');
+const roleNames = (args.roles ?? 'admin,ventas,tecnico,contabilidad').split(',');
 
-// Mirrors routeRoles in apps/web/src/config/nav.js (A = admin, V = ventas, T = técnico).
+// Mirrors routeRoles in apps/web/src/config/nav.js (A = admin, V = ventas, T = técnico, C = contabilidad).
 // Replaced by generated constants in FE-03; `checkRouteTable` fails if App.jsx and this table drift.
-const ALL = 'AVT', AV = 'AV', A = 'A';
+const ALL = 'AVTC', AV = 'AV', AVC = 'AVC', A = 'A';
 const ROUTES = [
-  ['/dashboard', ALL], ['/quotations', AV], ['/quotations/:quotationId', AV], ['/projects', AV], ['/projects/:projectId', AV], ['/clientes', ALL], ['/clientes/:clientId', ALL],
+  ['/dashboard', ALL], ['/quotations', AVC], ['/quotations/:quotationId', AVC], ['/projects', AVC], ['/projects/:projectId', AVC], ['/clientes', ALL], ['/clientes/:clientId', ALL],
   ['/surveys', ALL], ['/schedule', ALL], ['/activity-wall', ALL], ['/reports', A],
   ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AV],
-  ['/pedidos-internos', AV], ['/pedidos-internos/:pedidoId', AV],
+  ['/pedidos-internos', AVC], ['/pedidos-internos/:pedidoId', AVC],
   ['/vehicle-control', A], ['/vehicle-control/:id', A], ['/vehicles', A], ['/vehicles/:id', A],
   ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/inventario', ALL], ['/usuarios/:userId', ALL],
 ];
-const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T' };
+const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T', contabilidad: 'C' };
 // Routes that intentionally redirect (ActivityWallPage is `<Navigate to="/dashboard">`); classified `redirect-ok`, not failing.
 const EXPECTED_REDIRECT = new Set(['/activity-wall']);
 

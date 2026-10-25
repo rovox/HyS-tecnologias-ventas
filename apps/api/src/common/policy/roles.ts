@@ -8,6 +8,7 @@ import {
   canMutateRelevamientos,
   canMutateSchedules,
   canManageProjects,
+  canSeeProjects,
   isAdmin,
 } from './policy';
 
@@ -18,6 +19,7 @@ export {
   clientWhere,
   goalWhere,
   isAdmin,
+  isConta,
   isTec,
   isVentas,
   metricsUserId,
@@ -59,4 +61,8 @@ export function assertCanCreateSchedules(user: User) {
 
 export function assertCanManageProjects(user: User) {
   if (!canManageProjects(user)) throw new ForbiddenException('Sin acceso a proyectos');
+}
+
+export function assertCanSeeProjects(user: User) {
+  if (!canSeeProjects(user)) throw new ForbiddenException('Sin acceso a proyectos');
 }
