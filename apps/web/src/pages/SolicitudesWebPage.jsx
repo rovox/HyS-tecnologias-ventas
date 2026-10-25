@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale';
 import Layout from '@/components/Layout.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
-import { Badge } from '@/components/ui/badge.jsx';
+import { StatusBadge } from '@/shared/views';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
@@ -24,19 +24,10 @@ const ESTADOS = [
   { value: 'descartada', label: 'Descartadas' },
 ];
 
-const ESTADO_BADGE = {
-  nueva: { label: 'Nueva', variant: 'default' },
-  contactada: { label: 'Contactada', variant: 'secondary' },
-  convertida: { label: 'Cliente', variant: 'outline' },
-  descartada: { label: 'Descartada', variant: 'destructive' },
-};
 
 const fecha = (value) => (value ? format(new Date(value), "d MMM yyyy, HH:mm", { locale: es }) : '—');
 
-const EstadoBadge = ({ estado }) => {
-  const cfg = ESTADO_BADGE[estado] || { label: estado, variant: 'outline' };
-  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
-};
+const EstadoBadge = ({ estado }) => <StatusBadge entity="lead" state={estado} />;
 
 const SolicitudesWebPage = () => {
   const navigate = useNavigate();

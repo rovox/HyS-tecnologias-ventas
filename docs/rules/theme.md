@@ -1,36 +1,47 @@
 # Theme rules
 
-## Official theme
+## Source
 
-The app uses the **shadcn/ui theming system** (CSS variables in `src/index.css`, mapped in `tailwind.config.js`). Brand values come from `DESIGN.md` (H&S navy + green). There is one theme; dark mode is optional and only through the same variables.
+`DESIGN.md` is the only source of colours, states and screen patterns. The code implements it in:
 
-| shadcn token | DESIGN.md source | Use |
-|---|---|---|
-| `--background` / `--foreground` | `surface` / `on-surface` | page |
-| `--card` | `surface-container-lowest` | cards, modals |
-| `--primary` / `--primary-foreground` | `primary-container` / `on-primary` | main actions, active nav |
-| `--secondary` | `surface-container` | secondary buttons |
-| `--accent` | `secondary` (brand green) | highlights, success emphasis |
-| `--muted` / `--muted-foreground` | `surface-container-low` / `on-surface-variant` | subtle text, empty states |
-| `--destructive` | `error` | delete, errors |
-| `--border`, `--input`, `--ring` | `outline-variant`, `outline`, `surface-tint` | borders, focus |
+| File | Holds |
+|---|---|
+| `apps/web/src/index.css` | CSS variables (HSL): shadcn core (`--primary`, `--muted`, `--border`…) and the narrative tones |
+| `apps/web/tailwind.config.js` | the classes for those variables |
+| `apps/web/src/shared/lib/status.js` | every state: label, tone, icon (`STATUS`, `TONE`, `statusOf`) |
+| `apps/web/src/shared/views/StatusBadge.jsx` | `<StatusBadge entity state>`, `<ToneTag tone>` |
 
-Status colors (programado, en proceso, terminado, cancelado, pagado, pendiente…) are defined **once** in `src/constants/status.js` as token-based classes and rendered by `<StatusBadge>`.
+## Narrative tones
+
+`danger` · `warning` · `success` · `info` · `progress` · `neutral`, each with `DEFAULT` (solid), `foreground`
+(text on solid), `soft` (background), `fg` (text on soft or white), `border`. Meaning and examples: `DESIGN.md` §2.
+
+| Need | Classes |
+|---|---|
+| State | `<StatusBadge entity="movement" state={m.estado} />` (never a local colour map) |
+| Tag that is not a state | `<ToneTag tone="danger" icon={AlertTriangle}>Sin técnico</ToneTag>` |
+| Money in / out / owed | `text-success-fg` (+) · `text-danger-fg` (−, saldo) · `text-muted-foreground` (0) |
+| Card painted by state | `bg-<tone>-soft border-<tone>-border border-l-4 border-l-<tone>` |
+| Striped / hovered row | `bg-row-stripe` · `bg-row-hover` |
+
+`primary` (navy) is structure: navigation, titles, the main button. `secondary` (brand green) is identity, not
+"success": use `success` for confirmed/validated. `destructive` stays for shadcn buttons and equals `danger`.
 
 ## Rules
 
-- Use only token classes: `bg-primary`, `text-muted-foreground`, `border-border`…
-- **No raw palette classes** (`bg-blue-600`, `text-emerald-600`) and no hex values (`bg-[#002b5b]`). Today there are ~515 raw palette usages; they are migrated per feature.
-- No new CSS files. `index.css` contains only tokens, base layer and truly global utilities.
-- Spacing and radius from Tailwind scale; radius from `--radius`.
-- Typography: one font family, sizes `text-sm` (body), `text-base`, `text-lg`, `text-xl`, `text-2xl` (page title). No `font-black` except KPI numbers.
-- Touch targets ≥ 44px (`min-h-11`) on mobile.
-- Contrast: text on backgrounds must pass WCAG AA; check new token pairs before using them.
+- Token classes only. **No raw palette classes** (`bg-blue-600`, `text-emerald-600`) and no hex (`bg-[#002b5b]`).
+  Legacy pages still have them; they are migrated when their feature is rewritten.
+- No new CSS files. `index.css` holds tokens, the base layer and a few global utilities.
+- One font (Inter). Sizes: `text-xs` labels, `text-sm` body, `text-base` section, `text-2xl` page title; numbers
+  `tabular-nums`.
+- Touch targets ≥ 44 px (`min-h-11`) on phones.
+- A new colour pair is measured for WCAG AA before use (`fg` on `soft` ≥ 4.5:1).
+- No dark mode.
 
 ## Checking
 
 ```bash
-grep -rhoE "(bg|text|border)-(red|blue|green|orange|emerald|slate|gray|amber|yellow|indigo|purple|sky|rose|zinc|neutral)-[0-9]{2,3}" apps/web/src --include=*.jsx | wc -l
+rg -o "(bg|text|border)-(red|blue|green|orange|emerald|slate|gray|amber|yellow|indigo|purple|sky|rose|zinc|neutral)-[0-9]{2,3}" apps/web/src -g '*.jsx' | wc -l
 ```
 
-The count must only go down. A feature is "themed" when it returns 0.
+The count must only go down (347 on 2026-10-25). `features/*` and `shared/*` must stay at 0.

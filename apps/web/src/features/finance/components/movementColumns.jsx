@@ -1,12 +1,12 @@
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { cn } from '@/lib/utils';
-import { CONCEPTO_LABEL, ESTADO, TIPO_LABEL, sign } from '../constants.js';
+import { StatusBadge } from '@/shared/views';
+import { CONCEPTO_LABEL, TIPO_LABEL, sign } from '../constants.js';
 
 function MovementStateBadge({ movement }) {
-  const state = ESTADO[movement.estado];
   return (
-    <span className={cn('inline-flex rounded px-2 py-0.5 text-xs font-medium', state.className)} title={movement.motivo || undefined}>
-      {state.label}
+    <span title={movement.motivo || undefined}>
+      <StatusBadge entity="movement" state={movement.estado} />
     </span>
   );
 }
@@ -14,7 +14,7 @@ function MovementStateBadge({ movement }) {
 function Amount({ movement }) {
   const s = sign(movement);
   return (
-    <span className={cn('font-medium', s > 0 && 'text-secondary', s < 0 && 'text-destructive')}>
+    <span className={cn('whitespace-nowrap font-semibold tabular-nums', s > 0 && 'text-success-fg', s < 0 && 'text-danger-fg')}>
       {s > 0 ? '+' : s < 0 ? '−' : '↔ '}
       {formatBs(movement.monto)}
     </span>

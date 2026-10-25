@@ -591,13 +591,16 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('a delivered branch order moves stock between branches; without stock the delivery is refused', async () => {
-      const before = await stock('prd_utp6');
+      // Its own product, so the test does not depend on seed products someone archived or moved by hand.
+      const cable = (await http().post('/api/inventory/products').set(ventas())
+        .send({ codigo: `E2E-UTP-${Date.now()}`, nombre: 'Cable UTP Cat6 e2e', categoriaId: 'cableado_estructurado', tipo: 'material', unidad: 'm', costo: 3 }).expect(201)).body;
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: cable.id, tipo: 'entrada', cantidad: 80, costoUnitario: 3, sucursalDestinoId: 'suc_central' }).expect(201);
       const ok = (await http().post('/api/pedidos-internos').set(ventas())
-        .send({ sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ productoId: 'prd_utp6', materialNombre: 'Cable UTP Cat6', cantidad: 50 }] }).expect(201)).body;
+        .send({ sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ productoId: cable.id, materialNombre: cable.nombre, cantidad: 50 }] }).expect(201)).body;
       await deliver(ok.id).then((r) => expect(r.status).toBe(200));
-      const after = await stock('prd_utp6');
-      expect(after.stock.suc_central).toBe(before.stock.suc_central - 50);
-      expect(after.stock.suc_punata).toBe(before.stock.suc_punata + 50);
+      const after = await stock(cable.id);
+      expect(after.stock.suc_central).toBe(30);
+      expect(after.stock.suc_punata).toBe(50);
       const big = (await http().post('/api/pedidos-internos').set(ventas())
         .send({ sucursalOrigenId: 'suc_quillacollo', sucursalDestinoId: 'suc_central', items: [{ productoId: 'prd_sw24', materialNombre: 'Switch', cantidad: 5 }] }).expect(201)).body;
       const refused = await deliver(big.id);

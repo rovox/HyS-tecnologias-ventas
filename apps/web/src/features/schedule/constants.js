@@ -1,15 +1,13 @@
-export const JOB_STATE = {
-  programado: { label: 'Programado', dot: 'bg-muted-foreground' },
-  en_proceso: { label: 'En proceso', dot: 'bg-primary' },
-  terminado: { label: 'Terminado', dot: 'bg-secondary' },
-  cancelado: { label: 'Cancelado', dot: 'bg-destructive' },
-};
+import { Cable, Cctv, Monitor } from 'lucide-react';
+import { STATUS } from '@/shared/lib/status.js';
 
-/** Static class names per division so Tailwind keeps them (tokens in index.css). */
+export const JOB_STATE = STATUS.job;
+
+/** The division is a text tag with an icon (the colour belongs to the state, so the two are never confused). */
 export const DIVISION = {
-  computo_comunicacion: { short: 'Cómputo', border: 'border-l-division-computo', bg: 'bg-division-computo/10', dot: 'bg-division-computo' },
-  seguridad_electronica: { short: 'Seguridad', border: 'border-l-division-seguridad', bg: 'bg-division-seguridad/10', dot: 'bg-division-seguridad' },
-  cableado_estructurado: { short: 'Cableado', border: 'border-l-division-cableado', bg: 'bg-division-cableado/10', dot: 'bg-division-cableado' },
+  computo_comunicacion: { short: 'Cómputo', icon: Monitor },
+  seguridad_electronica: { short: 'Seguridad', icon: Cctv },
+  cableado_estructurado: { short: 'Cableado', icon: Cable },
 };
 
 /** What can be done to a job from each state (the API checks the same flow). */

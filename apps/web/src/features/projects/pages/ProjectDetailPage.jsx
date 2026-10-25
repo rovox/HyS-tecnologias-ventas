@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout.jsx';
 import { Chatter } from '@/features/activity';
-import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBar } from '@/shared/views';
+import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBadge, StatusBar } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useProject } from '../api.js';
@@ -17,16 +17,13 @@ import { JobDialog } from '../components/JobDialog.jsx';
 import { PaymentDialog } from '../components/PaymentDialog.jsx';
 import { useProjectActions } from '../components/useProjectActions.js';
 
-const JOB_STATE = { programado: 'Programado', en_proceso: 'En proceso', terminado: 'Terminado', cancelado: 'Cancelado' };
-
 const jobColumns = [
   { key: 'trabajo', header: 'Trabajo', cell: (t) => t.descripcionTrabajo },
   { key: 'fecha', header: 'Fecha', cell: (t) => `${formatDay(t.fechaProgramada)}${t.horario ? ` · ${t.horario}` : ''}` },
   { key: 'tecnico', header: 'Técnico', cell: (t) => t.tecnico?.name || 'Sin asignar' },
-  { key: 'estado', header: 'Estado', cell: (t) => JOB_STATE[t.estado] || t.estado },
+  { key: 'estado', header: 'Estado', cell: (t) => <StatusBadge entity="job" state={t.estado} /> },
 ];
 
-const MOVEMENT_STATE = { por_validar: 'Por validar', validado: 'Validado', observado: 'Observado' };
 const total = (rows) => formatBs(rows.reduce((s, m) => s + Number(m.monto), 0));
 
 const materialColumns = [
@@ -40,7 +37,7 @@ const movementColumns = [
   { key: 'concepto', header: 'Concepto', cell: (m) => PAYMENT_TYPE[m.concepto] || m.concepto },
   { key: 'metodo', header: 'Método', cell: (m) => m.metodo || '—' },
   { key: 'por', header: 'Registró', cell: (m) => m.registradoPor?.name || '—' },
-  { key: 'estado', header: 'Estado', cell: (m) => MOVEMENT_STATE[m.estado] || m.estado },
+  { key: 'estado', header: 'Estado', cell: (m) => <StatusBadge entity="movement" state={m.estado} /> },
   { key: 'nota', header: 'Nota', cell: (m) => m.nota || '—' },
   { key: 'monto', header: 'Monto', align: 'right', cell: (m) => formatBs(m.monto), total },
 ];
@@ -94,7 +91,7 @@ export default function ProjectDetailPage() {
             )}
           </>
         }
-        statusBar={<StatusBar stages={projectStages(project.estado)} current={project.estado} allowed={project.transicionesValidas} onSelect={(estado) => actions.changeStatus(project, estado)} />}
+        statusBar={<StatusBar entity="project" stages={projectStages(project.estado)} current={project.estado} allowed={project.transicionesValidas} onSelect={(estado) => actions.changeStatus(project, estado)} />}
         smartButtons={[
           { key: 'cotizacion', icon: FileText, label: 'Cotización', value: project.quotation.numero, to: `/quotations/${project.quotation.id}` },
           { key: 'cliente', icon: User, label: 'Cliente', value: project.cliente.nombre, to: `/clientes/${project.cliente.id}` },

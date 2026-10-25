@@ -1,3 +1,5 @@
+import { STATUS } from '@/shared/lib/status.js';
+
 export const TIPO_LABEL = { ingreso: 'Ingreso', egreso: 'Egreso', transferencia: 'Transferencia' };
 
 export const CONCEPTOS = {
@@ -27,12 +29,7 @@ export const CONCEPTO_LABEL = {
   ...CONCEPTOS.transferencia,
 };
 
-export const ESTADO = {
-  por_validar: { label: 'Por validar', className: 'bg-primary/10 text-primary' },
-  validado: { label: 'Validado', className: 'bg-secondary/15 text-secondary' },
-  observado: { label: 'Observado', className: 'bg-destructive/10 text-destructive' },
-  anulado: { label: 'Anulado', className: 'bg-muted text-muted-foreground line-through' },
-};
+export const ESTADO = STATUS.movement;
 
 /** + money in, − money out, ↔ between boxes. */
 export const sign = (m) => (m.tipo === 'ingreso' ? 1 : m.tipo === 'egreso' ? -1 : 0);

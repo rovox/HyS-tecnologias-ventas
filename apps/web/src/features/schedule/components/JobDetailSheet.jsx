@@ -9,12 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
 import { useUserDirectory } from '@/features/catalogs';
-import { Field, FieldGrid, useConfirm } from '@/shared/views';
+import { Field, FieldGrid, StatusBadge, useConfirm } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
-import { cn } from '@/lib/utils';
 import { useJob, useUpdateJob } from '../api.js';
-import { DIVISION, JOB_ACTIONS, JOB_FIELDS, JOB_STATE, formatJobValue } from '../constants.js';
+import { DivisionTag } from './JobChip.jsx';
+import { JOB_ACTIONS, JOB_FIELDS, JOB_STATE, formatJobValue } from '../constants.js';
 import { jobDay } from '../dates.js';
 import { JobPaymentDialog } from './JobPaymentDialog.jsx';
 
@@ -59,12 +59,8 @@ export function JobDetailSheet({ jobId, onClose }) {
           <>
             <SheetHeader>
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className={cn('inline-flex items-center gap-1 rounded px-2 py-0.5 font-medium', DIVISION[job.categoriaId]?.bg)}>
-                  <span className={cn('h-2 w-2 rounded-full', DIVISION[job.categoriaId]?.dot)} /> {job.categoria?.label}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 font-medium">
-                  <span className={cn('h-2 w-2 rounded-full', JOB_STATE[job.estado]?.dot)} /> {JOB_STATE[job.estado]?.label}
-                </span>
+                <StatusBadge entity="job" state={job.estado} />
+                <DivisionTag id={job.categoriaId} label={job.categoria?.label} />
               </div>
               <SheetTitle>{job.cliente?.nombre}</SheetTitle>
               <SheetDescription>{job.descripcionTrabajo}</SheetDescription>

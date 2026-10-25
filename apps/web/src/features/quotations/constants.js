@@ -1,15 +1,9 @@
 import { formatBs } from '@/shared/lib/format.js';
+import { STATUS } from '@/shared/lib/status.js';
 
 // Quotation states as the UI shows them. Transitions are not here: the API returns `transicionesValidas`.
 
-export const QUOTATION_STATE = {
-  borrador: { label: 'Borrador', className: 'bg-muted text-muted-foreground' },
-  enviado: { label: 'Enviada', className: 'bg-primary/10 text-primary' },
-  aprobado: { label: 'Aprobada', className: 'bg-secondary/15 text-secondary' },
-  rechazado: { label: 'Rechazada', className: 'bg-destructive/10 text-destructive' },
-  vencido: { label: 'Vencida', className: 'border border-border bg-background text-muted-foreground' },
-  eliminada: { label: 'Eliminada', className: 'bg-muted text-muted-foreground line-through' },
-};
+export const QUOTATION_STATE = STATUS.quotation;
 
 /** A deleted quotation keeps its state but is shown as "Eliminada". */
 export const displayState = (quote) => (quote.eliminadaAt ? 'eliminada' : quote.estado);
