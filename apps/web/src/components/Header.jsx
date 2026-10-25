@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { TasksSystray } from '@/features/tasks';
 
 const Header = ({ onMenuClick }) => {
   const { currentUser } = useAuth();
@@ -47,7 +46,6 @@ const Header = ({ onMenuClick }) => {
           >
             {currentUser?.name?.charAt(0) || 'U'}
           </Link>
-          <TasksSystray />
         </div>
       </div>
     </header>

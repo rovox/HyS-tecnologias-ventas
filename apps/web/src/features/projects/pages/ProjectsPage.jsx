@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout.jsx';
 import { useCategories } from '@/features/catalogs';
 import { QuotationTabs } from '@/features/quotations';
-import { ControlPanel, ListView, useListControls } from '@/shared/views';
+import { ControlPanel, ListView, Money, useListControls } from '@/shared/views';
 import { downloadCsv } from '@/shared/lib/csv.js';
-import { formatBs } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useProjects } from '../api.js';
 import { PROJECT_STATE } from '../constants.js';
@@ -49,7 +48,7 @@ export default function ProjectsPage() {
         searchPlaceholder="Buscar por código, título, cliente…"
         {...panel}
         onExport={() => downloadCsv('proyectos.csv', projectCsv, rows)}
-        meta={`${rows.length} · por cobrar ${formatBs(owed)}`}
+        meta={<>{rows.length} proyectos — por cobrar <Money value={owed} kind="owed" /></>}
       />
       <div className="px-4 py-4 sm:px-6">
         <ListView

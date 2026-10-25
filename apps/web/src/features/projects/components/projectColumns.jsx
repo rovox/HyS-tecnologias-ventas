@@ -1,4 +1,5 @@
 import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { Money } from '@/shared/views';
 import { CollectedBar, ProjectStateBadge } from './ProjectStateBadge.jsx';
 
 const sum = (key) => (rows) => formatBs(rows.reduce((total, p) => total + Number(p[key]), 0));
@@ -24,7 +25,7 @@ export const projectColumns = [
   },
   { key: 'monto', header: 'Monto', align: 'right', cell: (p) => formatBs(p.montoOficial), total: sum('montoOficial') },
   { key: 'cobrado', header: 'Cobrado', align: 'right', cell: (p) => <div className="flex flex-col items-end gap-1">{formatBs(p.cobrado)}<CollectedBar pct={p.pctCobrado} /></div>, total: sum('cobrado') },
-  { key: 'saldo', header: 'Saldo', align: 'right', cell: (p) => <span className={p.saldo > 0 ? 'font-medium text-destructive' : ''}>{formatBs(p.saldo)}</span>, total: sum('saldo') },
+  { key: 'saldo', header: 'Saldo', align: 'right', cell: (p) => <Money value={p.saldo} kind="owed" />, total: sum('saldo') },
 ];
 
 export function ProjectCard({ project: p }) {
@@ -39,7 +40,7 @@ export function ProjectCard({ project: p }) {
       <div className="flex items-center justify-between pt-1">
         <CollectedBar pct={p.pctCobrado} />
         <span className="text-xs">
-          Saldo <span className={p.saldo > 0 ? 'font-semibold text-destructive' : 'font-semibold'}>{formatBs(p.saldo)}</span>
+          Saldo <Money value={p.saldo} kind="owed" />
         </span>
       </div>
     </div>

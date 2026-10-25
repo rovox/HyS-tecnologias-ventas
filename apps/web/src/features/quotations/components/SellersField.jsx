@@ -2,6 +2,7 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserDirectory } from '@/features/catalogs';
+import { SearchSelect } from '@/shared/views';
 
 const COMMERCIAL = ['ADMINISTRADOR', 'VENTAS / ADMINISTRACIÓN'];
 
@@ -16,17 +17,15 @@ export function SellersField({ value, onChange, disabled }) {
     <div className="space-y-2">
       {value.map((row, index) => (
         <div key={index} className="flex items-center gap-2">
-          <select
-            className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+          <SearchSelect
+            className="flex-1"
             value={row.userId}
             disabled={disabled}
-            onChange={(e) => set(index, { userId: e.target.value, nombre: options.find((u) => u.id === e.target.value)?.name || '' })}
-          >
-            <option value="">Selecciona vendedor</option>
-            {options.map((u) => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
+            placeholder="Selecciona vendedor"
+            searchPlaceholder="Buscar vendedor…"
+            onChange={(userId) => set(index, { userId, nombre: options.find((u) => u.id === userId)?.name || '' })}
+            options={options.map((u) => ({ value: u.id, label: u.name }))}
+          />
           {value.length > 1 && (
             <>
               <Input

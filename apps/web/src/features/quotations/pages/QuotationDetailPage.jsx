@@ -93,7 +93,7 @@ export default function QuotationDetailPage() {
             ) : null}
           </Field>
           <Field label="Plazo de entrega">{quote.plazoFinal ? formatDay(quote.plazoFinal) : null}</Field>
-          {quote.tieneLicitacion && <Field label="Licitación">{[quote.licitacionNumero, quote.licitacionEntidad].filter(Boolean).join(' · ') || 'Sí'}</Field>}
+          {quote.tieneLicitacion && <Field label="Licitación">{[quote.licitacionNumero, quote.licitacionEntidad].filter(Boolean).join(', ') || 'Sí'}</Field>}
         </FieldGrid>
         {Array.isArray(quote.licitacionArchivos) && quote.licitacionArchivos.length > 0 && (
           <div className="space-y-1 text-sm">

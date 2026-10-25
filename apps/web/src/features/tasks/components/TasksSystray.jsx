@@ -20,7 +20,7 @@ export function TasksSystray() {
         className="relative min-h-11"
         onClick={() => setOpen(true)}
         aria-label={`Tareas: ${pending} pendientes${overdue ? `, ${overdue} vencidas` : ''}`}
-        title={data ? `${pending} pendientes · ${data.sinAsignar} sin asignar · ${overdue} vencidas` : 'Tareas'}
+        title={data ? `${pending} pendientes, ${data.sinAsignar} sin asignar, ${overdue} vencidas` : 'Tareas'}
       >
         <ListTodo className="h-5 w-5" />
         <span className="hidden sm:inline">Tareas</span>

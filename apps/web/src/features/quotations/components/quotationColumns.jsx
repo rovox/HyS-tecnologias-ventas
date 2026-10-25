@@ -60,7 +60,7 @@ export function QuotationCard({ quote: q }) {
       <div className="flex items-center justify-between pt-1">
         <span className="text-xs text-muted-foreground">
           {q.categoria?.label}
-          {left !== null && <span className={left <= 3 ? ' text-destructive' : ''}> · vence en {left} d</span>}
+          {left !== null && <span className={left <= 3 ? 'ml-2 font-semibold text-danger-fg' : 'ml-2'}>Vence en {left} d</span>}
         </span>
         <span className="font-semibold">{formatBs(q.monto)}</span>
       </div>

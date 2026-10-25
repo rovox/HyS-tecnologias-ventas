@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useUserDirectory } from '@/features/catalogs';
 import { ClientPicker } from '@/features/clients';
-import { useConfirm } from '@/shared/views';
+import { SearchSelect, useConfirm } from '@/shared/views';
 import { notify } from '@/shared/lib/notify.js';
 import { useCreateTask, useTasks, useUpdateTask } from '../api.js';
 import { TaskRow } from './TaskRow.jsx';
@@ -119,17 +119,13 @@ export function TasksPanel({ open, onOpenChange }) {
             <div className="grid gap-2">
               <ClientPicker value={draft.clienteId} onChange={(clienteId) => setDraft({ ...draft, clienteId })} />
               <div className="grid grid-cols-2 gap-2">
-                <select
-                  aria-label="Responsable"
-                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                <SearchSelect
                   value={draft.asignadoId}
-                  onChange={(e) => setDraft({ ...draft, asignadoId: e.target.value })}
-                >
-                  <option value="">Sin asignar</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
+                  onChange={(asignadoId) => setDraft({ ...draft, asignadoId })}
+                  emptyOption="Sin asignar"
+                  placeholder="Responsable"
+                  options={users.map((u) => ({ value: u.id, label: u.name }))}
+                />
                 <Input type="date" aria-label="Fecha" value={draft.plazo} onChange={(e) => setDraft({ ...draft, plazo: e.target.value })} />
               </div>
             </div>

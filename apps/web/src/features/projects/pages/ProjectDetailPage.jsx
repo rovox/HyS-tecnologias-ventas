@@ -19,7 +19,7 @@ import { useProjectActions } from '../components/useProjectActions.js';
 
 const jobColumns = [
   { key: 'trabajo', header: 'Trabajo', cell: (t) => t.descripcionTrabajo },
-  { key: 'fecha', header: 'Fecha', cell: (t) => `${formatDay(t.fechaProgramada)}${t.horario ? ` · ${t.horario}` : ''}` },
+  { key: 'fecha', header: 'Fecha', cell: (t) => `${formatDay(t.fechaProgramada)}${t.horario ? `, ${t.horario}` : ''}` },
   { key: 'tecnico', header: 'Técnico', cell: (t) => t.tecnico?.name || 'Sin asignar' },
   { key: 'estado', header: 'Estado', cell: (t) => <StatusBadge entity="job" state={t.estado} /> },
 ];
@@ -96,7 +96,7 @@ export default function ProjectDetailPage() {
           { key: 'cotizacion', icon: FileText, label: 'Cotización', value: project.quotation.numero, to: `/quotations/${project.quotation.id}` },
           { key: 'cliente', icon: User, label: 'Cliente', value: project.cliente.nombre, to: `/clientes/${project.cliente.id}` },
           { key: 'trabajos', icon: Wrench, label: 'Trabajos', value: project.trabajos.length, to: '/schedule' },
-          { key: 'cobrado', icon: HandCoins, label: `Cobrado · ${project.pctCobrado} %`, value: formatBs(project.cobrado) },
+          { key: 'cobrado', icon: HandCoins, label: `Cobrado (${project.pctCobrado} %)`, value: formatBs(project.cobrado) },
         ]}
         subtitle={project.codigo}
         title={project.titulo}
@@ -113,7 +113,7 @@ export default function ProjectDetailPage() {
           </Field>
           <Field label="Cobrado"><div className="flex items-center gap-3">{formatBs(project.cobrado)} <CollectedBar pct={project.pctCobrado} /></div></Field>
           <Field label="Por validar">{formatBs(project.porValidar)}</Field>
-          <Field label="Costo (gastos + material)">{formatBs(project.costo)}{project.costoMaterial > 0 && <span className="text-xs text-muted-foreground"> · material {formatBs(project.costoMaterial)}</span>}</Field>
+          <Field label="Costo (gastos + material)">{formatBs(project.costo)}{project.costoMaterial > 0 && <span className="ml-2 text-xs text-muted-foreground">(material: {formatBs(project.costoMaterial)})</span>}</Field>
           <Field label="Margen">
             <span className={project.margen < 0 ? 'font-semibold text-destructive' : 'font-semibold'}>{formatBs(project.margen)}</span>
           </Field>

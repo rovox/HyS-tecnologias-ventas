@@ -10,12 +10,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { TONE } from '@/shared/lib/status.js';
 
 /**
  * Odoo-style control panel on top of every list: breadcrumb, main actions, search with active filter facets,
  * filter menu (toggle filters + one "group by"), view switcher and CSV export.
  *
- * filters: [{ key, label, section? }] · activeFilters: string[] · onToggleFilter(key)
+ * filters: [{ key, label, section?, count?, tone? }] · activeFilters: string[] · onToggleFilter(key)
+ *   `count` shows how many records the filter matches; `tone` colours it (e.g. 'danger' for "Sin técnico").
  * groupOptions: [{ key, label }] · groupBy · onGroupBy(key | null)
  * views: [{ key, label, icon: Component }] · view · onViewChange(key)
  */
@@ -76,6 +78,7 @@ export function ControlPanel({
               <span key={f.key} className="inline-flex items-center gap-1 rounded-md border border-info-border bg-info-soft px-2 py-0.5 text-xs font-semibold text-info-fg">
                 <Filter className="h-3 w-3" />
                 {f.label}
+                {f.count != null && <span className="tabular-nums">({f.count})</span>}
                 <button type="button" aria-label={`Quitar ${f.label}`} onClick={() => onToggleFilter(f.key)}>
                   <X className="h-3 w-3" />
                 </button>
@@ -90,11 +93,24 @@ export function ControlPanel({
               </span>
             )}
             <input
+              type="search"
               value={search}
               onChange={(e) => onSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && search && (e.preventDefault(), onSearch(''))}
               placeholder={searchPlaceholder}
-              className="min-w-[8rem] flex-1 bg-transparent py-2 text-sm outline-none"
+              aria-label="Buscar"
+              className="min-w-[8rem] flex-1 bg-transparent py-2 text-sm outline-none [&::-webkit-search-cancel-button]:hidden"
             />
+            {search && (
+              <button
+                type="button"
+                title="Borrar el texto (Esc)"
+                onClick={() => onSearch('')}
+                className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted-foreground hover:bg-danger-soft hover:text-danger-fg"
+              >
+                <X className="h-4 w-4" /> Borrar
+              </button>
+            )}
           </div>
         )}
 
@@ -119,7 +135,12 @@ export function ControlPanel({
                           onCheckedChange={() => onToggleFilter(f.key)}
                           onSelect={(e) => e.preventDefault()}
                         >
-                          {f.label}
+                          <span className="flex-1">{f.label}</span>
+                          {f.count != null && (
+                            <span className={cn('ml-2 rounded px-1.5 text-xs font-semibold tabular-nums', f.count > 0 && f.tone ? TONE[f.tone].badge : 'text-muted-foreground')}>
+                              {f.count}
+                            </span>
+                          )}
                         </DropdownMenuCheckboxItem>
                       ))}
                     <DropdownMenuSeparator />

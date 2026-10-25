@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useProjects } from '@/features/projects';
-import { ListView } from '@/shared/views';
+import { ListView, Money } from '@/shared/views';
 import { formatBs } from '@/shared/lib/format.js';
 
 const sum = (key) => (rows) => formatBs(rows.reduce((s, p) => s + Number(p[key]), 0));
@@ -11,7 +11,7 @@ const columns = [
   { key: 'monto', header: 'Monto', align: 'right', cell: (p) => formatBs(p.montoOficial), total: sum('montoOficial') },
   { key: 'cobrado', header: 'Cobrado', align: 'right', cell: (p) => formatBs(p.cobrado), total: sum('cobrado') },
   { key: 'porValidar', header: 'Por validar', align: 'right', cell: (p) => formatBs(p.porValidar), total: sum('porValidar') },
-  { key: 'saldo', header: 'Saldo', align: 'right', cell: (p) => <span className="font-medium text-destructive">{formatBs(p.saldo)}</span>, total: sum('saldo') },
+  { key: 'saldo', header: 'Saldo', align: 'right', cell: (p) => <Money value={p.saldo} kind="owed" />, total: sum('saldo') },
 ];
 
 /** Cuentas por cobrar: projects that still owe money, the largest debt first. */

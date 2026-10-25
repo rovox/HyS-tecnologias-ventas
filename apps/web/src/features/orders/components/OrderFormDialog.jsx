@@ -12,6 +12,7 @@ import { formatDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { useOpenJobs, useOrder, useSaveOrder } from '../api.js';
 import { OrderItems, emptyItem } from './OrderItems.jsx';
+import { SearchSelect } from '@/shared/views';
 
 const PRIORIDADES = ['Baja', 'Normal', 'Alta', 'Urgente'];
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
@@ -115,14 +116,19 @@ export function OrderFormDialog({ open, onOpenChange, pedidoId, readOnly, onSave
               {form.tipo === 'trabajo' ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="ord-trabajo">Trabajo *</Label>
-                  <select id="ord-trabajo" className={select} value={form.cronogramaId} disabled={readOnly} onChange={(e) => set({ cronogramaId: e.target.value })}>
-                    <option value="">Elige el trabajo</option>
-                    {jobs.map((j) => (
-                      <option key={j.id} value={j.id}>
-                        {j.cliente?.nombre} · {j.descripcionTrabajo} · {formatDay(j.fechaProgramada)}{j.project ? ` · ${j.project.codigo}` : ' · sin proyecto'}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchSelect
+                    id="ord-trabajo"
+                    value={form.cronogramaId}
+                    disabled={readOnly}
+                    onChange={(cronogramaId) => set({ cronogramaId })}
+                    placeholder="Elige el trabajo"
+                    searchPlaceholder="Buscar cliente, trabajo o proyecto…"
+                    options={jobs.map((j) => ({
+                      value: j.id,
+                      label: `${j.cliente?.nombre || 'Sin cliente'} — ${j.descripcionTrabajo}`,
+                      hint: `${formatDay(j.fechaProgramada)} · ${j.project ? `Proyecto ${j.project.codigo}` : 'Sin proyecto (solo texto libre)'}`,
+                    }))}
+                  />
                 </div>
               ) : (
                 <div className="space-y-1.5">
@@ -135,9 +141,14 @@ export function OrderFormDialog({ open, onOpenChange, pedidoId, readOnly, onSave
               )}
               <div className="space-y-1.5">
                 <Label htmlFor="ord-resp">Solicita</Label>
-                <select id="ord-resp" className={select} value={form.responsableId} disabled={readOnly} onChange={(e) => set({ responsableId: e.target.value })}>
-                  {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                <SearchSelect
+                  id="ord-resp"
+                  value={form.responsableId}
+                  disabled={readOnly}
+                  onChange={(responsableId) => set({ responsableId })}
+                  searchPlaceholder="Buscar persona…"
+                  options={users.map((u) => ({ value: u.id, label: u.name }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">

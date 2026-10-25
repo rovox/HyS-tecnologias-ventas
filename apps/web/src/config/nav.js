@@ -13,6 +13,7 @@ import {
   Wallet,
   Boxes,
   Inbox,
+  Briefcase,
 } from 'lucide-react';
 import { ROLES } from '@/constants/roles.js';
 
@@ -44,9 +45,10 @@ const operationalMenuSections = [
     title: 'OPERACIONES',
     items: [
       { to: '/quotations', icon: FileStack, label: 'Cotizaciones', allowedRoles: QUOTE_ROLES },
+      { to: '/projects', icon: Briefcase, label: 'Proyectos', allowedRoles: QUOTE_ROLES },
       { to: '/clientes', icon: Building2, label: 'Clientes', allowedRoles: CLIENT_ROLES },
       { to: '/solicitudes-web', icon: Inbox, label: 'Solicitudes web', allowedRoles: SOLICITUDES_WEB_ROLES },
-      { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos', allowedRoles: SURVEY_ROLES },
+      { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos y asistencias', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
       { to: '/inventario', icon: Boxes, label: 'Inventario', allowedRoles: ALL_ROLES },

@@ -100,7 +100,9 @@ await step('an internal order picks the product and moves stock when delivered',
   await dlg.getByRole('radio', { name: 'Para una sucursal' }).click(T);
   await dlg.getByLabel('Sale de').selectOption({ label: 'Central' });
   await dlg.getByLabel('Para la sucursal *').selectOption({ label: 'Punata' });
-  await dlg.getByLabel('Producto').first().selectOption({ label: `${code} · Cámara domo smoke` });
+  await dlg.getByLabel('Producto del inventario').first().click(T); // searchable combobox (SearchSelect)
+  await p.getByPlaceholder('Buscar por código o nombre…').fill(code);
+  await p.getByRole('option', { name: new RegExp(code) }).click(T);
   await dlg.getByLabel('Cantidad').first().fill('2');
   await dlg.getByRole('button', { name: 'Crear pedido' }).click(T);
   await dlg.waitFor({ state: 'hidden', ...T });
@@ -118,15 +120,19 @@ await step('salida a proyecto: the project shows the material and its cost, the 
   await p.goto(`${WEB}/inventario`, { waitUntil: 'networkidle' });
   await act('Salida a proyecto');
   await p.getByLabel('Sale de').selectOption({ label: 'Central (5)' });
-  const projectId = await p.locator('#sm-proyecto option').nth(1).getAttribute('value');
-  await p.getByLabel('Proyecto *').selectOption(projectId);
+  const projects = await (await fetch(`${API}/projects`, { headers: { Authorization: `Bearer ${B.token}` } })).json();
+  const target = projects.find((x) => !['cerrado', 'anulado'].includes(x.estado));
+  const projectId = target.id;
+  await p.getByLabel('Proyecto *').click(T); // searchable combobox (SearchSelect)
+  await p.getByPlaceholder('Buscar código, título o cliente…').fill(target.codigo);
+  await p.getByRole('option', { name: new RegExp(target.codigo) }).first().click(T);
   await p.getByLabel(/Cantidad/).fill('1');
   await p.getByRole('button', { name: 'Registrar' }).click(T);
   await p.getByText('Salida registrada').waitFor(T);
   await p.goto(`${WEB}/projects/${projectId}`, { waitUntil: 'networkidle' });
   await p.getByRole('tab', { name: /Material/ }).click(T);
   await p.getByRole('row', { name: new RegExp(code) }).waitFor(T);
-  await p.getByText(/material Bs/).waitFor(T);
+  await p.getByText(/material: Bs/).waitFor(T);
   const project = await (await fetch(`${API}/projects/${projectId}`, { headers: { Authorization: `Bearer ${B.token}` } })).json();
   await p.goto(`${WEB}/clientes/${project.cliente?.id ?? project.clienteId}`, { waitUntil: 'networkidle' });
   await p.getByRole('tab', { name: /Equipos/ }).click(T);

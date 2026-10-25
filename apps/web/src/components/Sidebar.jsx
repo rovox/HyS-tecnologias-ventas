@@ -162,7 +162,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         className={linkClass}
                       >
                         {item.icon ? <item.icon className="h-5 w-5 shrink-0" /> : null}
-                        <span className="truncate">{item.label}</span>
+                        <span className="leading-tight">{item.label}</span>
                       </NavLink>
                     );
                   })}

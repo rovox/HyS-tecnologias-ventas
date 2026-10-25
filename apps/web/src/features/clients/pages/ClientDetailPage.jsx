@@ -46,7 +46,7 @@ const jobColumns = [
   { key: 'saldo', header: 'Saldo', align: 'right', cell: (j) => money(j.saldo, true), total: sum('saldo') },
 ];
 const equipmentColumns = [
-  { key: 'producto', header: 'Equipo', cell: (e) => <div><p className="font-medium">{e.producto.nombre}</p><p className="text-xs text-muted-foreground">{e.producto.codigo}{e.producto.marca ? ` · ${e.producto.marca}` : ''}</p></div> },
+  { key: 'producto', header: 'Equipo', cell: (e) => <div><p className="font-medium">{e.producto.nombre}</p><p className="text-xs text-muted-foreground">{e.producto.codigo}{e.producto.marca ? `, marca ${e.producto.marca}` : ''}</p></div> },
   { key: 'cantidad', header: 'Cantidad', align: 'right', cell: (e) => Number(e.cantidad) },
   { key: 'proyecto', header: 'Proyecto', cell: (e) => e.proyecto?.codigo },
   { key: 'fecha', header: 'Entregado', cell: (e) => formatDay(e.fecha) },
@@ -112,7 +112,7 @@ export default function ClientDetailPage() {
         }
         smartButtons={[
           { key: 'cotizaciones', icon: FileStack, label: 'Cotizaciones', value: client.cotizaciones.length, ...(commercial ? { to: `/quotations?vista=cerradas&q=${encodeURIComponent(client.nombre)}` } : {}) },
-          { key: 'proyectos', icon: FolderKanban, label: `Proyectos · ${client.proyectosEnCurso} en curso`, value: client.proyectos.length, ...(commercial ? { to: `/projects?q=${encodeURIComponent(client.nombre)}` } : {}) },
+          { key: 'proyectos', icon: FolderKanban, label: `Proyectos (${client.proyectosEnCurso} en curso)`, value: client.proyectos.length, ...(commercial ? { to: `/projects?q=${encodeURIComponent(client.nombre)}` } : {}) },
           { key: 'garantia', icon: ShieldCheck, label: 'En garantía', value: enGarantia },
           { key: 'saldo', icon: HandCoins, label: 'Saldo pendiente', value: formatBs(client.saldoPendiente) },
         ]}
