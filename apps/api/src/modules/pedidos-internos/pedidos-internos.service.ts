@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma, User } from '@prisma/client';
-import { checkTransition, deleteError, deliveryFields, itemTotal, nextStates, pedidoTotal } from './domain/pedidos-internos.rules';
+import { checkTransition, deleteError, deliveryFields, transitionNeedsReason } from './domain/pedidos-internos.rules';
+import { PEDIDO_INCLUDE, presentPedidos } from './pedido.presenter';
 import { InventoryService } from '../inventory';
 import { canManagePedidos, canSeePedidos } from '../../common/policy/policy';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -23,8 +24,18 @@ export class PedidosInternosService {
     if (!canSeePedidos(user)) throw new ForbiddenException('Sin acceso a pedidos internos');
   }
 
-  private emit(type: string, id: string, user: User, affects: string[] = []) {
-    return this.audit.record({ user, action: `pedido_interno.${type}`, entity: 'pedido_interno', id, affects });
+  /** Audit row with the field diff (who changed what) and the realtime event: the order page shows it as history. */
+  private emit(type: string, id: string, user: User, sessionId: string | undefined, extra: { before?: object | null; after?: object | null; affects?: string[] } = {}) {
+    return this.audit.record({
+      user,
+      sessionId,
+      action: `pedido_interno.${type}`,
+      entity: 'pedido_interno',
+      id,
+      before: extra.before as Record<string, unknown> | null | undefined,
+      after: extra.after as Record<string, unknown> | null | undefined,
+      affects: extra.affects ?? [],
+    });
   }
 
   /** Delivering moves the stock of its catalog items in the same transaction (or nothing changes). */
@@ -53,47 +64,32 @@ export class PedidosInternosService {
       ];
     }
 
-    const pedidos = await this.prisma.pedidoInterno.findMany({
-      where,
-      include: {
-        responsable: { select: { id: true, name: true } },
-        sucursalOrigen: { select: { id: true, nombre: true } },
-        items: true,
-        _count: { select: { comentarios: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return pedidos;
+    const rows = await this.prisma.pedidoInterno.findMany({ where, include: PEDIDO_INCLUDE, orderBy: { createdAt: 'desc' } });
+    return presentPedidos(this.prisma, rows);
   }
 
+  /** The order with its items, comments and the stock movements its delivery made. */
   async findOne(id: string, user: User) {
     this.assertCanSee(user);
-    const pedido = await this.prisma.pedidoInterno.findUnique({
-      where: { id },
-      include: {
-        responsable: { select: { id: true, name: true } },
-        sucursalOrigen: { select: { id: true, nombre: true } },
-        items: true,
-        comentarios: {
-          orderBy: { createdAt: 'asc' },
-          include: { autor: { select: { id: true, name: true } } },
-        },
-      },
-    });
-
-    if (!pedido) throw new NotFoundException('Pedido interno no encontrado');
-
-    const { comentarios, items, ...rest } = pedido;
-    return {
-      pedido: { ...rest, costoTotal: pedidoTotal(items), transicionesValidas: nextStates(rest.estado) },
-      detalles: items.map((item) => ({ ...item, costoTotal: itemTotal(item) })),
-      comentarios,
-      historial: [],
-    };
+    const row = await this.prisma.pedidoInterno.findUnique({ where: { id }, include: PEDIDO_INCLUDE });
+    if (!row) throw new NotFoundException('Pedido interno no encontrado');
+    const [[pedido], comentarios, movimientos] = await Promise.all([
+      presentPedidos(this.prisma, [row]),
+      this.prisma.pedidoInternoComentario.findMany({
+        where: { pedidoId: id },
+        orderBy: { createdAt: 'asc' },
+        include: { autor: { select: { id: true, name: true } } },
+      }),
+      this.prisma.stockMovement.findMany({
+        where: { pedidoInternoId: id },
+        orderBy: { fecha: 'asc' },
+        include: { producto: { select: { id: true, codigo: true, nombre: true, unidad: true } } },
+      }),
+    ]);
+    return { ...pedido, comentarios, movimientos };
   }
 
-  async create(dto: UpsertPedidoInternoDto, user: User) {
+  async create(dto: UpsertPedidoInternoDto, user: User, sessionId?: string) {
     this.assertCanManage(user);
     const { items, ...pedidoData } = dto;
     await this.inventory.assertProducts((items || []).map((i) => i.productoId || ''));
@@ -101,6 +97,7 @@ export class PedidosInternosService {
     const pedido = await this.prisma.pedidoInterno.create({
       data: {
         responsableId: pedidoData.responsableId || user.id,
+        solicitanteId: user.id,
         sucursalOrigenId: pedidoData.sucursalOrigenId,
         sucursalDestinoId: pedidoData.sucursalDestinoId,
         cronogramaId: pedidoData.cronogramaId,
@@ -123,18 +120,14 @@ export class PedidosInternosService {
             }
           : undefined,
       },
-      include: {
-        items: true,
-        responsable: { select: { id: true, name: true } },
-        sucursalOrigen: { select: { id: true, nombre: true } },
-      },
+      include: PEDIDO_INCLUDE,
     });
 
-    await this.emit('created', pedido.id, user);
-    return pedido;
+    await this.emit('created', pedido.id, user, sessionId);
+    return (await presentPedidos(this.prisma, [pedido]))[0];
   }
 
-  async update(id: string, dto: UpsertPedidoInternoDto, user: User) {
+  async update(id: string, dto: UpsertPedidoInternoDto, user: User, sessionId?: string) {
     this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
@@ -181,11 +174,12 @@ export class PedidosInternosService {
       if (delivering) await this.deliver(tx, id, user);
     });
 
-    await this.emit('updated', id, user, delivering ? ['stock', 'product', 'project', 'client'] : []);
+    const after = await this.prisma.pedidoInterno.findUnique({ where: { id } });
+    await this.emit('update', id, user, sessionId, { before: existing, after, affects: delivering ? ['stock', 'product', 'project', 'client'] : [] });
     return this.findOne(id, user);
   }
 
-  async remove(id: string, user: User) {
+  async remove(id: string, user: User, sessionId?: string) {
     this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
@@ -193,32 +187,36 @@ export class PedidosInternosService {
     if (blocked) throw new BadRequestException(blocked);
 
     await this.prisma.pedidoInterno.delete({ where: { id } });
-    await this.emit('deleted', id, user);
+    await this.emit('delete', id, user, sessionId);
     return { ok: true };
   }
 
-  async updateEstado(id: string, dto: UpdateEstadoPedidoDto, user: User) {
+  /** A state change; rejecting or cancelling needs a reason, kept as a comment. Delivering moves the stock. */
+  async updateEstado(id: string, dto: UpdateEstadoPedidoDto, user: User, sessionId?: string) {
     this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
     this.assertTransition(existing.estado, dto.estado);
+    const motivo = dto.observacion?.trim();
+    if (transitionNeedsReason(dto.estado) && !motivo) throw new BadRequestException('Indica el motivo');
 
     const data = {
       estado: dto.estado,
       ...deliveryFields(dto.estado, { fechaEntrega: dto.fecha_entrega, entregadoPorId: dto.entregado_por_id }, user.id, new Date()),
-      ...(dto.observacion ? { observaciones: dto.observacion } : {}),
     };
 
     const delivering = dto.estado === 'entregado';
-    await this.prisma.$transaction(async (tx) => {
-      await tx.pedidoInterno.update({ where: { id }, data });
+    const after = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.pedidoInterno.update({ where: { id }, data });
       if (delivering) await this.deliver(tx, id, user);
+      if (motivo) await tx.pedidoInternoComentario.create({ data: { pedidoId: id, autorId: user.id, contenido: `${dto.estado === 'rechazado' ? 'Rechazado' : dto.estado === 'cancelado' ? 'Cancelado' : 'Nota'}: ${motivo}` } });
+      return row;
     });
-    await this.emit('updated', id, user, delivering ? ['stock', 'product', 'project'] : []);
+    await this.emit('status', id, user, sessionId, { before: existing, after, affects: delivering ? ['stock', 'product', 'project', 'client'] : [] });
     return this.findOne(id, user);
   }
 
-  async addComentario(id: string, dto: AddComentarioDto, user: User) {
+  async addComentario(id: string, dto: AddComentarioDto, user: User, sessionId?: string) {
     this.assertCanManage(user);
     const existing = await this.prisma.pedidoInterno.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido interno no encontrado');
@@ -234,7 +232,7 @@ export class PedidosInternosService {
       include: { autor: { select: { id: true, name: true } } },
     });
 
-    await this.emit('updated', id, user);
+    await this.emit('comment', id, user, sessionId);
     return comentario;
   }
 }

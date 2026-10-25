@@ -331,6 +331,7 @@ async function main() {
     const id = `ped_seed_${i + 1}`;
     const data = {
       responsableId: 'usr_tecnico',
+      solicitanteId: 'usr_ventas',
       sucursalOrigenId: 'suc_central',
       sucursalDestinoId: 'suc_central',
       cronogramaId: estado === 'cancelado' ? null : 'sch_andina',

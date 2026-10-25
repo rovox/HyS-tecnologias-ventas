@@ -207,10 +207,27 @@ describe('hs-erp API (e2e)', () => {
         .get('/api/pedidos-internos/ped_seed_1')
         .set('Authorization', `Bearer ${ventasToken}`)
         .expect(200);
-      expect(res.body.pedido.estado).toBe('solicitado');
-      expect(res.body.pedido.transicionesValidas).toEqual(['aprobado', 'rechazado', 'cancelado']);
-      expect(res.body.pedido.costoTotal).toBe(225);
-      expect(res.body.detalles[0].costoTotal).toBe(225);
+      expect(res.body.estado).toBe('solicitado');
+      expect(res.body.transicionesValidas).toEqual(['aprobado', 'rechazado', 'cancelado']);
+      expect(res.body.costoTotal).toBe(225);
+      expect(res.body.items[0].costoTotal).toBe(225);
+      expect(res.body).toMatchObject({ codigo: 'PED-PEDSEE', solicitante: { id: 'usr_ventas' }, responsable: { id: 'usr_tecnico' }, destino: { tipo: 'trabajo' } });
+      expect(res.body.destino.trabajo.cliente.nombre).toBeTruthy();
+    });
+
+    it('an order keeps who asked, who receives it, a reason to reject and its history (INV-02)', async () => {
+      const as = (t: string) => ({ Authorization: `Bearer ${t}` });
+      const order = (await request(app.getHttpServer()).post('/api/pedidos-internos').set(as(ventasToken))
+        .send({ sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', responsableId: 'usr_tecnico', items: [{ materialNombre: 'Tarugos 8 mm', cantidad: 50 }] })
+        .expect(201)).body;
+      expect(order).toMatchObject({ solicitante: { id: 'usr_ventas' }, responsable: { id: 'usr_tecnico' }, destino: { tipo: 'sucursal', sucursal: { id: 'suc_punata' } } });
+      await request(app.getHttpServer()).patch(`/api/pedidos-internos/${order.id}/status`).set(as(adminToken)).send({ estado: 'rechazado' }).expect(400);
+      const rejected = (await request(app.getHttpServer()).patch(`/api/pedidos-internos/${order.id}/status`).set(as(adminToken)).send({ estado: 'rechazado', observacion: 'Hay stock en Punata' }).expect(200)).body;
+      expect(rejected.estado).toBe('rechazado');
+      expect(rejected.comentarios.at(-1).contenido).toBe('Rechazado: Hay stock en Punata');
+      const history = (await request(app.getHttpServer()).get(`/api/activity/pedido_interno/${order.id}`).set(as(adminToken)).expect(200)).body;
+      expect(history.map((h: { action: string }) => h.action)).toEqual(expect.arrayContaining(['pedido_interno.created', 'pedido_interno.status']));
+      expect(history.find((h: { action: string }) => h.action === 'pedido_interno.status').detalle.estado).toEqual({ antes: 'solicitado', despues: 'rechazado' });
     });
 
     it('rejects a transition outside the flow', async () => {
@@ -651,7 +668,7 @@ describe('hs-erp API (e2e)', () => {
       expect(refused.status).toBe(400);
       expect(refused.body.message).toMatch(/Switch 24 puertos PoE: Stock insuficiente/);
       const still = (await http().get(`/api/pedidos-internos/${big.id}`).set(ventas()).expect(200)).body;
-      expect(still.pedido.estado).toBe('listo_para_entrega');
+      expect(still.estado).toBe('listo_para_entrega');
     });
   });
 
