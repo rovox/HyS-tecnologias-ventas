@@ -1,10 +1,14 @@
-// Internal orders (pedidos internos): fetch one order for editing and save it. The list and detail pages are still the
-// MVP pages; this feature owns the form.
+// Internal orders (pedidos internos): the only file of this feature that talks HTTP. Keys start with
+// 'pedido_interno' (its realtime entity); delivering also moves stock, projects and clients.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
+
+export function useOrders(enabled = true) {
+  return useQuery({ queryKey: ['pedido_interno', 'list'], queryFn: () => apiClient.get('pedidos-internos', opts()), enabled });
+}
 
 export function useOrder(id) {
   return useQuery({ queryKey: ['pedido_interno', 'detail', id], queryFn: () => apiClient.get(`pedidos-internos/${id}`, opts()), enabled: Boolean(id) });
@@ -20,10 +24,25 @@ export function useOpenJobs(enabled) {
   });
 }
 
-export function useSaveOrder() {
+function useOrderMutation(fn) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }) => (id ? apiClient.patch(`pedidos-internos/${id}`, data, opts()) : apiClient.post('pedidos-internos', data, opts())),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pedido_interno'] }),
+    mutationFn: fn,
+    onSuccess: () => {
+      for (const key of ['pedido_interno', 'stock', 'product', 'project', 'client']) queryClient.invalidateQueries({ queryKey: [key] });
+    },
   });
+}
+
+export function useSaveOrder() {
+  return useOrderMutation(({ id, ...data }) => (id ? apiClient.patch(`pedidos-internos/${id}`, data, opts()) : apiClient.post('pedidos-internos', data, opts())));
+}
+
+/** estado + optional `observacion` (the reason to reject or cancel). */
+export function useOrderStatus() {
+  return useOrderMutation(({ id, ...body }) => apiClient.patch(`pedidos-internos/${id}/status`, body, opts()));
+}
+
+export function useAddOrderComment() {
+  return useOrderMutation(({ id, contenido }) => apiClient.post(`pedidos-internos/${id}/comments`, { contenido }, opts()));
 }

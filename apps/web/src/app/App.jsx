@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Route, Routes, BrowserRouter as Router, Navigate } from 'react-router-dom';
+import { Route, Routes, BrowserRouter as Router, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 import { routeRoles } from '@/config/nav.js';
@@ -13,6 +13,7 @@ import { ClientDetailPage, ClientsPage } from '@/features/clients';
 import { FinancePage } from '@/features/finance';
 import { ProjectDetailPage, ProjectsPage } from '@/features/projects';
 import { InventoryPage } from '@/features/inventory';
+import { OrderDetailPage } from '@/features/orders';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
@@ -25,9 +26,7 @@ const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
 const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
 const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
 const SchedulePage = lazy(() => import('@/features/schedule').then((m) => ({ default: m.SchedulePage })));
-const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
-const PedidoInternoDetailPage = lazy(() => import('@/pages/PedidoInternoDetailPage.jsx'));
 const VehicleControlPage = lazy(() => import('@/pages/VehicleControlPage.jsx'));
 const VehicleDetailPage = lazy(() => import('@/pages/VehicleDetailPage.jsx'));
 const VehiclesPage = lazy(() => import('@/pages/VehiclesPage.jsx'));
@@ -47,6 +46,12 @@ function RouteFallback() {
   );
 }
 
+
+/** /pedidos-internos/:id (old links) → the order page inside Inventario. */
+function OldOrderLink() {
+  const { id } = useParams();
+  return <Navigate to={`/inventario/pedidos/${id}`} replace />;
+}
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -151,17 +156,15 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/pedidos-internos" element={
+            {/* Pedidos internos live in Inventario (INV-02); old links redirect. */}
+            <Route path="/inventario/pedidos/:id" element={
               <ProtectedRoute allowedRoles={routeRoles.pedidos}>
-                <PedidosInternosPage />
+                <OrderDetailPage />
               </ProtectedRoute>
             } />
-            <Route path="/pedidos-internos/:id" element={
-              <ProtectedRoute allowedRoles={routeRoles.pedidos}>
-                <PedidoInternoDetailPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/orders" element={<Navigate to="/pedidos-internos" replace />} />
+            <Route path="/pedidos-internos" element={<Navigate to="/inventario?vista=pedidos" replace />} />
+            <Route path="/pedidos-internos/:id" element={<OldOrderLink />} />
+            <Route path="/orders" element={<Navigate to="/inventario?vista=pedidos" replace />} />
 
             <Route path="/vehicle-control" element={
               <ProtectedRoute allowedRoles={routeRoles.frozen}>

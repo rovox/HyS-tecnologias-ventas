@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { NavLink, useSearchParams } from 'react-router-dom';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { Link, NavLink, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, Archive, MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useCategories, useSucursales } from '@/features/catalogs';
-import { ControlPanel, ListView, useConfirm, useListControls } from '@/shared/views';
+import { ControlPanel, ListView, ToneTag, useConfirm, useListControls } from '@/shared/views';
+import { OrdersView } from '@/features/orders';
 import { downloadCsv } from '@/shared/lib/csv.js';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
@@ -24,16 +25,28 @@ const movementColumns = [
   { key: 'tipo', header: 'Movimiento', cell: (m) => MOVEMENT[m.tipo]?.title || m.tipo },
   { key: 'cantidad', header: 'Cantidad', align: 'right', cell: (m) => `${Number(m.cantidad)} ${m.producto.unidad}` },
   { key: 'ruta', header: 'De → a', cell: (m) => `${m.sucursalOrigen?.nombre || '—'} → ${m.project?.codigo || m.sucursalDestino?.nombre || '—'}` },
-  { key: 'origen', header: 'Origen', cell: (m) => (m.pedidoInterno ? 'Pedido interno' : m.motivo || m.nota || '—') },
+  {
+    key: 'origen',
+    header: 'Origen',
+    cell: (m) =>
+      m.pedidoInterno ? (
+        <Link className="font-semibold text-primary hover:underline" to={`/inventario/pedidos/${m.pedidoInterno.id}`} onClick={(e) => e.stopPropagation()}>
+          Pedido {m.pedidoInterno.codigo}
+        </Link>
+      ) : (
+        m.motivo || m.nota || '—'
+      ),
+  },
   { key: 'por', header: 'Registró', cell: (m) => m.registradoPor?.name },
 ];
 
 /** Inventario: products with stock per branch (computed from movements) and the movements themselves. */
 export default function InventoryPage() {
-  const { canManageMoney, isVentasLevel } = useAuth();
+  const { canManageMoney, isVentasLevel, readsAll } = useAuth();
   const manage = isVentasLevel();
   const [params] = useSearchParams();
-  const vista = params.get('vista') === 'movimientos' ? 'movimientos' : 'productos';
+  const vistas = [['productos', 'Productos'], ...(readsAll() ? [['pedidos', 'Pedidos internos']] : []), ['movimientos', 'Movimientos']];
+  const vista = vistas.some(([k]) => k === params.get('vista')) ? params.get('vista') : 'productos';
   const { data: products = [], isLoading } = useProducts();
   const { data: movements = [], isLoading: loadingMoves } = useStockMovements();
   const { data: sucursales = [] } = useSucursales();
@@ -44,14 +57,17 @@ export default function InventoryPage() {
   const [moving, setMoving] = useState(null);
   useDocumentTitle('Inventario');
 
+  const active = products.filter((p) => p.active);
+  const archived = products.length - active.length;
+  const low = active.filter((p) => p.stockBajo).length;
   const filters = useMemo(
     () => [
-      { key: 'bajo', label: 'Stock bajo', section: 'Stock', test: (p) => p.stockBajo },
-      { key: 'archivados', label: 'Archivados', section: 'Stock', test: (p) => !p.active },
+      { key: 'bajo', label: 'Stock bajo', section: 'Stock', tone: 'danger', count: low, test: (p) => p.stockBajo && p.active },
+      { key: 'archivados', label: 'Archivados (ya no se tienen)', section: 'Stock', tone: 'neutral', count: archived, test: (p) => !p.active },
       ...Object.entries(TIPO).map(([k, label]) => ({ key: k, label, section: 'Tipo', test: (p) => p.tipo === k })),
       ...(categories?.divisions || []).map((d) => ({ key: d.id, label: d.label, section: 'Categoría', test: (p) => p.categoriaId === d.id })),
     ],
-    [categories],
+    [categories, low, archived],
   );
   const visibleProducts = products.filter((p) => p.active || (params.get('f') || '').includes('archivados'));
   const list = useListControls(visibleProducts, {
@@ -103,10 +119,21 @@ export default function InventoryPage() {
     );
 
   const columns = [
-    { key: 'producto', header: 'Producto', cell: (p) => <div><p className="font-medium">{p.nombre}</p><p className="text-xs text-muted-foreground">{p.codigo}{p.marca ? `, marca ${p.marca}` : ''}</p></div> },
+    {
+      key: 'producto',
+      header: 'Producto',
+      cell: (p) => (
+        <div className={cn(!p.active && 'opacity-70')}>
+          <p className={cn('font-medium', !p.active && 'line-through')}>{p.nombre}</p>
+          <p className="text-xs text-muted-foreground">{p.codigo}{p.marca ? `, marca ${p.marca}` : ''}</p>
+          {!p.active && <ToneTag tone="neutral" icon={Archive}>Archivado</ToneTag>}
+          {p.active && p.stockBajo && <ToneTag tone="danger" icon={AlertTriangle}>Stock bajo (mínimo {Number(p.stockMinimo)})</ToneTag>}
+        </div>
+      ),
+    },
     { key: 'categoria', header: 'Categoría', cell: (p) => <div><p>{p.categoria?.label}</p><p className="text-xs text-muted-foreground">{TIPO[p.tipo]}</p></div> },
     ...sucursales.map((s) => ({ key: s.id, header: s.nombre, align: 'right', cell: (p) => (p.tipo === 'servicio' ? '—' : p.stock[s.id] ?? 0) })),
-    { key: 'total', header: 'Total', align: 'right', cell: (p) => (p.tipo === 'servicio' ? '—' : <span className={cn('font-semibold', p.stockBajo && 'text-destructive')} title={p.stockBajo ? `Mínimo ${Number(p.stockMinimo)}` : undefined}>{p.stockTotal} {p.unidad}</span>) },
+    { key: 'total', header: 'Total', align: 'right', cell: (p) => (p.tipo === 'servicio' ? '—' : <span className={cn('font-semibold', p.active && p.stockBajo && 'text-danger-fg')} title={p.stockBajo ? `Mínimo ${Number(p.stockMinimo)}` : undefined}>{p.stockTotal} {p.unidad}</span>) },
     { key: 'costo', header: 'Costo', align: 'right', cell: (p) => formatBs(p.costo) },
     { key: 'precio', header: 'Precio', align: 'right', cell: (p) => formatBs(p.precio) },
     { key: 'acciones', header: '', cell: actions },
@@ -122,30 +149,37 @@ export default function InventoryPage() {
     { header: 'Mínimo', value: (p) => Number(p.stockMinimo) },
     { header: 'Costo Bs', value: (p) => Number(p.costo).toFixed(2) },
   ];
-  const low = products.filter((p) => p.stockBajo).length;
+
+  const tabs = (
+    <nav className="flex gap-1 overflow-x-auto border-b border-border bg-card px-4 sm:px-6" aria-label="Vistas de inventario">
+      {vistas.map(([key, label]) => (
+        <NavLink key={key} to={`/inventario?vista=${key}`} className={cn('-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', vista === key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
+          {label}
+          {key === 'productos' && low > 0 && <span className="ml-1.5 rounded-full bg-danger px-1.5 py-0.5 text-xs font-bold text-danger-foreground" title="Productos con stock bajo">{low}</span>}
+        </NavLink>
+      ))}
+    </nav>
+  );
+
+  if (vista === 'pedidos') return <Layout><OrdersView tabs={tabs} /></Layout>;
 
   return (
     <Layout>
-      <nav className="flex gap-1 border-b border-border bg-card px-4 sm:px-6" aria-label="Vistas de inventario">
-        {[['productos', 'Productos'], ['movimientos', 'Movimientos']].map(([key, label]) => (
-          <NavLink key={key} to={`/inventario?vista=${key}`} className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', vista === key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
-            {label}
-          </NavLink>
-        ))}
-      </nav>
+      {tabs}
       <ControlPanel
         breadcrumbs={[{ label: 'Inventario' }, { label: vista === 'productos' ? 'Productos' : 'Movimientos' }]}
         actions={manage && vista === 'productos' && <Button onClick={() => setEditing({})}><Plus /> Nuevo producto</Button>}
         searchPlaceholder="Buscar por código, nombre, marca…"
         {...(vista === 'productos' ? list.panel : moves.panel)}
         onExport={vista === 'productos' ? () => downloadCsv('inventario.csv', csv, list.rows) : undefined}
-        meta={vista === 'productos' ? `${list.rows.length} productos${low ? `, ${low} con stock bajo` : ''}` : `${moves.rows.length} movimientos`}
+        meta={vista === 'productos' ? `${list.rows.length} productos${low ? `, ${low} con stock bajo` : ''}${archived ? `, ${archived} archivados` : ''}` : `${moves.rows.length} movimientos`}
       />
       <div className="px-4 py-4 sm:px-6">
         {vista === 'productos' ? (
           <ListView
             columns={columns}
             rows={list.rows}
+            tone={(p) => (!p.active ? 'neutral' : p.stockBajo ? 'danger' : undefined)}
             groups={list.groups}
             loading={isLoading}
             empty="No hay productos con estos filtros"

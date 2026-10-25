@@ -53,6 +53,7 @@ model User {
   schedulesTecnico    Schedule[]                @relation("ScheduleTecnico")
   schedulePayments    SchedulePayment[]         @relation("PaymentCollector")
   pedidosResponsable  PedidoInterno[]           @relation("PedidoResponsable")
+  pedidosSolicitados  PedidoInterno[]           @relation("PedidoSolicitante")
   comentariosPedidos  PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
   quotationsDeleted   Quotation[]               @relation("QuotationsDeleted")
   projectsResponsable Project[]                 @relation("ProjectResponsable")
@@ -416,6 +417,9 @@ model PedidoInterno {
   id                   String                    @id @default(uuid())
   responsableId        String
   responsable          User                      @relation("PedidoResponsable", fields: [responsableId], references: [id])
+  /// Who asked for it (INV-02); `responsable` is who receives it ("para").
+  solicitanteId        String
+  solicitante          User                      @relation("PedidoSolicitante", fields: [solicitanteId], references: [id])
   sucursalOrigenId     String?
   sucursalOrigen       Sucursal?                 @relation("SucursalPedidosOrigen", fields: [sucursalOrigenId], references: [id])
   sucursalDestinoId    String?
@@ -433,6 +437,7 @@ model PedidoInterno {
   stockMovements       StockMovement[]
 
   @@index([responsableId])
+  @@index([solicitanteId])
   @@index([estado])
   @@index([sucursalOrigenId])
   @@map("pedidos_internos")

@@ -1,6 +1,13 @@
-import { checkTransition, deliveryFields, itemTotal, nextStates, pedidoTotal } from './pedidos-internos.rules';
+import { orderCode } from '../../../common/domain/codes';
+import { checkTransition, deliveryFields, itemTotal, nextStates, pedidoTotal, transitionNeedsReason } from './pedidos-internos.rules';
 
 describe('pedidos-internos domain', () => {
+  it('asks a reason to reject or cancel, and gives each order a short code (INV-02)', () => {
+    expect(['rechazado', 'cancelado', 'aprobado', 'entregado'].map(transitionNeedsReason)).toEqual([true, true, false, false]);
+    expect(orderCode('d56db4df-c27a-4a5e')).toBe('PED-D56DB4');
+    expect(orderCode('ped_seed_1')).toBe('PED-PEDSEE');
+  });
+
   it('lists the next states of each state', () => {
     expect(nextStates('solicitado')).toEqual(['aprobado', 'rechazado', 'cancelado']);
     expect(nextStates('entregado')).toEqual([]);

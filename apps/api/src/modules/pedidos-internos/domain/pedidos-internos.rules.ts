@@ -53,3 +53,8 @@ export function deliveryFields(
 export function deleteError(estado: string): string | null {
   return estado === 'entregado' ? 'Un pedido entregado no se elimina: ya movió stock' : null;
 }
+
+/** Rejecting or cancelling an order needs a reason (it stays as a comment and in the history). */
+export function transitionNeedsReason(to: string): boolean {
+  return to === 'rechazado' || to === 'cancelado';
+}

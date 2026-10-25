@@ -7,7 +7,6 @@ import {
   ClipboardList,
   Settings,
   CalendarDays,
-  Package,
   CarFront,
   Megaphone,
   Wallet,
@@ -53,7 +52,6 @@ const operationalMenuSections = [
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
       { to: '/inventario', icon: Boxes, label: 'Inventario', allowedRoles: ALL_ROLES },
-      { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
     ],
   },
   {
