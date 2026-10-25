@@ -18,6 +18,16 @@ const VERBS = {
   convert: 'convirtió',
   complete: 'completó',
   claim: 'tomó',
+  // Ledger (movement.*)
+  income: 'registró un cobro',
+  ingreso: 'registró un ingreso',
+  egreso: 'registró un gasto',
+  transferencia: 'registró una transferencia',
+  validado: 'validó en caja',
+  observado: 'observó',
+  anulado: 'anuló',
+  refund: 'marcó como reembolsado',
+  reverse: 'revirtió',
 };
 
 const verbOf = (action) => {

@@ -39,7 +39,3 @@ export function useUpdateJob() {
   return useJobMutation(({ id, ...data }) => apiClient.patch(`schedules/${id}`, data, opts()));
 }
 
-/** tipo: adelanto | cobro | extra_asistencia. A job of a project pays into the project (the API routes it). */
-export function useRegisterJobPayment() {
-  return useJobMutation(({ id, ...payment }) => apiClient.post(`schedules/${id}/payments`, payment, opts()));
-}

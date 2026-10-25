@@ -40,7 +40,3 @@ export function useAddProjectJob() {
   return useProjectMutation(({ id, ...job }) => apiClient.post(`projects/${id}/trabajos`, job, opts()));
 }
 
-/** tipo: adelanto | cobro | extra_asistencia (adicional: does not reduce the balance). */
-export function useRegisterProjectPayment() {
-  return useProjectMutation(({ id, ...payment }) => apiClient.post(`projects/${id}/cobros`, payment, opts()));
-}

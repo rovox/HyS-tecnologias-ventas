@@ -5,6 +5,7 @@ export { KanbanView } from './KanbanView.jsx';
 export { StatusBar } from './StatusBar.jsx';
 export { StatusBadge, ToneTag } from './StatusBadge.jsx';
 export { SearchSelect } from './SearchSelect.jsx';
+export { RowQuickActions } from './RowQuickActions.jsx';
 export { Money } from './Money.jsx';
 export { LocationField, LocationLink } from './Location.jsx';
 export { FormView, FieldGrid, Field } from './FormView.jsx';

@@ -25,9 +25,17 @@ function CardList({ columns, rows = [], rowKey = (r) => r.id, onRowClick, loadin
       {!loading &&
         rows.map((row) =>
           onRowClick ? (
-            <button key={rowKey(row)} type="button" onClick={() => onRowClick(row)} className={cn('w-full rounded-md border border-border bg-card p-3 text-left shadow-sm', tone?.(row) && cn('border-l-4', TONE[tone(row)].border))}>
+            // A div, not a button: cards may hold their own action buttons.
+            <div
+              key={rowKey(row)}
+              role="button"
+              tabIndex={0}
+              onClick={() => onRowClick(row)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && (e.preventDefault(), onRowClick(row))}
+              className={cn('w-full cursor-pointer rounded-md border border-border bg-card p-3 text-left shadow-sm', tone?.(row) && cn('border-l-4', TONE[tone(row)].border))}
+            >
               {renderCard(row)}
-            </button>
+            </div>
           ) : (
             <div key={rowKey(row)} className={cn('rounded-md border border-border bg-card p-3 shadow-sm', tone?.(row) && cn('border-l-4', TONE[tone(row)].border))}>
               {renderCard(row)}

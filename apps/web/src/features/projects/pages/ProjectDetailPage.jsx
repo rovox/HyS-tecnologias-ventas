@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
+import { IncomeDialog, MovementDialog } from '@/features/finance';
 import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBadge, StatusBar } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
@@ -15,7 +16,6 @@ import { PAYMENT_TYPE, PROJECT_FIELDS, PROJECT_TRANSITION, formatProjectValue, p
 import { CollectedBar, ProjectStateBadge } from '../components/ProjectStateBadge.jsx';
 import { EditProjectDialog } from '../components/EditProjectDialog.jsx';
 import { JobDialog } from '../components/JobDialog.jsx';
-import { PaymentDialog } from '../components/PaymentDialog.jsx';
 import { useProjectActions } from '../components/useProjectActions.js';
 
 const jobColumns = [
@@ -148,14 +148,26 @@ export default function ProjectDetailPage() {
             <ListView columns={movementColumns} rows={project.cobros} empty="Sin cobros registrados" />
           </TabsContent>
           <TabsContent value="gastos">
-            <ListView columns={movementColumns} rows={project.gastos} empty="Sin gastos: regístralos en Finanzas › Registrar gasto, eligiendo este proyecto" />
+            {open && (
+              <div className="mb-3 flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setDialog('gasto')}>
+                  <Plus /> Registrar gasto del proyecto
+                </Button>
+              </div>
+            )}
+            <ListView columns={movementColumns} rows={project.gastos} empty="Sin gastos registrados en este proyecto" />
           </TabsContent>
           <TabsContent value="material">
             <ListView columns={materialColumns} rows={project.material} empty="Sin material: llega al entregar un pedido interno de un trabajo del proyecto, o con Inventario › Salida a proyecto" />
           </TabsContent>
         </Tabs>
       </FormView>
-      <PaymentDialog project={project} open={dialog === 'pago'} onOpenChange={(o) => !o && close()} />
+      <MovementDialog tipo="egreso" defaults={{ projectId: project.id }} open={dialog === 'gasto'} onOpenChange={(o) => !o && close()} />
+      <IncomeDialog
+        target={{ kind: 'project', id: project.id, title: project.codigo, saldo: project.saldo, total: project.montoOficial, cobrado: project.cobrado }}
+        open={dialog === 'pago'}
+        onOpenChange={(o) => !o && close()}
+      />
       <JobDialog project={project} open={dialog === 'trabajo'} onOpenChange={(o) => !o && close()} />
       <EditProjectDialog project={project} open={dialog === 'editar'} onOpenChange={(o) => !o && close()} />
     </Layout>

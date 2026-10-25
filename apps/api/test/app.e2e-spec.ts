@@ -618,6 +618,8 @@ describe('hs-erp API (e2e)', () => {
       await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
       const projectId = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
       const job = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body.trabajos[0];
+      // Buy the 2 cameras first, so the test never depends on stock left by earlier runs.
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_cam_ip', tipo: 'entrada', cantidad: 2, costoUnitario: 450, sucursalDestinoId: 'suc_central' }).expect(201);
       const before = (await stock('prd_cam_ip')).stock.suc_central;
       const pedido = (await http().post('/api/pedidos-internos').set(ventas())
         .send({ sucursalOrigenId: 'suc_central', cronogramaId: job.id, items: [{ productoId: 'prd_cam_ip', materialNombre: 'Cámara IP 4MP domo', cantidad: 2 }, { materialNombre: 'Tornillos', cantidad: 10 }] })

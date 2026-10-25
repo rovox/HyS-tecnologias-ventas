@@ -33,3 +33,18 @@ export const ESTADO = STATUS.movement;
 
 /** + money in, − money out, ↔ between boxes. */
 export const sign = (m) => (m.tipo === 'ingreso' ? 1 : m.tipo === 'egreso' ? -1 : 0);
+
+/** Field names of the API → labels in the history (chatter) of a movement. */
+export const MOVEMENT_FIELDS = {
+  estado: 'Estado',
+  concepto: 'Concepto',
+  monto: 'Monto',
+  fecha: 'Fecha',
+  metodo: 'Método',
+  nota: 'Nota',
+  motivo: 'Motivo',
+  cajaId: 'Caja',
+  recibidoPorId: 'Tiene el dinero',
+  pagadoPor: 'Pagó',
+  reembolsadoAt: 'Reembolsado el',
+};
