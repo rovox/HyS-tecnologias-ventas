@@ -58,8 +58,3 @@ export function deleteError(estado: string): string | null {
 export function transitionNeedsReason(to: string): boolean {
   return to === 'rechazado' || to === 'cancelado';
 }
-
-/** Short code people can say and search: PED- plus the first 6 characters of the id. */
-export function orderCode(id: string): string {
-  return `PED-${id.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase()}`;
-}

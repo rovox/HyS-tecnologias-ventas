@@ -1,4 +1,5 @@
-import { checkTransition, deliveryFields, itemTotal, nextStates, orderCode, pedidoTotal, transitionNeedsReason } from './pedidos-internos.rules';
+import { orderCode } from '../../../common/domain/codes';
+import { checkTransition, deliveryFields, itemTotal, nextStates, pedidoTotal, transitionNeedsReason } from './pedidos-internos.rules';
 
 describe('pedidos-internos domain', () => {
   it('asks a reason to reject or cancel, and gives each order a short code (INV-02)', () => {

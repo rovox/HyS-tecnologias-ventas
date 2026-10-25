@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../common/prisma/prisma.service';
-import { itemTotal, nextStates, orderCode, pedidoTotal } from './domain/pedidos-internos.rules';
+import { orderCode } from '../../common/domain/codes';
+import { itemTotal, nextStates, pedidoTotal } from './domain/pedidos-internos.rules';
 
 const PERSON = { select: { id: true, name: true } } as const;
 

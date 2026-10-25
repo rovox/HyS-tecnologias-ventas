@@ -6,6 +6,7 @@ import { canAdjustInventory, canManageInventory, canRegisterMovements } from '..
 import { CategoriesService } from '../categories';
 import { CreateProductDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
 import { isLowStock, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './domain/inventory.rules';
+import { orderCode } from '../../common/domain/codes';
 
 type Tx = Prisma.TransactionClient;
 const STOCK_SELECT = { select: { cantidad: true, sucursalOrigenId: true, sucursalDestinoId: true } } as const;
@@ -87,7 +88,7 @@ export class InventoryService {
       include: MOVEMENT_INCLUDE,
       orderBy: { fecha: 'desc' },
       take: 1000,
-    });
+    }).then((rows) => rows.map((m) => ({ ...m, pedidoInterno: m.pedidoInterno ? { id: m.pedidoInterno.id, codigo: orderCode(m.pedidoInterno.id) } : null })));
   }
 
   /** Entradas, transfers and outputs to a project (commercial); adjustments (Gerencia, Contabilidad). Never below zero. */
