@@ -102,7 +102,7 @@ function TableList({ columns, rows = [], groups, rowKey = (r) => r.id, onRowClic
           {!loading &&
             groups?.map((g) => (
               <Fragment key={g.key}>
-                <tr className="border-b border-border bg-secondary/60">
+                <tr className="border-b border-border bg-primary-fixed text-on-primary-fixed">
                   <td colSpan={columns.length} className="px-3 py-2 text-sm font-semibold">
                     {g.label} <span className="font-normal text-muted-foreground">({g.rows.length})</span>
                   </td>

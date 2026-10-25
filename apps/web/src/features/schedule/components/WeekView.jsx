@@ -11,7 +11,7 @@ export function WeekView({ days, jobsByDay, onOpen, phone }) {
       <div className="space-y-3">
         {visible.map((day) => (
           <section key={day}>
-            <h3 className={cn('mb-1 text-sm font-semibold capitalize', day === now && 'text-primary')}>{dayLabel(day)}{day === now ? ' · hoy' : ''}</h3>
+            <h3 className={cn('mb-1 text-sm font-semibold capitalize', day === now && 'text-primary')}>{dayLabel(day)}{day === now && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">Hoy</span>}</h3>
             <div className="space-y-1.5">
               {(jobsByDay.get(day) || []).map((job) => <JobChip key={job.id} job={job} onOpen={onOpen} />)}
               {!jobsByDay.get(day)?.length && <p className="text-xs text-muted-foreground">Sin trabajos</p>}

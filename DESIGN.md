@@ -1,194 +1,229 @@
 ---
-name: H&S tecnologias
+name: H&S Tecnologías ERP
 colors:
-  surface: '#f8f9ff'
-  surface-dim: '#cbdbf5'
-  surface-bright: '#f8f9ff'
-  surface-container-lowest: '#ffffff'
-  surface-container-low: '#eff4ff'
-  surface-container: '#e5eeff'
-  surface-container-high: '#dce9ff'
-  surface-container-highest: '#d3e4fe'
-  on-surface: '#0b1c30'
-  on-surface-variant: '#43474f'
-  inverse-surface: '#213145'
-  inverse-on-surface: '#eaf1ff'
-  outline: '#747780'
-  outline-variant: '#c4c6d0'
-  surface-tint: '#405f91'
-  primary: '#001736'
-  on-primary: '#ffffff'
-  primary-container: '#002b5b'
-  on-primary-container: '#7594ca'
-  inverse-primary: '#a9c7ff'
-  secondary: '#2e6c00'
-  on-secondary: '#ffffff'
-  secondary-container: '#75fd00'
-  on-secondary-container: '#307000'
-  tertiary: '#001736'
-  on-tertiary: '#ffffff'
-  tertiary-container: '#002b5b'
-  on-tertiary-container: '#6b94d7'
-  error: '#ba1a1a'
-  on-error: '#ffffff'
-  error-container: '#ffdad6'
-  on-error-container: '#93000a'
-  primary-fixed: '#d6e3ff'
-  primary-fixed-dim: '#a9c7ff'
-  on-primary-fixed: '#001b3d'
-  on-primary-fixed-variant: '#264778'
-  secondary-fixed: '#80ff2c'
-  secondary-fixed-dim: '#67e100'
-  on-secondary-fixed: '#092100'
-  on-secondary-fixed-variant: '#215100'
-  tertiary-fixed: '#d6e3ff'
-  tertiary-fixed-dim: '#a9c7ff'
-  on-tertiary-fixed: '#001b3d'
-  on-tertiary-fixed-variant: '#144685'
-  background: '#f8f9ff'
-  on-background: '#0b1c30'
-  surface-variant: '#d3e4fe'
+  # Marca y estructura
+  primary: '#001838'            # navy: navegación, títulos, botón principal
+  primary-container: '#002b5c'
+  primary-fixed: '#d6e4ff'      # fondo de filas de grupo y etapas
+  on-primary-fixed: '#00193d'
+  brand-green: '#2e6b00'        # verde de marca (secondary): logotipo, acentos de marca
+  brand-green-bright: '#77ff00' # solo botón "acción" y acentos puntuales
+  background: '#fafbff'
+  foreground: '#0c1d31'
+  card: '#ffffff'
+  muted: '#f1f5f9'
+  muted-foreground: '#65758b'
+  border: '#e1e7ef'
+  row-stripe: '#f4f6fb'
+  row-hover: '#e1eefe'
+  # Paleta narrativa: solid / soft (fondo) / fg (texto) / border
+  danger: '#ba1c1c'
+  danger-soft: '#fee6e6'
+  danger-fg: '#8e1515'
+  danger-border: '#f6acac'
+  warning: '#db7706'
+  warning-soft: '#fff5d6'
+  warning-fg: '#843b0b'
+  warning-border: '#fbcb6a'
+  success: '#157f3c'
+  success-soft: '#dbfae6'
+  success-fg: '#145c30'
+  success-border: '#85e0a6'
+  info: '#1555e0'
+  info-soft: '#e1eefe'
+  info-fg: '#1c3e9c'
+  info-border: '#9ec6fa'
+  progress: '#6b26d9'
+  progress-soft: '#f5ebff'
+  progress-fg: '#5222a0'
+  progress-border: '#d2b4f9'
+  neutral: '#566376'
+  neutral-soft: '#e7ecf3'
+  neutral-fg: '#344256'
+  neutral-border: '#bfcad9'
 typography:
-  display-lg:
-    fontFamily: Inter
-    fontSize: 32px
-    fontWeight: '700'
-    lineHeight: 40px
-    letterSpacing: -0.02em
-  headline-md:
-    fontFamily: Inter
-    fontSize: 24px
-    fontWeight: '600'
-    lineHeight: 32px
-    letterSpacing: -0.01em
-  headline-sm:
-    fontFamily: Inter
-    fontSize: 20px
-    fontWeight: '600'
-    lineHeight: 28px
-  body-lg:
-    fontFamily: Inter
-    fontSize: 16px
-    fontWeight: '400'
-    lineHeight: 24px
-  body-md:
-    fontFamily: Inter
-    fontSize: 14px
-    fontWeight: '400'
-    lineHeight: 20px
-  label-md:
-    fontFamily: Inter
-    fontSize: 12px
-    fontWeight: '600'
-    lineHeight: 16px
-    letterSpacing: 0.05em
-  data-tabular:
-    fontFamily: Inter
-    fontSize: 14px
-    fontWeight: '500'
-    lineHeight: 20px
-  headline-md-mobile:
-    fontFamily: Inter
-    fontSize: 20px
-    fontWeight: '600'
-    lineHeight: 28px
+  family: Inter
+  page-title: { fontSize: 24px, fontWeight: '700', lineHeight: 32px }
+  section-title: { fontSize: 16px, fontWeight: '600', lineHeight: 24px }
+  body: { fontSize: 14px, fontWeight: '400', lineHeight: 20px }
+  label: { fontSize: 12px, fontWeight: '600', lineHeight: 16px }
+  table-header: { fontSize: 12px, fontWeight: '600', lineHeight: 16px, textTransform: uppercase, letterSpacing: 0.04em }
+  number: { fontSize: 14px, fontWeight: '600', fontVariantNumeric: tabular-nums }
+  kpi: { fontSize: 28px, fontWeight: '800', fontVariantNumeric: tabular-nums }
 rounded:
-  sm: 0.25rem
-  DEFAULT: 0.5rem
-  md: 0.75rem
-  lg: 1rem
-  xl: 1.5rem
-  full: 9999px
+  sm: 0.5rem
+  md: 0.625rem
+  lg: 0.75rem
 spacing:
   container-max: 1440px
-  gutter: 24px
-  margin-mobile: 16px
-  margin-desktop: 32px
-  sidebar-width: 260px
-  unit-xs: 4px
-  unit-sm: 8px
-  unit-md: 16px
-  unit-lg: 24px
-  unit-xl: 40px
+  gutter-mobile: 16px
+  gutter-desktop: 32px
+  scale: [4px, 8px, 12px, 16px, 24px, 40px]
+  touch-target: 44px
 ---
 
-## Brand & Style
+# Sistema de diseño — ERP H&S Tecnologías
 
-The design system is engineered for efficiency, clarity, and professional reliability. It targets Small to Medium Enterprises (SMEs) that require a robust operational tool without the visual clutter typical of legacy ERP software. 
+Este archivo es la **única fuente** de colores, tipografía y patrones de pantalla. El código los implementa en
+`apps/web/src/index.css` (variables), `apps/web/tailwind.config.js` (clases), `apps/web/src/shared/lib/status.js`
+(estados) y `apps/web/src/shared/views/*` (componentes). Si algo aquí y el código no coinciden, se corrige el código
+o este archivo en el mismo commit.
 
-The aesthetic is **Sobrio & Minimalista**. It leverages a high-contrast foundation to ensure data density is manageable and legible. The style combines **Corporate Modern** structures with **Minimalist** refinement, prioritizing functional hierarchy over decorative elements. The emotional response is one of "ordered control"—users should feel that the complex financial and operational data is transparent and easy to navigate.
+## 1. Principios
 
-- **Precision:** Every pixel serves a functional purpose.
-- **Clarity:** Use of whitespace to separate data clusters.
-- **Authority:** Deep navy tones provide a stable, institutional feel, while vibrant green highlights key actions and success states.
+1. **El color cuenta algo.** Un color nunca decora: dice si algo está bien, mal, esperando o en curso (§2).
+2. **Lo importante se ve primero.** Saldos adeudados, vencidos, observados y faltantes llevan color y peso; lo demás
+   es texto normal.
+3. **Una acción, un clic.** Las acciones frecuentes son botones visibles en la fila o en la cabecera (§6.4); el menú
+   ⋯ es solo para lo raro.
+4. **Sin sorpresas.** Toda acción que borra, anula o mueve dinero dice qué registro toca y qué va a cambiar antes de
+   confirmar (§6.6), y deja rastro en el historial.
+5. **Datos reales, lenguaje del negocio.** Etiquetas "campo: valor"; nunca separadores "·" para unir datos
+   distintos, ni códigos técnicos sin contexto.
 
-## Colors
+## 2. Paleta narrativa
 
-The color palette is derived directly from the corporate identity, optimized for a professional software interface.
+Seis tonos. Cada uno tiene cinco variables: `--<tono>` (sólido), `--<tono>-foreground` (texto sobre el sólido),
+`--<tono>-soft` (fondo suave), `--<tono>-fg` (texto sobre el suave o sobre blanco), `--<tono>-border`. En Tailwind:
+`bg-danger`, `bg-danger-soft`, `text-danger-fg`, `border-danger-border`…
 
-- **Primary (Deep Navy):** Used for primary navigation, sidebars, and critical headers to establish a "grounded" frame.
-- **Accent (Vibrant Green):** Reserved for "Success" states, primary CTA buttons (like "Registrar Factura"), and highlighting positive trends. It must be used sparingly to maintain its impact.
-- **Neutrals:** A range of Slate grays (`#F8FAFC` to `#1E293B`) manage the hierarchy of secondary text and UI borders.
-- **Backgrounds:** A "Clean White" approach is used for the main content area to maximize contrast, with "Subtle Gray" used for the sidebar and container backgrounds to create depth without relying on heavy shadows.
+| Tono | Significa | Ejemplos |
+|---|---|---|
+| **danger** (rojo) | Error, alerta que hay que mencionar, algo que falta o se debe | Saldo adeudado, observado, rechazado, vencido hace días, stock bajo, sin técnico, margen negativo, trabajo cancelado |
+| **warning** (ámbar) | Espera a alguien; hay que actuar pronto | Por validar, solicitado, pendiente, por vencer (≤ 3 días), reembolso pendiente, dinero por rendir |
+| **success** (verde) | Confirmado, validado, terminado, cobrado | Validado, en caja, aprobada, terminado, entregado, garantía vigente, ingreso (+) |
+| **info** (azul) | Programado, enviado, informativo | Programado, enviada, planificado, filtros activos |
+| **progress** (violeta) | Alguien lo está trabajando | En proceso, en ejecución, en preparación, servicio en curso, agrupación activa |
+| **neutral** (gris) | Borrador, anulado, archivado: ya no cuenta | Borrador, anulado (tachado), archivado, cerrado |
 
-## Typography
+Reglas:
+- Badge de estado = fondo `soft` + texto `fg` + borde `border` + **icono** (nunca solo color: también lo leen
+  daltónicos y la impresión en blanco y negro).
+- Montos: ingreso `text-success-fg` con "+", egreso y saldo adeudado `text-danger-fg` con "−", cero en
+  `text-muted-foreground`.
+- Una tarjeta de calendario se pinta entera con el tono de su estado (fondo `soft`, borde izquierdo `solid`). La
+  división (Cómputo, Seguridad, Cableado) es una etiqueta de texto con icono, **sin color propio**, para no competir
+  con el estado.
+- Los tonos se usan solo con su significado. El navy (`primary`) es estructura (menú, títulos, botón principal); el
+  verde de marca (`secondary`) es identidad, no "éxito".
+- Contraste comprobado (WCAG AA): `fg` sobre `soft` ≥ 7:1; blanco sobre el sólido ≥ 5:1 salvo `warning`, que usa
+  texto oscuro (`--warning-foreground`). Una pareja nueva se mide antes de usarla.
+- No hay modo oscuro.
 
-This design system utilizes **Inter** for its exceptional legibility in data-heavy environments and its neutral, modern character.
+## 3. Estados (registro único)
 
-- **Data Tables:** Use `data-tabular` settings (Tabular Figures) to ensure columns of numbers align perfectly for easy scanning.
-- **Hierarchy:** Strong weight contrasts (Bold 700 vs Regular 400) are used to distinguish labels from user-generated content.
-- **Mobile scaling:** Display sizes drop by approximately 20% on mobile to maintain screen real estate while preserving the "bold" editorial feel of headers.
+Todos los estados viven en `apps/web/src/shared/lib/status.js` (`STATUS[entidad][estado] = { label, tone, icon,
+strike }`) y se dibujan con `<StatusBadge entity state />`. Las etiquetas del historial, los filtros y la barra de
+estado (`<StatusBar entity>`, que pinta la etapa actual con su tono) salen del mismo registro. Un estado desconocido
+se muestra tal cual en gris: nunca se oculta.
 
-## Layout & Spacing
+| Entidad | Estados → tono |
+|---|---|
+| quotation | borrador neutral · enviada info · aprobada success · rechazada danger · vencida warning · eliminada neutral tachada |
+| project | planificado info · en ejecución progress · entregado success · cerrado neutral · anulado neutral tachado |
+| job | programado info · en proceso progress · terminado success · cancelado danger tachado |
+| movement | por validar warning · validado success · observado danger · anulado neutral tachado |
+| order | solicitado warning · aprobado info · en preparación / listo progress · entregado success · rechazado danger · cancelado neutral |
+| visit | pendiente warning · programado info · en camino / en atención progress · resuelto success · cancelado neutral |
+| lead | nueva warning · contactada info · cliente success · descartada neutral |
+| product | activo success · archivado neutral |
 
-The layout follows a **Fixed-Fluid Hybrid** model. The sidebar remains fixed at `260px`, while the main content area is a fluid grid that caps at `1440px` to prevent line-lengths from becoming unreadable.
+Para algo que no es un estado ("Sin técnico", "Stock bajo", "Archivado") se usa `<ToneTag tone icon>`.
 
-- **Grid:** A 12-column grid is used for desktop dashboards.
-- **Rhythm:** A strict 8px linear scale (4, 8, 16, 24, 40) governs all padding and margins.
-- **Mobile:** On small screens, the sidebar collapses into a bottom navigation bar or a hamburger menu. Margins reduce to `16px` to maximize space for data tables, which may use horizontal scrolling for high-density information.
+## 4. Tipografía
 
-## Elevation & Depth
+- **Inter** en toda la app (cargada en `index.css`). Cuerpo 14 px.
+- Título de página 24 px / 700; título de sección 16 px / 600; etiqueta 12 px / 600.
+- Encabezado de tabla 12 px, mayúsculas, 600, `text-muted-foreground`.
+- Números y montos: `tabular-nums`, 600, alineados a la derecha. KPI del dashboard 28 px / 800.
+- Etiqueta vs. valor: la etiqueta en `text-muted-foreground` 12 px, el valor en 14 px `text-foreground`.
 
-To maintain a "minimalist" and "sobrio" feel, elevation is achieved through **Tonal Layering** rather than heavy shadows.
+## 5. Superficies y espacio
 
-- **Level 0 (Base):** `#F8FAFC` (Subtle Gray) for the main application background.
-- **Level 1 (Cards/Content):** White surfaces with a `1px` stroke in `#E2E8F0`. 
-- **Level 2 (Active/Floating):** Used for dropdowns and modals. These utilize an **Ambient Shadow**: `0px 4px 20px rgba(0, 43, 91, 0.08)`. The shadow color is tinted with the Primary Navy to keep the interface feeling cohesive and high-end.
-- **Interactive States:** Buttons and interactive cards use a subtle "lift" effect (0.5rem shadow) on hover to provide tactile feedback.
+- Fondo de la app `background`; tarjetas y tablas en blanco (`card`) con borde `border` de 1 px; sombras solo en
+  elementos flotantes (menús, diálogos, popovers).
+- Escala de espacio 4 · 8 · 12 · 16 · 24 · 40 px. Margen lateral 16 px en teléfono, 32 px en escritorio; contenido
+  hasta 1440 px.
+- Radio (`--radius` = 12 px): 10 px badges, chips, botones e inputs (`rounded-md`); 12 px tarjetas y diálogos (`rounded-lg`).
+- Objetivos táctiles ≥ 44 px (`min-h-11`) en teléfono. Sin desplazamiento horizontal de la página a 360 px.
 
-## Shapes
+## 6. Componentes
 
-The shape language is **Rounded (Medium)**. This softens the "industrial" feel of an ERP, making the software feel more approachable and modern.
+### 6.1 Tablas (`ListView`)
+- **Filas alternadas** (`bg-row-stripe` en las pares) y hover `bg-row-hover` cuando la fila abre algo.
+- **Columna `#`** a la izquierda con el número de fila, como Excel; con agrupación, la numeración sigue dentro de
+  cada grupo.
+- Fila de grupo en `primary-fixed` con su conteo; subtotal y total al pie en `muted`, en negrita.
+- Una fila puede llevar un borde izquierdo de tono (`tone(row)`) para señalar vencidos u observados.
+- En teléfono, tarjetas (`renderCard`) con los mismos colores.
 
-- **Standard Components:** `0.5rem (8px)` corner radius for buttons, inputs, and small cards.
-- **Large Containers:** `1rem (16px)` corner radius for main dashboard widgets and modal overlays.
-- **Navigation:** Active states in the sidebar use a semi-pill shape (left-side rounded) to indicate selection clearly.
+### 6.2 Panel de control (`ControlPanel`)
+- Breadcrumb, acción principal, buscador, filtros, agrupación, vistas y exportar CSV.
+- **Buscador**: `type="search"`, botón × visible para borrar todo y `Esc` borra.
+- Chip de filtro activo en tono info; chip de agrupación en tono progress; ambos con × para quitarlos.
+- Contadores en los filtros que importan ("Archivados (3)", "Sin técnico (2)") con el tono de su significado.
 
-## Components
+### 6.3 Combobox con búsqueda (`SearchSelect`)
+- Toda lista que pueda pasar de ~8 opciones (clientes, productos, proyectos, trabajos, usuarios, técnicos) se elige
+  escribiendo: Popover + búsqueda (cmdk), resultado resaltado, "Sin resultados", opción para limpiar.
+- Las listas cortas y fijas (sucursal, caja, método de pago, prioridad) siguen como `<select>`.
 
-### Buttons
-- **Primary:** Background `#002B5B`, Text `#FFFFFF`. High-contrast, authoritative.
-- **Action/Success:** Background `#76FF03`, Text `#002B5B`. Used for "Add", "Save", or "Confirm".
-- **Secondary:** Transparent background with `#E2E8F0` border.
+### 6.4 Acciones rápidas (`RowQuickActions`)
+- Botones de icono con tooltip en la propia fila: ✓ (success), ✗ (danger), ✎ editar, ⋯ más.
+- Después de cada acción, el aviso ofrece el siguiente paso: "Ver proyecto", "Registrar otro", "Deshacer" cuando
+  existe.
 
-### Input Fields
-- White background with a `1px` border. On focus, the border shifts to Primary Navy with a subtle `2px` glow of the same color at 10% opacity.
+### 6.5 Botones
+- Principal: navy (`bg-primary`), uno por vista.
+- Confirmar / guardar en un diálogo: principal. Acción positiva destacada ("Validar", "Registrar cobro"): `success`.
+- Destructiva (anular, eliminar, rechazar): `danger`, siempre con confirmación.
+- Secundaria: borde `border`, fondo blanco. Siempre con texto; solo icono en las acciones rápidas de fila (con
+  tooltip y `aria-label`).
 
-### Data Tables
-- Row height: `56px` for comfort. 
-- Alternating row stripes are not used; instead, a subtle bottom-border (`1px solid #F1F5F9`) separates entries. 
-- Hover state: Row background shifts to `#F8FAFC`.
+### 6.6 Confirmaciones con detalle (`useConfirm`)
+- Título con la acción y el registro ("¿Anular el cobro de Bs 500 de PRY-0004?").
+- Lista "campo: valor" del registro afectado (`details`) y el **efecto** (`effect`): "La Caja Central baja de
+  Bs 5.200 a Bs 4.700", "El proyecto vuelve a deber Bs 500".
+- Motivo obligatorio cuando la acción lo exige (anular, observar, rechazar, cancelar, ajustar).
 
-### Navigation (Mobile)
-- A **Bottom Tab Bar** is recommended for SME owners who need "at-a-glance" access to Finance, Quotes, and Reports while on the move.
-- Active icons use the Vibrant Green accent for high visibility.
+### 6.7 Formularios
+- Cada campo con etiqueta visible arriba; nunca un placeholder como única etiqueta.
+- Un dato que no se puede cambiar se muestra como texto ("Producto: Cámara IP 4 MP"), no como input deshabilitado.
+- Ubicación (`LocationField`): dirección + link opcional (Google Maps, Waze o cualquier URL) que se abre con
+  "Abrir ubicación".
+- Errores en `text-danger-fg` debajo del campo; el botón de guardar dice qué falta.
 
-### Chips & Status Tags
-- Status tags (e.g., "Pagado", "Pendiente") use low-saturation versions of the status color with high-saturation text to ensure they don't distract from primary data but remain clearly categorizable.
+### 6.8 Archivos (`FilePreview`)
+- Imágenes: se guardan en WebP; miniaturas en galería; al abrir, vista grande con "Descargar (JPG)".
+- PDF: se ven dentro de la app (visor del navegador en un diálogo) con "Abrir en pestaña" y "Descargar".
 
-## Documentación extendida
+### 6.9 Historial (`Chatter`)
+- Cada registro muestra debajo quién hizo qué y cuándo, con "campo: antes → después" y el motivo de las acciones
+  que lo piden. Se actualiza en vivo.
 
-Este archivo es la **fuente de verdad de tokens**. Para implementación web/mobile, patrones ERP y checklist de pantallas, ver:
+## 7. Patrones de vista
 
-- [`docs/design/design-system-manual.md`](docs/design/design-system-manual.md)
-- [`docs/design/responsive-web-mobile.md`](docs/design/responsive-web-mobile.md)
+| Vista | Estructura |
+|---|---|
+| **Lista** | `ControlPanel` + `ListView`/`KanbanView`; totales al pie; filtros y búsqueda en la URL |
+| **Ficha** | `FormView`: acciones + `StatusBar` arriba, botones inteligentes (enlaces con número), campos "etiqueta: valor", pestañas, `Chatter` |
+| **Bandeja** | lista de lo que espera una acción, con ✓/✗ en la fila y contador en la pestaña |
+| **Calendario** | tarjetas pintadas por estado, leyenda de estados, panel lateral con todas las acciones |
+| **Dashboard** | acciones rápidas → "requiere atención" (contadores danger/warning) → indicadores → actividad; cada tarjeta abre la lista que suma su cifra |
+
+## 8. Tiempo real
+
+Toda vista que muestra datos se actualiza sola cuando otro usuario cambia algo (`RealtimeProvider`). No hay botón
+"recargar" ni datos viejos después de una acción: si una vista no se actualiza en vivo, es un error.
+
+## 9. Checklist de una pantalla
+
+- [ ] Estados con `StatusBadge`; colores solo de §2; 0 clases de paleta cruda (`bg-blue-600`) y 0 hex.
+- [ ] Tabla con filas alternadas y numeradas, montos con signo y color, totales.
+- [ ] Buscador con botón ×; combobox con búsqueda en listas largas.
+- [ ] Acciones frecuentes visibles; confirmaciones con detalle y efecto.
+- [ ] Etiquetas "campo: valor"; sin "·" uniendo datos; sin inputs deshabilitados como texto.
+- [ ] Teléfono a 360 px sin scroll horizontal; objetivos ≥ 44 px.
+- [ ] Se actualiza en vivo desde otra sesión.
+
+Guía de adaptación a teléfono: [`docs/design/responsive-web-mobile.md`](docs/design/responsive-web-mobile.md).

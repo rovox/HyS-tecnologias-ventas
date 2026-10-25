@@ -53,6 +53,7 @@ export default function QuotationDetailPage() {
         actions={<QuotationActions quote={quote} onEdit={() => setEditing(true)} />}
         statusBar={
           <StatusBar
+            entity="quotation"
             stages={statusStages(quote.estado)}
             current={quote.estado}
             allowed={quote.transicionesValidas}

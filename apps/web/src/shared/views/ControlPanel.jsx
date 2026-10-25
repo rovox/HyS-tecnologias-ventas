@@ -73,7 +73,7 @@ export function ControlPanel({
           <div className="flex min-h-10 flex-1 flex-wrap items-center gap-1 rounded-md border border-input bg-background px-2 lg:mx-4">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             {facets.map((f) => (
-              <span key={f.key} className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs font-medium">
+              <span key={f.key} className="inline-flex items-center gap-1 rounded-md border border-info-border bg-info-soft px-2 py-0.5 text-xs font-semibold text-info-fg">
                 <Filter className="h-3 w-3" />
                 {f.label}
                 <button type="button" aria-label={`Quitar ${f.label}`} onClick={() => onToggleFilter(f.key)}>
@@ -82,7 +82,7 @@ export function ControlPanel({
               </span>
             ))}
             {groupLabel && (
-              <span className="inline-flex items-center gap-1 rounded bg-accent/15 px-2 py-0.5 text-xs font-medium">
+              <span className="inline-flex items-center gap-1 rounded-md border border-progress-border bg-progress-soft px-2 py-0.5 text-xs font-semibold text-progress-fg">
                 Agrupar: {groupLabel}
                 <button type="button" aria-label="Quitar agrupación" onClick={() => onGroupBy(null)}>
                   <X className="h-3 w-3" />

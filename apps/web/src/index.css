@@ -35,55 +35,64 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
     
-    --destructive: 0 76% 42%;
+    --destructive: 0 74% 42%;
     --destructive-foreground: 0 0% 100%;
-
-    --success: 92 100% 50%;
-    --success-foreground: 94 100% 16%;
 
     --action: 92 100% 50%;
     --action-foreground: 94 100% 16%;
 
-    --client-contracted-bg: 214 80% 96%;
-    --client-contracted-border: 214 70% 72%;
-    --client-contracted-fg: 214 100% 18%;
-
     --outline-variant: 228 10% 79%;
 
-    --warning: 35 100% 50%;
-    --warning-foreground: 0 0% 100%;
-    
+    /* Narrative tones (DESIGN.md "Paleta narrativa"). Each: solid, -foreground (text on solid),
+       -soft (badge/row background), -fg (text on soft or white), -border. Pairs checked for WCAG AA. */
+    --danger: 0 74% 42%;
+    --danger-foreground: 0 0% 100%;
+    --danger-soft: 0 93% 95%;
+    --danger-fg: 0 74% 32%;
+    --danger-border: 0 80% 82%;
+
+    --warning: 32 95% 44%;
+    --warning-foreground: 26 83% 14%;
+    --warning-soft: 45 100% 92%;
+    --warning-fg: 24 85% 28%;
+    --warning-border: 40 95% 70%;
+
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 141 76% 92%;
+    --success-fg: 143 64% 22%;
+    --success-border: 142 60% 70%;
+
+    --info: 221 83% 48%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 214 95% 94%;
+    --info-fg: 224 70% 36%;
+    --info-border: 214 90% 80%;
+
+    --progress: 263 70% 50%;
+    --progress-foreground: 0 0% 100%;
+    --progress-soft: 270 100% 96%;
+    --progress-fg: 263 65% 38%;
+    --progress-border: 266 85% 84%;
+
+    --neutral: 215 16% 40%;
+    --neutral-foreground: 0 0% 100%;
+    --neutral-soft: 214 32% 93%;
+    --neutral-fg: 215 25% 27%;
+    --neutral-border: 214 25% 80%;
+
+    /* Striped rows (Excel-like) and the row-number gutter. */
+    --row-stripe: 220 50% 97%;
+    --row-hover: 214 95% 94%;
+
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 215 100% 18%;
     --radius: 0.75rem;
 
-    /* Dashboard & Component Specific Tokens */
-    --metric-card-bg: 0 0% 100%;
-    --metric-card-border: 214 32% 91%;
-    --metric-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-    
+    /* Legacy tables (ReportsPage) until DASH-01 removes them. */
     --table-row-hover: 210 40% 98%;
     --table-header-bg: 210 40% 96%;
-
-    --progress-track: 214 32% 91%;
-    --progress-fill: 220 100% 40%;
-
-    --sidebar-bg: 220 100% 15%;
-    --corporate-dark: 220 100% 10%;
-    
-    /* Schedule & Status Tokens */
-    --state-pending: 210 40% 96%;
-    --state-pending-fg: 220 40% 10%;
-    
-    --state-progress: 40 90% 50%;
-    --state-progress-fg: 0 0% 100%;
-    
-    --state-completed: 142 71% 45%;
-    --state-completed-fg: 0 0% 100%;
-    
-    --state-canceled: 215 16% 47%;
-    --state-canceled-fg: 0 0% 100%;
 
     --content-padding: clamp(1rem, 3vw, 2rem);
     --header-height: 4rem;
@@ -95,68 +104,6 @@
     --z-toast: 100;
   }
 
-  .dark {
-    --division-computo: 199 89% 58%;
-    --division-seguridad: 262 70% 70%;
-    --division-cableado: 28 90% 60%;
-    --background: 220 100% 10%;
-    --foreground: 0 0% 100%;
-    
-    --primary: 220 100% 50%;
-    --primary-foreground: 220 100% 10%;
-    
-    --secondary: 220 60% 20%;
-    --secondary-foreground: 0 0% 100%;
-    
-    --accent: 220 60% 20%;
-    --accent-foreground: 0 0% 100%;
-
-    --card: 220 80% 12%;
-    --card-foreground: 0 0% 100%;
-    
-    --popover: 220 80% 12%;
-    --popover-foreground: 0 0% 100%;
-    
-    --muted: 220 60% 25%;
-    --muted-foreground: 220 20% 75%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 142 71% 35%;
-    --success-foreground: 0 0% 100%;
-
-    --warning: 35 100% 40%;
-    --warning-foreground: 0 0% 100%;
-    
-    --border: 220 60% 25%;
-    --input: 220 60% 25%;
-    --ring: 220 100% 50%;
-
-    /* Dashboard & Component Specific Tokens Dark */
-    --metric-card-bg: 220 80% 14%;
-    --metric-card-border: 220 60% 25%;
-    --metric-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
-    
-    --table-row-hover: 220 60% 18%;
-    --table-header-bg: 220 60% 16%;
-
-    --progress-track: 220 60% 25%;
-    --progress-fill: 220 100% 50%;
-
-    /* Schedule & Status Tokens Dark */
-    --state-pending: 220 60% 20%;
-    --state-pending-fg: 220 20% 90%;
-    
-    --state-progress: 40 100% 30%;
-    --state-progress-fg: 0 0% 100%;
-    
-    --state-completed: 142 71% 30%;
-    --state-completed-fg: 0 0% 100%;
-    
-    --state-canceled: 220 20% 25%;
-    --state-canceled-fg: 220 20% 80%;
-  }
 }
 
 @layer base {
@@ -190,19 +137,6 @@
     @apply w-full px-[var(--content-padding)] max-w-[1440px] mx-auto;
   }
 
-  /* Metric Card Utilities */
-  .metric-card {
-    @apply bg-[hsl(var(--metric-card-bg))] border border-[hsl(var(--metric-card-border))] rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
-    box-shadow: var(--metric-card-shadow);
-  }
-
-  .progress-bar-container {
-    @apply w-full h-2 rounded-full overflow-hidden bg-[hsl(var(--progress-track))];
-  }
-
-  .progress-bar-fill {
-    @apply h-full transition-all duration-500 ease-out bg-[hsl(var(--progress-fill))];
-  }
 
   /* Table Utilities */
   .table-container {
@@ -221,27 +155,6 @@
     @apply px-4 py-3 align-middle text-sm text-foreground;
   }
 
-  /* Status Colors */
-  .bg-state-pending {
-    background-color: hsl(var(--state-pending));
-    color: hsl(var(--state-pending-fg));
-  }
-  .bg-state-progress {
-    background-color: hsl(var(--state-progress));
-    color: hsl(var(--state-progress-fg));
-  }
-  .bg-state-completed {
-    background-color: hsl(var(--state-completed));
-    color: hsl(var(--state-completed-fg));
-  }
-  .bg-state-canceled {
-    background-color: hsl(var(--state-canceled));
-    color: hsl(var(--state-canceled-fg));
-  }
-  .border-state-pending { border-color: hsl(var(--state-pending-fg) / 0.2); }
-  .border-state-progress { border-color: hsl(var(--state-progress)); }
-  .border-state-completed { border-color: hsl(var(--state-completed)); }
-  .border-state-canceled { border-color: hsl(var(--state-canceled)); }
 }
 
 .custom-scrollbar::-webkit-scrollbar {

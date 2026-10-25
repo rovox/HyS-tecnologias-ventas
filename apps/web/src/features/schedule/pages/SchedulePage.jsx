@@ -4,7 +4,7 @@ import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, List, Plus } fr
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { ControlPanel, ListView, useListControls } from '@/shared/views';
+import { ControlPanel, ListView, StatusBadge, useListControls } from '@/shared/views';
 import { downloadCsv } from '@/shared/lib/csv.js';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
@@ -12,7 +12,7 @@ import { useIsPhone } from '@/shared/lib/useIsPhone.js';
 import { useJobs } from '../api.js';
 import { DIVISION, JOB_STATE } from '../constants.js';
 import { addDays, addMonths, jobDay, monthGrid, monthLabel, rangeLabel, today, weekDays, weekStart } from '../dates.js';
-import { DivisionLegend } from '../components/JobChip.jsx';
+import { DivisionTag, StateLegend } from '../components/JobChip.jsx';
 import { JobDetailSheet } from '../components/JobDetailSheet.jsx';
 import { JobFormDialog } from '../components/JobFormDialog.jsx';
 import { MonthView } from '../components/MonthView.jsx';
@@ -27,10 +27,10 @@ const VIEWS = [
 const listColumns = [
   { key: 'fecha', header: 'Fecha', cell: (j) => `${formatDay(j.fechaProgramada)}${j.horario ? ` · ${j.horario}` : ''}` },
   { key: 'cliente', header: 'Cliente', cell: (j) => <div><p className="font-medium">{j.cliente?.nombre}</p><p className="text-xs text-muted-foreground">{j.descripcionTrabajo}</p></div> },
-  { key: 'categoria', header: 'Categoría', cell: (j) => DIVISION[j.categoriaId]?.short },
+  { key: 'categoria', header: 'Categoría', cell: (j) => <DivisionTag id={j.categoriaId} /> },
   { key: 'tecnico', header: 'Técnico', cell: (j) => j.tecnico?.name || 'Sin asignar' },
   { key: 'origen', header: 'Origen', cell: (j) => j.project?.codigo || 'Trabajo suelto' },
-  { key: 'estado', header: 'Estado', cell: (j) => JOB_STATE[j.estado]?.label },
+  { key: 'estado', header: 'Estado', cell: (j) => <StatusBadge entity="job" state={j.estado} /> },
   { key: 'saldo', header: 'Saldo', align: 'right', cell: (j) => (j.projectId ? '—' : formatBs(j.saldo)) },
 ];
 
@@ -123,7 +123,7 @@ export default function SchedulePage() {
         meta={`${rows.length} trabajos`}
       />
       <div className="space-y-3 px-4 py-4 sm:px-6">
-        <DivisionLegend />
+        <StateLegend />
         {view === 'semana' && <WeekView days={days} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} phone={phone} />}
         {view === 'mes' && <MonthView grid={days} month={anchor} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} onShowWeek={(day) => go({ view: 'semana', dia: day })} />}
         {view === 'lista' && (

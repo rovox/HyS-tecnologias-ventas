@@ -1,12 +1,7 @@
 import { formatBs } from '@/shared/lib/format.js';
+import { STATUS } from '@/shared/lib/status.js';
 
-export const PROJECT_STATE = {
-  planificado: { label: 'Planificado', className: 'bg-muted text-muted-foreground' },
-  en_ejecucion: { label: 'En ejecución', className: 'bg-primary/10 text-primary' },
-  entregado: { label: 'Entregado', className: 'bg-secondary/15 text-secondary' },
-  cerrado: { label: 'Cerrado', className: 'border border-border bg-background text-foreground' },
-  anulado: { label: 'Anulado', className: 'bg-destructive/10 text-destructive line-through' },
-};
+export const PROJECT_STATE = STATUS.project;
 
 const MAIN = ['planificado', 'en_ejecucion', 'entregado', 'cerrado'];
 

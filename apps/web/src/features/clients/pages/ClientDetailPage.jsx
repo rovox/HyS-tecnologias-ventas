@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
-import { ControlPanel, Field, FieldGrid, FormView, ListView } from '@/shared/views';
+import { ControlPanel, Field, FieldGrid, FormView, ListView, ToneTag } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useClientSummary } from '../api.js';
@@ -33,7 +33,7 @@ const projectColumns = [
   {
     key: 'garantia',
     header: 'Garantía',
-    cell: (p) => (p.garantiaHasta ? <span className={p.garantiaVigente ? 'inline-flex items-center gap-1 text-secondary' : 'text-muted-foreground line-through'}>{p.garantiaVigente && <ShieldCheck className="h-4 w-4" />}{formatDay(p.garantiaHasta)}</span> : `${p.garantiaMeses} meses desde la entrega`),
+    cell: (p) => (p.garantiaHasta ? <span className={p.garantiaVigente ? 'inline-flex items-center gap-1 font-medium text-success-fg' : 'text-muted-foreground line-through'}>{p.garantiaVigente && <ShieldCheck className="h-4 w-4" />}{formatDay(p.garantiaHasta)}</span> : `${p.garantiaMeses} meses desde la entrega`),
   },
   { key: 'monto', header: 'Monto', align: 'right', cell: (p) => formatBs(p.monto), total: sum('monto') },
   { key: 'saldo', header: 'Saldo', align: 'right', cell: (p) => money(p.saldo, true), total: sum('saldo') },
@@ -53,7 +53,7 @@ const equipmentColumns = [
   {
     key: 'garantia',
     header: 'Garantía',
-    cell: (e) => (e.garantiaHasta ? <span className={e.garantiaVigente ? 'inline-flex items-center gap-1 text-secondary' : 'text-muted-foreground line-through'}>{e.garantiaVigente && <ShieldCheck className="h-4 w-4" />}{formatDay(e.garantiaHasta)}</span> : 'desde la entrega del proyecto'),
+    cell: (e) => (e.garantiaHasta ? <span className={e.garantiaVigente ? 'inline-flex items-center gap-1 font-medium text-success-fg' : 'text-muted-foreground line-through'}>{e.garantiaVigente && <ShieldCheck className="h-4 w-4" />}{formatDay(e.garantiaHasta)}</span> : 'desde la entrega del proyecto'),
   },
 ];
 const quoteColumns = [
@@ -118,7 +118,7 @@ export default function ClientDetailPage() {
         ]}
         subtitle={client.tipo || 'Cliente'}
         title={client.nombre}
-        badge={client.servicioEnCurso ? <span className="rounded bg-primary/10 px-2 py-0.5 text-sm text-primary">Servicio en curso</span> : null}
+        badge={client.servicioEnCurso ? <ToneTag tone="progress" className="text-sm">Servicio en curso</ToneTag> : null}
         chatter={<Chatter entity="client" id={client.id} fieldLabels={FIELDS} />}
       >
         <FieldGrid>
