@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, List, Plus } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, List, Plus, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { cn } from '@/lib/utils';
 import { ControlPanel, ListView, StatusBadge, useListControls } from '@/shared/views';
 import { downloadCsv } from '@/shared/lib/csv.js';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
@@ -24,11 +25,14 @@ const VIEWS = [
   { key: 'lista', label: 'Lista', icon: List },
 ];
 
+/** An open job nobody will attend: shown in red everywhere. */
+const unassigned = (j) => !j.tecnicoId && ['programado', 'en_proceso'].includes(j.estado);
+
 const listColumns = [
   { key: 'fecha', header: 'Fecha', cell: (j) => `${formatDay(j.fechaProgramada)}${j.horario ? `, ${j.horario}` : ''}` },
   { key: 'cliente', header: 'Cliente', cell: (j) => <div><p className="font-medium">{j.cliente?.nombre}</p><p className="text-xs text-muted-foreground">{j.descripcionTrabajo}</p></div> },
   { key: 'categoria', header: 'Categoría', cell: (j) => <DivisionTag id={j.categoriaId} /> },
-  { key: 'tecnico', header: 'Técnico', cell: (j) => j.tecnico?.name || 'Sin asignar' },
+  { key: 'tecnico', header: 'Técnico', cell: (j) => (j.tecnico?.name || <span className={unassigned(j) ? 'font-semibold text-danger-fg' : ''}>Sin asignar</span>) },
   { key: 'origen', header: 'Origen', cell: (j) => j.project?.codigo || 'Trabajo suelto' },
   { key: 'estado', header: 'Estado', cell: (j) => <StatusBadge entity="job" state={j.estado} /> },
   { key: 'saldo', header: 'Saldo', align: 'right', cell: (j) => (j.projectId ? '—' : formatBs(j.saldo)) },
@@ -65,11 +69,11 @@ export default function SchedulePage() {
   const filters = useMemo(
     () => [
       { key: 'mios', label: 'Mis trabajos', section: 'Responsable', test: (j) => j.tecnicoId === currentUser?.id || j.vendedorId === currentUser?.id },
-      { key: 'sin_tecnico', label: 'Sin técnico', section: 'Responsable', test: (j) => !j.tecnicoId },
+      { key: 'sin_tecnico', label: 'Sin técnico', section: 'Responsable', tone: 'danger', count: jobs.filter(unassigned).length, test: unassigned },
       ...Object.entries(DIVISION).map(([id, d]) => ({ key: id, label: d.short, section: 'Categoría', test: (j) => j.categoriaId === id })),
       ...Object.entries(JOB_STATE).map(([id, s]) => ({ key: id, label: s.label, section: 'Estado', test: (j) => j.estado === id })),
     ],
-    [currentUser],
+    [currentUser, jobs],
   );
   const { rows, groups, panel } = useListControls(jobs, {
     filters,
@@ -91,6 +95,9 @@ export default function SchedulePage() {
     for (const list of map.values()) list.sort((a, b) => (a.horario || '').localeCompare(b.horario || ''));
     return map;
   }, [rows]);
+
+  const missing = jobs.filter(unassigned).length;
+  const showingMissing = panel.activeFilters.includes('sin_tecnico');
 
   const go = (patch) => setParams((p) => { const n = new URLSearchParams(p); for (const [k, v] of Object.entries(patch)) n.set(k, v); return n; }, { replace: true });
   const step = (n) => go({ dia: view === 'mes' ? addMonths(anchor, n) : addDays(weekStart(anchor), 7 * n) });
@@ -123,11 +130,23 @@ export default function SchedulePage() {
         meta={`${rows.length} trabajos`}
       />
       <div className="space-y-3 px-4 py-4 sm:px-6">
-        <StateLegend />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <StateLegend />
+          {(missing > 0 || showingMissing) && (
+            <button
+              type="button"
+              aria-pressed={showingMissing}
+              onClick={() => panel.onToggleFilter('sin_tecnico')}
+              className={cn('inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold', showingMissing ? 'border-danger bg-danger text-danger-foreground' : 'border-danger-border bg-danger-soft text-danger-fg hover:bg-danger hover:text-danger-foreground')}
+            >
+              <UserX className="h-3.5 w-3.5" /> {showingMissing ? 'Ver todos' : `Sin técnico (${missing})`}
+            </button>
+          )}
+        </div>
         {view === 'semana' && <WeekView days={days} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} phone={phone} />}
         {view === 'mes' && <MonthView grid={days} month={anchor} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} onShowWeek={(day) => go({ view: 'semana', dia: day })} />}
         {view === 'lista' && (
-          <ListView columns={listColumns} rows={rows} groups={groups} loading={isLoading} onRowClick={(j) => setOpenId(j.id)} empty="No hay trabajos en estas fechas" />
+          <ListView columns={listColumns} rows={rows} groups={groups} loading={isLoading} tone={(j) => (unassigned(j) ? 'danger' : undefined)} onRowClick={(j) => setOpenId(j.id)} empty="No hay trabajos en estas fechas" />
         )}
       </div>
       <JobDetailSheet jobId={openId} onClose={() => setOpenId(null)} />
