@@ -93,9 +93,9 @@ await step('a transfer above the stock is warned; 3 to Quillacollo moves it', as
   await p.getByText('Transferencia registrada').waitFor(T);
   await stockIs(p, '7 0 3 10');
 });
-await step('an internal order picks the product and moves stock when delivered', async () => {
-  await p.goto(`${WEB}/pedidos-internos`, { waitUntil: 'networkidle' });
-  await p.getByRole('button', { name: 'Crear Pedido' }).click(T);
+await step('an internal order (Inventario › Pedidos) is delivered from its page: stock moves, history shows who did it', async () => {
+  await p.goto(`${WEB}/inventario?vista=pedidos`, { waitUntil: 'networkidle' });
+  await p.getByRole('button', { name: 'Nuevo pedido' }).click(T);
   const dlg = p.getByRole('dialog');
   await dlg.getByRole('radio', { name: 'Para una sucursal' }).click(T);
   await dlg.getByLabel('Sale de').selectOption({ label: 'Central' });
@@ -103,18 +103,20 @@ await step('an internal order picks the product and moves stock when delivered',
   await dlg.getByLabel('Producto del inventario').first().click(T); // searchable combobox (SearchSelect)
   await p.getByPlaceholder('Buscar por código o nombre…').fill(code);
   await p.getByRole('option', { name: new RegExp(code) }).click(T);
-  await dlg.getByLabel('Cantidad').first().fill('2');
+  await dlg.getByLabel('Cantidad *').first().fill('2');
   await dlg.getByRole('button', { name: 'Crear pedido' }).click(T);
-  await dlg.waitFor({ state: 'hidden', ...T });
-  const orders = await (await fetch(`${API}/pedidos-internos`, { headers: { Authorization: `Bearer ${B.token}` } })).json();
-  const list = Array.isArray(orders) ? orders : orders.data ?? orders.items ?? [];
-  const order = list.find((o) => JSON.stringify(o).includes(code)) ?? list[0];
-  for (const estado of ['aprobado', 'en_preparación', 'listo_para_entrega', 'entregado']) {
-    const r = await fetch(`${API}/pedidos-internos/${order.id}/status`, { method: 'PATCH', headers: { 'content-type': 'application/json', Authorization: `Bearer ${B.token}` }, body: JSON.stringify({ estado }) });
-    if (!r.ok) throw new Error(`deliver ${r.status} ${await r.text()}`);
+  await p.waitForURL(/\/inventario\/pedidos\//, T);
+  for (const label of ['Aprobar', 'Preparar', 'Listo para entregar', 'Entregar']) {
+    await p.getByRole('button', { name: label, exact: true }).first().click(T);
+    const confirm = p.getByRole('dialog');
+    if (label === 'Entregar') await confirm.getByText(/Salen 2 .* de Central a Punata/).waitFor(T);
+    await confirm.getByRole('button', { name: label, exact: true }).click(T);
+    await confirm.waitFor({ state: 'hidden', ...T });
   }
+  await p.getByText('Stock movido al entregar').waitFor(T);
+  await p.getByRole('region', { name: 'Historial' }).getByText('cambió el estado').first().waitFor(T);
   await stockIs(B.page, '5 2 3 10');
-  if (SHOTS) await B.page.screenshot({ path: `${SHOTS}/inventory.png` });
+  if (SHOTS) await p.screenshot({ path: `${SHOTS}/order.png`, fullPage: true });
 });
 await step('salida a proyecto: the project shows the material and its cost, the client the equipment', async () => {
   await p.goto(`${WEB}/inventario`, { waitUntil: 'networkidle' });
@@ -141,7 +143,7 @@ await step('salida a proyecto: the project shows the material and its cost, the 
 });
 await step('movements tab lists the order delivery', async () => {
   await p.goto(`${WEB}/inventario?vista=movimientos`, { waitUntil: 'networkidle' });
-  await p.getByRole('row', { name: /Pedido interno/ }).first().waitFor(T);
+  await p.getByRole('link', { name: /^Pedido PED-/ }).first().waitFor(T);
 });
 await step('a técnico reads the inventory without actions', async () => {
   await tec.page.goto(`${WEB}/inventario`, { waitUntil: 'networkidle' });

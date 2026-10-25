@@ -28,6 +28,7 @@ const VERBS = {
   anulado: 'anuló',
   refund: 'marcó como reembolsado',
   reverse: 'revirtió',
+  comment: 'comentó',
 };
 
 const verbOf = (action) => {

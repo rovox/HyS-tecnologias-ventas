@@ -13,12 +13,12 @@ import { notify } from '@/shared/lib/notify.js';
 import { useOpenJobs, useOrder, useSaveOrder } from '../api.js';
 import { OrderItems, emptyItem } from './OrderItems.jsx';
 import { SearchSelect } from '@/shared/views';
+import { ROLES } from '@/constants/roles.js';
 
 const PRIORIDADES = ['Baja', 'Normal', 'Alta', 'Urgente'];
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
-function fromOrder(data, user, defaultOrigin) {
-  const p = data?.pedido;
+function fromOrder(p, user, defaultOrigin) {
   return {
     tipo: p?.cronogramaId ? 'trabajo' : 'sucursal',
     cronogramaId: p?.cronogramaId || '',
@@ -28,8 +28,8 @@ function fromOrder(data, user, defaultOrigin) {
     prioridad: p?.prioridad || 'Normal',
     fecha: p?.fechaEntregaEstimada ? String(p.fechaEntregaEstimada).slice(0, 10) : new Date().toLocaleDateString('en-CA'), // today, local
     observaciones: p?.observaciones || '',
-    items: data?.detalles?.length
-      ? data.detalles.map((d) => ({ key: d.id, productoId: d.productoId || '', materialNombre: d.materialNombre, cantidad: String(d.cantidad), unidad: d.unidad, costoUnitario: d.costoUnitario ?? '', observaciones: d.observaciones || '' }))
+    items: p?.items?.length
+      ? p.items.map((d) => ({ key: d.id, productoId: d.productoId || '', materialNombre: d.materialNombre, cantidad: String(d.cantidad), unidad: d.unidad, costoUnitario: d.costoUnitario ?? '', observaciones: d.observaciones || '' }))
       : [emptyItem()],
   };
 }
@@ -93,13 +93,14 @@ export function OrderFormDialog({ open, onOpenChange, pedidoId, readOnly, onSave
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{readOnly ? 'Pedido interno' : pedidoId ? 'Editar pedido interno' : 'Nuevo pedido interno'}</DialogTitle>
-          <DialogDescription>Los ítems del inventario mueven stock al entregarse: al proyecto del trabajo o a la sucursal de destino.</DialogDescription>
+          <DialogDescription>Los productos del inventario mueven stock al entregar el pedido: salen hacia el proyecto del trabajo o hacia la sucursal de destino.</DialogDescription>
         </DialogHeader>
         {!form || (pedidoId && isLoading) ? (
           <Skeleton className="h-64 w-full" />
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Para">
+            <p id="ord-destino-tipo" className="text-sm font-medium">Destino del pedido</p>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="ord-destino-tipo">
               {[['trabajo', 'Para un trabajo'], ['sucursal', 'Para una sucursal']].map(([key, label]) => (
                 <Button key={key} type="button" role="radio" aria-checked={form.tipo === key} variant={form.tipo === key ? 'default' : 'outline'} disabled={readOnly} onClick={() => set({ tipo: key })}>
                   {label}
@@ -126,7 +127,7 @@ export function OrderFormDialog({ open, onOpenChange, pedidoId, readOnly, onSave
                     options={jobs.map((j) => ({
                       value: j.id,
                       label: `${j.cliente?.nombre || 'Sin cliente'} — ${j.descripcionTrabajo}`,
-                      hint: `${formatDay(j.fechaProgramada)} · ${j.project ? `Proyecto ${j.project.codigo}` : 'Sin proyecto (solo texto libre)'}`,
+                      hint: `${formatDay(j.fechaProgramada)}, ${j.project ? `proyecto ${j.project.codigo}` : 'sin proyecto (solo material de texto libre)'}`,
                     }))}
                   />
                 </div>
@@ -140,15 +141,16 @@ export function OrderFormDialog({ open, onOpenChange, pedidoId, readOnly, onSave
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label htmlFor="ord-resp">Solicita</Label>
+                <Label htmlFor="ord-resp">Lo recibe</Label>
                 <SearchSelect
                   id="ord-resp"
                   value={form.responsableId}
                   disabled={readOnly}
                   onChange={(responsableId) => set({ responsableId })}
                   searchPlaceholder="Buscar persona…"
-                  options={users.map((u) => ({ value: u.id, label: u.name }))}
+                  options={users.filter((u) => u.role !== ROLES.NONE).map((u) => ({ value: u.id, label: u.name, hint: u.role }))}
                 />
+                <p className="text-xs text-muted-foreground">Lo pide: {order?.solicitante?.name || currentUser?.name} (queda en el historial)</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
@@ -158,7 +160,7 @@ export function OrderFormDialog({ open, onOpenChange, pedidoId, readOnly, onSave
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="ord-fecha">Para el *</Label>
+                  <Label htmlFor="ord-fecha">Se necesita el *</Label>
                   <Input id="ord-fecha" type="date" value={form.fecha} disabled={readOnly} onChange={(e) => set({ fecha: e.target.value })} />
                 </div>
               </div>
