@@ -53,7 +53,7 @@ export class ProjectsController {
   }
 
   @Post(':id/cobros')
-  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONTA)
   @ApiOperation({ summary: 'Register a payment of the project (to be validated)' })
   pay(@Param('id') id: string, @Body() dto: ProjectPaymentDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.projects.registerPayment(id, dto, user, sessionId);

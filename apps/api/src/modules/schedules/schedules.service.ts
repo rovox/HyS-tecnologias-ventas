@@ -232,7 +232,7 @@ export class SchedulesService {
     assertCanMutateSchedules(user);
     await this.get(scheduleId, user);
     const concepto = dto.tipo === 'extra_asistencia' ? 'adicional' : dto.tipo;
-    await this.income.register({ scheduleId }, { concepto, monto: Number(dto.monto), metodo: dto.metodo, nota: dto.nota }, user, sessionId);
+    await this.income.register({ scheduleId }, { concepto, monto: Number(dto.monto), metodo: dto.metodo, nota: dto.nota, recibidoPorId: dto.recibidoPorId }, user, sessionId);
     return this.get(scheduleId, user);
   }
 

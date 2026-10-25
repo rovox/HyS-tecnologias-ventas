@@ -11,11 +11,15 @@ const CONCEPTOS: Record<string, readonly string[]> = {
   transferencia: ['deposito', 'retiro'],
 };
 
-/** por_validar → validado | observado | anulado; observado → por_validar (corrected) | anulado. Validated is final. */
+/**
+ * por_validar → validado | observado | anulado; observado → por_validar (corrected) | anulado; validado → anulado
+ * (Gerencia or Contabilidad, with a reason: it leaves the box). Anulado is final. A validated movement is corrected by
+ * editing it (FIN-03, owner 2026-10-24): every change stays in its history.
+ */
 const MOVEMENT_FLOW: Record<string, readonly string[]> = {
   por_validar: ['validado', 'observado', 'anulado'],
   observado: ['por_validar', 'anulado'],
-  validado: [],
+  validado: ['anulado'],
   anulado: [],
 };
 
@@ -77,10 +81,13 @@ export function checkMovementTransition(
   return { ok: true };
 }
 
-/** A movement can be edited while it is not validated nor cancelled; editing an observed one sends it back to validation. */
-export function editMovementError(movement: { estado: string }): string | null {
-  if (movement.estado === 'validado') return 'Un movimiento validado no se edita: se corrige con un movimiento inverso';
+/**
+ * Who may edit: whoever registered it while it waits (por_validar, observado); Gerencia and Contabilidad also once
+ * validated. An annulled movement is never edited. Editing an observed one sends it back to validation.
+ */
+export function editMovementError(movement: { estado: string }, canManageMoney: boolean): string | null {
   if (movement.estado === 'anulado') return 'El movimiento está anulado';
+  if (movement.estado === 'validado' && !canManageMoney) return 'Solo Gerencia o Contabilidad corrigen un movimiento validado';
   return null;
 }
 
@@ -127,8 +134,60 @@ export function pendingRefund(m: { tipo: string; pagadoPor?: string | null; reem
   return m.tipo === 'egreso' && m.pagadoPor === 'empleado' && !m.reembolsadoAt && m.estado !== 'anulado';
 }
 
-/** The movement that cancels a validated one: same amount, opposite direction. */
-export function reversalOf(m: { tipo: string; concepto: string; cajaId?: string | null; cajaDestinoId?: string | null }) {
-  if (m.tipo === 'transferencia') return { tipo: 'transferencia', concepto: m.concepto, cajaId: m.cajaDestinoId ?? null, cajaDestinoId: m.cajaId ?? null };
-  return { tipo: m.tipo === 'ingreso' ? 'egreso' : 'ingreso', concepto: 'otro', cajaId: m.cajaId ?? null, cajaDestinoId: null };
+/** Incomes registered and not yet validated, per person who holds the money ("por rendir"). Largest first. */
+export function custody<T extends Movement & { recibidoPorId?: string | null }>(movements: T[]) {
+  const byPerson = new Map<string, T[]>();
+  for (const m of movements) {
+    if (m.tipo !== 'ingreso' || m.estado !== 'por_validar' || !m.recibidoPorId) continue;
+    byPerson.set(m.recibidoPorId, [...(byPerson.get(m.recibidoPorId) ?? []), m]);
+  }
+  return [...byPerson.entries()]
+    .map(([userId, rows]) => ({ userId, total: total(rows), cantidad: rows.length, movimientos: rows }))
+    .sort((a, b) => b.total - a.total);
+}
+
+export type Impact =
+  | { tipo: 'caja'; cajaId: string; antes: number; despues: number }
+  | { tipo: 'saldo'; antes: number; despues: number }
+  | { tipo: 'costo'; antes: number; despues: number };
+
+/**
+ * What changes when a movement is validated into a box or annulled, so the person sees it before confirming:
+ * the box balances, and the balance owed or the cost of its project or job.
+ * boxes: validated balance per box; target: the project or job it belongs to (amount, collected, cost).
+ */
+export function movementImpact(
+  m: Movement & { monto: number | string | { toString(): string } },
+  accion: 'validar' | 'anular',
+  ctx: { boxes: Record<string, number>; cajaId?: string | null; target?: { monto: number; cobrado: number; costo: number; cancelled: boolean } | null },
+): Impact[] {
+  const amount = Number(m.monto);
+  const out: Impact[] = [];
+  const box = (cajaId: string | null | undefined, delta: number) => {
+    if (!cajaId) return;
+    const antes = ctx.boxes[cajaId] ?? 0;
+    out.push({ tipo: 'caja', cajaId, antes, despues: cents(antes + delta) });
+  };
+  const sign = m.tipo === 'ingreso' ? 1 : -1;
+  if (accion === 'validar') {
+    if (m.tipo === 'transferencia') {
+      box(m.cajaId, -amount);
+      box(m.cajaDestinoId, amount);
+    } else box(ctx.cajaId ?? m.cajaId, sign * amount);
+    return out;
+  }
+  if (m.estado === 'validado') {
+    if (m.tipo === 'transferencia') {
+      box(m.cajaId, amount);
+      box(m.cajaDestinoId, -amount);
+    } else box(m.cajaId, -sign * amount);
+  }
+  const t = ctx.target;
+  if (t && COUNTED.includes(m.estado)) {
+    if (m.tipo === 'ingreso' && BUDGET_INCOME.includes(m.concepto)) {
+      out.push({ tipo: 'saldo', antes: balanceOf(t.monto, t.cobrado, t.cancelled), despues: balanceOf(t.monto, cents(t.cobrado - amount), t.cancelled) });
+    }
+    if (m.tipo === 'egreso') out.push({ tipo: 'costo', antes: t.costo, despues: cents(t.costo - amount) });
+  }
+  return out;
 }

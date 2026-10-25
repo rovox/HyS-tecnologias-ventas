@@ -70,7 +70,10 @@ export class IncomeService {
     };
   }
 
-  /** Registered as `por_validar`; Gerencia validates it into a cash box (rendición). */
+  /**
+   * Registered as `por_validar`; Gerencia or Contabilidad validate it into a cash box (rendición). `recibidoPorId` is who
+   * holds the money until then (default: who registers it; a técnico only for himself).
+   */
   async register(ref: { projectId?: string; scheduleId?: string }, dto: IncomeDto, user: User, sessionId?: string) {
     const target = await this.target(ref);
     const allowed = isAdmin(user) || isVentas(user) || isConta(user) || (isTec(user) && target.technicians.includes(user.id));
@@ -79,6 +82,12 @@ export class IncomeService {
       movementError({ tipo: 'ingreso', concepto: dto.concepto, monto: dto.monto }) ||
       incomeError(target, dto.concepto, dto.monto);
     if (error) throw new BadRequestException(error);
+    const recibidoPorId = dto.recibidoPorId || user.id;
+    if (recibidoPorId !== user.id) {
+      if (isTec(user)) throw new ForbiddenException('Registra solo el dinero que recibiste tú');
+      const person = await this.prisma.user.findUnique({ where: { id: recibidoPorId }, select: { active: true } });
+      if (!person?.active) throw new BadRequestException('La persona que recibió el dinero no existe o está inactiva');
+    }
     const row = await this.prisma.cashMovement.create({
       data: {
         tipo: 'ingreso',
@@ -91,6 +100,7 @@ export class IncomeService {
         clienteId: target.clienteId,
         sucursalId: target.sucursalId,
         registradoPorId: user.id,
+        recibidoPorId,
       },
       include: MOVEMENT_DETAIL,
     });

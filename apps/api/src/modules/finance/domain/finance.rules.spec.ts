@@ -7,8 +7,9 @@ import {
   incomeError,
   incomeOf,
   movementError,
+  custody,
+  movementImpact,
   pendingRefund,
-  reversalOf,
 } from './finance.rules';
 
 const m = (tipo: string, concepto: string, monto: number, estado = 'validado', extra = {}) => ({ tipo, concepto, monto, estado, ...extra });
@@ -23,14 +24,22 @@ describe('finance rules', () => {
     expect(movementError({ tipo: 'transferencia', concepto: 'deposito', monto: 50, cajaId: 'a', cajaDestinoId: 'b' })).toBeNull();
   });
 
-  it('validates into a cash box; observes and cancels with a reason; validated is final', () => {
+  it('validates into a cash box; observes and cancels with a reason; a validated one can only be annulled', () => {
     expect(checkMovementTransition({ estado: 'por_validar', tipo: 'ingreso' }, 'validado', {})).toEqual({ ok: false, reason: 'Elige la caja donde queda el dinero' });
     expect(checkMovementTransition({ estado: 'por_validar', tipo: 'ingreso' }, 'validado', { cajaId: 'c1' })).toEqual({ ok: true });
     expect(checkMovementTransition({ estado: 'por_validar', tipo: 'ingreso' }, 'observado', {})).toEqual({ ok: false, reason: 'Indica el motivo' });
     expect(checkMovementTransition({ estado: 'observado', tipo: 'ingreso' }, 'por_validar', {})).toEqual({ ok: true });
-    expect(checkMovementTransition({ estado: 'validado', tipo: 'ingreso' }, 'anulado', { motivo: 'x' }).ok).toBe(false);
-    expect(editMovementError({ estado: 'validado' })).toMatch(/movimiento inverso/);
-    expect(editMovementError({ estado: 'observado' })).toBeNull();
+    expect(checkMovementTransition({ estado: 'validado', tipo: 'ingreso' }, 'anulado', { motivo: 'x' }).ok).toBe(true);
+    expect(checkMovementTransition({ estado: 'validado', tipo: 'ingreso' }, 'anulado', {}).ok).toBe(false);
+    expect(checkMovementTransition({ estado: 'validado', tipo: 'ingreso' }, 'observado', { motivo: 'x' }).ok).toBe(false);
+    expect(checkMovementTransition({ estado: 'anulado', tipo: 'ingreso' }, 'por_validar', {}).ok).toBe(false);
+  });
+
+  it('lets the author edit while it waits, and Gerencia or Contabilidad also once validated (FIN-03)', () => {
+    expect(editMovementError({ estado: 'observado' }, false)).toBeNull();
+    expect(editMovementError({ estado: 'validado' }, false)).toMatch(/Gerencia o Contabilidad/);
+    expect(editMovementError({ estado: 'validado' }, true)).toBeNull();
+    expect(editMovementError({ estado: 'anulado' }, true)).toMatch(/anulado/);
   });
 
   it('counts registered and validated advances and payments; observed or cancelled ones do not count', () => {
@@ -59,11 +68,38 @@ describe('finance rules', () => {
     expect(cashBoxBalance('c2', rows)).toBe(400);
   });
 
-  it('tracks refunds owed to employees and reverses validated movements', () => {
+  it('tracks refunds owed to employees', () => {
     expect(pendingRefund({ tipo: 'egreso', pagadoPor: 'empleado', estado: 'validado' })).toBe(true);
     expect(pendingRefund({ tipo: 'egreso', pagadoPor: 'empleado', estado: 'validado', reembolsadoAt: new Date() })).toBe(false);
     expect(pendingRefund({ tipo: 'egreso', pagadoPor: 'empresa', estado: 'validado' })).toBe(false);
-    expect(reversalOf({ tipo: 'ingreso', concepto: 'cobro', cajaId: 'c1' })).toEqual({ tipo: 'egreso', concepto: 'otro', cajaId: 'c1', cajaDestinoId: null });
-    expect(reversalOf({ tipo: 'transferencia', concepto: 'deposito', cajaId: 'a', cajaDestinoId: 'b' })).toEqual({ tipo: 'transferencia', concepto: 'deposito', cajaId: 'b', cajaDestinoId: 'a' });
+  });
+
+  it('groups the money each person holds until it is validated (por rendir)', () => {
+    const rows = [
+      m('ingreso', 'cobro', 300, 'por_validar', { recibidoPorId: 'tec' }),
+      m('ingreso', 'adelanto', 200, 'por_validar', { recibidoPorId: 'tec' }),
+      m('ingreso', 'cobro', 900, 'por_validar', { recibidoPorId: 'ven' }),
+      m('ingreso', 'cobro', 50, 'validado', { recibidoPorId: 'tec' }),
+      m('egreso', 'material', 70, 'por_validar', { recibidoPorId: 'tec' }),
+    ];
+    expect(custody(rows).map(({ userId, total, cantidad }) => ({ userId, total, cantidad }))).toEqual([
+      { userId: 'ven', total: 900, cantidad: 1 },
+      { userId: 'tec', total: 500, cantidad: 2 },
+    ]);
+  });
+
+  it('tells what a validation or an annulment changes: boxes, balance owed, cost', () => {
+    const boxes = { c1: 5200, c2: 100 };
+    const target = { monto: 3000, cobrado: 1000, costo: 400, cancelled: false };
+    expect(movementImpact(m('ingreso', 'cobro', 500, 'por_validar'), 'validar', { boxes, cajaId: 'c1' })).toEqual([{ tipo: 'caja', cajaId: 'c1', antes: 5200, despues: 5700 }]);
+    expect(movementImpact(m('ingreso', 'cobro', 500, 'validado', { cajaId: 'c1' }), 'anular', { boxes, target })).toEqual([
+      { tipo: 'caja', cajaId: 'c1', antes: 5200, despues: 4700 },
+      { tipo: 'saldo', antes: 2000, despues: 2500 },
+    ]);
+    expect(movementImpact(m('egreso', 'material', 100, 'por_validar'), 'anular', { boxes, target })).toEqual([{ tipo: 'costo', antes: 400, despues: 300 }]);
+    expect(movementImpact(m('transferencia', 'deposito', 50, 'validado', { cajaId: 'c1', cajaDestinoId: 'c2' }), 'anular', { boxes })).toEqual([
+      { tipo: 'caja', cajaId: 'c1', antes: 5200, despues: 5250 },
+      { tipo: 'caja', cajaId: 'c2', antes: 100, despues: 50 },
+    ]);
   });
 });

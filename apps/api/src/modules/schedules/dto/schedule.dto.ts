@@ -214,4 +214,10 @@ export class CreateSchedulePaymentDto {
   @IsString()
   @Transform(emptyToUndef)
   quotationId?: string;
+
+  @ApiPropertyOptional({ description: 'Who received the money (default: who registers it)' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  recibidoPorId?: string;
 }
