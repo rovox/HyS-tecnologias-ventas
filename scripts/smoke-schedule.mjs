@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Browser smoke for the cronograma (SCH-02): ventas schedules a stand-alone job for the técnico → the técnico sees it
-// live, starts it and takes a payment → ventas sees the change live and reschedules it → the técnico finishes it;
-// month and list views render; a project job shows that its money is the project's.
+// Browser smoke for the cronograma (SCH-02, SCH-03): ventas schedules a stand-alone job without técnico (red "Sin
+// técnico" button) and assigns him from the job panel → the técnico sees it live, starts it and takes a payment →
+// ventas sees the change live and moves it with "Editar trabajo" → the técnico finishes it; month and list views
+// render; a project job shows that its money is the project's.
 //
 //   node scripts/smoke-schedule.mjs [--web http://localhost:3000] [--api http://localhost:3001/api] [--shots dir]
 
@@ -53,7 +54,7 @@ const sheet = (page) => page.getByRole('dialog').filter({ hasText: desc });
 
 await ventas.page.goto(`${WEB}/schedule`, { waitUntil: 'networkidle' });
 await tec.page.goto(`${WEB}/schedule`, { waitUntil: 'networkidle' });
-await step('ventas schedules a stand-alone job for the técnico', async () => {
+await step('ventas schedules a stand-alone job without técnico', async () => {
   const p = ventas.page;
   await p.getByRole('button', { name: 'Nuevo trabajo' }).click(T);
   await p.getByRole('combobox').filter({ hasText: 'Selecciona un cliente' }).click(T);
@@ -62,13 +63,19 @@ await step('ventas schedules a stand-alone job for the técnico', async () => {
   await p.getByRole('radio', { name: 'Seguridad electrónica' }).click(T);
   await p.getByLabel('Trabajo *').fill(desc);
   await p.getByLabel('Horario').fill('10:00–12:00');
-  await p.getByLabel('Técnico').click(T); // searchable combobox (SearchSelect)
-  await p.getByPlaceholder('Buscar técnico…').fill(tec.user.name);
-  await p.getByRole('option', { name: tec.user.name }).click(T);
   await p.getByLabel('Monto a cobrar (Bs)').fill('500');
   await p.getByRole('button', { name: 'Programar' }).click(T);
   await p.getByText('Trabajo programado').waitFor(T);
   await sheet(p).waitFor(T);
+  await p.locator('button', { hasText: /Sin técnico \(\d+\)/ }).waitFor(T); // behind the open panel (aria-hidden)
+  if (SHOTS) await p.screenshot({ path: `${SHOTS}/schedule-unassigned.png` });
+});
+await step('ventas assigns the técnico from the job panel', async () => {
+  const p = ventas.page;
+  await sheet(p).getByRole('combobox').filter({ hasText: 'Asignar técnico' }).click(T); // searchable combobox (SearchSelect)
+  await p.getByPlaceholder('Buscar técnico…').fill(tec.user.name);
+  await p.getByRole('option', { name: tec.user.name }).click(T);
+  await p.getByText(`Asignado a ${tec.user.name}`).waitFor(T);
   if (SHOTS) await p.screenshot({ path: `${SHOTS}/schedule-detail.png` });
 });
 await step('the técnico sees it live on his phone and starts it', async () => {
@@ -88,15 +95,18 @@ await step('the técnico takes a payment', async () => {
   await p.getByText('Cobro de Bs 200,00 registrado: queda por validar').waitFor(T);
   await sheet(ventas.page).getByText('Bs 300,00').waitFor({ timeout: 4000 });
 });
-await step('ventas reschedules it', async () => {
+await step('ventas moves it to the next day with "Editar trabajo"', async () => {
   const p = ventas.page;
-  const date = sheet(p).getByLabel('Fecha', { exact: true });
+  await sheet(p).getByRole('button', { name: 'Editar trabajo' }).click(T);
+  const dlg = p.getByRole('dialog').filter({ hasText: 'Guardar cambios' });
+  const date = dlg.getByLabel('Fecha *');
   const value = await date.inputValue();
   const next = new Date(`${value}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + 1);
   await date.fill(next.toISOString().slice(0, 10));
-  await sheet(p).getByRole('button', { name: 'Guardar', exact: true }).click(T);
-  await p.getByText('Trabajo reprogramado').waitFor(T);
+  if (SHOTS) await p.screenshot({ path: `${SHOTS}/schedule-edit.png` });
+  await dlg.getByRole('button', { name: 'Guardar cambios' }).click(T);
+  await p.getByText('Trabajo actualizado').waitFor(T);
 });
 await step('the técnico finishes it', async () => {
   const p = tec.page;
@@ -118,7 +128,7 @@ await step('a project job says its money is the project\'s', async () => {
   const p = ventas.page;
   const row = p.locator('tr', { hasText: 'PRY-' }).first();
   await row.click(T);
-  await p.getByText('el dinero es del proyecto').waitFor(T);
+  await p.getByText('Los cobros van al proyecto').waitFor(T);
 });
 await step('week view (desktop) for the screenshot', async () => {
   const p = ventas.page;

@@ -465,6 +465,18 @@ describe('hs-erp API (e2e)', () => {
       expect(Number((await http().get(`/api/schedules/${job.id}`).set(ventas()).expect(200)).body.saldo)).toBe(0);
     });
 
+    it('edits a job: assigns and unassigns the técnico, clears place and link; the técnico cannot reassign (SCH-03)', async () => {
+      const job = (await http().post('/api/schedules').set(ventas())
+        .send({ categoriaId: 'cableado_estructurado', clienteId: 'cli_andina', sucursalId: 'suc_central', descripcionTrabajo: 'Revisión de puntos de red', fechaProgramada: '2026-11-04', lugar: 'Av. Blanco Galindo km 2', mapsLink: 'https://maps.app.goo.gl/abc' })
+        .expect(201)).body;
+      expect(job.tecnicoId).toBeNull();
+      const assigned = (await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ tecnicoId: tecId, horario: '09:00–11:00' }).expect(200)).body;
+      expect(assigned).toMatchObject({ tecnicoId: tecId, horario: '09:00–11:00' });
+      await http().patch(`/api/schedules/${job.id}`).set(tec()).send({ tecnicoId: '' }).expect(403);
+      const cleared = (await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ tecnicoId: '', lugar: '', mapsLink: '', horario: '' }).expect(200)).body;
+      expect(cleared).toMatchObject({ tecnicoId: null, lugar: '', mapsLink: '', horario: null });
+    });
+
     it('validates into a box (Gerencia only); a validated movement is edited with history or annulled, never reversed (FIN-03)', async () => {
       const pending = (await http().get('/api/finance/movements').query({ estado: 'por_validar', tipo: 'ingreso' }).set(ventas()).expect(200)).body;
       const m = pending[0];

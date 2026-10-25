@@ -30,10 +30,11 @@ export const JOB_FIELDS = {
   fechaProgramada: 'Fecha',
   horario: 'Horario',
   observaciones: 'Notas',
+  vendedorId: 'Vendedor',
+  categoriaId: 'Categoría',
   lugar: 'Lugar',
+  mapsLink: 'Link de ubicación',
   descripcionTrabajo: 'Trabajo',
   monto: 'Monto',
   fechaFinalizacion: 'Terminado el',
 };
-
-export const formatJobValue = (field, value) => (field === 'estado' ? JOB_STATE[value]?.label : undefined);

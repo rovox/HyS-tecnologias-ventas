@@ -3,6 +3,8 @@ import { Transform, Type } from 'class-transformer';
 import { IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
+/** On update, '' (or null) clears the field: "Sin asignar", no place, no link. */
+const clearable = ({ value }: { value: unknown }) => (value === null ? '' : value);
 
 export class CreateScheduleDto {
   @ApiPropertyOptional({ description: 'One of the 3 divisions; taken from the quotation when quotationId is set' })
@@ -97,7 +99,7 @@ export class UpdateScheduleDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   lugar?: string;
 
   @ApiPropertyOptional()
@@ -129,31 +131,31 @@ export class UpdateScheduleDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   horario?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   vendedorId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   tecnicoId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   observaciones?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   mapsLink?: string;
 
   @ApiPropertyOptional({ enum: ['programado', 'en_proceso', 'terminado', 'cancelado'] })
