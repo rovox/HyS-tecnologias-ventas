@@ -77,7 +77,7 @@ export default function QuotationsPage() {
         view={view}
         onViewChange={(v) => setParams((p) => { const n = new URLSearchParams(p); n.set('view', v); return n; }, { replace: true })}
         onExport={() => downloadCsv(`cotizaciones-${vista}.csv`, quotationCsv, rows)}
-        meta={`${rows.length} · ${formatBs(total)}`}
+        meta={`${rows.length} cotizaciones — total ${formatBs(total)}`}
       />
       <div className="px-4 py-4 sm:px-6">
         {view === 'list' ? (

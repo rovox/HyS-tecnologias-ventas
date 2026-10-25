@@ -1,62 +1,32 @@
 import { useState } from 'react';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientOptions } from '@/features/catalogs';
+import { SearchSelect } from '@/shared/views';
 import { ClientFormDialog } from './ClientFormDialog.jsx';
-import { cn } from '@/lib/utils';
 
 /** Searchable client select with "Nuevo cliente" (creates it and selects it). */
-export function ClientPicker({ value, onChange, disabled }) {
-  const [open, setOpen] = useState(false);
+export function ClientPicker({ id, value, onChange, disabled }) {
   const [creating, setCreating] = useState(false);
   const { data: clients = [], isLoading } = useClientOptions();
-  const selected = clients.find((c) => c.id === value);
 
   return (
     <div className="flex gap-2">
-      <Popover modal open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button type="button" variant="outline" role="combobox" disabled={disabled} className="flex-1 justify-between font-normal">
-            <span className={cn('truncate', !selected && 'text-muted-foreground')}>
-              {selected?.nombre || (isLoading ? 'Cargando…' : 'Selecciona un cliente')}
-            </span>
-            <ChevronsUpDown className="opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Buscar cliente…" />
-            <CommandList>
-              <CommandEmpty>Sin resultados</CommandEmpty>
-              <CommandGroup>
-                {clients.map((c) => (
-                  <CommandItem
-                    key={c.id}
-                    value={`${c.nombre} ${c.id}`}
-                    onSelect={() => {
-                      onChange(c.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check className={cn(value === c.id ? 'opacity-100' : 'opacity-0')} />
-                    {c.nombre}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      <Button type="button" variant="outline" size="icon" title="Nuevo cliente" disabled={disabled} onClick={() => setCreating(true)}>
+      <SearchSelect
+        id={id}
+        className="flex-1"
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        loading={isLoading}
+        placeholder="Selecciona un cliente"
+        searchPlaceholder="Buscar cliente…"
+        options={clients.map((c) => ({ value: c.id, label: c.nombre, hint: c.direccion || undefined, keywords: [c.contacto, c.telefono].filter(Boolean).join(' ') }))}
+      />
+      <Button type="button" variant="outline" size="icon" title="Nuevo cliente" aria-label="Nuevo cliente" className="h-9 min-h-9 w-9 min-w-9" disabled={disabled} onClick={() => setCreating(true)}>
         <Plus />
       </Button>
-      <ClientFormDialog
-        open={creating}
-        onOpenChange={setCreating}
-        onSaved={(client) => client?.id && onChange(client.id)}
-      />
+      <ClientFormDialog open={creating} onOpenChange={setCreating} onSaved={(client) => client?.id && onChange(client.id)} />
     </div>
   );
 }

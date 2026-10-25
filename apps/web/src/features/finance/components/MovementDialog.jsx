@@ -9,6 +9,7 @@ import { useProjects } from '@/features/projects';
 import { notify } from '@/shared/lib/notify.js';
 import { useCashBoxes, useCreateMovement, useUpdateMovement } from '../api.js';
 import { CONCEPTOS } from '../constants.js';
+import { SearchSelect } from '@/shared/views';
 
 const TITLES = { egreso: 'Registrar gasto', ingreso: 'Otro ingreso', transferencia: 'Transferencia entre cajas' };
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
@@ -117,12 +118,14 @@ export function MovementDialog({ tipo, movement, open, onOpenChange }) {
           {kind === 'egreso' && !movement && isVentasLevel() && (
             <div className="space-y-1.5">
               <Label htmlFor="mv-proyecto">Proyecto (suma a su costo)</Label>
-              <select id="mv-proyecto" className={select} value={form.projectId} onChange={(e) => set({ projectId: e.target.value })}>
-                <option value="">Gasto operativo (sin proyecto)</option>
-                {projects.filter((p) => !['cerrado', 'anulado'].includes(p.estado)).map((p) => (
-                  <option key={p.id} value={p.id}>{p.codigo} · {p.titulo}</option>
-                ))}
-              </select>
+              <SearchSelect
+                id="mv-proyecto"
+                value={form.projectId}
+                onChange={(projectId) => set({ projectId })}
+                emptyOption="Gasto operativo (sin proyecto)"
+                searchPlaceholder="Buscar código, título o cliente…"
+                options={projects.filter((p) => !['cerrado', 'anulado'].includes(p.estado)).map((p) => ({ value: p.id, label: `${p.codigo} — ${p.titulo}`, hint: p.cliente?.nombre }))}
+              />
             </div>
           )}
           {kind === 'transferencia' && (

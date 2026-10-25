@@ -103,7 +103,7 @@ export default function InventoryPage() {
     );
 
   const columns = [
-    { key: 'producto', header: 'Producto', cell: (p) => <div><p className="font-medium">{p.nombre}</p><p className="text-xs text-muted-foreground">{p.codigo}{p.marca ? ` · ${p.marca}` : ''}</p></div> },
+    { key: 'producto', header: 'Producto', cell: (p) => <div><p className="font-medium">{p.nombre}</p><p className="text-xs text-muted-foreground">{p.codigo}{p.marca ? `, marca ${p.marca}` : ''}</p></div> },
     { key: 'categoria', header: 'Categoría', cell: (p) => <div><p>{p.categoria?.label}</p><p className="text-xs text-muted-foreground">{TIPO[p.tipo]}</p></div> },
     ...sucursales.map((s) => ({ key: s.id, header: s.nombre, align: 'right', cell: (p) => (p.tipo === 'servicio' ? '—' : p.stock[s.id] ?? 0) })),
     { key: 'total', header: 'Total', align: 'right', cell: (p) => (p.tipo === 'servicio' ? '—' : <span className={cn('font-semibold', p.stockBajo && 'text-destructive')} title={p.stockBajo ? `Mínimo ${Number(p.stockMinimo)}` : undefined}>{p.stockTotal} {p.unidad}</span>) },
@@ -139,7 +139,7 @@ export default function InventoryPage() {
         searchPlaceholder="Buscar por código, nombre, marca…"
         {...(vista === 'productos' ? list.panel : moves.panel)}
         onExport={vista === 'productos' ? () => downloadCsv('inventario.csv', csv, list.rows) : undefined}
-        meta={vista === 'productos' ? `${list.rows.length} productos${low ? ` · ${low} con stock bajo` : ''}` : `${moves.rows.length} movimientos`}
+        meta={vista === 'productos' ? `${list.rows.length} productos${low ? `, ${low} con stock bajo` : ''}` : `${moves.rows.length} movimientos`}
       />
       <div className="px-4 py-4 sm:px-6">
         {vista === 'productos' ? (
@@ -153,7 +153,7 @@ export default function InventoryPage() {
               <div className="flex items-start justify-between gap-2 text-sm">
                 <div className="min-w-0">
                   <p className="font-medium">{p.nombre}</p>
-                  <p className="text-xs text-muted-foreground">{p.codigo} · {sucursales.map((s) => `${s.nombre} ${p.stock[s.id] ?? 0}`).join(' · ')}</p>
+                  <p className="text-xs text-muted-foreground">{p.codigo} — {sucursales.map((s) => `${s.nombre}: ${p.stock[s.id] ?? 0}`).join(', ')}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   {p.tipo !== 'servicio' && <span className={cn('font-semibold', p.stockBajo && 'text-destructive')}>{p.stockTotal}</span>}

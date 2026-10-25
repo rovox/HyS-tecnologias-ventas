@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, HandCoins, MapPin } from 'lucide-react';
+import { HandCoins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
 import { useUserDirectory } from '@/features/catalogs';
-import { Field, FieldGrid, StatusBadge, useConfirm } from '@/shared/views';
+import { Field, FieldGrid, LocationLink, SearchSelect, StatusBadge, useConfirm } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { useJob, useUpdateJob } from '../api.js';
@@ -83,10 +83,7 @@ export function JobDetailSheet({ jobId, onClose }) {
               <Field label="Fecha">{formatDay(job.fechaProgramada)}{job.horario ? ` · ${job.horario}` : ''}</Field>
               <Field label="Técnico">{job.tecnico?.name || 'Sin asignar'}</Field>
               <Field label="Lugar">
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-4 w-4 shrink-0" /> {job.lugar || '—'}
-                  {job.mapsLink && <a href={job.mapsLink} target="_blank" rel="noreferrer" className="text-primary" aria-label="Abrir en el mapa"><ExternalLink className="h-4 w-4" /></a>}
-                </span>
+                <LocationLink address={job.lugar} link={job.mapsLink} />
               </Field>
               {job.project ? (
                 <Field label="Proyecto">
@@ -113,10 +110,13 @@ export function JobDetailSheet({ jobId, onClose }) {
                   <Input type="date" aria-label="Fecha" value={plan.fecha} onChange={(e) => setPlan({ ...plan, fecha: e.target.value })} />
                   <Input placeholder="09:00–12:00" aria-label="Horario" value={plan.horario} onChange={(e) => setPlan({ ...plan, horario: e.target.value })} />
                 </div>
-                <select aria-label="Técnico" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={plan.tecnicoId} onChange={(e) => setPlan({ ...plan, tecnicoId: e.target.value })}>
-                  <option value="">Sin asignar</option>
-                  {users.filter((u) => u.role === TECNICO).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                <SearchSelect
+                  value={plan.tecnicoId}
+                  onChange={(tecnicoId) => setPlan({ ...plan, tecnicoId })}
+                  emptyOption="Sin asignar"
+                  searchPlaceholder="Buscar técnico…"
+                  options={users.filter((u) => u.role === TECNICO).map((u) => ({ value: u.id, label: u.name }))}
+                />
                 <Button size="sm" disabled={!planChanged || update.isPending} onClick={() => save({ fechaProgramada: plan.fecha, horario: plan.horario, tecnicoId: plan.tecnicoId }, 'Trabajo reprogramado')}>
                   Guardar
                 </Button>

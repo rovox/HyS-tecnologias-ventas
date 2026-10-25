@@ -63,7 +63,7 @@ export function Chatter({ entity, id, fieldLabels = {}, formatValue = () => unde
                 <span className="font-medium">{row.user?.name || 'Sistema'}</span>{' '}
                 <span className="text-muted-foreground">{verbOf(row.action)}</span>{' '}
                 <time className="text-xs text-muted-foreground" title={formatDateTime(row.at)}>
-                  · {formatRelative(row.at)}
+                  {formatRelative(row.at)}
                 </time>
               </p>
               {row.detalle && (

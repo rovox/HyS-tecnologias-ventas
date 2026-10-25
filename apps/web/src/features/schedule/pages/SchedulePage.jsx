@@ -25,7 +25,7 @@ const VIEWS = [
 ];
 
 const listColumns = [
-  { key: 'fecha', header: 'Fecha', cell: (j) => `${formatDay(j.fechaProgramada)}${j.horario ? ` · ${j.horario}` : ''}` },
+  { key: 'fecha', header: 'Fecha', cell: (j) => `${formatDay(j.fechaProgramada)}${j.horario ? `, ${j.horario}` : ''}` },
   { key: 'cliente', header: 'Cliente', cell: (j) => <div><p className="font-medium">{j.cliente?.nombre}</p><p className="text-xs text-muted-foreground">{j.descripcionTrabajo}</p></div> },
   { key: 'categoria', header: 'Categoría', cell: (j) => <DivisionTag id={j.categoriaId} /> },
   { key: 'tecnico', header: 'Técnico', cell: (j) => j.tecnico?.name || 'Sin asignar' },

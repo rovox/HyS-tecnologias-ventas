@@ -37,7 +37,7 @@ export function PaymentDialog({ project, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Registrar cobro · {project.codigo}</DialogTitle>
+          <DialogTitle>Registrar cobro en {project.codigo}</DialogTitle>
           <DialogDescription>Saldo pendiente: {formatBs(project.saldo)} de {formatBs(project.montoOficial)}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">

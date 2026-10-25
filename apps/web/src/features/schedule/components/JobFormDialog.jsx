@@ -10,6 +10,7 @@ import { notify } from '@/shared/lib/notify.js';
 import { cn } from '@/lib/utils';
 import { useCreateJob } from '../api.js';
 import { today } from '../dates.js';
+import { LocationField, SearchSelect } from '@/shared/views';
 
 const TECNICO = 'SEGURIDAD ELECTRÓNICA';
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
@@ -22,6 +23,7 @@ const empty = (user, day) => ({
   horario: '',
   tecnicoId: '',
   lugar: '',
+  mapsLink: '',
   monto: '',
   sucursalId: user?.sucursalId || '',
 });
@@ -56,6 +58,7 @@ export function JobFormDialog({ open, onOpenChange, day, onCreated }) {
         tecnicoId: form.tecnicoId || undefined,
         horario: form.horario || undefined,
         lugar: form.lugar || undefined,
+        mapsLink: form.mapsLink || undefined,
       });
       notify.success('Trabajo programado');
       onOpenChange(false);
@@ -105,10 +108,14 @@ export function JobFormDialog({ open, onOpenChange, day, onCreated }) {
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label htmlFor="job-new-tec">Técnico</Label>
-              <select id="job-new-tec" className={select} value={form.tecnicoId} onChange={(e) => set({ tecnicoId: e.target.value })}>
-                <option value="">Sin asignar</option>
-                {users.filter((u) => u.role === TECNICO).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
+              <SearchSelect
+                id="job-new-tec"
+                value={form.tecnicoId}
+                onChange={(tecnicoId) => set({ tecnicoId })}
+                emptyOption="Sin asignar"
+                searchPlaceholder="Buscar técnico…"
+                options={users.filter((u) => u.role === TECNICO).map((u) => ({ value: u.id, label: u.name }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="job-new-suc">Sucursal *</Label>
@@ -118,15 +125,16 @@ export function JobFormDialog({ open, onOpenChange, day, onCreated }) {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="job-new-lugar">Lugar</Label>
-              <Input id="job-new-lugar" placeholder="Dirección del cliente" value={form.lugar} onChange={(e) => set({ lugar: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="job-new-monto">Monto a cobrar (Bs)</Label>
-              <Input id="job-new-monto" type="number" min="0" step="0.01" value={form.monto} onChange={(e) => set({ monto: e.target.value })} />
-            </div>
+          <LocationField
+            id="job-new-lugar"
+            address={form.lugar}
+            link={form.mapsLink}
+            placeholder="Dirección del cliente"
+            onChange={({ address, link }) => set({ lugar: address, mapsLink: link })}
+          />
+          <div className="space-y-1.5">
+            <Label htmlFor="job-new-monto">Monto a cobrar (Bs)</Label>
+            <Input id="job-new-monto" type="number" min="0" step="0.01" value={form.monto} onChange={(e) => set({ monto: e.target.value })} />
           </div>
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

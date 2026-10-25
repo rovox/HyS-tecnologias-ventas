@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useUserDirectory } from '@/features/catalogs';
 import { notify } from '@/shared/lib/notify.js';
 import { useAddProjectJob } from '../api.js';
+import { SearchSelect } from '@/shared/views';
 
 const TECNICO = 'SEGURIDAD ELECTRÓNICA';
 const EMPTY = { descripcionTrabajo: '', fechaProgramada: '', horario: '', tecnicoId: '', lugar: '' };
@@ -37,7 +38,7 @@ export function JobDialog({ project, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuevo trabajo · {project.codigo}</DialogTitle>
+          <DialogTitle>Nuevo trabajo en {project.codigo}</DialogTitle>
           <DialogDescription>Aparece en el cronograma con la categoría del proyecto ({project.categoria?.label}).</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
@@ -57,10 +58,14 @@ export function JobDialog({ project, open, onOpenChange }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="job-tec">Técnico</Label>
-            <select id="job-tec" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.tecnicoId} onChange={(e) => set({ tecnicoId: e.target.value })}>
-              <option value="">Sin asignar</option>
-              {users.filter((u) => u.role === TECNICO).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            <SearchSelect
+              id="job-tec"
+              value={form.tecnicoId}
+              onChange={(tecnicoId) => set({ tecnicoId })}
+              emptyOption="Sin asignar"
+              searchPlaceholder="Buscar técnico…"
+              options={users.filter((u) => u.role === TECNICO).map((u) => ({ value: u.id, label: u.name }))}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="job-lugar">Lugar</Label>

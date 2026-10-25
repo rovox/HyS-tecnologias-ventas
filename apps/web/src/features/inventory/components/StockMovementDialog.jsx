@@ -7,6 +7,7 @@ import { useSucursales } from '@/features/catalogs';
 import { useProjects } from '@/features/projects';
 import { notify } from '@/shared/lib/notify.js';
 import { useRegisterStockMovement } from '../api.js';
+import { SearchSelect } from '@/shared/views';
 
 export const MOVEMENT = {
   entrada: { title: 'Entrada (compra)', done: 'Entrada registrada' },
@@ -60,7 +61,7 @@ export function StockMovementDialog({ product, tipo, onClose }) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{MOVEMENT[tipo].title}</DialogTitle>
-          <DialogDescription>{product.codigo} · {product.nombre}</DialogDescription>
+          <DialogDescription>{product.nombre} (código {product.codigo})</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           {tipo === 'ajuste' && (
@@ -103,10 +104,14 @@ export function StockMovementDialog({ product, tipo, onClose }) {
           {tipo === 'salida_proyecto' && (
             <div className="space-y-1.5">
               <Label htmlFor="sm-proyecto">Proyecto *</Label>
-              <select id="sm-proyecto" className={select} value={form.projectId} onChange={set('projectId')}>
-                <option value="">Elige el proyecto</option>
-                {projects.filter((p) => !['cerrado', 'anulado'].includes(p.estado)).map((p) => <option key={p.id} value={p.id}>{p.codigo} · {p.titulo}</option>)}
-              </select>
+              <SearchSelect
+                id="sm-proyecto"
+                value={form.projectId}
+                onChange={(projectId) => setForm((f) => ({ ...f, projectId }))}
+                placeholder="Elige el proyecto"
+                searchPlaceholder="Buscar código, título o cliente…"
+                options={projects.filter((p) => !['cerrado', 'anulado'].includes(p.estado)).map((p) => ({ value: p.id, label: `${p.codigo} — ${p.titulo}`, hint: p.cliente?.nombre }))}
+              />
             </div>
           )}
           {tipo === 'ajuste' && (

@@ -62,7 +62,9 @@ await step('ventas schedules a stand-alone job for the técnico', async () => {
   await p.getByRole('radio', { name: 'Seguridad electrónica' }).click(T);
   await p.getByLabel('Trabajo *').fill(desc);
   await p.getByLabel('Horario').fill('10:00–12:00');
-  await p.getByLabel('Técnico').selectOption({ label: tec.user.name });
+  await p.getByLabel('Técnico').click(T); // searchable combobox (SearchSelect)
+  await p.getByPlaceholder('Buscar técnico…').fill(tec.user.name);
+  await p.getByRole('option', { name: tec.user.name }).click(T);
   await p.getByLabel('Monto a cobrar (Bs)').fill('500');
   await p.getByRole('button', { name: 'Programar' }).click(T);
   await p.getByText('Trabajo programado').waitFor(T);

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useSucursales } from '@/features/catalogs';
-import { ControlPanel, ListView, useListControls } from '@/shared/views';
+import { ControlPanel, ListView, Money, useListControls } from '@/shared/views';
 import { downloadCsv } from '@/shared/lib/csv.js';
 import { formatBs } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
@@ -18,8 +18,8 @@ const columns = [
   { key: 'nombre', header: 'Cliente', cell: (c) => <div><p className="font-medium">{c.nombre}</p>{c.tipo && <p className="text-xs text-muted-foreground">{c.tipo}</p>}</div> },
   { key: 'contacto', header: 'Contacto', cell: (c) => <div><p>{c.contacto || '—'}</p>{c.telefono && <p className="text-xs text-muted-foreground">{c.telefono}</p>}</div> },
   { key: 'sucursal', header: 'Sucursal', cell: (c) => c.sucursal?.nombre },
-  { key: 'curso', header: 'En curso', cell: (c) => (c.proyectosEnCurso + c.trabajosEnCurso ? `${c.proyectosEnCurso} proyectos · ${c.trabajosEnCurso} trabajos` : '—') },
-  { key: 'saldo', header: 'Saldo pendiente', align: 'right', cell: (c) => <span className={c.saldoPendiente > 0 ? 'font-medium text-destructive' : 'text-muted-foreground'}>{formatBs(c.saldoPendiente)}</span>, total: owed },
+  { key: 'curso', header: 'En curso', cell: (c) => (c.proyectosEnCurso + c.trabajosEnCurso ? `${c.proyectosEnCurso} proyectos, ${c.trabajosEnCurso} trabajos` : '—') },
+  { key: 'saldo', header: 'Saldo pendiente', align: 'right', cell: (c) => <Money value={c.saldoPendiente} kind="owed" />, total: owed },
 ];
 
 const csv = [
@@ -80,9 +80,9 @@ export default function ClientsPage() {
             <div className="flex items-start justify-between gap-2 text-sm">
               <div className="min-w-0">
                 <p className="font-medium">{c.nombre}</p>
-                <p className="text-xs text-muted-foreground">{[c.contacto, c.telefono].filter(Boolean).join(' · ') || c.sucursal?.nombre}</p>
+                <p className="text-xs text-muted-foreground">{[c.contacto, c.telefono].filter(Boolean).join(', ') || c.sucursal?.nombre}</p>
               </div>
-              {c.saldoPendiente > 0 && <span className="shrink-0 font-semibold text-destructive">{formatBs(c.saldoPendiente)}</span>}
+              {c.saldoPendiente > 0 && <Money className="shrink-0" value={c.saldoPendiente} kind="owed" />}
             </div>
           )}
         />
