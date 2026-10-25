@@ -58,6 +58,7 @@ model User {
   projectsResponsable Project[]                 @relation("ProjectResponsable")
   movementsRegistered CashMovement[]            @relation("MovementRegisteredBy")
   movementsValidated  CashMovement[]            @relation("MovementValidatedBy")
+  movementsReceived   CashMovement[]            @relation("MovementReceivedBy")
   stockRegistered     StockMovement[]           @relation("StockRegisteredBy")
 
   @@index([sucursalId])
@@ -586,6 +587,9 @@ model CashMovement {
   registradoPor   User          @relation("MovementRegisteredBy", fields: [registradoPorId], references: [id])
   validadoPorId   String?
   validadoPor     User?         @relation("MovementValidatedBy", fields: [validadoPorId], references: [id])
+  /// Incomes: who received the money (a técnico may collect from the client); it is "por rendir" until validated.
+  recibidoPorId   String?
+  recibidoPor     User?         @relation("MovementReceivedBy", fields: [recibidoPorId], references: [id])
   validadoAt      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -596,6 +600,7 @@ model CashMovement {
   @@index([clienteId])
   @@index([cajaId])
   @@index([fecha])
+  @@index([recibidoPorId])
   @@map("cash_movements")
 }
 

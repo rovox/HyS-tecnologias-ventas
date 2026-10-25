@@ -16,8 +16,9 @@ import { useJob, useUpdateJob } from '../api.js';
 import { DivisionTag } from './JobChip.jsx';
 import { JOB_ACTIONS, JOB_FIELDS, JOB_STATE, formatJobValue } from '../constants.js';
 import { jobDay } from '../dates.js';
-import { JobPaymentDialog } from './JobPaymentDialog.jsx';
 import { ROLES } from '@/constants/roles.js';
+import { IncomeDialog } from '@/features/finance';
+import { useProject } from '@/features/projects';
 
 const TECNICO = ROLES.TEC;
 
@@ -26,6 +27,7 @@ export function JobDetailSheet({ jobId, onClose }) {
   const { isVentasLevel, readsAll } = useAuth();
   const commercial = isVentasLevel();
   const { data: job, isLoading } = useJob(jobId);
+  const { data: project } = useProject(job?.projectId, Boolean(job?.projectId) && readsAll());
   const { data: users = [] } = useUserDirectory();
   const update = useUpdateJob();
   const confirm = useConfirm();
@@ -133,7 +135,17 @@ export function JobDetailSheet({ jobId, onClose }) {
             </section>
 
             <Chatter entity="schedule" id={job.id} fieldLabels={JOB_FIELDS} formatValue={formatJobValue} />
-            <JobPaymentDialog job={job} open={paying} onOpenChange={setPaying} />
+            <IncomeDialog
+              target={{
+                kind: 'job',
+                id: job.id,
+                title: job.project ? `el proyecto ${job.project.codigo}` : job.cliente?.nombre,
+                saldo: job.projectId ? project?.saldo : Number(job.saldo),
+                cobrado: job.projectId ? project?.cobrado : Number(job.adelanto),
+              }}
+              open={paying}
+              onOpenChange={setPaying}
+            />
           </>
         )}
       </SheetContent>

@@ -99,6 +99,29 @@ export class UpdateMovementDto {
   @IsOptional()
   @IsIn(['empresa', 'empleado'])
   pagadoPor?: string;
+
+  @ApiPropertyOptional({ description: 'Incomes: who received the money (Gerencia or Contabilidad, or the author while it waits)' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  recibidoPorId?: string;
+
+  @ApiPropertyOptional({ description: 'Validated movements: the box where the money is (Gerencia or Contabilidad)' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  cajaId?: string;
+}
+
+export class ImpactQuery {
+  @ApiProperty({ enum: ['validar', 'anular'] })
+  @IsIn(['validar', 'anular'])
+  accion: 'validar' | 'anular';
+
+  @ApiPropertyOptional({ description: 'validar: the box chosen' })
+  @IsOptional()
+  @IsString()
+  cajaId?: string;
 }
 
 export class ValidateMovementDto {
@@ -174,4 +197,10 @@ export class IncomeDto {
   @IsOptional()
   @IsString()
   nota?: string;
+
+  @ApiPropertyOptional({ description: 'Who received the money (default: who registers it)' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  recibidoPorId?: string;
 }

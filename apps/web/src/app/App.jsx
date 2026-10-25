@@ -10,6 +10,8 @@ import { queryClient } from './queryClient.js';
 import { RealtimeProvider } from './RealtimeProvider.jsx';
 import { ConfirmProvider } from '@/shared/views';
 import { ClientDetailPage, ClientsPage } from '@/features/clients';
+import { FinancePage } from '@/features/finance';
+import { ProjectDetailPage, ProjectsPage } from '@/features/projects';
 import { InventoryPage } from '@/features/inventory';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
@@ -21,9 +23,6 @@ const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx')
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
 const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
 const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
-const ProjectsPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectsPage })));
-const ProjectDetailPage = lazy(() => import('@/features/projects').then((m) => ({ default: m.ProjectDetailPage })));
-const FinancePage = lazy(() => import('@/features/finance').then((m) => ({ default: m.FinancePage })));
 const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
 const SchedulePage = lazy(() => import('@/features/schedule').then((m) => ({ default: m.SchedulePage })));
 const PedidosInternosPage = lazy(() => import('@/pages/PedidosInternosPage.jsx'));

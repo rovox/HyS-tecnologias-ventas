@@ -113,4 +113,9 @@ export class ProjectPaymentDto {
   @IsOptional()
   @IsString()
   nota?: string;
+
+  @ApiPropertyOptional({ description: 'Who received the money (default: who registers it)' })
+  @IsOptional()
+  @IsString()
+  recibidoPorId?: string;
 }

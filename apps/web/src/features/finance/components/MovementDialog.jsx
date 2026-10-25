@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { useSucursales } from '@/features/catalogs';
+import { useSucursales, useUserDirectory } from '@/features/catalogs';
+import { ROLES } from '@/constants/roles.js';
 import { useProjects } from '@/features/projects';
 import { notify } from '@/shared/lib/notify.js';
 import { useCashBoxes, useCreateMovement, useUpdateMovement } from '../api.js';
@@ -15,7 +16,7 @@ const TITLES = { egreso: 'Registrar gasto', ingreso: 'Otro ingreso', transferenc
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
-function initial(tipo, movement, user) {
+function initial(tipo, movement, user, defaults = {}) {
   return {
     concepto: movement?.concepto || Object.keys(CONCEPTOS[tipo])[0],
     monto: movement ? String(Number(movement.monto)) : '',
@@ -23,31 +24,36 @@ function initial(tipo, movement, user) {
     metodo: movement?.metodo || 'efectivo',
     nota: movement?.nota || '',
     pagadoPor: movement?.pagadoPor || 'empresa',
-    projectId: movement?.project?.id || '',
+    projectId: movement?.project?.id || defaults.projectId || '',
     sucursalId: movement?.sucursal?.id || user?.sucursalId || '',
-    cajaId: 'caja_central',
+    cajaId: movement?.caja?.id || 'caja_central',
     cajaDestinoId: '',
+    recibidoPorId: movement?.recibidoPor?.id || '',
   };
 }
 
 /**
- * Register an expense (anyone), another income (commercial) or a transfer (Gerencia), or correct a movement that is
- * not validated yet. Payments of projects and jobs are registered on them, not here.
+ * Register an expense (anyone), another income (commercial, Contabilidad) or a transfer (Gerencia, Contabilidad), or
+ * correct a movement: its author while it waits; Gerencia and Contabilidad also once validated (then the box and who
+ * holds an income can change too, and everything stays in its history). Payments of projects and jobs are registered
+ * on them, not here.
  */
-export function MovementDialog({ tipo, movement, open, onOpenChange }) {
-  const { currentUser, readsAll } = useAuth();
+export function MovementDialog({ tipo, movement, open, onOpenChange, defaults }) {
+  const { currentUser, readsAll, canManageMoney } = useAuth();
+  const { data: people = [] } = useUserDirectory();
   const create = useCreateMovement();
   const update = useUpdateMovement();
   const { data: sucursales = [] } = useSucursales();
   const { data: boxes = [] } = useCashBoxes();
   const { data: projects = [] } = useProjects(open && tipo === 'egreso' && readsAll());
   const kind = movement?.tipo || tipo;
-  const [form, setForm] = useState(() => initial(kind, movement, currentUser));
+  const [form, setForm] = useState(() => initial(kind, movement, currentUser, defaults));
   useEffect(() => {
-    if (open) setForm(initial(kind, movement, currentUser));
-  }, [open, kind, movement, currentUser]);
+    if (open) setForm(initial(kind, movement, currentUser, defaults));
+  }, [open, kind, movement, currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const saving = create.isPending || update.isPending;
+  const validated = movement?.estado === 'validado' && kind !== 'transferencia';
   const concepts = movement && !CONCEPTOS[kind][movement.concepto] ? { [movement.concepto]: movement.concepto, ...CONCEPTOS[kind] } : CONCEPTOS[kind];
 
   async function submit(e) {
@@ -62,11 +68,13 @@ export function MovementDialog({ tipo, movement, open, onOpenChange }) {
       metodo: form.metodo,
       nota: form.nota,
       ...(kind === 'egreso' ? { pagadoPor: form.pagadoPor } : {}),
+      ...(movement && kind === 'ingreso' && form.recibidoPorId && form.recibidoPorId !== movement.recibidoPor?.id ? { recibidoPorId: form.recibidoPorId } : {}),
+      ...(validated && form.cajaId !== movement.caja?.id ? { cajaId: form.cajaId } : {}),
     };
     try {
       if (movement) {
         await update.mutateAsync({ id: movement.id, ...data });
-        notify.success(movement.estado === 'observado' ? 'Corregido: vuelve a validación' : 'Movimiento corregido');
+        notify.success(movement.estado === 'observado' ? 'Corregido: vuelve a validación' : validated ? 'Movimiento editado: el cambio queda en su historial' : 'Movimiento corregido');
       } else {
         await create.mutateAsync({
           tipo: kind,
@@ -87,8 +95,13 @@ export function MovementDialog({ tipo, movement, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{movement ? 'Corregir movimiento' : TITLES[kind]}</DialogTitle>
-          {movement?.motivo && <DialogDescription>Observación: {movement.motivo}</DialogDescription>}
+          <DialogTitle>{movement ? (movement.estado === 'validado' ? 'Editar movimiento validado' : 'Corregir movimiento') : TITLES[kind]}</DialogTitle>
+          {movement?.estado === 'observado' && movement.motivo && <DialogDescription>Observación: {movement.motivo}</DialogDescription>}
+          {movement?.estado === 'validado' && (
+            <DialogDescription className="rounded-md border border-warning-border bg-warning-soft px-2 py-1 text-warning-fg">
+              Ya está validado: cada cambio queda en el historial con quién lo hizo y el valor anterior.
+            </DialogDescription>
+          )}
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -155,6 +168,26 @@ export function MovementDialog({ tipo, movement, open, onOpenChange }) {
               </div>
             )}
           </div>
+          {movement && kind === 'ingreso' && (canManageMoney() || movement.estado !== 'validado') && (
+            <div className="space-y-1.5">
+              <Label htmlFor="mv-recibe">{movement.estado === 'por_validar' ? '¿Quién tiene el dinero?' : '¿Quién lo recibió?'}</Label>
+              <SearchSelect
+                id="mv-recibe"
+                value={form.recibidoPorId}
+                onChange={(recibidoPorId) => set({ recibidoPorId })}
+                searchPlaceholder="Buscar persona…"
+                options={people.filter((p) => p.role !== ROLES.NONE).map((p) => ({ value: p.id, label: p.name, hint: p.role }))}
+              />
+            </div>
+          )}
+          {validated && canManageMoney() && (
+            <div className="space-y-1.5">
+              <Label htmlFor="mv-caja">Caja donde está el dinero</Label>
+              <select id="mv-caja" className={select} value={form.cajaId} onChange={(e) => set({ cajaId: e.target.value })}>
+                {boxes.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+              </select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="mv-nota">Nota</Label>
             <Input id="mv-nota" value={form.nota} onChange={(e) => set({ nota: e.target.value })} placeholder="Ej. factura 123, viaje a Punata" />

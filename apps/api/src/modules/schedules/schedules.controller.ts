@@ -38,7 +38,7 @@ export class SchedulesController {
 
   @Post(':id/payments')
   @UseGuards(RolesGuard)
-  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC)
+  @Roles(ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONTA)
   @ApiOperation({ summary: 'Register adelanto, cobro, or extra_asistencia' })
   registerPayment(
     @Param('id') id: string,

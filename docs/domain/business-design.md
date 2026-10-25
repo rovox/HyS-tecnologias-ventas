@@ -94,7 +94,8 @@ Productos del inventario → cobro inmediato → salida de stock. No crea proyec
 Todo peso que entra o sale es un **Movimiento**:
 - Se crea `por_validar`.
 - Contabilidad lo pasa a `validado` (asignando caja) o a `observado` (con motivo; se corrige y vuelve a la bandeja).
-- Un movimiento validado no se edita: se corrige con uno opuesto.
+- Un movimiento validado lo corrigen Contabilidad o Gerencia **editándolo**: cada cambio queda en su historial (quién, cuándo, campo, valor anterior). También se puede anular con motivo y sale de su caja. (Decisión del dueño, 2026-10-24: el contraasiento "revertir" no se entendía.)
+- Cada cobro dice **quién recibió el dinero** (un técnico puede cobrar en sitio): hasta que se valida, ese dinero está "por rendir" a su nombre.
 
 | Tipo | Conceptos | Se liga a |
 |---|---|---|

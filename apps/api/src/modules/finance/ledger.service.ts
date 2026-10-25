@@ -3,20 +3,24 @@ import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { canRegisterMovements, canSeeLedger, canValidateMovements } from '../../common/policy/policy';
-import { CreateMovementDto, ListMovementsQuery, UpdateMovementDto } from './dto/finance.dto';
+import { CreateMovementDto, ImpactQuery, ListMovementsQuery, UpdateMovementDto } from './dto/finance.dto';
 import {
   cashBoxBalance,
   checkMovementTransition,
+  custody,
   editMovementError,
+  expensesOf,
+  incomeError,
+  incomeOf,
   movementError,
+  movementImpact,
   pendingRefund,
-  reversalOf,
 } from './domain/finance.rules';
 import { MOVEMENT_DETAIL, presentMovement } from './movement.presenter';
 
 const dayEnd = (iso: string) => new Date(`${iso.slice(0, 10)}T23:59:59.999Z`);
 
-/** The ledger: expenses, other incomes and transfers; validation into cash boxes (rendición); reversals and refunds. */
+/** The ledger: expenses, other incomes and transfers; validation into cash boxes (rendición); corrections and refunds. */
 @Injectable()
 export class LedgerService {
   constructor(
@@ -34,14 +38,24 @@ export class LedgerService {
     return row;
   }
 
+  /** One movement (the side panel): the author always, the whole ledger for commercial roles and Contabilidad. */
+  async get(id: string, user: User) {
+    if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
+    const row = await this.row(id);
+    if (!canSeeLedger(user) && row.registradoPorId !== user.id && row.recibidoPorId !== user.id) throw new ForbiddenException('Sin acceso a este movimiento');
+    return presentMovement(row);
+  }
+
   async list(query: ListMovementsQuery, user: User) {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
     const rows = await this.prisma.cashMovement.findMany({
       where: {
-        ...(canSeeLedger(user) ? {} : { registradoPorId: user.id }),
+        AND: [
+          canSeeLedger(user) ? {} : { OR: [{ registradoPorId: user.id }, { recibidoPorId: user.id }] },
+          query.cajaId ? { OR: [{ cajaId: query.cajaId }, { cajaDestinoId: query.cajaId }] } : {},
+        ],
         ...(query.tipo ? { tipo: query.tipo } : {}),
         ...(query.estado ? { estado: query.estado } : {}),
-        ...(query.cajaId ? { OR: [{ cajaId: query.cajaId }, { cajaDestinoId: query.cajaId }] } : {}),
         ...(query.projectId ? { projectId: query.projectId } : {}),
         ...(query.clienteId ? { clienteId: query.clienteId } : {}),
         ...(query.desde || query.hasta
@@ -85,6 +99,7 @@ export class LedgerService {
         pagadoPor: dto.tipo === 'egreso' ? dto.pagadoPor : null,
         sucursalId,
         registradoPorId: user.id,
+        ...(dto.tipo === 'ingreso' ? { recibidoPorId: user.id } : {}),
         // A transfer is done by Gerencia between its own boxes: it is valid as soon as it is registered.
         ...(transfer ? { estado: 'validado', validadoPorId: user.id, validadoAt: new Date() } : {}),
       },
@@ -94,14 +109,31 @@ export class LedgerService {
     return presentMovement(row);
   }
 
-  /** Correct a movement before validation; an observed one goes back to the validation inbox. */
+  /**
+   * Correct a movement: its author while it waits; Gerencia and Contabilidad at any time, a validated one included
+   * (also who holds an income and the box of a validated movement). Every change is in the history (before/after).
+   * An observed one goes back to the validation inbox.
+   */
   async update(id: string, dto: UpdateMovementDto, user: User, sessionId?: string) {
     const before = await this.row(id);
-    if (before.registradoPorId !== user.id && !canValidateMovements(user)) throw new ForbiddenException('Solo quien lo registró, Gerencia o Contabilidad lo corrigen');
-    const blocked = editMovementError(before);
+    const manager = canValidateMovements(user);
+    if (before.registradoPorId !== user.id && !manager) throw new ForbiddenException('Solo quien lo registró, Gerencia o Contabilidad lo corrigen');
+    const blocked = editMovementError(before, manager);
     if (blocked) throw new BadRequestException(blocked);
+    if (dto.cajaId !== undefined && (!manager || before.estado !== 'validado' || before.tipo === 'transferencia')) {
+      throw new BadRequestException('La caja se cambia solo en un movimiento validado, y lo hacen Gerencia o Contabilidad');
+    }
+    if (dto.cajaId) await this.assertBox(dto.cajaId);
+    if (dto.recibidoPorId !== undefined) {
+      if (before.tipo !== 'ingreso') throw new BadRequestException('Solo un ingreso tiene quién recibió el dinero');
+      await this.assertActiveUser(dto.recibidoPorId);
+    }
     const next = { tipo: before.tipo, concepto: dto.concepto ?? before.concepto, monto: dto.monto ?? Number(before.monto), cajaId: before.cajaId, cajaDestinoId: before.cajaDestinoId, pagadoPor: dto.pagadoPor ?? before.pagadoPor };
-    const error = movementError(next);
+    const moneyChanged = (dto.monto !== undefined && dto.monto !== Number(before.monto)) || (dto.concepto !== undefined && dto.concepto !== before.concepto);
+    const target = before.tipo === 'ingreso' && moneyChanged ? await this.target(before) : null;
+    // The same balance rule as when it was registered (only when the amount or concept changes), without counting itself.
+    const counted = ['por_validar', 'validado'].includes(before.estado) && ['adelanto', 'cobro'].includes(before.concepto) ? Number(before.monto) : 0;
+    const error = movementError(next) || (target ? incomeError({ ...target, cobrado: target.cobrado - counted }, next.concepto, next.monto) : null);
     if (error) throw new BadRequestException(error);
     const after = await this.prisma.cashMovement.update({
       where: { id },
@@ -112,6 +144,8 @@ export class LedgerService {
         ...(dto.metodo !== undefined ? { metodo: dto.metodo } : {}),
         ...(dto.nota !== undefined ? { nota: dto.nota } : {}),
         ...(dto.pagadoPor !== undefined && before.tipo === 'egreso' ? { pagadoPor: dto.pagadoPor } : {}),
+        ...(dto.recibidoPorId !== undefined ? { recibidoPorId: dto.recibidoPorId } : {}),
+        ...(dto.cajaId ? { cajaId: dto.cajaId } : {}),
         ...(before.estado === 'observado' ? { estado: 'por_validar', motivo: null } : {}),
       },
       include: MOVEMENT_DETAIL,
@@ -120,16 +154,17 @@ export class LedgerService {
     return presentMovement(after);
   }
 
-  /** validado (Gerencia, into a box) · observado (Gerencia, reason) · anulado (Gerencia or whoever registered it, reason). */
+  /**
+   * validado (Gerencia or Contabilidad, into a box) · observado (same, reason) · anulado (same, or the author while it
+   * waits; reason). Annulling a validated movement takes it out of its box.
+   */
   async transition(id: string, to: 'validado' | 'observado' | 'anulado', input: { cajaId?: string; motivo?: string }, user: User, sessionId?: string) {
     const before = await this.row(id);
-    if (to !== 'anulado' || before.registradoPorId !== user.id) this.assertValidator(user);
+    const ownWaiting = to === 'anulado' && before.registradoPorId === user.id && before.estado !== 'validado';
+    if (!ownWaiting) this.assertValidator(user);
     const check = checkMovementTransition(before, to, input);
     if (!check.ok) throw new BadRequestException(check.reason);
-    if (to === 'validado' && input.cajaId) {
-      const box = await this.prisma.cashBox.findUnique({ where: { id: input.cajaId } });
-      if (!box?.active) throw new BadRequestException('Caja no válida');
-    }
+    if (to === 'validado' && input.cajaId) await this.assertBox(input.cajaId);
     const data: Prisma.CashMovementUncheckedUpdateInput =
       to === 'validado'
         ? { estado: 'validado', ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}), validadoPorId: user.id, validadoAt: new Date(), motivo: null }
@@ -137,35 +172,6 @@ export class LedgerService {
     const after = await this.prisma.cashMovement.update({ where: { id }, data, include: MOVEMENT_DETAIL });
     await this.audit.record({ user, sessionId, action: `movement.${to}`, entity: 'movement', id, before, after, affects: this.affects(before) });
     return presentMovement(after);
-  }
-
-  /** A validated movement is corrected with its opposite, validated in the same box. */
-  async reverse(id: string, motivo: string, user: User, sessionId?: string) {
-    this.assertValidator(user);
-    const original = await this.row(id);
-    if (original.estado !== 'validado') throw new BadRequestException('Solo se revierte un movimiento validado');
-    if (await this.prisma.cashMovement.findUnique({ where: { reversaDeId: id } })) throw new BadRequestException('Este movimiento ya fue revertido');
-    const opposite = reversalOf(original);
-    const row = await this.prisma.cashMovement.create({
-      data: {
-        ...opposite,
-        monto: original.monto,
-        nota: `Reverso de ${original.concepto}: ${motivo.trim()}`,
-        motivo: motivo.trim(),
-        estado: 'validado',
-        reversaDeId: id,
-        projectId: original.projectId,
-        scheduleId: original.scheduleId,
-        clienteId: original.clienteId,
-        sucursalId: original.sucursalId,
-        registradoPorId: user.id,
-        validadoPorId: user.id,
-        validadoAt: new Date(),
-      },
-      include: MOVEMENT_DETAIL,
-    });
-    await this.audit.record({ user, sessionId, action: 'movement.reverse', entity: 'movement', id: row.id, affects: this.affects(original), patch: { reversaDeId: id } });
-    return presentMovement(row);
   }
 
   /** Marks an employee's expense as given back. */
@@ -186,6 +192,60 @@ export class LedgerService {
       this.prisma.cashMovement.findMany({ where: { estado: 'validado' }, select: { tipo: true, concepto: true, monto: true, estado: true, cajaId: true, cajaDestinoId: true } }),
     ]);
     return boxes.map((box) => ({ ...box, saldo: cashBoxBalance(box.id, movements) }));
+  }
+
+  /** Who holds money not yet validated (incomes por_validar), per person, largest first. */
+  async custody(user: User) {
+    if (!canSeeLedger(user)) throw new ForbiddenException('Sin acceso a finanzas');
+    const rows = await this.prisma.cashMovement.findMany({
+      where: { tipo: 'ingreso', estado: 'por_validar', recibidoPorId: { not: null } },
+      include: MOVEMENT_DETAIL,
+      orderBy: { fecha: 'asc' },
+    });
+    return custody(rows).map((group) => ({
+      ...group,
+      persona: group.movimientos[0].recibidoPor,
+      movimientos: group.movimientos.map(presentMovement),
+    }));
+  }
+
+  /** What validating (into `cajaId`) or annulling this movement changes: box balances, balance owed or cost of its project or job. */
+  async impact(id: string, query: ImpactQuery, user: User) {
+    this.assertValidator(user);
+    const m = await this.row(id);
+    const [boxes, target] = await Promise.all([this.cashBoxes(user), this.target(m)]);
+    const balances = Object.fromEntries(boxes.map((b) => [b.id, b.saldo]));
+    const names = Object.fromEntries(boxes.map((b) => [b.id, b.nombre]));
+    const efectos = movementImpact(m, query.accion, { boxes: balances, cajaId: query.cajaId, target });
+    return {
+      efectos: efectos.map((e) => (e.tipo === 'caja' ? { ...e, caja: names[e.cajaId] ?? e.cajaId } : { ...e, de: m.project?.codigo ?? m.schedule?.descripcionTrabajo ?? null })),
+    };
+  }
+
+  /** The project or stand-alone job a movement belongs to: amount, collected and cost (read-only). */
+  private async target(m: { projectId: string | null; scheduleId: string | null }) {
+    if (!m.projectId && !m.scheduleId) return null;
+    const where = m.projectId ? { projectId: m.projectId } : { scheduleId: m.scheduleId, projectId: null };
+    const [owner, movements] = await Promise.all([
+      m.projectId
+        ? this.prisma.project.findUnique({ where: { id: m.projectId }, select: { montoOficial: true, estado: true } })
+        : this.prisma.schedule.findUnique({ where: { id: m.scheduleId! }, select: { monto: true, estado: true } }),
+      this.prisma.cashMovement.findMany({ where, select: { tipo: true, concepto: true, monto: true, estado: true } }),
+    ]);
+    if (!owner) return null;
+    const monto = Number('montoOficial' in owner ? owner.montoOficial : owner.monto);
+    const cancelled = owner.estado === 'anulado' || owner.estado === 'cancelado';
+    return { monto, cobrado: incomeOf(movements).cobrado, costo: expensesOf(movements), cancelled };
+  }
+
+  private async assertBox(cajaId: string) {
+    const box = await this.prisma.cashBox.findUnique({ where: { id: cajaId } });
+    if (!box?.active) throw new BadRequestException('Caja no válida');
+  }
+
+  private async assertActiveUser(userId: string) {
+    const person = await this.prisma.user.findUnique({ where: { id: userId }, select: { active: true } });
+    if (!person?.active) throw new BadRequestException('La persona que recibió el dinero no existe o está inactiva');
   }
 
   private affects(m: { projectId: string | null; scheduleId: string | null }) {

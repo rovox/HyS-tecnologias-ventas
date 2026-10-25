@@ -448,22 +448,48 @@ describe('hs-erp API (e2e)', () => {
       expect(Number((await http().get(`/api/schedules/${job.id}`).set(ventas()).expect(200)).body.saldo)).toBe(0);
     });
 
-    it('validates into a box (Gerencia only); a validated movement is reversed, never edited', async () => {
+    it('validates into a box (Gerencia only); a validated movement is edited with history or annulled, never reversed (FIN-03)', async () => {
       const pending = (await http().get('/api/finance/movements').query({ estado: 'por_validar', tipo: 'ingreso' }).set(ventas()).expect(200)).body;
       const m = pending[0];
       expect(m.transicionesValidas).toEqual(['validado', 'observado', 'anulado']);
+      expect(m.recibidoPor?.id).toBeTruthy();
       await http().post(`/api/finance/movements/${m.id}/validar`).set(ventas()).send({ cajaId: 'caja_central' }).expect(403);
       await http().post(`/api/finance/movements/${m.id}/validar`).set(admin()).send({}).expect(400);
+      const impact = (await http().get(`/api/finance/movements/${m.id}/impacto`).query({ accion: 'validar', cajaId: 'caja_central' }).set(admin()).expect(200)).body;
       const before = await box('caja_central');
+      expect(impact.efectos[0]).toMatchObject({ tipo: 'caja', caja: 'Caja central Cochabamba', antes: before });
       const ok = (await http().post(`/api/finance/movements/${m.id}/validar`).set(admin()).send({ cajaId: 'caja_central' }).expect(201)).body;
-      expect(ok).toMatchObject({ estado: 'validado', caja: { id: 'caja_central' } });
+      expect(ok).toMatchObject({ estado: 'validado', caja: { id: 'caja_central' }, transicionesValidas: ['anulado'] });
       expect(await box('caja_central')).toBeCloseTo(before + Number(m.monto), 2);
-      await http().patch(`/api/finance/movements/${m.id}`).set(admin()).send({ monto: 1 }).expect(400);
-      await http().post(`/api/finance/movements/${m.id}/anular`).set(admin()).send({ motivo: 'x' }).expect(400);
-      const reversal = (await http().post(`/api/finance/movements/${m.id}/revertir`).set(admin()).send({ motivo: 'Cobro duplicado' }).expect(201)).body;
-      expect(reversal).toMatchObject({ tipo: 'egreso', estado: 'validado', reversaDeId: m.id });
+      // Gerencia corrects a validated movement: another box and a note; the history keeps before/after.
+      await http().patch(`/api/finance/movements/${m.id}`).set(ventas()).send({ nota: 'x' }).expect(403);
+      const moved = (await http().patch(`/api/finance/movements/${m.id}`).set(admin()).send({ cajaId: 'caja_chica_punata', nota: 'Estaba en Punata' }).expect(200)).body;
+      expect(moved).toMatchObject({ estado: 'validado', caja: { id: 'caja_chica_punata' } });
       expect(await box('caja_central')).toBeCloseTo(before, 2);
-      await http().post(`/api/finance/movements/${m.id}/revertir`).set(admin()).send({ motivo: 'otra vez' }).expect(400);
+      const history = (await http().get(`/api/activity/movement/${m.id}`).set(admin()).expect(200)).body;
+      expect(history.some((h: { action: string; detalle?: Record<string, unknown> }) => h.action === 'movement.update' && h.detalle?.cajaId)).toBe(true);
+      // Annulling a validated one shows its effect first and takes it out of its box; there is no "revertir" anymore.
+      const punata = await box('caja_chica_punata');
+      const effect = (await http().get(`/api/finance/movements/${m.id}/impacto`).query({ accion: 'anular' }).set(admin()).expect(200)).body;
+      expect(effect.efectos.find((e: { tipo: string }) => e.tipo === 'caja')).toMatchObject({ antes: punata, despues: punata - Number(m.monto) });
+      await http().post(`/api/finance/movements/${m.id}/anular`).set(admin()).send({}).expect(400);
+      await http().post(`/api/finance/movements/${m.id}/anular`).set(admin()).send({ motivo: 'Cobro duplicado' }).expect(201);
+      expect(await box('caja_chica_punata')).toBeCloseTo(punata - Number(m.monto), 2);
+      await http().post(`/api/finance/movements/${m.id}/revertir`).set(admin()).send({ motivo: 'x' }).expect(404);
+      await http().patch(`/api/finance/movements/${m.id}`).set(admin()).send({ nota: 'y' }).expect(400);
+    });
+
+    it('records who received a payment and lists the money each person holds (por rendir)', async () => {
+      const job = (await http().post('/api/schedules').set(ventas())
+        .send({ clienteId: 'cli_andina', categoriaId: 'seguridad_electronica', descripcionTrabajo: 'Revisión de cámaras', fechaProgramada: '2026-11-03', sucursalId: 'suc_central', tecnicoId: tecId, monto: 400 })
+        .expect(201)).body;
+      await http().post(`/api/schedules/${job.id}/payments`).set(ventas()).send({ tipo: 'cobro', monto: 150, recibidoPorId: tecId }).expect(201);
+      await http().post(`/api/schedules/${job.id}/payments`).set(tec()).send({ tipo: 'cobro', monto: 50, recibidoPorId: 'usr_ventas' }).expect(403);
+      const custody = (await http().get('/api/finance/por-rendir').set(ventas()).expect(200)).body;
+      const marcos = custody.find((c: { userId: string }) => c.userId === tecId);
+      expect(marcos.persona.id).toBe(tecId);
+      expect(marcos.movimientos.some((x: { scheduleId: string }) => x.scheduleId === job.id)).toBe(true);
+      await http().get('/api/finance/por-rendir').set(tec()).expect(403);
     });
 
     it('an employee expense: observed, corrected, validated and refunded; the técnico sees only his movements', async () => {
@@ -471,7 +497,7 @@ describe('hs-erp API (e2e)', () => {
       const e = (await http().post('/api/finance/movements').set(tec()).send({ tipo: 'egreso', concepto: 'combustible', monto: 80, pagadoPor: 'empleado', nota: 'Viaje E2E' }).expect(201)).body;
       expect(e).toMatchObject({ estado: 'por_validar', reembolsoPendiente: true });
       const mine = (await http().get('/api/finance/movements').set(tec()).expect(200)).body;
-      expect(mine.every((r: { registradoPor: { id: string } }) => r.registradoPor.id === tecId)).toBe(true);
+      expect(mine.every((r: { registradoPor: { id: string }; recibidoPor?: { id: string } }) => r.registradoPor.id === tecId || r.recibidoPor?.id === tecId)).toBe(true);
       await http().post(`/api/finance/movements/${e.id}/observar`).set(admin()).send({}).expect(400);
       await http().post(`/api/finance/movements/${e.id}/observar`).set(admin()).send({ motivo: 'Falta factura' }).expect(201);
       const fixed = (await http().patch(`/api/finance/movements/${e.id}`).set(tec()).send({ monto: 85, nota: 'Con factura' }).expect(200)).body;
@@ -592,6 +618,8 @@ describe('hs-erp API (e2e)', () => {
       await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
       const projectId = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
       const job = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body.trabajos[0];
+      // Buy the 2 cameras first, so the test never depends on stock left by earlier runs.
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_cam_ip', tipo: 'entrada', cantidad: 2, costoUnitario: 450, sucursalDestinoId: 'suc_central' }).expect(201);
       const before = (await stock('prd_cam_ip')).stock.suc_central;
       const pedido = (await http().post('/api/pedidos-internos').set(ventas())
         .send({ sucursalOrigenId: 'suc_central', cronogramaId: job.id, items: [{ productoId: 'prd_cam_ip', materialNombre: 'Cámara IP 4MP domo', cantidad: 2 }, { materialNombre: 'Tornillos', cantidad: 10 }] })

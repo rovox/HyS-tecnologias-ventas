@@ -1,63 +1,55 @@
-import { MoreHorizontal } from 'lucide-react';
+import { Check, MoreHorizontal, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/contexts/AuthContext.jsx';
-import { useConfirm } from '@/shared/views';
-import { notify } from '@/shared/lib/notify.js';
-import { useMovementAction } from '../api.js';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { RowQuickActions } from '@/shared/views';
 
-const PROMPTS = {
-  observar: { title: '¿Observar el movimiento?', description: 'Vuelve a quien lo registró para que lo corrija.', confirmLabel: 'Observar', reason: 'Qué hay que corregir', done: 'Movimiento observado' },
-  anular: { title: '¿Anular el movimiento?', description: 'Deja de contar en saldos y cajas.', confirmLabel: 'Anular', destructive: true, reason: 'Motivo de la anulación', done: 'Movimiento anulado' },
-  revertir: { title: '¿Revertir el movimiento validado?', description: 'Se registra el movimiento inverso, validado en la misma caja.', confirmLabel: 'Revertir', destructive: true, reason: 'Motivo del reverso', done: 'Movimiento revertido' },
-  reembolsar: { title: '¿Marcar como reembolsado?', description: 'El empleado ya recibió el dinero que puso.', confirmLabel: 'Reembolsado', done: 'Reembolso registrado' },
-};
-
-/** Row menu: only what this movement and this user allow. Validating opens the box picker (`onValidate`). */
-export function MovementActions({ movement: m, onValidate, onEdit }) {
-  const { currentUser, canManageMoney } = useAuth();
-  const confirm = useConfirm();
-  const action = useMovementAction();
-  const admin = canManageMoney();
-  const own = m.registradoPor?.id === currentUser?.id;
-  const allowed = m.transicionesValidas;
-
-  const items = [
-    admin && allowed.includes('validado') && { key: 'validar', label: 'Validar…', run: () => onValidate(m) },
-    admin && allowed.includes('observado') && { key: 'observar', label: 'Observar' },
-    (admin || own) && ['por_validar', 'observado'].includes(m.estado) && { key: 'corregir', label: 'Corregir', run: () => onEdit(m) },
-    (admin || own) && allowed.includes('anulado') && { key: 'anular', label: 'Anular', destructive: true },
-    admin && m.estado === 'validado' && !m.reversaDeId && { key: 'revertir', label: 'Revertir', destructive: true },
-    admin && m.reembolsoPendiente && m.estado === 'validado' && { key: 'reembolsar', label: 'Marcar reembolsado' },
+/**
+ * Actions of a movement row. `quick` (rendición inbox): ✓ validates into the branch's box in one click and ✗ observes
+ * it with a reason; the ⋯ menu keeps the rest. `actions` comes from useMovementActions.
+ */
+export function MovementActions({ movement: m, actions, quick = false }) {
+  const can = actions.allowed(m);
+  const menu = [
+    can.validate && { key: 'box', label: 'Validar en otra caja…', run: () => actions.chooseBox(m) },
+    !quick && can.validate && { key: 'validate', label: 'Validar en la caja de la sucursal', run: () => actions.validate(m) },
+    !quick && can.observe && { key: 'observe', label: 'Observar…', run: () => actions.observe(m) },
+    can.edit && { key: 'edit', label: m.estado === 'validado' ? 'Editar (queda en el historial)' : 'Corregir', run: () => actions.edit(m) },
+    can.refund && { key: 'refund', label: 'Marcar reembolsado', run: () => actions.refund(m) },
+    can.annul && { key: 'annul', label: 'Anular…', destructive: true, run: () => actions.annul(m) },
   ].filter(Boolean);
-  if (!items.length) return null;
-
-  async function run(key) {
-    const prompt = PROMPTS[key];
-    const { ok, reason } = await confirm(prompt);
-    if (!ok) return;
-    try {
-      await action.mutateAsync({ id: m.id, action: key, ...(reason ? { motivo: reason } : {}) });
-      notify.success(prompt.done);
-    } catch {
-      /* shown by the query client */
-    }
-  }
+  if (!menu.length && !(quick && (can.validate || can.observe))) return null;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Acciones del movimiento" onClick={(e) => e.stopPropagation()}>
-          <MoreHorizontal />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {items.map((item) => (
-          <DropdownMenuItem key={item.key} className={item.destructive ? 'text-destructive' : ''} onSelect={() => (item.run ? item.run() : run(item.key))}>
-            {item.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <RowQuickActions
+      actions={
+        quick
+          ? [
+              { key: 'ok', icon: Check, label: 'Validar en la caja de la sucursal', tone: 'success', hidden: !can.validate, disabled: actions.busy, onClick: () => actions.validate(m) },
+              { key: 'no', icon: X, label: 'Observar: no es correcto', tone: 'danger', hidden: !can.observe, disabled: actions.busy, onClick: () => actions.observe(m) },
+              { key: 'edit', icon: Pencil, label: 'Corregir', hidden: !can.edit, onClick: () => actions.edit(m) },
+            ]
+          : []
+      }
+    >
+      {menu.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 min-h-8 w-8 min-w-8" aria-label="Más acciones del movimiento">
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {menu.map((item, i) => (
+              <span key={item.key}>
+                {item.destructive && i > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem className={item.destructive ? 'text-danger-fg' : ''} onSelect={item.run}>
+                  {item.label}
+                </DropdownMenuItem>
+              </span>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </RowQuickActions>
   );
 }

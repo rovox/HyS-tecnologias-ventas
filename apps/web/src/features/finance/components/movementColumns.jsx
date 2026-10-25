@@ -1,6 +1,6 @@
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { cn } from '@/lib/utils';
-import { StatusBadge } from '@/shared/views';
+import { StatusBadge, ToneTag } from '@/shared/views';
 import { CONCEPTO_LABEL, TIPO_LABEL, sign } from '../constants.js';
 
 function MovementStateBadge({ movement }) {
@@ -21,10 +21,31 @@ function Amount({ movement }) {
   );
 }
 
-const detail = (m) =>
-  [m.project && `${m.project.codigo} · ${m.project.titulo}`, !m.project && m.schedule?.descripcionTrabajo, m.cliente?.nombre, m.nota]
-    .filter(Boolean)
-    .join(' · ');
+const origin = (m) => (m.project ? `${m.project.codigo} — ${m.project.titulo}` : m.schedule?.descripcionTrabajo || null);
+
+function Detail({ movement: m }) {
+  const main = origin(m);
+  if (!main && !m.cliente && !m.nota) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="min-w-0 text-sm">
+      {main && <p className="line-clamp-1 font-medium">{main}</p>}
+      {m.cliente && <p className="line-clamp-1 text-xs text-muted-foreground">Cliente: {m.cliente.nombre}</p>}
+      {m.nota && <p className="line-clamp-1 text-xs italic text-muted-foreground" title={m.nota}>{m.nota}</p>}
+    </div>
+  );
+}
+
+/** Who registered it and, for an income still waiting, who holds the money (warning colour: it must be handed in). */
+function People({ movement: m }) {
+  const holding = m.tipo === 'ingreso' && m.estado === 'por_validar' && m.recibidoPor;
+  return (
+    <div className="text-sm">
+      <p>{m.registradoPor?.name}</p>
+      {holding && m.recibidoPor.id !== m.registradoPor?.id && <p className="text-xs font-semibold text-warning-fg">Tiene el dinero: {m.recibidoPor.name}</p>}
+      {holding && m.recibidoPor.id === m.registradoPor?.id && <p className="text-xs font-semibold text-warning-fg">Tiene el dinero</p>}
+    </div>
+  );
+}
 
 const boxes = (m) => (m.tipo === 'transferencia' ? `${m.caja?.nombre || '—'} → ${m.cajaDestino?.nombre || '—'}` : m.caja?.nombre || '—');
 
@@ -40,15 +61,13 @@ export function movementColumns(renderActions) {
       cell: (m) => (
         <div>
           <p className="font-medium">{CONCEPTO_LABEL[m.concepto] || m.concepto}</p>
-          <p className="text-xs text-muted-foreground">
-            {TIPO_LABEL[m.tipo]}
-            {m.pagadoPor === 'empleado' ? ` · pagó ${m.registradoPor?.name}${m.reembolsoPendiente ? ' (reembolso pendiente)' : ''}` : ''}
-          </p>
+          <p className="text-xs text-muted-foreground">{TIPO_LABEL[m.tipo]}{m.pagadoPor === 'empleado' ? `, lo pagó ${m.registradoPor?.name}` : ''}</p>
+          {m.reembolsoPendiente && <ToneTag tone="warning" className="mt-0.5">Reembolso pendiente</ToneTag>}
         </div>
       ),
     },
-    { key: 'detalle', header: 'Detalle', cell: (m) => <span className="line-clamp-2 text-sm" title={detail(m)}>{detail(m) || '—'}</span> },
-    { key: 'registro', header: 'Registró', cell: (m) => m.registradoPor?.name },
+    { key: 'detalle', header: 'Proyecto, cliente, nota', cell: (m) => <Detail movement={m} /> },
+    { key: 'registro', header: 'Registró', cell: (m) => <People movement={m} /> },
     { key: 'caja', header: 'Caja', cell: boxes },
     { key: 'estado', header: 'Estado', cell: (m) => <MovementStateBadge movement={m} /> },
     { key: 'monto', header: 'Monto', align: 'right', cell: (m) => <Amount movement={m} />, total: net },
@@ -63,9 +82,9 @@ export function MovementCard({ movement: m, actions }) {
         <p className="font-medium">{CONCEPTO_LABEL[m.concepto] || m.concepto}</p>
         <Amount movement={m} />
       </div>
-      <p className="line-clamp-2 text-xs text-muted-foreground">{detail(m) || TIPO_LABEL[m.tipo]}</p>
+      <Detail movement={m} />
       <div className="flex items-center justify-between">
-        <span className="text-xs">{formatDay(m.fecha)} · {m.registradoPor?.name}</span>
+        <span className="text-xs">{formatDay(m.fecha)}, {m.registradoPor?.name}</span>
         <div className="flex items-center gap-1">
           <MovementStateBadge movement={m} />
           {actions}

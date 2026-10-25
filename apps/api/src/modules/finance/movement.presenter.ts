@@ -13,6 +13,7 @@ export const MOVEMENT_DETAIL = {
   sucursal: { select: { id: true, nombre: true } },
   registradoPor: USER_NAME,
   validadoPor: USER_NAME,
+  recibidoPor: USER_NAME,
 } satisfies Prisma.CashMovementInclude;
 
 type MovementRow = Prisma.CashMovementGetPayload<{ include: typeof MOVEMENT_DETAIL }>;
