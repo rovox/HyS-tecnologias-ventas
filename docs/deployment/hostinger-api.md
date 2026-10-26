@@ -343,14 +343,33 @@ SPA white-goat uses **`VITE_API_MODE=api`** against lime-chamois once the SPA Gi
 - Prefer MySQL passwords without `$ @ # /` inside `DATABASE_URL`, or URL-encode them (`$` → `%24`).
 - Do not paste production secrets into chat; rotate if you did.
 
-## Proposed fix for the `dist` gap (2026-10-26, not applied — needs explicit approval)
+## Proposed fix for the `dist` gap (revised 2026-10-26, not applied — needs explicit approval)
 
-Per `CLAUDE.md`, `.github/workflows` and the production branch are not touched without the owner's explicit go-ahead, so this is written up, not done. Smallest fix that keeps PLAT-06's reasoning (dev branches stay free of build artifacts):
+Per `CLAUDE.md`, `.github/workflows` and the production branch are not touched without the owner's explicit go-ahead, so this is written up, not done.
 
-1. A new workflow, triggered only on push to a dedicated `release` branch (not `mvp`/`feat/*`/`fix/*`): runs `pnpm --filter @hs-erp/web build` and `pnpm --filter @hs-erp/api build` in CI (same two steps `ci.yml` already runs, so this is close to free), then commits `apps/web/dist` and `apps/api/dist` back to `release` with `[skip ci]` — the same shape as the old `web.yml`/`api.yml`, scoped to one branch instead of every dev branch.
+**Current hPanel docs (checked 2026-10-26, see sources in the chat log) confirm Hostinger's Node.js app *does* run a real Build script** — an npm script run after install, 15-minute limit, Root directory can point at a monorepo subfolder ("only that subdirectory is built"). That changes the plan for the API:
+
+- **API (lime-chamois):** `nest build` is plain `tsc` — `nest-cli.json` sets no `compiler`/`builder`, so there is no native binary (no swc, no webpack) in the build step. **Verified locally 2026-10-26**: copied `apps/api` alone (no `node_modules`, no monorepo parent) into an empty directory, ran `pnpm install` then `pnpm run build` there with nothing else present — it installed, generated the Prisma client, ran `nest build`, produced `dist/main.js`, and the built app boots (module graph initializes) with no native-binary step anywhere. So the API no longer needs its `dist/` pre-built and committed: set **Build script = `build`** in hPanel and let Hostinger build it on every deploy, same as the docs' supported path. `apps/api/pnpm-workspace.yaml` (already in the repo, written for exactly this) keeps it installable with `apps/api` as the sole root.
+- **Web (white-goat, SPA):** unchanged — `vite build` spawns a native `esbuild` binary, and this project's own deploy history already hit `EACCES` from that under Hostinger's filesystem (documented above and in `hostinger-frontend.md`); that finding predates this check and a generic doc search neither confirms nor rules it out for the current product, so it is not re-tested here. Safest path, and still Hostinger's own supported pattern for a prebuilt static app ("Output directory: ... for static sites, the files to serve"; leave Build script empty): keep **Build script empty, Output directory = `dist`**, with `dist/` pre-built in CI and committed.
+- Hostinger's own docs describe exactly the branch-per-environment pattern already proposed below: *"Deploy a preview branch as a separate app on a free subdomain, then point the main site at the release branch once it's verified."*
+- No rollback button in hPanel — deployment history shows commit/author/status/logs only. Rollback is `git revert` + push (already correct in this doc's existing "Rollback" section).
+
+Revised plan (smaller than before — only the SPA still needs a CI-committed `dist/`):
+
+1. A new workflow, triggered only on push to a dedicated `release` branch (not `mvp`/`feat/*`/`fix/*`): runs `pnpm --filter @hs-erp/web build` in CI, then commits `apps/web/dist` back to `release` with `[skip ci]`. The API needs no build/commit step in CI at all — `pnpm --filter @hs-erp/api build` already runs in `ci.yml` for `pnpm check`, so this adds nothing new for the API.
 2. Merging `mvp` → `release` (fast-forward, reviewed) becomes "cut a release"; it's the only thing that triggers a rebuild.
-3. In hPanel, both Node apps' Git integration is re-pointed from `migration/backend-api` to `release` (owner, hPanel UI — not reachable from here).
-4. First release also needs the DB brought current: back up, review `categories_divisions`, import `hostinger-delta-20261026.sql` (above), then USERS-02 (below).
+3. In hPanel: SPA keeps Build script empty / Output `dist`; API's Build script changes from empty to `build` (a one-field hPanel change, not a workflow change). Both Node apps' Git integration is re-pointed from `migration/backend-api` to `release` (owner, hPanel UI — not reachable from here).
+4. First release also needs the DB brought current — see "Fresh database" below (simpler now that the owner confirmed the current production DB holds nothing worth keeping), then USERS-02 (below).
+
+## Fresh database (owner confirmed 2026-10-26: production DB is not in use, nothing to preserve)
+
+This replaces the delta-import plan above. Instead of applying only the 10 missing migrations and worrying about `categories_divisions` reclassifying live rows, drop and recreate:
+
+1. Back up anyway first (cheap insurance, one `mysqldump` or hPanel's own Backups button — even an empty/test DB is a 30-second safety net).
+2. Empty the schema (`DROP DATABASE` + recreate, or drop every table) — same DB name/user (`u656468476_hys_sales` / `u656468476_hys_api`), no new MySQL resource needed.
+3. Import `hostinger-schema-baseline.sql` (regenerated 2026-10-26, all 25 migrations in order) then `hostinger-bootstrap.sql`, exactly as the "Empty database (greenfield)" path above already documents. `hostinger-delta-20261026.sql` and its `categories_divisions` warning no longer apply — there is no existing data to reclassify.
+4. This also means `hostinger-db-master.sql` (baseline + bootstrap in one file) is worth regenerating too before using it, since it predates several migrations — regenerate with the same concat-in-folder-order method as the baseline, or just use the two-file path (baseline, then bootstrap) which is already current.
+5. Still a production write: back up, then apply, in one approved session, same as any other write per `CLAUDE.md` §3 — the "not operational" status lowers the stakes, it doesn't skip the step.
 
 ## USERS-02 still needs passwords
 
