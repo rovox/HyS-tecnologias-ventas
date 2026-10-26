@@ -86,7 +86,7 @@ aca/
 1. `pnpm install`
 2. `pnpm dev:web`
 3. Login con una cuenta demo → [demo-accounts.md](./demo-accounts.md)
-4. Para el sitio en Hostinger: `git push origin migration/frontend-poc` y esperar el commit de Actions `chore: refresh web dist` (ver [deployment/hostinger-frontend.md](../deployment/hostinger-frontend.md))
+4. Para publicar en Hostinger: ver [deployment/hostinger.md](../deployment/hostinger.md)
 
 ## Solución de problemas
 

@@ -17,8 +17,7 @@
 | Plan API cotizaciones y ventas | [migration/api-quotations-sales.md](./migration/api-quotations-sales.md) |
 | Modelo MySQL (microservicios) | [migration/microservice-model.md](./migration/microservice-model.md) |
 | Estado del backend | [migration/backend-status.md](./migration/backend-status.md) |
-| Deploy en Hostinger (SPA) | [deployment/hostinger-frontend.md](./deployment/hostinger-frontend.md) |
-| Deploy en Hostinger (API ventas) | [deployment/hostinger-api.md](./deployment/hostinger-api.md) |
+| Publicar en Hostinger (API, web y base de datos) | [deployment/hostinger.md](./deployment/hostinger.md) |
 
 ## Estructura
 

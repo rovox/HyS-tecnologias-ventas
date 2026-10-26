@@ -1,30 +1,14 @@
 ---
-description: Sales API CI/CD — GitHub compiles Nest; Hostinger Cloud Startup Node Web App + MySQL. Never VPS.
+description: Deploy — Hostinger Cloud Startup (never VPS). GitHub Actions builds from `release`, Hostinger runs the `deploy` branch.
 alwaysApply: true
 ---
 
-# Backend CI/CD (NestJS sales API)
+# Deploy (API and SPA)
 
-The API is a **separate** Hostinger Cloud Startup **Node.js Web App** + dedicated MySQL. Never run Nest on the static SPA instance (`noexec` / esbuild). See `docs/deployment/hostinger-api.md`.
+Single guide: `docs/deployment/hostinger.md`.
 
-**Do not use a VPS.** Stay on Cloud Startup. Prisma uses a JS MariaDB driver adapter so the native query engine is not required at runtime. Apply schema SQL in phpMyAdmin; do not run `prisma migrate deploy` on the host.
-
-## Split
-
-- **Local:** `pnpm dev:api` against the MySQL of the root `docker-compose.yml` (`pnpm db:up`).
-- **CI:** `.github/workflows/api.yml` on `migration/backend-api` — `prisma generate` + `nest build` on `ubuntu-latest`, then commit `apps/api/dist`.
-- **CD:** Hostinger Node app (`lime-chamois-337700.hostingersite.com`), Framework **Other**, empty build, **start / entry** `start-api.mjs` (or `dist/main.js`). Env: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR`.
-
-`UPLOAD_DIR` must sit **outside** the git checkout (redeploys wipe `apps/api`). PDFs are not committed. Never `prisma seed` / `migrate deploy` on Hostinger.
-
-`apps/api` `postinstall` runs `prisma generate --schema=./prisma/schema.prisma` so Hostinger’s monorepo `pnpm install` still generates the client (adapter is JS-only). That is allowed; compiling Nest on the host is not.
-
-## Do not
-
-- Deploy this API on the Vite/SPA Web App.
-- Run `vite build` or `nest build` on the host.
-- Flip production `VITE_API_MODE=api` until `GET /api/health` and `GET /api/health/db` succeed.
-- Move the API to a VPS.
-- Leave Hostinger **entry/start** empty — without `start-api.mjs` or `dist/main.js` the site returns Hostinger’s 404 HTML.
-
-SPA publish stays `.cursor/rules/frontend-cicd.mdc`.
+- Two Hostinger Node sites on Cloud Startup, both on the `deploy` branch: API (root `apps/api`, entry `dist/main.js`) and SPA (root `apps/web`, output `dist`, entry `serve-dist.mjs`). Build command **empty** on both: the host cannot run `vite build` (native esbuild, `noexec`).
+- `.github/workflows/release.yml` builds `release` and force-pushes `deploy` with `apps/*/dist` and one `pnpm-lock.yaml` per app. Never commit build output to other branches (PLAT-06) and never edit `deploy` by hand.
+- Cut a release: `git checkout release && git merge --ff-only mvp && git push origin release`.
+- Database: one SQL file from `node apps/api/scripts/build-hostinger-sql.mjs` (`--users` for the importable file with users, gitignored). Never `prisma db seed` on the host. Never a VPS, never a second MySQL.
+- Env only in hPanel (`DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR` outside the site folder, `WEB_LEADS_KEY`); the SPA's API URL is baked from `apps/web/.env.production`.

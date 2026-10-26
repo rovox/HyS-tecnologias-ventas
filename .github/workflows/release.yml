@@ -1,0 +1,55 @@
+name: release
+
+# REL-01 (owner approved 2026-10-26). Hostinger Cloud Startup runs each app from its folder of the `deploy` branch and
+# does not build (empty Build command: `vite build` needs a native esbuild binary the host cannot execute). This job
+# takes `release`, builds what Hostinger only serves and force-pushes the result to `deploy`:
+#   apps/api/dist (Nest, entry dist/main.js) · apps/web/dist (SPA, served by serve-dist.mjs)
+#   apps/api/pnpm-lock.yaml · apps/web/pnpm-lock.yaml (each app installs with its own folder as root)
+# So Hostinger only ever sees a complete build, deploys once per release, and dev branches never carry build files
+# (PLAT-06). Cut a release: merge `mvp` into `release` and push. Roll back: run this workflow on an older commit of
+# `release` (Actions → release → Run workflow), or revert on `release` and push.
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the API and the SPA (apps/web/.env.production is baked into the SPA)
+        run: |
+          pnpm --filter @hs-erp/api build
+          pnpm --filter @hs-erp/web build
+
+      - name: Lockfile per app (Hostinger installs apps/api and apps/web on their own)
+        run: |
+          pnpm --dir apps/api install --lockfile-only --no-frozen-lockfile
+          pnpm --dir apps/web install --lockfile-only --no-frozen-lockfile
+
+      - name: Publish the build to the deploy branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B deploy
+          git add -f apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
+          git commit -m "chore(deploy): Hostinger build of release ${GITHUB_SHA::8}"
+          git push --force origin deploy

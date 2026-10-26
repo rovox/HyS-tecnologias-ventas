@@ -13,7 +13,7 @@ All current data is test data. Until go-live, production is not a testing ground
 
 1. Edit `apps/api/prisma/schema.prisma`.
 2. `pnpm --filter @hs-erp/api prisma migrate dev --name <change>` (local only). If the local DB user cannot create the shadow database, write `prisma/migrations/<ts>_<change>/migration.sql` by hand (check it with `prisma migrate diff --from-url $DATABASE_URL --to-schema-datamodel prisma/schema.prisma --script`) and apply it with `prisma migrate deploy` on the local DB.
-3. Commit the migration **and** a copy of its SQL in `docs/deployment/sql/<date>_<change>.sql`.
+3. Commit the migration and regenerate the single production SQL: `node apps/api/scripts/build-hostinger-sql.mjs` (updates `docs/deployment/hostinger-db.sql`; see `docs/deployment/hostinger.md`).
 4. Ask for approval before: dropping/renaming tables or columns, changing stored role/status values.
 
 Never run `prisma migrate deploy`, `db push` or `seed` against Hostinger. Never connect the app to the production DB from a laptop.

@@ -6,7 +6,7 @@ name: ci
 
 on:
   push:
-    branches: [main, develop, 'feat/**', 'fix/**', 'chore/**', 'analysis/**']
+    branches: [main, mvp, release, develop, 'feat/**', 'fix/**', 'chore/**', 'analysis/**']
   pull_request:
 
 concurrency:

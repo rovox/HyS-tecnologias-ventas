@@ -33,4 +33,4 @@ Default SPA production build stays `mock` until Hostinger API is healthy.
 
 ## Hostinger
 
-Separate Node Web App + own MySQL. See [`docs/deployment/hostinger-api.md`](../../docs/deployment/hostinger-api.md). Never run this on the static SPA instance. **Never seed in production.**
+Separate Node Web App + own MySQL. See [`docs/deployment/hostinger.md`](../../docs/deployment/hostinger.md). Never run this on the static SPA instance. **Never seed in production.**

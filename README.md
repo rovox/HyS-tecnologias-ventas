@@ -103,10 +103,10 @@ Reglas: [`docs/rules/architecture.md`](./docs/rules/architecture.md). Negocio y 
 
 ## Deploy
 
-Static frontend on Hostinger from `apps/web/dist`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md). API (separate Node Web App + MySQL): [`docs/deployment/hostinger-api.md`](./docs/deployment/hostinger-api.md). Do not flip `VITE_API_MODE=api` until `GET /api/health` succeeds.
+Hostinger Cloud Startup: two Node sites (API and SPA) from the `deploy` branch, built by GitHub Actions from `release`; the database is created from one SQL file. Guide: [`docs/deployment/hostinger.md`](./docs/deployment/hostinger.md).
 
 ```bash
-git push origin migration/frontend-poc
+git checkout release && git merge --ff-only mvp && git push origin release
 ```
 
 ---
