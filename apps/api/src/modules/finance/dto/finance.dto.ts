@@ -178,8 +178,8 @@ export class ListMovementsQuery {
 
 /** A payment of a project or job: advance, payment against the balance, or an additional charge on top. */
 export class IncomeDto {
-  @ApiProperty({ enum: ['adelanto', 'cobro', 'adicional'] })
-  @IsIn(['adelanto', 'cobro', 'adicional'], { message: 'Tipo de cobro no válido' })
+  @ApiProperty({ enum: ['adelanto', 'cobro', 'adicional', 'asistencia'], description: 'asistencia: only on a visit' })
+  @IsIn(['adelanto', 'cobro', 'adicional', 'asistencia'], { message: 'Tipo de cobro no válido' })
   concepto: string;
 
   @ApiProperty({ minimum: 0.01 })

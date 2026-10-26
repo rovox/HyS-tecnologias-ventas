@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class UpsertClientDto {
   @ApiProperty({ minLength: 2 })
@@ -31,6 +31,12 @@ export class UpsertClientDto {
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @ApiPropertyOptional({ description: 'Link de ubicación de cualquier fuente (Maps, Waze, WhatsApp…)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  mapsLink?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -74,6 +80,12 @@ export class UpdateClientDto {
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @ApiPropertyOptional({ description: 'Link de ubicación de cualquier fuente (Maps, Waze, WhatsApp…)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  mapsLink?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

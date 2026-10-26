@@ -20,7 +20,8 @@ export const isVentas = (actor?: Actor | null) => actor?.role === ROLES.VENTAS;
 export const isTec = (actor?: Actor | null) => actor?.role === ROLES.TEC;
 export const isConta = (actor?: Actor | null) => actor?.role === ROLES.CONTA;
 const isNone = (actor?: Actor | null) => actor?.role === ROLES.NONE;
-const isCommercial = (actor?: Actor | null) => isAdmin(actor) || isVentas(actor);
+/** Roles that sell: Gerencia and Ventas. */
+export const isCommercial = (actor?: Actor | null) => isAdmin(actor) || isVentas(actor);
 /** Who reads every record (commercial roles and Contabilidad); writing is decided per action. */
 const readsAll = (actor?: Actor | null) => isCommercial(actor) || isConta(actor);
 /** Gerencia and Contabilidad: the money and stock controls. */

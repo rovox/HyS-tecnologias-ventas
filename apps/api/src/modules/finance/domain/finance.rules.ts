@@ -6,7 +6,7 @@ import type { TransitionCheck } from '../../../common/domain/state-machine';
 export const MOVEMENT_TIPOS = ['ingreso', 'egreso', 'transferencia'] as const;
 
 const CONCEPTOS: Record<string, readonly string[]> = {
-  ingreso: ['adelanto', 'cobro', 'adicional', 'venta_directa', 'otro'],
+  ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'otro'],
   egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'otro'],
   transferencia: ['deposito', 'retiro'],
 };
@@ -109,6 +109,12 @@ export function expensesOf(movements: Movement[]): number {
 /** Balance still owed; a cancelled project or job owes nothing. */
 export function balanceOf(monto: number, cobrado: number, cancelled: boolean): number {
   return cancelled ? 0 : Math.max(0, cents(Number(monto) - cobrado));
+}
+
+/** A visit (asistencia) is charged as "asistencia" and owes nothing beforehand; projects and jobs take the others. */
+export function incomeConceptError(target: 'visita' | 'trabajo', concepto: string): string | null {
+  if (target === 'visita') return concepto === 'asistencia' ? null : 'Una visita se cobra como asistencia';
+  return concepto === 'asistencia' ? 'El cobro de asistencia es solo para visitas' : null;
 }
 
 /** Why an income cannot be registered on a project or job, or null. The excess over the balance is an "adicional". */

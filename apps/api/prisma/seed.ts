@@ -313,7 +313,7 @@ async function main() {
       clienteId: 'cli_andina',
       sucursalId: 'suc_central',
       fecha: at(i - 2),
-      tipoVisita: 'relevamiento',
+      tipoVisita: i % 2 ? 'asistencia' : 'relevamiento',
       estado,
       prioridad: 'media',
       vendedorId: 'usr_ventas',
@@ -321,6 +321,11 @@ async function main() {
       lugar: 'Av. Arce 2450, La Paz',
       notas: `Seed ENV-04 (${estado})`,
       cotizacionId: 'quo_andina',
+      ...(i % 2
+        ? { motivo: 'Cámara sin imagen', problemaReportado: 'La cámara del ingreso no graba desde ayer', equipoAfectado: 'Cámara domo ingreso' }
+        : { necesidadCliente: 'Ampliar la vigilancia al depósito', areaRevisar: 'Depósito y patio', cantidadEstimada: 4 }),
+      ...(estado === 'resuelto' ? { fotosUrl: [], diagnostico: 'Conector suelto', solucion: 'Se reemplazó el conector' } : {}),
+      ...(estado === 'cancelado' ? { motivoCancelacion: 'El cliente reprogramó la visita' } : {}),
     };
     await prisma.relevamiento.upsert({ where: { id: `rel_seed_${estado}` }, update: data, create: { id: `rel_seed_${estado}`, ...data } });
   }
