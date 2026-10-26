@@ -17,7 +17,7 @@ pnpm install
 pnpm dev:web
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con un botón rápido (por ejemplo Dennis, `dennis@hscontrol.com`). Cuentas en [`config/users.json`](./config/users.json).
+Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con un botón rápido (por ejemplo Denis, `denis.palacios@hys.com`). Cuentas en [`config/users.json`](./config/users.json).
 
 | Comando | Descripción |
 |---------|-------------|

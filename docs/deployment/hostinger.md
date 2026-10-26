@@ -64,7 +64,9 @@ node apps/api/scripts/build-hostinger-sql.mjs --users      # → config/hostinge
 
 [`hostinger-db.sql`](./hostinger-db.sql) es la misma base **sin usuarios** (la que queda en git para revisar).
 
-Crear la base (recomendado: una **nueva**; la actual queda intacta como respaldo):
+**Automático por SSH (lo usado el 2026-10-26):** `scripts/hostinger-recreate-db.sh --yes` respalda la base que usa la API (`~/backups/<base>-<fecha>.sql.gz` en el servidor), borra sus tablas, importa `config/hostinger-db.local.sql`, comprueba tablas, usuarios y migraciones, y reinicia la API. Lee `DATABASE_URL` del entorno del sitio en el servidor (no se muestra ni se copia). Misma base y mismo usuario: no hay que tocar hPanel.
+
+Manual, con una base **nueva** (la actual queda intacta como respaldo):
 
 1. hPanel → Bases de datos → **Crear base de datos**: nombre (Hostinger antepone `u656468476_`, p. ej. `u656468476_hs_erp`), usuario nuevo y contraseña **solo letras y números** (sin `$ @ # /`). Asignarla al sitio de la API (lime-chamois).
 2. phpMyAdmin de esa base → **Importar** → `config/hostinger-db.local.sql` → Continuar (crea 26 tablas, los catálogos y los usuarios).

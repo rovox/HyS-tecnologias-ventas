@@ -4,7 +4,7 @@ import { IsEmail, IsString, MinLength } from 'class-validator';
 const emailOpts = { require_tld: false as const };
 
 export class LoginDto {
-  @ApiProperty({ example: 'dennis@hscontrol.com' })
+  @ApiProperty({ example: 'denis.palacios@hys.com' })
   @IsEmail(emailOpts)
   email: string;
 
@@ -15,7 +15,7 @@ export class LoginDto {
 }
 
 export class ForgotPasswordDto {
-  @ApiProperty({ example: 'dennis@hscontrol.com' })
+  @ApiProperty({ example: 'denis.palacios@hys.com' })
   @IsEmail(emailOpts)
   email: string;
 }
