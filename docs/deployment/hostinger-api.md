@@ -2,6 +2,13 @@
 
 Separate **Node.js Web App** + dedicated **MySQL** on the same Cloud Startup plan (up to 10 apps). Do not run this service on the static SPA instance. Frontend publish: [hostinger-frontend.md](./hostinger-frontend.md).
 
+> **2026-10-26 read-only check (`ssh hostinger-hs`, filesystem only, no DB rows read).** Confirms the mechanism below and finds the gap that blocks a deploy today:
+> - Both apps are **Hostinger's own Node.js App Manager** (Phusion Passenger), not a generic static host: each site is `~/domains/<site>/hbuilds/{config,current→versions/<uuid>,last-source}`. A `.ci-trigger` marker file (API `console.log` shows redeploys through 2026-09-23) confirms hPanel's own Git integration pulls the watched branch and restarts the app — this part still works and needs no code change.
+> - **The watched branch (`migration/backend-api`) is 91+ commits behind `mvp`** (last deploy commit `899fac51`, 2026-09-23). None of the UX-plan work (roles, finance ledger, inventory, cronograma) is on it yet.
+> - **The real blocker: PLAT-06 (2026-10-20) stopped committing `apps/*/dist`.** Both Node apps have an **empty Build command** in hPanel — Hostinger never runs `vite build` or `nest build` itself (by design, see "Known pitfalls" below); it only runs `pnpm install` and starts the already-committed `dist/`. The old `web.yml`/`api.yml` workflows built and bot-committed `dist/` back to the watched branch; `ci.yml` (which replaced them) uploads `dist` only as a CI artifact and **never commits it**. Pushing `mvp` to `migration/backend-api` as-is would deploy a repo with no `dist/` and the Node apps would fail to start. Fixing this needs a workflow change, which needs **explicit approval** per `CLAUDE.md` (`.github/workflows` and the production branch are both covered by that rule) — see the proposal at the end of this file.
+> - Schema comparison (production's deployed `prisma/schema.prisma`, read the same way, vs. local): see **"Schema diff 2026-10-26"** below.
+> - Querying live table/row counts was not done — it needs a separate approval (it is a "production read" of actual data, not just structure).
+
 **Never use a VPS.** MySQL is localhost-only from the Node app; the API must stay on this Cloud Startup. Free remote Node hosts cannot reach Hostinger MySQL.
 
 App name suggestion: `hys-sales-api`. Package: `apps/api`. Global prefix: `/api`. Branch: `migration/backend-api`.
@@ -224,6 +231,27 @@ Regenerate the baseline after new Prisma migrations (concat folders in name orde
 | 1–11 | Each `apps/api/prisma/migrations/*/migration.sql` in folder-name order |
 | 12 | `docs/deployment/hostinger-bootstrap.sql` |
 
+### Production is at `20260923010000_pedidos_internos`; `mvp` has 10 more → [hostinger-delta-20261026.sql](./hostinger-delta-20261026.sql)
+
+Checked 2026-10-26 (read-only, filesystem): production's deployed `prisma/migrations/` stops at `20260923010000_pedidos_internos` — the same 15 folders in the same order as local, so nothing is diverged, only behind. `mvp` adds 10 more: `solicitudes_web`, `activity_detalle`, `categories_divisions`, `quotations_close_states`, `task_client`, `projects`, `cash_ledger`, `inventory`, `movement_custody`, `order_requester`. `hostinger-delta-20261026.sql` is those 10 concatenated in order, for a single phpMyAdmin import on the existing DB — same convention as above, scoped to this upgrade. **Back up first**, and read the file's own header: one of the 10 (`categories_divisions`) rewrites every quotation's and job's category and needs a one-query manual check before it runs (the header gives the exact query). The other 9 are pure additions (new tables, or a new nullable/defaulted column with its own backfill) and touch no existing column's meaning.
+
+### Schema diff 2026-10-26 (structural, not data)
+
+Read-only (filesystem): production's deployed `apps/api/prisma/schema.prisma` vs. local. 19 tables in production, 24 in `mvp` (+`solicitudes_web`, `projects`, `cash_boxes`, `cash_movements`, `products`, `stock_movements` — all net new, nothing dropped). Of the existing 19, these have real column changes (everything else is formatting or an added relation, not a column):
+
+| Table | Change |
+|---|---|
+| `quotations` | `categoria` (free text) column removed, `categoriaId` is now a required FK to `quotation_categories` instead of a loose string; added `eliminadaAt`, `eliminadaPorId`, `motivoEliminacion` (soft delete with reason); `estado` value `aceptado` renamed to `aprobado` |
+| `schedules` | `type` column removed, replaced by a required `categoriaId` FK (same division as its quotation when it has one); added `projectId` (nullable: a job may belong to a project) |
+| `quotation_categories` | added `principal` boolean (marks the 3 fixed divisions apart from user-made subcategory chips) |
+| `activities` | added `detalle` (JSON: before/after per changed field, for the Chatter history) |
+| `tasks` | added `clienteId` (nullable) |
+| `pedidos_internos` | added `solicitanteId` (required FK: who asked, separate from `responsableId` who receives; backfilled from `responsableId` for existing rows) |
+| `pedido_interno_items` | added `productoId` (nullable FK to the new `products` table) |
+| `cash_movements` | (new table) added `recibidoPorId` after creation, in a later migration (who holds the money until validated) |
+
+`Sale`, `SaleJob`, `SalePayment` (the old sales/payment tables) are untouched in both — `Project`/`CashMovement` are new, parallel tables for the flow going forward; this upgrade does not migrate old sales rows into them. The one migration worth a human look before running is `categories_divisions` (see above); the rest are additive and self-contained.
+
 ## Create Nest Node app from hPanel UI
 
 1. hPanel → **Websites** → **Add website** → **Node.js web app** (not WordPress, not “empty” PHP).
@@ -314,3 +342,16 @@ SPA white-goat uses **`VITE_API_MODE=api`** against lime-chamois once the SPA Gi
 - Env changes need **Restart**, not only Save.
 - Prefer MySQL passwords without `$ @ # /` inside `DATABASE_URL`, or URL-encode them (`$` → `%24`).
 - Do not paste production secrets into chat; rotate if you did.
+
+## Proposed fix for the `dist` gap (2026-10-26, not applied — needs explicit approval)
+
+Per `CLAUDE.md`, `.github/workflows` and the production branch are not touched without the owner's explicit go-ahead, so this is written up, not done. Smallest fix that keeps PLAT-06's reasoning (dev branches stay free of build artifacts):
+
+1. A new workflow, triggered only on push to a dedicated `release` branch (not `mvp`/`feat/*`/`fix/*`): runs `pnpm --filter @hs-erp/web build` and `pnpm --filter @hs-erp/api build` in CI (same two steps `ci.yml` already runs, so this is close to free), then commits `apps/web/dist` and `apps/api/dist` back to `release` with `[skip ci]` — the same shape as the old `web.yml`/`api.yml`, scoped to one branch instead of every dev branch.
+2. Merging `mvp` → `release` (fast-forward, reviewed) becomes "cut a release"; it's the only thing that triggers a rebuild.
+3. In hPanel, both Node apps' Git integration is re-pointed from `migration/backend-api` to `release` (owner, hPanel UI — not reachable from here).
+4. First release also needs the DB brought current: back up, review `categories_divisions`, import `hostinger-delta-20261026.sql` (above), then USERS-02 (below).
+
+## USERS-02 still needs passwords
+
+`config/users.passwords.local.json` (gitignored, read by `scripts/generate-users-sql.mjs --role`) is not present on this machine — confirmed 2026-10-26, nothing was read or printed. Without it the script can't hash passwords for Dennis, Giovanni, Elias or Estefany's rename to CONTABILIDAD. The owner creates that file locally (one password per new/changed user) or supplies passwords another way; the script dry-runs the SQL for review either way before anything touches production.

@@ -1,5 +1,7 @@
 # Hostinger Cloud Startup — frontend POC deploy
 
+> **2026-10-26 read-only check.** The SPA site (white-goat) is also a Hostinger **Node.js App Manager** app (Phusion Passenger), started with [`apps/web/serve-dist.mjs`](../../apps/web/serve-dist.mjs) — not a plain static Apache host. That script only reads the pre-built `dist/` from disk, so it still needs `dist/` committed on the watched branch exactly as this doc says; nothing here is wrong, it's just not "static hosting" in the literal sense. The real gap: `migration/backend-api` is 91+ commits behind `mvp` and, since PLAT-06 (2026-10-20), `ci.yml` no longer commits `apps/web/dist` back to any branch (the old `web.yml` did; it was removed). A push today would deploy a repo with no `dist/` and the Node app would fail to start. Full writeup and the proposed fix: [hostinger-api.md](./hostinger-api.md#proposed-fix-for-the-dist-gap-2026-10-26-not-applied--needs-explicit-approval) (not applied — needs explicit approval, it touches `.github/workflows` and the production branch).
+
 Use the **existing private GitHub repository**. Do not create another repo.
 
 - Remote: the `origin` already configured on this machine (`HyS-tecnologias-ventas`)
