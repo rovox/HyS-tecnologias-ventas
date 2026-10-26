@@ -111,6 +111,8 @@ model Client {
   sucursalId     String
   sucursal       Sucursal       @relation(fields: [sucursalId], references: [id])
   observaciones  String         @default("") @db.Text
+  /// Optional location link from any source (Maps, Waze, WhatsApp…), next to the address.
+  mapsLink       String         @default("") @db.VarChar(500)
   lastActivityAt DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -193,30 +195,57 @@ model QuotationSeller {
 }
 
 model Relevamiento {
-  id           String            @id @default(uuid())
-  usuarioId    String
-  usuario      User              @relation(fields: [usuarioId], references: [id])
-  clienteId    String
-  cliente      Client            @relation(fields: [clienteId], references: [id])
-  sucursalId   String?
-  sucursal     Sucursal?         @relation(fields: [sucursalId], references: [id])
-  fecha        DateTime          @db.Date
-  fechaFin     DateTime?         @db.Date
-  tipoVisita   String            @default("relevamiento") @db.VarChar(32)
-  estado       String            @default("programado") @db.VarChar(32)
-  prioridad    String            @default("media") @db.VarChar(16)
-  vendedorId   String?
-  tecnicoId    String?
-  lugar        String            @db.VarChar(200)
-  notas        String?           @db.Text
-  fotosUrl     Json?
-  cotizacionId String?
-  cotizacion   Quotation?        @relation(fields: [cotizacionId], references: [id])
-  payments     SchedulePayment[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id                   String            @id @default(uuid())
+  usuarioId            String
+  usuario              User              @relation(fields: [usuarioId], references: [id])
+  clienteId            String
+  cliente              Client            @relation(fields: [clienteId], references: [id])
+  sucursalId           String?
+  sucursal             Sucursal?         @relation(fields: [sucursalId], references: [id])
+  fecha                DateTime          @db.Date
+  fechaFin             DateTime?         @db.Date
+  tipoVisita           String            @default("relevamiento") @db.VarChar(32)
+  estado               String            @default("programado") @db.VarChar(32)
+  prioridad            String            @default("media") @db.VarChar(16)
+  vendedorId           String?
+  tecnicoId            String?
+  lugar                String            @db.VarChar(200)
+  notas                String?           @db.Text
+  fotosUrl             Json?
+  cotizacionId         String?
+  cotizacion           Quotation?        @relation(fields: [cotizacionId], references: [id])
+  payments             SchedulePayment[]
+  /// SUR-02: what the visit form asks. Asistencia: motivo … solucion; relevamiento: necesidadCliente … observacionTecnica.
+  hora                 String?           @db.VarChar(16)
+  mapsLink             String            @default("") @db.VarChar(500)
+  motivo               String            @default("") @db.VarChar(200)
+  problemaReportado    String?           @db.Text
+  equipoAfectado       String            @default("") @db.VarChar(200)
+  causaProbable        String?           @db.Text
+  diagnostico          String?           @db.Text
+  solucion             String?           @db.Text
+  necesidadCliente     String?           @db.Text
+  areaRevisar          String            @default("") @db.VarChar(200)
+  medidasPuntos        String?           @db.Text
+  cantidadEstimada     Int?
+  observacionTecnica   String?           @db.Text
+  observacionFinal     String?           @db.Text
+  requiereMaterial     Boolean           @default(false)
+  requiereCotizacion   Boolean           @default(false)
+  requiereVolver       Boolean           @default(false)
+  /// The job this visit revisits (an installation under warranty, a failure after a job).
+  trabajoRelacionadoId String?
+  trabajoRelacionado   Schedule?         @relation("VisitRelatedJob", fields: [trabajoRelacionadoId], references: [id], onDelete: SetNull)
+  /// Taken from the related job when it is set (domain/relevamientos.rules.ts warrantyUntil); editable.
+  garantiaHasta        DateTime?         @db.Date
+  motivoCancelacion    String?           @db.Text
+  /// Payments taken on the visit (ledger).
+  movements            CashMovement[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@index([cotizacionId])
+  @@index([trabajoRelacionadoId])
   @@index([usuarioId])
   @@index([sucursalId, fecha])
   @@index([sucursalId, estado])
@@ -314,6 +343,7 @@ model Schedule {
   tasks              Task[]
   payments           SchedulePayment[]
   movements          CashMovement[]
+  visits             Relevamiento[]    @relation("VisitRelatedJob")
 
   @@index([fechaProgramada])
   @@index([sucursalId, estado])
@@ -574,6 +604,9 @@ model CashMovement {
   schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
   clienteId       String?
   cliente         Client?       @relation(fields: [clienteId], references: [id])
+  /// A payment taken on a visit (asistencia) (SUR-02).
+  relevamientoId  String?
+  relevamiento    Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
   cajaId          String?       @db.VarChar(64)
   caja            CashBox?      @relation("CashBoxOrigin", fields: [cajaId], references: [id])
   cajaDestinoId   String?       @db.VarChar(64)
@@ -606,6 +639,7 @@ model CashMovement {
   @@index([cajaId])
   @@index([fecha])
   @@index([recibidoPorId])
+  @@index([relevamientoId])
   @@map("cash_movements")
 }
 

@@ -21,7 +21,7 @@ function Amount({ movement }) {
   );
 }
 
-const origin = (m) => (m.project ? `${m.project.codigo} — ${m.project.titulo}` : m.schedule?.descripcionTrabajo || null);
+const origin = (m) => (m.project ? `${m.project.codigo} — ${m.project.titulo}` : m.schedule?.descripcionTrabajo || (m.relevamiento ? `Visita del ${formatDay(m.relevamiento.fecha)}` : null));
 
 function Detail({ movement: m }) {
   const main = origin(m);

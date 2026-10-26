@@ -19,6 +19,7 @@ export {
   clientWhere,
   goalWhere,
   isAdmin,
+  isCommercial,
   isConta,
   isTec,
   isVentas,

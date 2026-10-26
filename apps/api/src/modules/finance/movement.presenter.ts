@@ -7,6 +7,7 @@ const BOX = { select: { id: true, nombre: true } } as const;
 export const MOVEMENT_DETAIL = {
   project: { select: { id: true, codigo: true, titulo: true } },
   schedule: { select: { id: true, descripcionTrabajo: true } },
+  relevamiento: { select: { id: true, tipoVisita: true, fecha: true } },
   cliente: { select: { id: true, nombre: true } },
   caja: BOX,
   cajaDestino: BOX,

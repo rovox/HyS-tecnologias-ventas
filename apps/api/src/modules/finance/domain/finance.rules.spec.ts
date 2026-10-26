@@ -4,6 +4,7 @@ import {
   checkMovementTransition,
   editMovementError,
   expensesOf,
+  incomeConceptError,
   incomeError,
   incomeOf,
   movementError,
@@ -55,6 +56,14 @@ describe('finance rules', () => {
     expect(incomeError({ monto: 2500, cobrado: 1500, cancelled: false }, 'adicional', 5000)).toBeNull();
     expect(incomeError({ monto: 2500, cobrado: 0, cancelled: true }, 'cobro', 10)).toMatch(/anulado/);
     expect(incomeError({ monto: 2500, cobrado: 0, cancelled: false, closed: true }, 'cobro', 10)).toMatch(/cerrado/);
+  });
+
+  it('charges a visit only as asistencia, and asistencia only on a visit', () => {
+    expect(incomeConceptError('visita', 'asistencia')).toBeNull();
+    expect(incomeConceptError('visita', 'cobro')).toMatch(/asistencia/);
+    expect(incomeConceptError('trabajo', 'asistencia')).toMatch(/solo para visitas/);
+    expect(incomeConceptError('trabajo', 'adicional')).toBeNull();
+    expect(incomeError({ monto: 0, cobrado: 0, cancelled: false }, 'asistencia', 150)).toBeNull();
   });
 
   it('computes a cash box from validated movements only', () => {

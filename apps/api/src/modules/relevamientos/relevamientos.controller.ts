@@ -16,7 +16,7 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nes
 import type { User } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../../common/auth/current-user.decorator';
-import { UpsertRelevamientoDto } from './dto/relevamiento.dto';
+import { CreateRelevamientoDto, UpdateRelevamientoDto, VisitPaymentDto, VisitStatusDto } from './dto/relevamiento.dto';
 import { RelevamientosService } from './relevamientos.service';
 
 @ApiTags('relevamientos')
@@ -27,9 +27,9 @@ export class RelevamientosController {
   constructor(private readonly relevamientos: RelevamientosService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List relevamientos' })
-  list(@CurrentUser() user: User, @Query('cotizacionId') cotizacionId?: string) {
-    return this.relevamientos.list(user, cotizacionId);
+  @ApiOperation({ summary: 'List visits (relevamientos y asistencias); filters: cotizacionId, clienteId' })
+  list(@CurrentUser() user: User, @Query('cotizacionId') cotizacionId?: string, @Query('clienteId') clienteId?: string) {
+    return this.relevamientos.list(user, { cotizacionId, clienteId });
   }
 
   @Get(':id')
@@ -40,19 +40,26 @@ export class RelevamientosController {
 
   @Post()
   @ApiOperation({ summary: 'Create relevamiento' })
-  create(@Body() dto: UpsertRelevamientoDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+  create(@Body() dto: CreateRelevamientoDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.relevamientos.create(dto, user, sessionId);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update relevamiento (resuelto requiere foto)' })
-  update(
-    @Param('id') id: string,
-    @Body() dto: Partial<UpsertRelevamientoDto>,
-    @CurrentUser() user: User,
-    @CurrentSessionId() sessionId?: string,
-  ) {
+  @ApiOperation({ summary: 'Update the visit form (not its state)' })
+  update(@Param('id') id: string, @Body() dto: UpdateRelevamientoDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.relevamientos.update(id, dto, user, sessionId);
+  }
+
+  @Post(':id/estado')
+  @ApiOperation({ summary: 'Change state (resuelto needs a photo, cancelado a reason)' })
+  status(@Param('id') id: string, @Body() dto: VisitStatusDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.relevamientos.changeStatus(id, dto, user, sessionId);
+  }
+
+  @Post(':id/cobros')
+  @ApiOperation({ summary: 'Payment taken on the visit (asistencia): ledger, por validar' })
+  pay(@Param('id') id: string, @Body() dto: VisitPaymentDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.relevamientos.registerPayment(id, dto, user, sessionId);
   }
 
   @Post(':id/files')

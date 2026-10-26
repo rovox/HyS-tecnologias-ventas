@@ -20,8 +20,9 @@ const TYPES = [
 const METHODS = ['efectivo', 'transferencia', 'QR', 'tarjeta', 'otro'];
 
 /**
- * One payment dialog for projects and stand-alone jobs (a job of a project pays into the project; the API routes it).
- * target: { kind: 'project' | 'job', id, title, saldo?, total? }. It records who received the money: until it is
+ * One payment dialog for projects, stand-alone jobs and visits (a job of a project pays into the project; the API
+ * routes it; a visit is charged as "asistencia" and owes nothing beforehand).
+ * target: { kind: 'project' | 'job' | 'visit', id, title, saldo?, total? }. It records who received the money: until it is
  * validated, that person holds it ("por rendir"). A técnico only registers money he received himself.
  */
 export function IncomeDialog({ target, open, onOpenChange }) {
@@ -29,7 +30,8 @@ export function IncomeDialog({ target, open, onOpenChange }) {
   const { currentUser, isSeguridad, readsAll } = useAuth();
   const { data: people = [] } = useUserDirectory();
   const pay = useRegisterIncome();
-  const fresh = () => ({ concepto: target.cobrado > 0 ? 'cobro' : 'adelanto', monto: '', metodo: 'efectivo', nota: '', recibidoPorId: currentUser?.id || '' });
+  const visit = target.kind === 'visit';
+  const fresh = () => ({ concepto: visit ? 'asistencia' : target.cobrado > 0 ? 'cobro' : 'adelanto', monto: '', metodo: 'efectivo', nota: '', recibidoPorId: currentUser?.id || '' });
   const [form, setForm] = useState(fresh);
   useEffect(() => {
     if (open) setForm(fresh());
@@ -38,7 +40,7 @@ export function IncomeDialog({ target, open, onOpenChange }) {
 
   const saldo = target.saldo;
   const monto = Number(form.monto);
-  const reducesBalance = form.concepto !== 'adicional';
+  const reducesBalance = !['adicional', 'asistencia'].includes(form.concepto);
   const error = !(monto > 0) ? 'Ingresa el monto' : reducesBalance && saldo !== undefined && monto > saldo ? `Supera el saldo (${formatBs(saldo)}): registra el excedente como adicional` : null;
   const holder = people.find((p) => p.id === form.recibidoPorId);
 
@@ -47,7 +49,7 @@ export function IncomeDialog({ target, open, onOpenChange }) {
     if (error) return notify.error(error);
     try {
       await pay.mutateAsync({ target, concepto: form.concepto, monto, metodo: form.metodo, nota: form.nota || undefined, recibidoPorId: form.recibidoPorId || undefined });
-      notify.success(`${form.concepto === 'adicional' ? 'Adicional' : 'Cobro'} de ${formatBs(monto)} registrado: queda por validar`, {
+      notify.success(`${form.concepto === 'adicional' ? 'Adicional' : visit ? 'Cobro de la asistencia' : 'Cobro'} de ${formatBs(monto)} registrado: queda por validar`, {
         description: holder ? `El dinero lo tiene ${holder.id === currentUser?.id ? 'usted' : holder.name} hasta entregarlo en caja.` : undefined,
         action: readsAll() ? { label: 'Ver por rendir', onClick: () => navigate('/finanzas?vista=por_rendir') } : undefined,
       });
@@ -70,14 +72,20 @@ export function IncomeDialog({ target, open, onOpenChange }) {
           )}
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tipo de cobro">
-            {TYPES.map(([key, label]) => (
-              <Button key={key} type="button" role="radio" aria-checked={form.concepto === key} variant={form.concepto === key ? 'default' : 'outline'} onClick={() => set({ concepto: key })}>
-                {label}
-              </Button>
-            ))}
-          </div>
-          {!reducesBalance && <p className="text-xs text-muted-foreground">Un adicional es un cobro extra: no reduce el saldo.</p>}
+          {visit ? (
+            <p className="text-sm text-muted-foreground">Cobro de la asistencia: va al libro de caja y queda por validar.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tipo de cobro">
+                {TYPES.map(([key, label]) => (
+                  <Button key={key} type="button" role="radio" aria-checked={form.concepto === key} variant={form.concepto === key ? 'default' : 'outline'} onClick={() => set({ concepto: key })}>
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              {!reducesBalance && <p className="text-xs text-muted-foreground">Un adicional es un cobro extra: no reduce el saldo.</p>}
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label htmlFor="inc-monto">Monto (Bs) *</Label>

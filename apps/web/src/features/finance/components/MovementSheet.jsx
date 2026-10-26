@@ -91,6 +91,7 @@ export function MovementSheet({ movementId, actions, onClose }) {
                 </Field>
               )}
               {!m.project && m.schedule && <Field label="Trabajo">{m.schedule.descripcionTrabajo}</Field>}
+              {m.relevamiento && <Field label="Visita"><Link className="text-primary hover:underline" to={`/surveys?visita=${m.relevamiento.id}`}>{formatDay(m.relevamiento.fecha)}</Link></Field>}
               {m.cliente && <Field label="Cliente">{m.cliente.nombre}</Field>}
               <Field label="Método">{m.metodo || '—'}</Field>
               <Field label="Registró">{m.registradoPor?.name}</Field>

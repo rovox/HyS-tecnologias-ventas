@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -10,6 +13,8 @@ describe('hs-erp API (e2e)', () => {
   let adminToken = '';
 
   beforeAll(async () => {
+    // Uploaded test files go to a throwaway folder, not the dev uploads (owned by the container, and not test data).
+    process.env.UPLOAD_DIR = mkdtempSync(join(tmpdir(), 'hs-erp-e2e-'));
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -566,6 +571,73 @@ describe('hs-erp API (e2e)', () => {
       await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ tecnicoId: tecId }).expect(200);
       const paid = (await http().post(`/api/projects/${id}/cobros`).set(tec()).send({ concepto: 'cobro', monto: 100 }).expect(201)).body;
       expect(paid).toMatchObject({ cobrado: 100, porValidar: 100, saldo: 2400 });
+    });
+  });
+
+  describe('relevamientos y asistencias (SUR-02)', () => {
+    const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
+    let tecToken = '';
+    let tecId = '';
+    const tec = () => ({ Authorization: `Bearer ${tecToken}` });
+    const http = () => request(app.getHttpServer());
+
+    beforeAll(async () => {
+      const res = await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico));
+      tecToken = res.body.accessToken;
+      tecId = res.body.user.id;
+    });
+
+    it('keeps every field of an asistencia, takes the warranty from the job it revisits and the client link', async () => {
+      const job = (await http().post('/api/schedules').set(ventas())
+        .send({ categoriaId: 'seguridad_electronica', clienteId: 'cli_andina', sucursalId: 'suc_central', descripcionTrabajo: 'Instalación de 4 cámaras', fechaProgramada: '2026-09-01', tecnicoId: tecId })
+        .expect(201)).body;
+      await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ estado: 'en_proceso' }).expect(200);
+      await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ estado: 'terminado', fechaFinalizacion: '2026-09-02' }).expect(200);
+      const visit = (await http().post('/api/relevamientos').set(ventas()).send({
+        clienteId: 'cli_andina', tipoVisita: 'asistencia', fecha: '2026-10-20', hora: '09:30', lugar: 'Av. Arce 2450', mapsLink: 'https://maps.app.goo.gl/xyz',
+        tecnicoId: tecId, motivo: 'Cámara sin imagen', problemaReportado: 'La cámara 3 no graba', equipoAfectado: 'Cámara domo 3', requiereVolver: true,
+        trabajoRelacionadoId: job.id,
+      }).expect(201)).body;
+      expect(visit).toMatchObject({
+        estado: 'programado', hora: '09:30', mapsLink: 'https://maps.app.goo.gl/xyz', motivo: 'Cámara sin imagen', problemaReportado: 'La cámara 3 no graba',
+        requiereVolver: true, enGarantia: true, tecnico: { id: tecId }, trabajoRelacionado: { id: job.id }, transicionesValidas: expect.arrayContaining(['en_camino']),
+      });
+      expect(String(visit.garantiaHasta).slice(0, 10)).toBe('2027-09-02');
+      const other = (await http().get('/api/schedules').set(ventas()).expect(200)).body.find((j: { clienteId: string }) => j.clienteId !== 'cli_andina');
+      await http().patch(`/api/relevamientos/${visit.id}`).set(ventas()).send({ trabajoRelacionadoId: other.id }).expect(400);
+      const edited = (await http().patch(`/api/relevamientos/${visit.id}`).set(tec()).send({ diagnostico: 'Fuente quemada', solucion: '', hora: '' }).expect(200)).body;
+      expect(edited).toMatchObject({ diagnostico: 'Fuente quemada', solucion: null, hora: null, motivo: 'Cámara sin imagen' });
+      await http().patch(`/api/relevamientos/${visit.id}`).set(tec()).send({ tecnicoId: '' }).expect(403);
+      const client = (await http().patch('/api/clients/cli_andina').set(ventas()).send({ mapsLink: 'https://waze.com/ul/abc' }).expect(200)).body;
+      expect(client.mapsLink).toBe('https://waze.com/ul/abc');
+    });
+
+    it('resolves only with a photo, cancels only with a reason, and takes the payment into the ledger', async () => {
+      const make = async () => (await http().post('/api/relevamientos').set(ventas())
+        .send({ clienteId: 'cli_andina', tipoVisita: 'asistencia', fecha: '2026-10-21', lugar: 'Oficina central', tecnicoId: tecId }).expect(201)).body;
+      const visit = await make();
+      await http().post(`/api/relevamientos/${visit.id}/estado`).set(tec()).send({ estado: 'resuelto' }).expect(400);
+      await http().post(`/api/relevamientos/${visit.id}/estado`).set(tec()).send({ estado: 'en_atencion' }).expect(201);
+      const noPhoto = await http().post(`/api/relevamientos/${visit.id}/estado`).set(tec()).send({ estado: 'resuelto' }).expect(400);
+      expect(noPhoto.body.message).toContain('foto');
+      await http().post(`/api/relevamientos/${visit.id}/files`).set(tec()).attach('file', Buffer.from([0xff, 0xd8, 0xff, 0xd9]), { filename: 'evidencia.jpg', contentType: 'image/jpeg' }).expect(201);
+      const done = (await http().post(`/api/relevamientos/${visit.id}/estado`).set(tec()).send({ estado: 'resuelto' }).expect(201)).body;
+      expect(done).toMatchObject({ estado: 'resuelto', transicionesValidas: [] });
+      expect(done.fechaFin).toBeTruthy();
+      await http().patch(`/api/relevamientos/${visit.id}`).set(tec()).send({ observacionFinal: 'x' }).expect(403);
+
+      const paid = (await http().post(`/api/relevamientos/${visit.id}/cobros`).set(tec()).send({ monto: 150, metodo: 'efectivo' }).expect(201)).body;
+      expect(paid).toMatchObject({ cobrado: 150, porRendir: 150 });
+      const movement = (await http().get('/api/finance/movements').query({ estado: 'por_validar' }).set(ventas()).expect(200)).body
+        .find((m: { relevamiento?: { id: string } }) => m.relevamiento?.id === visit.id);
+      expect(movement).toMatchObject({ concepto: 'asistencia', recibidoPor: { id: tecId }, cliente: { id: 'cli_andina' } });
+      expect(Number(movement.monto)).toBe(150);
+
+      const other = await make();
+      await http().post(`/api/relevamientos/${other.id}/estado`).set(ventas()).send({ estado: 'cancelado' }).expect(400);
+      const cancelled = (await http().post(`/api/relevamientos/${other.id}/estado`).set(ventas()).send({ estado: 'cancelado', motivo: 'El cliente reprogramó' }).expect(201)).body;
+      expect(cancelled).toMatchObject({ estado: 'cancelado', motivoCancelacion: 'El cliente reprogramó' });
+      await http().post(`/api/relevamientos/${other.id}/cobros`).set(ventas()).send({ monto: 50 }).expect(400);
     });
   });
 

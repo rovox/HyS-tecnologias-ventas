@@ -22,6 +22,7 @@ export const CONCEPTOS = {
 /** Every concept, including the payments that come from projects and jobs. */
 export const CONCEPTO_LABEL = {
   adelanto: 'Adelanto',
+  asistencia: 'Asistencia',
   cobro: 'Cobro',
   adicional: 'Adicional',
   ...CONCEPTOS.ingreso,
