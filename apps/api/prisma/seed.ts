@@ -35,8 +35,9 @@ async function main() {
   for (const row of USERS) {
     const passwordHash = await bcrypt.hash(passwordFor(row.email), 10);
     const { id, localOnly: _localOnly, ...rest } = row;
+    // By id: the roster id is the identity, an email may change (USERS-03).
     await prisma.user.upsert({
-      where: { email: row.email },
+      where: { id },
       update: { ...rest, passwordHash, active: true },
       create: { id, ...rest, passwordHash, active: true },
     });

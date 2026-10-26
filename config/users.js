@@ -37,8 +37,8 @@ function credentialsFor(email) {
 // One account per role for tests and scripts.
 const ROLE_ACCOUNTS = {
   admin: 'julio@hscontrol.com',
-  ventas: 'dennis@hscontrol.com',
-  contabilidad: 'estefany@hscontrol.com',
+  ventas: 'denis.palacios@hys.com',
+  contabilidad: 'estefany.gonzales@hscontrol.com',
   tecnico: 'marcos.tec@demo.hs.local',
 };
 
