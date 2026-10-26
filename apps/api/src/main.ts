@@ -20,6 +20,8 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      // Dev only (API_STRICT_DTO=1, set by `pnpm dev`): reject fields the API does not know instead of dropping them silently.
+      forbidNonWhitelisted: process.env.API_STRICT_DTO === '1',
       transform: true,
       transformOptions: { enableImplicitConversion: true },
     }),
@@ -27,8 +29,8 @@ async function bootstrap() {
 
   if (process.env.ENABLE_SWAGGER === '1') {
     const swagger = new DocumentBuilder()
-      .setTitle('H&S Sales API')
-      .setDescription('Sales microservice: auth, clients, quotations, tasks, relevamientos, goals, metrics.')
+      .setTitle('hs-erp API')
+      .setDescription('H&S Tecnologías ERP: auth, clients, quotations, projects (schedules), payments, relevamientos, internal orders, goals, metrics.')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

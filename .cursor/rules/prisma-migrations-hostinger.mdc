@@ -1,29 +1,12 @@
 ---
-description: Prisma migrations — additive per schema change; Hostinger uses ops SQL baseline, never migrate deploy on host.
+description: Prisma migrations — additive, one change per folder; production DB from one generated SQL file.
 globs: apps/api/prisma/**/*
 alwaysApply: false
 ---
 
-# Prisma migrations (sales API)
+# Prisma migrations
 
-## Repo (local / CI)
-
-- Keep the full `apps/api/prisma/migrations/` history. **Do not squash** folders already applied on Hostinger or local DBs.
-- One migration folder = **one schema change**. Prefer names with a **domain prefix**: `…_clients_…`, `…_quotations_…`, `…_tasks_…`, `…_schedules_…`, `…_relevamientos_…`. Do not mix unrelated entities in one SQL file.
-- Create with `pnpm --filter api prisma:migrate` (`migrate dev`). Never `db push` for shared environments.
-
-## Hostinger (empty MySQL)
-
-- **Do not** run `prisma migrate deploy` or `prisma db seed` on the host.
-- Import either:
-  1. Each `migration.sql` in folder-name order, then [hostinger-bootstrap.sql](docs/deployment/hostinger-bootstrap.sql), **or**
-  2. Single ops file [hostinger-schema-baseline.sql](docs/deployment/hostinger-schema-baseline.sql), then bootstrap.
-- The baseline is **ops-only**. It does not replace Prisma folders in git.
-
-## When adding a migration
-
-1. Ship the new folder via `migrate dev` as usual.
-2. Regenerate the ops baseline (ordered concat of all `migrations/*/migration.sql`) into `docs/deployment/hostinger-schema-baseline.sql`.
-3. Document Hostinger applies the **new** `migration.sql` alone on existing DBs (phpMyAdmin), not a full baseline re-import.
-
-See [docs/deployment/hostinger-api.md](docs/deployment/hostinger-api.md).
+- Keep the full `apps/api/prisma/migrations/` history; never squash folders. One folder = one schema change. Never `db push` on a shared database.
+- After adding a migration, regenerate the single production SQL: `node apps/api/scripts/build-hostinger-sql.mjs` (`docs/deployment/hostinger-db.sql`; it also records `_prisma_migrations`).
+- A new database on Hostinger: import the file from `--users` (see `docs/deployment/hostinger.md`). An existing one: apply only the new `migration.sql`.
+- Never `prisma db seed` on Hostinger.

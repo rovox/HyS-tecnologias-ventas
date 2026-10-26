@@ -1,0 +1,71 @@
+import { BadRequestException } from '@nestjs/common';
+import { SchedulesService } from './schedules.service';
+import { ROLES } from '../../common/policy/roles';
+
+describe('SchedulesService', () => {
+  const prisma = {
+    schedule: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    client: { findUnique: jest.fn() },
+    sucursal: { findUnique: jest.fn() },
+    quotation: { findUnique: jest.fn() },
+    touchClientActivity: jest.fn(),
+  };
+  const audit = { record: jest.fn(), log: jest.fn() };
+  const categories = { assertDivision: jest.fn() };
+  const income = { register: jest.fn() };
+  const service = new SchedulesService(prisma as never, audit as never, categories as never, income as never);
+
+  const admin = {
+    id: 'usr_admin',
+    role: ROLES.ADMIN,
+    sucursalId: 'suc_central',
+  } as never;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('rejects invalid status transition', async () => {
+    prisma.schedule.findFirst.mockResolvedValue({
+      id: 'sch_1',
+      estado: 'terminado',
+      monto: 100,
+      clienteId: 'cli_1',
+      projectId: null,
+      movements: [],
+    });
+    await expect(
+      service.update('sch_1', { estado: 'programado' }, admin),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates schedule and touches client activity', async () => {
+    prisma.client.findUnique.mockResolvedValue({ id: 'cli_1', direccion: 'X' });
+    prisma.sucursal.findUnique.mockResolvedValue({ id: 'suc_central' });
+    prisma.schedule.create.mockResolvedValue({ id: 'sch_new', clienteId: 'cli_1' });
+    prisma.schedule.findFirst.mockResolvedValue({ id: 'sch_new', projectId: null, monto: 1000, estado: 'programado', movements: [] });
+    const row = await service.create(
+      {
+        categoriaId: 'seguridad_electronica',
+        clienteId: 'cli_1',
+        descripcionTrabajo: 'Instalación',
+        sucursalId: 'suc_central',
+        fechaProgramada: '2026-08-22',
+        monto: 1000,
+        adelanto: 200,
+      },
+      admin,
+      'sess_1',
+    );
+    expect(row.id).toBe('sch_new');
+    expect(categories.assertDivision).toHaveBeenCalledWith('seguridad_electronica');
+    expect(income.register).toHaveBeenCalledWith({ scheduleId: 'sch_new' }, expect.objectContaining({ concepto: 'adelanto', monto: 200 }), admin, 'sess_1');
+    expect(prisma.touchClientActivity).toHaveBeenCalledWith('cli_1');
+    expect(audit.record).toHaveBeenCalled();
+  });
+});

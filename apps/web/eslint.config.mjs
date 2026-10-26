@@ -53,6 +53,23 @@ export default [
 		},
 	},
 	{
+		// Feature-driven boundaries: another feature only through its index.js; inside a feature, relative imports.
+		files: ['src/**/*.js', 'src/**/*.jsx'],
+		rules: {
+			'no-restricted-imports': ['error', { patterns: [{ group: ['@/features/*/*'], message: 'Import another feature only through its index.js (@/features/<x>).' }] }],
+		},
+	},
+	{
+		// Inside features and the shared view kit only `api.js` talks HTTP (CLAUDE.md: no HTTP from pages/components).
+		files: ['src/features/**/*.jsx', 'src/shared/views/**/*.jsx'],
+		rules: {
+			'no-restricted-imports': ['error', { patterns: [
+				{ group: ['@/features/*/*'], message: 'Import another feature only through its index.js (@/features/<x>).' },
+				{ group: ['@/api/*', '@/services/*'], message: 'Fetch through the feature api.js hooks.' },
+			] }],
+		},
+	},
+	{
 		files: ['**/*.jsx'],
 		plugins: { horizons: unicodeEscapePlugin },
 		rules: { 'horizons/no-unicode-escapes-in-jsx': 'warn' },

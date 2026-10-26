@@ -8,10 +8,10 @@ datasource db {
 }
 
 model Sucursal {
-  id            String         @id
-  nombre        String         @db.VarChar(50)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id            String          @id
+  nombre        String          @db.VarChar(50)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   users         User[]
   clients       Client[]
   quotations    Quotation[]
@@ -19,36 +19,48 @@ model Sucursal {
   tasks         Task[]
   schedules     Schedule[]
   pedidosOrigen PedidoInterno[] @relation("SucursalPedidosOrigen")
+  projects      Project[]
+  cashBoxes     CashBox[]
+  movements     CashMovement[]
+  stockOut      StockMovement[] @relation("StockOrigin")
+  stockIn       StockMovement[] @relation("StockDestination")
 
   @@map("sucursales")
 }
 
 model User {
-  id               String         @id @default(uuid())
-  email            String         @unique
-  passwordHash     String
-  name             String
-  role             String
-  phone            String         @default("")
-  active           Boolean        @default(true)
-  monthlyGoalBs    Decimal        @default(0) @db.Decimal(12, 2)
-  sucursalId       String?
-  sucursal         Sucursal?      @relation(fields: [sucursalId], references: [id])
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  sessions         Session[]
-  activities       Activity[]
-  quotations       Quotation[]    @relation("VendorQuotations")
-  sellerGoals      SellerGoal[]
-  relevamientos    Relevamiento[]
-  createdTasks     Task[]         @relation("TaskCreator")
-  assignedTasks    Task[]         @relation("TaskAssignee")
-  designatedTasks  Task[]         @relation("TaskAssignedBy")
-  schedulesVendedor Schedule[]    @relation("ScheduleVendedor")
-  schedulesTecnico  Schedule[]    @relation("ScheduleTecnico")
-  schedulePayments  SchedulePayment[] @relation("PaymentCollector")
-  pedidosResponsable PedidoInterno[] @relation("PedidoResponsable")
-  comentariosPedidos PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
+  id                  String                    @id @default(uuid())
+  email               String                    @unique
+  passwordHash        String
+  name                String
+  role                String
+  phone               String                    @default("")
+  active              Boolean                   @default(true)
+  monthlyGoalBs       Decimal                   @default(0) @db.Decimal(12, 2)
+  sucursalId          String?
+  sucursal            Sucursal?                 @relation(fields: [sucursalId], references: [id])
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  sessions            Session[]
+  activities          Activity[]
+  quotations          Quotation[]               @relation("VendorQuotations")
+  sellerGoals         SellerGoal[]
+  relevamientos       Relevamiento[]
+  createdTasks        Task[]                    @relation("TaskCreator")
+  assignedTasks       Task[]                    @relation("TaskAssignee")
+  designatedTasks     Task[]                    @relation("TaskAssignedBy")
+  schedulesVendedor   Schedule[]                @relation("ScheduleVendedor")
+  schedulesTecnico    Schedule[]                @relation("ScheduleTecnico")
+  schedulePayments    SchedulePayment[]         @relation("PaymentCollector")
+  pedidosResponsable  PedidoInterno[]           @relation("PedidoResponsable")
+  pedidosSolicitados  PedidoInterno[]           @relation("PedidoSolicitante")
+  comentariosPedidos  PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
+  quotationsDeleted   Quotation[]               @relation("QuotationsDeleted")
+  projectsResponsable Project[]                 @relation("ProjectResponsable")
+  movementsRegistered CashMovement[]            @relation("MovementRegisteredBy")
+  movementsValidated  CashMovement[]            @relation("MovementValidatedBy")
+  movementsReceived   CashMovement[]            @relation("MovementReceivedBy")
+  stockRegistered     StockMovement[]           @relation("StockRegisteredBy")
 
   @@index([sucursalId])
   @@map("users")
@@ -77,31 +89,39 @@ model Activity {
   action     String
   entityType String?
   entityId   String?
+  /// Changed fields: { campo: { antes, despues } } (AuditService.record).
+  detalle    Json?
   at         DateTime @default(now())
 
   @@index([sessionId])
+  @@index([entityType, entityId])
   @@index([userId])
   @@index([at])
   @@map("activities")
 }
 
 model Client {
-  id              String         @id @default(uuid())
-  nombre          String
-  tipo            String
-  contacto        String         @default("")
-  email           String         @default("")
-  telefono        String         @default("")
-  direccion       String         @default("")
-  sucursalId      String
-  sucursal        Sucursal       @relation(fields: [sucursalId], references: [id])
-  observaciones   String         @default("") @db.Text
-  lastActivityAt  DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  quotations      Quotation[]
-  relevamientos   Relevamiento[]
-  schedules       Schedule[]
+  id             String         @id @default(uuid())
+  nombre         String
+  tipo           String
+  contacto       String         @default("")
+  email          String         @default("")
+  telefono       String         @default("")
+  direccion      String         @default("")
+  sucursalId     String
+  sucursal       Sucursal       @relation(fields: [sucursalId], references: [id])
+  observaciones  String         @default("") @db.Text
+  /// Optional location link from any source (Maps, Waze, WhatsApp…), next to the address.
+  mapsLink       String         @default("") @db.VarChar(500)
+  lastActivityAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  quotations     Quotation[]
+  relevamientos  Relevamiento[]
+  schedules      Schedule[]
+  tasks          Task[]
+  projects       Project[]
+  movements      CashMovement[]
 
   @@index([sucursalId])
   @@index([nombre])
@@ -112,44 +132,54 @@ model Client {
 }
 
 model Quotation {
-  id             String             @id @default(uuid())
-  numero         String             @unique
-  titulo         String
-  categoria      String
-  categoriaId    String
-  subcategoria   String             @default("")
-  sucursalId     String
-  sucursal       Sucursal           @relation(fields: [sucursalId], references: [id])
-  sucursalNombre String             @default("")
-  clienteId      String?
-  cliente        Client?            @relation(fields: [clienteId], references: [id])
-  estado         String             @default("borrador")
-  motivoRechazo  String?            @db.Text
-  monto          Decimal            @db.Decimal(12, 2)
-  observacion         String             @default("") @db.Text
-  archivo             String             @default("")
-  archivoPdfUrl       String             @default("")
-  tieneLicitacion     Boolean            @default(false)
-  licitacionNumero    String?            @db.VarChar(120)
-  licitacionEntidad   String?            @db.VarChar(200)
-  plazoFinal          DateTime?
-  fechaEnvio          DateTime?
-  licitacionArchivos  Json?
-  vendedorId          String
-  vendedor       User               @relation("VendorQuotations", fields: [vendedorId], references: [id])
-  sellers        QuotationSeller[]
-  sale           Sale?
-  relevamientos  Relevamiento[]
-  schedules      Schedule[]
-  tasks          Task[]
-  schedulePayments SchedulePayment[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id                 String            @id @default(uuid())
+  numero             String            @unique
+  titulo             String
+  /// One of the 3 divisions (QuotationCategory.principal). Mandatory (CAT-01).
+  categoriaId        String
+  categoria          QuotationCategory @relation(fields: [categoriaId], references: [id])
+  subcategoria       String            @default("")
+  sucursalId         String
+  sucursal           Sucursal          @relation(fields: [sucursalId], references: [id])
+  sucursalNombre     String            @default("")
+  clienteId          String?
+  cliente            Client?           @relation(fields: [clienteId], references: [id])
+  /// borrador → enviado → aprobado | rechazado | vencido (domain/quotations.rules.ts).
+  estado             String            @default("borrador")
+  motivoRechazo      String?           @db.Text
+  /// Deleted = hidden from the lists (kept with the reason, restorable). Never removed from the DB.
+  eliminadaAt        DateTime?
+  eliminadaPorId     String?
+  eliminadaPor       User?             @relation("QuotationsDeleted", fields: [eliminadaPorId], references: [id])
+  motivoEliminacion  String?           @db.Text
+  monto              Decimal           @db.Decimal(12, 2)
+  observacion        String            @default("") @db.Text
+  archivo            String            @default("")
+  archivoPdfUrl      String            @default("")
+  tieneLicitacion    Boolean           @default(false)
+  licitacionNumero   String?           @db.VarChar(120)
+  licitacionEntidad  String?           @db.VarChar(200)
+  plazoFinal         DateTime?
+  fechaEnvio         DateTime?
+  licitacionArchivos Json?
+  vendedorId         String
+  vendedor           User              @relation("VendorQuotations", fields: [vendedorId], references: [id])
+  sellers            QuotationSeller[]
+  sale               Sale?
+  relevamientos      Relevamiento[]
+  schedules          Schedule[]
+  tasks              Task[]
+  schedulePayments   SchedulePayment[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  project            Project?
 
   @@index([vendedorId])
   @@index([clienteId])
   @@index([estado, sucursalId])
   @@index([estado, createdAt])
+  @@index([categoriaId])
+  @@index([eliminadaAt])
   @@map("quotations")
 }
 
@@ -165,30 +195,57 @@ model QuotationSeller {
 }
 
 model Relevamiento {
-  id           String    @id @default(uuid())
-  usuarioId    String
-  usuario      User      @relation(fields: [usuarioId], references: [id])
-  clienteId    String
-  cliente      Client    @relation(fields: [clienteId], references: [id])
-  sucursalId   String?
-  sucursal     Sucursal? @relation(fields: [sucursalId], references: [id])
-  fecha        DateTime  @db.Date
-  fechaFin     DateTime? @db.Date
-  tipoVisita   String    @default("relevamiento") @db.VarChar(32)
-  estado       String    @default("programado") @db.VarChar(32)
-  prioridad    String    @default("media") @db.VarChar(16)
-  vendedorId   String?
-  tecnicoId    String?
-  lugar        String    @db.VarChar(200)
-  notas        String?   @db.Text
-  fotosUrl     Json?
-  cotizacionId String?
-  cotizacion   Quotation? @relation(fields: [cotizacionId], references: [id])
-  payments     SchedulePayment[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                   String            @id @default(uuid())
+  usuarioId            String
+  usuario              User              @relation(fields: [usuarioId], references: [id])
+  clienteId            String
+  cliente              Client            @relation(fields: [clienteId], references: [id])
+  sucursalId           String?
+  sucursal             Sucursal?         @relation(fields: [sucursalId], references: [id])
+  fecha                DateTime          @db.Date
+  fechaFin             DateTime?         @db.Date
+  tipoVisita           String            @default("relevamiento") @db.VarChar(32)
+  estado               String            @default("programado") @db.VarChar(32)
+  prioridad            String            @default("media") @db.VarChar(16)
+  vendedorId           String?
+  tecnicoId            String?
+  lugar                String            @db.VarChar(200)
+  notas                String?           @db.Text
+  fotosUrl             Json?
+  cotizacionId         String?
+  cotizacion           Quotation?        @relation(fields: [cotizacionId], references: [id])
+  payments             SchedulePayment[]
+  /// SUR-02: what the visit form asks. Asistencia: motivo … solucion; relevamiento: necesidadCliente … observacionTecnica.
+  hora                 String?           @db.VarChar(16)
+  mapsLink             String            @default("") @db.VarChar(500)
+  motivo               String            @default("") @db.VarChar(200)
+  problemaReportado    String?           @db.Text
+  equipoAfectado       String            @default("") @db.VarChar(200)
+  causaProbable        String?           @db.Text
+  diagnostico          String?           @db.Text
+  solucion             String?           @db.Text
+  necesidadCliente     String?           @db.Text
+  areaRevisar          String            @default("") @db.VarChar(200)
+  medidasPuntos        String?           @db.Text
+  cantidadEstimada     Int?
+  observacionTecnica   String?           @db.Text
+  observacionFinal     String?           @db.Text
+  requiereMaterial     Boolean           @default(false)
+  requiereCotizacion   Boolean           @default(false)
+  requiereVolver       Boolean           @default(false)
+  /// The job this visit revisits (an installation under warranty, a failure after a job).
+  trabajoRelacionadoId String?
+  trabajoRelacionado   Schedule?         @relation("VisitRelatedJob", fields: [trabajoRelacionadoId], references: [id], onDelete: SetNull)
+  /// Taken from the related job when it is set (domain/relevamientos.rules.ts warrantyUntil); editable.
+  garantiaHasta        DateTime?         @db.Date
+  motivoCancelacion    String?           @db.Text
+  /// Payments taken on the visit (ledger).
+  movements            CashMovement[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@index([cotizacionId])
+  @@index([trabajoRelacionadoId])
   @@index([usuarioId])
   @@index([sucursalId, fecha])
   @@index([sucursalId, estado])
@@ -252,34 +309,41 @@ model SalePayment {
 }
 
 model Schedule {
-  id                 String     @id @default(uuid())
-  type               String     @db.VarChar(32)
+  id                 String            @id @default(uuid())
+  /// Division of the job, copied from the quotation when it comes from one. Mandatory (CAT-01).
+  categoriaId        String
+  categoria          QuotationCategory @relation(fields: [categoriaId], references: [id])
   clienteId          String
-  cliente            Client     @relation(fields: [clienteId], references: [id])
-  lugar              String     @default("") @db.VarChar(300)
-  descripcionTrabajo String     @db.Text
-  monto              Decimal    @default(0) @db.Decimal(12, 2)
-  adelanto           Decimal    @default(0) @db.Decimal(12, 2)
-  saldo              Decimal    @default(0) @db.Decimal(12, 2)
+  cliente            Client            @relation(fields: [clienteId], references: [id])
+  lugar              String            @default("") @db.VarChar(300)
+  descripcionTrabajo String            @db.Text
+  monto              Decimal           @default(0) @db.Decimal(12, 2)
+  adelanto           Decimal           @default(0) @db.Decimal(12, 2)
+  saldo              Decimal           @default(0) @db.Decimal(12, 2)
   fechaProgramada    DateTime
-  horario            String?    @db.VarChar(32)
+  horario            String?           @db.VarChar(32)
   fechaFinalizacion  DateTime?
-  estado             String     @default("programado") @db.VarChar(32)
+  estado             String            @default("programado") @db.VarChar(32)
   sucursalId         String
-  sucursal           Sucursal   @relation(fields: [sucursalId], references: [id])
+  sucursal           Sucursal          @relation(fields: [sucursalId], references: [id])
   vendedorId         String?
-  vendedor           User?      @relation("ScheduleVendedor", fields: [vendedorId], references: [id])
+  vendedor           User?             @relation("ScheduleVendedor", fields: [vendedorId], references: [id])
   tecnicoId          String?
-  tecnico            User?      @relation("ScheduleTecnico", fields: [tecnicoId], references: [id])
+  tecnico            User?             @relation("ScheduleTecnico", fields: [tecnicoId], references: [id])
   quotationId        String?
-  quotation          Quotation? @relation(fields: [quotationId], references: [id])
-  observaciones      String     @default("") @db.Text
-  mapsLink           String     @default("") @db.VarChar(500)
+  quotation          Quotation?        @relation(fields: [quotationId], references: [id])
+  /// Project this job belongs to (PRO-01). Jobs without a project are stand-alone work.
+  projectId          String?
+  project            Project?          @relation(fields: [projectId], references: [id])
+  observaciones      String            @default("") @db.Text
+  mapsLink           String            @default("") @db.VarChar(500)
   fotosUrl           Json?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
   tasks              Task[]
   payments           SchedulePayment[]
+  movements          CashMovement[]
+  visits             Relevamiento[]    @relation("VisitRelatedJob")
 
   @@index([fechaProgramada])
   @@index([sucursalId, estado])
@@ -287,25 +351,27 @@ model Schedule {
   @@index([vendedorId])
   @@index([clienteId])
   @@index([quotationId])
+  @@index([categoriaId])
+  @@index([projectId])
   @@map("schedules")
 }
 
 model SchedulePayment {
-  id              String        @id @default(uuid())
-  scheduleId      String?
-  schedule        Schedule?     @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  relevamientoId  String?
-  relevamiento    Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
-  quotationId     String?
-  quotation       Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
-  tipo            String        @db.VarChar(32)
-  monto           Decimal       @db.Decimal(12, 2)
-  metodo          String        @default("") @db.VarChar(64)
-  nota            String        @default("") @db.Text
-  cobradoPorId    String?
-  cobradoPor      User?         @relation("PaymentCollector", fields: [cobradoPorId], references: [id])
-  at              DateTime      @default(now())
-  createdAt       DateTime      @default(now())
+  id             String        @id @default(uuid())
+  scheduleId     String?
+  schedule       Schedule?     @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  relevamientoId String?
+  relevamiento   Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
+  quotationId    String?
+  quotation      Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  tipo           String        @db.VarChar(32)
+  monto          Decimal       @db.Decimal(12, 2)
+  metodo         String        @default("") @db.VarChar(64)
+  nota           String        @default("") @db.Text
+  cobradoPorId   String?
+  cobradoPor     User?         @relation("PaymentCollector", fields: [cobradoPorId], references: [id])
+  at             DateTime      @default(now())
+  createdAt      DateTime      @default(now())
 
   @@index([scheduleId])
   @@index([relevamientoId])
@@ -333,6 +399,9 @@ model Task {
   prioridadMotivo String?    @db.Text
   plazo           DateTime?
   cotizacionId    String?
+  /// Client the follow-up is about (optional); carried into the quotation when the task is converted.
+  clienteId       String?
+  cliente         Client?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   quotation       Quotation? @relation(fields: [cotizacionId], references: [id], onDelete: SetNull)
   scheduleId      String?
   schedule        Schedule?  @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
@@ -349,60 +418,77 @@ model Task {
   @@index([plazo])
   @@index([cotizacionId])
   @@index([scheduleId])
+  @@index([clienteId])
   @@index([tipo, asignadoId])
   @@index([tipo, estado])
   @@map("tasks")
 }
 
+/// The 3 divisions (principal = true) classify quotations, jobs, projects and products; the other rows are
+/// subcategory chips created by users.
 model QuotationCategory {
-  id        String   @id
-  label     String   @db.VarChar(100)
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id
+  label      String      @db.VarChar(100)
+  active     Boolean     @default(true)
+  principal  Boolean     @default(false)
+  sortOrder  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  quotations Quotation[]
+  schedules  Schedule[]
+  projects   Project[]
+  products   Product[]
 
   @@unique([label])
   @@map("quotation_categories")
 }
 
 model PedidoInterno {
-  id                    String                    @id @default(uuid())
-  responsableId         String
-  responsable           User                      @relation("PedidoResponsable", fields: [responsableId], references: [id])
-  sucursalOrigenId      String?
-  sucursalOrigen        Sucursal?                 @relation("SucursalPedidosOrigen", fields: [sucursalOrigenId], references: [id])
-  sucursalDestinoId     String?
-  cronogramaId          String?
-  prioridad             String                    @default("Normal") @db.VarChar(16)
-  estado                String                    @default("solicitado") @db.VarChar(32)
-  fechaEntregaEstimada  DateTime?
-  fechaEntregaReal      DateTime?
-  entregadoPorId        String?
-  observaciones         String?                   @db.Text
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  items                 PedidoInternoItem[]
-  comentarios           PedidoInternoComentario[]
+  id                   String                    @id @default(uuid())
+  responsableId        String
+  responsable          User                      @relation("PedidoResponsable", fields: [responsableId], references: [id])
+  /// Who asked for it (INV-02); `responsable` is who receives it ("para").
+  solicitanteId        String
+  solicitante          User                      @relation("PedidoSolicitante", fields: [solicitanteId], references: [id])
+  sucursalOrigenId     String?
+  sucursalOrigen       Sucursal?                 @relation("SucursalPedidosOrigen", fields: [sucursalOrigenId], references: [id])
+  sucursalDestinoId    String?
+  cronogramaId         String?
+  prioridad            String                    @default("Normal") @db.VarChar(16)
+  estado               String                    @default("solicitado") @db.VarChar(32)
+  fechaEntregaEstimada DateTime?
+  fechaEntregaReal     DateTime?
+  entregadoPorId       String?
+  observaciones        String?                   @db.Text
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  items                PedidoInternoItem[]
+  comentarios          PedidoInternoComentario[]
+  stockMovements       StockMovement[]
 
   @@index([responsableId])
+  @@index([solicitanteId])
   @@index([estado])
   @@index([sucursalOrigenId])
   @@map("pedidos_internos")
 }
 
 model PedidoInternoItem {
-  id               String        @id @default(uuid())
-  pedidoId         String
-  pedido           PedidoInterno @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  materialNombre   String        @db.VarChar(200)
-  cantidad         Float         @default(1)
-  unidad           String        @default("unidades") @db.VarChar(32)
-  costoUnitario    Float?
-  observaciones    String?       @db.VarChar(500)
-  createdAt        DateTime      @default(now())
+  id             String        @id @default(uuid())
+  pedidoId       String
+  pedido         PedidoInterno @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  materialNombre String        @db.VarChar(200)
+  /// Catalog product (optional): when set, delivering the order moves its stock.
+  productoId     String?
+  producto       Product?      @relation(fields: [productoId], references: [id])
+  cantidad       Float         @default(1)
+  unidad         String        @default("unidades") @db.VarChar(32)
+  costoUnitario  Float?
+  observaciones  String?       @db.VarChar(500)
+  createdAt      DateTime      @default(now())
 
   @@index([pedidoId])
+  @@index([productoId])
   @@map("pedido_interno_items")
 }
 
@@ -418,4 +504,196 @@ model PedidoInternoComentario {
   @@index([pedidoId])
   @@index([autorId])
   @@map("pedido_interno_comentarios")
+}
+
+/// Contact-form requests from hstecnologias.com (WEB-01). Kept apart from
+/// Client on purpose: a request becomes an official Client only when sales
+/// converts it (POST /solicitudes-web/:id/convertir). `clienteId` stores the
+/// resulting client id without a Prisma relation, so Client is untouched.
+model SolicitudWeb {
+  id           String    @id @default(uuid())
+  nombre       String    @db.VarChar(200)
+  empresa      String    @default("") @db.VarChar(200)
+  email        String    @default("") @db.VarChar(200)
+  telefono     String    @default("") @db.VarChar(50)
+  departamento String    @default("") @db.VarChar(50)
+  servicio     String    @default("") @db.VarChar(100)
+  detalle      String    @db.Text
+  origen       String    @default("web") @db.VarChar(32)
+  pagina       String    @default("") @db.VarChar(500)
+  estado       String    @default("nueva") @db.VarChar(32)
+  notas        String    @db.Text
+  clienteId    String?
+  convertidaAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([estado])
+  @@index([email])
+  @@index([telefono])
+  @@index([createdAt])
+  @@map("solicitudes_web")
+}
+
+/// An approved quotation (PRO-01). Official amount, state, warranty; its jobs (trabajos) are schedules with projectId.
+model Project {
+  id              String            @id @default(uuid())
+  codigo          String            @unique
+  quotationId     String            @unique
+  quotation       Quotation         @relation(fields: [quotationId], references: [id])
+  clienteId       String
+  cliente         Client            @relation(fields: [clienteId], references: [id])
+  categoriaId     String
+  categoria       QuotationCategory @relation(fields: [categoriaId], references: [id])
+  sucursalId      String
+  sucursal        Sucursal          @relation(fields: [sucursalId], references: [id])
+  titulo          String            @db.VarChar(300)
+  montoOficial    Decimal           @db.Decimal(12, 2)
+  /// planificado → en_ejecucion → entregado → cerrado | anulado (domain/projects.rules.ts).
+  estado          String            @default("planificado") @db.VarChar(32)
+  motivoAnulacion String?           @db.Text
+  garantiaMeses   Int               @default(12)
+  entregadoAt     DateTime?
+  cerradoAt       DateTime?
+  responsableId   String?
+  responsable     User?             @relation("ProjectResponsable", fields: [responsableId], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  schedules       Schedule[]
+  movements       CashMovement[]
+  stockMovements  StockMovement[]
+
+  @@index([estado])
+  @@index([clienteId])
+  @@index([categoriaId])
+  @@map("projects")
+}
+
+/// Where validated money is (FIN-01): central box in Cochabamba, petty cash per branch; banks and QR later.
+model CashBox {
+  id         String         @id @db.VarChar(64)
+  nombre     String         @db.VarChar(120)
+  /// caja | caja_chica | banco | qr
+  tipo       String         @db.VarChar(32)
+  sucursalId String
+  sucursal   Sucursal       @relation(fields: [sucursalId], references: [id])
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  movements  CashMovement[] @relation("CashBoxOrigin")
+  incoming   CashMovement[] @relation("CashBoxDestination")
+
+  @@map("cash_boxes")
+}
+
+/// The single money ledger (FIN-01): ingreso | egreso | transferencia, validated into a cash box (rendición).
+model CashMovement {
+  id              String        @id @default(uuid())
+  tipo            String        @db.VarChar(16)
+  concepto        String        @db.VarChar(40)
+  monto           Decimal       @db.Decimal(12, 2)
+  fecha           DateTime      @default(now())
+  metodo          String        @default("") @db.VarChar(40)
+  nota            String        @default("") @db.VarChar(500)
+  /// por_validar → validado | observado | anulado (domain/finance.rules.ts).
+  estado          String        @default("por_validar") @db.VarChar(16)
+  motivo          String?       @db.Text
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id])
+  scheduleId      String?
+  schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
+  clienteId       String?
+  cliente         Client?       @relation(fields: [clienteId], references: [id])
+  /// A payment taken on a visit (asistencia) (SUR-02).
+  relevamientoId  String?
+  relevamiento    Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
+  cajaId          String?       @db.VarChar(64)
+  caja            CashBox?      @relation("CashBoxOrigin", fields: [cajaId], references: [id])
+  cajaDestinoId   String?       @db.VarChar(64)
+  cajaDestino     CashBox?      @relation("CashBoxDestination", fields: [cajaDestinoId], references: [id])
+  /// Expenses only: empresa | empleado (an employee's expense is refunded later).
+  pagadoPor       String?       @db.VarChar(16)
+  reembolsadoAt   DateTime?
+  comprobanteUrl  String?       @db.VarChar(500)
+  /// Validated movement this one reverses (a validated movement is never edited).
+  reversaDeId     String?       @unique
+  reversaDe       CashMovement? @relation("Reversal", fields: [reversaDeId], references: [id])
+  reversa         CashMovement? @relation("Reversal")
+  sucursalId      String
+  sucursal        Sucursal      @relation(fields: [sucursalId], references: [id])
+  registradoPorId String
+  registradoPor   User          @relation("MovementRegisteredBy", fields: [registradoPorId], references: [id])
+  validadoPorId   String?
+  validadoPor     User?         @relation("MovementValidatedBy", fields: [validadoPorId], references: [id])
+  /// Incomes: who received the money (a técnico may collect from the client); it is "por rendir" until validated.
+  recibidoPorId   String?
+  recibidoPor     User?         @relation("MovementReceivedBy", fields: [recibidoPorId], references: [id])
+  validadoAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([estado])
+  @@index([projectId])
+  @@index([scheduleId])
+  @@index([clienteId])
+  @@index([cajaId])
+  @@index([fecha])
+  @@index([recibidoPorId])
+  @@index([relevamientoId])
+  @@map("cash_movements")
+}
+
+/// Catalog item (INV-01): equipment, material or service. Stock is never stored: it comes from stock movements.
+model Product {
+  id          String              @id @default(uuid())
+  codigo      String              @unique @db.VarChar(40)
+  nombre      String              @db.VarChar(200)
+  marca       String              @default("") @db.VarChar(100)
+  /// One of the 3 divisions.
+  categoriaId String
+  categoria   QuotationCategory   @relation(fields: [categoriaId], references: [id])
+  /// equipo | material | servicio
+  tipo        String              @db.VarChar(16)
+  unidad      String              @default("unidad") @db.VarChar(20)
+  costo       Decimal             @default(0) @db.Decimal(12, 2)
+  precio      Decimal             @default(0) @db.Decimal(12, 2)
+  stockMinimo Decimal             @default(0) @db.Decimal(12, 2)
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  movements   StockMovement[]
+  pedidoItems PedidoInternoItem[]
+
+  @@index([categoriaId])
+  @@map("products")
+}
+
+/// A stock move (INV-01): entrada → destination; salida_proyecto → origin + project; transferencia → origin and
+/// destination; ajuste → origin (shortage) or destination (surplus), with a reason.
+model StockMovement {
+  id                String         @id @default(uuid())
+  productoId        String
+  producto          Product        @relation(fields: [productoId], references: [id])
+  tipo              String         @db.VarChar(20)
+  cantidad          Decimal        @db.Decimal(12, 2)
+  costoUnitario     Decimal        @default(0) @db.Decimal(12, 2)
+  sucursalOrigenId  String?
+  sucursalOrigen    Sucursal?      @relation("StockOrigin", fields: [sucursalOrigenId], references: [id])
+  sucursalDestinoId String?
+  sucursalDestino   Sucursal?      @relation("StockDestination", fields: [sucursalDestinoId], references: [id])
+  projectId         String?
+  project           Project?       @relation(fields: [projectId], references: [id])
+  pedidoInternoId   String?
+  pedidoInterno     PedidoInterno? @relation(fields: [pedidoInternoId], references: [id], onDelete: SetNull)
+  motivo            String?        @db.Text
+  nota              String         @default("") @db.VarChar(500)
+  registradoPorId   String
+  registradoPor     User           @relation("StockRegisteredBy", fields: [registradoPorId], references: [id])
+  fecha             DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+
+  @@index([productoId])
+  @@index([projectId])
+  @@index([pedidoInternoId])
+  @@map("stock_movements")
 }

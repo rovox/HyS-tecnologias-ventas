@@ -1,8 +1,8 @@
-# H&S Tecnologías — ERP Operativo
+# hs-erp — ERP de H&S Tecnologías
 
-Monorepo del sistema de gestión para **H&S Tecnologías**: ventas, cronograma de instalaciones, relevamientos, cotizaciones, logística interna y finanzas.
+Monorepo (`hs-erp`: `@hs-erp/api` + `@hs-erp/web`) del sistema de gestión para **H&S Tecnologías**: ventas, cronograma de instalaciones, relevamientos, cotizaciones, logística interna y finanzas.
 
-**Milestone actual:** frontend POC en mock. NestJS sales corre en local (`pnpm dev:api`); Hostinger aún no publica esa API.
+**Estado:** MVP en la rama `mvp`, verificado en el stack local (Docker). Avance y decisiones: [`docs/STATUS.md`](./docs/STATUS.md).
 
 ---
 
@@ -17,7 +17,7 @@ pnpm install
 pnpm dev:web
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `dennis.ventas@demo.hs.local` / `dennis` (o `Demo1234!`).
+Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con un botón rápido (por ejemplo Dennis, `dennis@hscontrol.com`). Cuentas en [`config/users.json`](./config/users.json).
 
 | Comando | Descripción |
 |---------|-------------|
@@ -26,7 +26,7 @@ Abrir [http://localhost:3000](http://localhost:3000) e iniciar sesión con `denn
 | `pnpm start:web` | Preview del build |
 | `pnpm lint` | ESLint |
 | `pnpm dev:api` | NestJS sales en `:3001` (MySQL local) |
-| `pnpm dev` | Frontend + PocketBase legacy (no necesario para POC) |
+| `pnpm dev` | API (`:3001`) + frontend (`:3000`) |
 
 Documentación completa: **[`docs/README.md`](./docs/README.md)**
 
@@ -39,7 +39,6 @@ aca/
 ├── apps/
 │   ├── web/              ← SPA React + Vite (activo)
 │   ├── api/              ← NestJS sales (Prisma + MySQL)
-│   └── pocketbase/       ← Legacy / referencia auditada
 ├── docs/                 ← Documentación canónica modular
 │   ├── getting-started/
 │   ├── design/
@@ -85,45 +84,29 @@ Manuales extendidos:
 
 ## Cuentas demo
 
-Contraseña: nombre en minúsculas (ej. `julio`), también funciona `Demo1234!` para cualquier cuenta.
-
-| Email | Rol |
-|-------|-----|
-| `julio.admin@demo.hs.local` | Administrador |
-| `elias.ops@demo.hs.local` | Administrador |
-| `estefany.admin@demo.hs.local` | Administrador |
-| `mabel.admin@demo.hs.local` | Administrador |
-| `dennis.ventas@demo.hs.local` | Ventas |
-| `wilson.ventas@demo.hs.local` | Ventas |
-| `vanesa.ventas@demo.hs.local` | Ventas |
-| `giovanni.ventas@demo.hs.local` | Ventas |
+Una sola lista de usuarios para local, tests y producción: [`config/users.json`](./config/users.json) (mismos correos que producción). En local la contraseña es la de `config/users.passwords.local.json` (fuera de git) o, si no está, el nombre de pila en minúsculas (ej. `julio`).
 
 Lista completa: [`docs/getting-started/demo-accounts.md`](./docs/getting-started/demo-accounts.md)
 
 ---
 
-## Arquitectura POC
+## Arquitectura
 
 ```
-React (pages/hooks)
-      ↓
-services/*          ← contrato futuro NestJS
-      ↓
-mocks/store.js      ← datos en memoria por sesión
+apps/web  React (pages → features/hooks → services)   →  HTTP + SSE realtime
+apps/api  NestJS (controllers → services → domain/)    →  Prisma → MySQL 8
 ```
 
-Detalle: [`docs/architecture/frontend-poc.md`](./docs/architecture/frontend-poc.md)
-
-Backend objetivo: NestJS + Prisma + MySQL — [`docs/migration/backend-status.md`](./docs/migration/backend-status.md)
+Reglas: [`docs/rules/architecture.md`](./docs/rules/architecture.md). Negocio y vocabulario: [`docs/domain/business-design.md`](./docs/domain/business-design.md).
 
 ---
 
 ## Deploy
 
-Static frontend on Hostinger from `apps/web/dist`. Guide: [`docs/deployment/hostinger-frontend.md`](./docs/deployment/hostinger-frontend.md). Sales API (separate Node Web App + MySQL): [`docs/deployment/hostinger-api.md`](./docs/deployment/hostinger-api.md). Do not flip `VITE_API_MODE=api` until `GET /api/health` succeeds.
+Hostinger Cloud Startup: two Node sites (API and SPA) from the `migration/backend-api` branch, built by GitHub Actions from `release`; the database is created from one SQL file. Guide: [`docs/deployment/hostinger.md`](./docs/deployment/hostinger.md).
 
 ```bash
-git push origin migration/frontend-poc
+git checkout release && git merge --ff-only mvp && git push origin release
 ```
 
 ---
@@ -143,5 +126,4 @@ git push origin migration/frontend-poc
 
 ## Licencia y notas
 
-- `apps/pocketbase/` se conserva como referencia del sistema auditado; el POC no lo ejecuta.
 - npm/yarn están bloqueados — usar solo **pnpm**.

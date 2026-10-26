@@ -1,0 +1,11 @@
+import type { User } from '@prisma/client';
+export { ROLES, clientWhere, goalWhere, isAdmin, isCommercial, isConta, isTec, isVentas, metricsUserId, quotationWhere, relevamientoWhere, saleWhere, scheduleWhere, taskWhere, } from './policy';
+export declare function assertAdmin(user: User): void;
+export declare function assertCanMutateQuotes(user: User): void;
+export declare function assertCanMutateClients(user: User): void;
+export declare function assertCanManageWebLeads(user: User): void;
+export declare function assertCanMutateSchedules(user: User): void;
+export declare function assertCanMutateRelevamientos(user: User): void;
+export declare function assertCanCreateSchedules(user: User): void;
+export declare function assertCanManageProjects(user: User): void;
+export declare function assertCanSeeProjects(user: User): void;

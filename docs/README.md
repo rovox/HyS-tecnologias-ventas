@@ -8,7 +8,7 @@
 |---------------|--------------|
 | Instalar y correr el frontend localmente | [getting-started/local-development.md](./getting-started/local-development.md) |
 | Cuentas demo y roles | [getting-started/demo-accounts.md](./getting-started/demo-accounts.md) |
-| Manual de diseño (web + mobile) | [design/design-system-manual.md](./design/design-system-manual.md) |
+| Sistema de diseño | [`DESIGN.md`](../DESIGN.md) · [design/](./design/README.md) |
 | Reglas operativas por sección | [operations/README.md](./operations/README.md) |
 | Dashboards según rol | [operations/dashboards-by-role.md](./operations/dashboards-by-role.md) |
 | Cruce de datos entre módulos | [operations/data-crossing.md](./operations/data-crossing.md) |
@@ -17,8 +17,7 @@
 | Plan API cotizaciones y ventas | [migration/api-quotations-sales.md](./migration/api-quotations-sales.md) |
 | Modelo MySQL (microservicios) | [migration/microservice-model.md](./migration/microservice-model.md) |
 | Estado del backend | [migration/backend-status.md](./migration/backend-status.md) |
-| Deploy en Hostinger (SPA) | [deployment/hostinger-frontend.md](./deployment/hostinger-frontend.md) |
-| Deploy en Hostinger (API ventas) | [deployment/hostinger-api.md](./deployment/hostinger-api.md) |
+| Publicar en Hostinger (API, web y base de datos) | [deployment/hostinger.md](./deployment/hostinger.md) |
 
 ## Estructura
 

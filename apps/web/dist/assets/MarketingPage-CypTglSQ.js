@@ -1,0 +1,1 @@
+import{j as t}from"./index-U-qtEa-E.js";import{U as o}from"./UnderConstructionPage-u2gQ3Hys.js";import"./Helmet-CE39TftF.js";import"./Layout-oDypDFFR.js";const i=()=>t.jsx(o,{moduleName:"Marketing"});export{i as default};

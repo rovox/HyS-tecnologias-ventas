@@ -1,0 +1,8 @@
+.git
+.pnpm-store
+**/node_modules
+**/dist
+**/.dev-dist
+apps/api/uploads
+docs
+*.md

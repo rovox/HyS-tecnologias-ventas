@@ -1,0 +1,166 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AddComentarioDto = exports.UpdateEstadoPedidoDto = exports.UpsertPedidoInternoDto = exports.PedidoItemDto = void 0;
+const swagger_1 = require("@nestjs/swagger");
+const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
+const pedidos_internos_rules_1 = require("../domain/pedidos-internos.rules");
+class PedidoItemDto {
+    productoId;
+    materialNombre;
+    cantidad;
+    unidad;
+    costoUnitario;
+    observaciones;
+}
+exports.PedidoItemDto = PedidoItemDto;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], PedidoItemDto.prototype, "productoId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], PedidoItemDto.prototype, "materialNombre", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], PedidoItemDto.prototype, "cantidad", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], PedidoItemDto.prototype, "unidad", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], PedidoItemDto.prototype, "costoUnitario", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], PedidoItemDto.prototype, "observaciones", void 0);
+class UpsertPedidoInternoDto {
+    responsableId;
+    sucursalOrigenId;
+    sucursalDestinoId;
+    cronogramaId;
+    prioridad;
+    estado;
+    fechaEntregaEstimada;
+    observaciones;
+    items;
+}
+exports.UpsertPedidoInternoDto = UpsertPedidoInternoDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "responsableId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "sucursalOrigenId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "sucursalDestinoId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "cronogramaId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['Baja', 'Normal', 'Alta', 'Urgente'] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['Baja', 'Normal', 'Alta', 'Urgente']),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "prioridad", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: pedidos_internos_rules_1.PEDIDO_ESTADOS }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(pedidos_internos_rules_1.PEDIDO_ESTADOS),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "estado", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "fechaEntregaEstimada", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpsertPedidoInternoDto.prototype, "observaciones", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ type: [PedidoItemDto] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => PedidoItemDto),
+    __metadata("design:type", Array)
+], UpsertPedidoInternoDto.prototype, "items", void 0);
+class UpdateEstadoPedidoDto {
+    estado;
+    fecha_entrega;
+    entregado_por_id;
+    observacion;
+}
+exports.UpdateEstadoPedidoDto = UpdateEstadoPedidoDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsIn)(pedidos_internos_rules_1.PEDIDO_ESTADOS),
+    __metadata("design:type", String)
+], UpdateEstadoPedidoDto.prototype, "estado", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEstadoPedidoDto.prototype, "fecha_entrega", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEstadoPedidoDto.prototype, "entregado_por_id", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEstadoPedidoDto.prototype, "observacion", void 0);
+class AddComentarioDto {
+    contenido;
+}
+exports.AddComentarioDto = AddComentarioDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AddComentarioDto.prototype, "contenido", void 0);
+//# sourceMappingURL=pedido-interno.dto.js.map

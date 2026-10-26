@@ -16,13 +16,14 @@ async function bootstrap() {
     app.enableCors({ origin: origins.length === 1 ? origins[0] : origins, credentials: true });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
+        forbidNonWhitelisted: process.env.API_STRICT_DTO === '1',
         transform: true,
         transformOptions: { enableImplicitConversion: true },
     }));
     if (process.env.ENABLE_SWAGGER === '1') {
         const swagger = new swagger_1.DocumentBuilder()
-            .setTitle('H&S Sales API')
-            .setDescription('Sales microservice: auth, clients, quotations, tasks, relevamientos, goals, metrics.')
+            .setTitle('hs-erp API')
+            .setDescription('H&S Tecnologías ERP: auth, clients, quotations, projects (schedules), payments, relevamientos, internal orders, goals, metrics.')
             .setVersion('1.0')
             .addBearerAuth()
             .build();

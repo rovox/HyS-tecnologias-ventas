@@ -12,22 +12,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HealthController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const prisma_service_1 = require("./prisma/prisma.service");
+const prisma_service_1 = require("./common/prisma/prisma.service");
 let HealthController = class HealthController {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
     }
     check() {
-        return { ok: true, service: 'sales' };
+        return { ok: true, service: 'hs-erp' };
     }
     async db() {
         try {
             await this.prisma.$queryRaw `SELECT 1`;
-            return { ok: true, service: 'sales', db: true };
+            return { ok: true, service: 'hs-erp', db: true };
         }
         catch {
-            throw new common_1.ServiceUnavailableException({ ok: false, service: 'sales', db: false });
+            throw new common_1.ServiceUnavailableException({ ok: false, service: 'hs-erp', db: false });
         }
     }
 };

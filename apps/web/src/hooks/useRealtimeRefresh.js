@@ -1,59 +1,22 @@
 import { useEffect, useRef } from 'react';
-import { apiClient, authToken } from '@/api/http.js';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
-export function useRealtimeRefresh() {
-  const esRef = useRef(null);
+/**
+ * Runs `onChange(event)` when the API reports a change to one of `entities` (e.g. ['schedule', 'payment']), or to an
+ * entity they affect, and after the realtime connection (re)opens. Legacy bridge for pages not yet on query hooks:
+ * the connection itself lives in `app/RealtimeProvider.jsx`. New code uses `features/<x>/api.js` hooks instead.
+ */
+export function useRealtimeEntities(entities, onChange) {
+  const handlerRef = useRef(onChange);
+  handlerRef.current = onChange;
+  const key = entities.join(',');
 
   useEffect(() => {
-    if (!API_BASE) return undefined;
-
-    let cancelled = false;
-    let retryTimer;
-
-    const connect = async () => {
-      try {
-        const { token } = await apiClient.post('realtime/ticket', {}, { token: authToken() });
-        if (cancelled || !token) return;
-        const url = `${API_BASE}/realtime/events?access_token=${encodeURIComponent(token)}`;
-        const es = new EventSource(url);
-        esRef.current = es;
-        es.onmessage = (msg) => {
-          try {
-            const data = JSON.parse(msg.data);
-            if (data?.type === 'heartbeat') return;
-            window.dispatchEvent(new CustomEvent('hs-realtime', { detail: data }));
-          } catch {
-            /* ignore malformed */
-          }
-        };
-        es.onerror = () => {
-          es.close();
-          esRef.current = null;
-          if (!cancelled) {
-            retryTimer = setTimeout(connect, 8_000);
-          }
-        };
-      } catch {
-        if (!cancelled) {
-          retryTimer = setTimeout(connect, 12_000);
-        }
-      }
+    const watched = new Set(key.split(','));
+    const onEvent = (e) => {
+      const { entity, affects = [] } = e.detail || {};
+      if (entity === '*' || watched.has(entity) || affects.some((a) => watched.has(a))) handlerRef.current(e.detail);
     };
-
-    connect();
-    return () => {
-      cancelled = true;
-      clearTimeout(retryTimer);
-      esRef.current?.close();
-      esRef.current = null;
-    };
-  }, []);
-}
-
-export function onRealtime(handler) {
-  const fn = (e) => handler(e.detail);
-  window.addEventListener('hs-realtime', fn);
-  return () => window.removeEventListener('hs-realtime', fn);
+    window.addEventListener('hs-realtime', onEvent);
+    return () => window.removeEventListener('hs-realtime', onEvent);
+  }, [key]);
 }

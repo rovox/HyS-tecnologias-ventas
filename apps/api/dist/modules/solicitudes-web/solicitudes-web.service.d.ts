@@ -1,0 +1,105 @@
+import type { Prisma, User } from '@prisma/client';
+import { ClientsService } from '../clients';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
+import { UpdateSolicitudDto, WebhookSolicitudDto } from './dto/solicitud-web.dto';
+export declare function clientTipoFromServicio(servicio: string): string;
+export declare class SolicitudesWebService {
+    private readonly prisma;
+    private readonly audit;
+    private readonly clients;
+    constructor(prisma: PrismaService, audit: AuditService, clients: ClientsService);
+    createFromWebhook(dto: WebhookSolicitudDto): Promise<{
+        id: string;
+    }>;
+    list(user: User, estado?: string, q?: string): Prisma.PrismaPromise<{
+        id: string;
+        nombre: string;
+        email: string;
+        telefono: string;
+        createdAt: Date;
+        updatedAt: Date;
+        detalle: string;
+        clienteId: string | null;
+        estado: string;
+        empresa: string;
+        notas: string;
+        servicio: string;
+        departamento: string;
+        pagina: string;
+        origen: string;
+        convertidaAt: Date | null;
+    }[]>;
+    get(id: string, user: User): Promise<{
+        id: string;
+        nombre: string;
+        email: string;
+        telefono: string;
+        createdAt: Date;
+        updatedAt: Date;
+        detalle: string;
+        clienteId: string | null;
+        estado: string;
+        empresa: string;
+        notas: string;
+        servicio: string;
+        departamento: string;
+        pagina: string;
+        origen: string;
+        convertidaAt: Date | null;
+    }>;
+    update(id: string, dto: UpdateSolicitudDto, user: User, sessionId?: string): Promise<{
+        id: string;
+        nombre: string;
+        email: string;
+        telefono: string;
+        createdAt: Date;
+        updatedAt: Date;
+        detalle: string;
+        clienteId: string | null;
+        estado: string;
+        empresa: string;
+        notas: string;
+        servicio: string;
+        departamento: string;
+        pagina: string;
+        origen: string;
+        convertidaAt: Date | null;
+    }>;
+    convert(id: string, user: User, sessionId?: string): Promise<{
+        solicitud: {
+            id: string;
+            nombre: string;
+            email: string;
+            telefono: string;
+            createdAt: Date;
+            updatedAt: Date;
+            detalle: string;
+            clienteId: string | null;
+            estado: string;
+            empresa: string;
+            notas: string;
+            servicio: string;
+            departamento: string;
+            pagina: string;
+            origen: string;
+            convertidaAt: Date | null;
+        };
+        client: {
+            id: string;
+            nombre: string;
+            tipo: string;
+            contacto: string;
+            email: string;
+            telefono: string;
+            direccion: string;
+            sucursalId: string;
+            observaciones: string;
+            mapsLink: string;
+            lastActivityAt: Date | null;
+            createdAt: Date;
+            updatedAt: Date;
+        } | null;
+        created: boolean;
+    }>;
+}

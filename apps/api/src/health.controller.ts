@@ -1,6 +1,6 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaService } from './common/prisma/prisma.service';
 
 @ApiTags('health')
 @Controller('health')
@@ -10,7 +10,7 @@ export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Liveness probe' })
   check() {
-    return { ok: true, service: 'sales' };
+    return { ok: true, service: 'hs-erp' };
   }
 
   @Get('db')
@@ -18,9 +18,9 @@ export class HealthController {
   async db() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return { ok: true, service: 'sales', db: true };
+      return { ok: true, service: 'hs-erp', db: true };
     } catch {
-      throw new ServiceUnavailableException({ ok: false, service: 'sales', db: false });
+      throw new ServiceUnavailableException({ ok: false, service: 'hs-erp', db: false });
     }
   }
 }

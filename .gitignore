@@ -4,14 +4,11 @@ node_modules/
 .pnp.js
 .pnpm-store/
 
-# Builds (Hostinger POC ships a pre-built SPA — see docs/deployment/hostinger-frontend.md)
+# Builds: dist/ is built by CI only and never committed (PLAT-06, decision D7)
 dist/
+.dev-dist/
 build/
 out/
-!apps/web/dist/
-!apps/web/dist/**
-!apps/api/dist/
-!apps/api/dist/**
 app.tar.gz
 *.tar.gz
 
@@ -27,10 +24,6 @@ next-env.d.ts
 .env*.local
 apps/api/.env.test
 
-# PocketBase local data (NO subir a git)
-apps/pocketbase/pb_data/
-apps/pocketbase/pocketbase
-apps/pocketbase/pocketbase.zip
 *.db
 *.db-shm
 *.db-wal
@@ -83,3 +76,16 @@ apps/api/uploads/
 
 # Documentación interna (datos reales, no GitHub)
 docs/decisiones-tecnicas/
+*.zip
+
+# Playwright
+test-results/
+playwright-report/
+
+# graphify knowledge-graph output (local tool)
+graphify-out/
+
+# Real passwords for the shared roster (config/users.js), never committed
+config/users.passwords.local.json
+# Production database SQL with user hashes (apps/api/scripts/build-hostinger-sql.mjs --users)
+config/*.local.sql

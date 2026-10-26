@@ -58,14 +58,14 @@ VITE_API_URL=http://localhost:3001/api
 
 ```bash
 cp apps/api/.env.example apps/api/.env
-docker compose -f apps/api/docker-compose.yml up -d
-pnpm --filter api prisma:generate
-pnpm --filter api prisma:deploy
-pnpm --filter api prisma:seed   # solo local; nunca en Hostinger (reescribe passwordHash)
-pnpm --filter api dev
+docker compose up -d db   # root docker-compose.yml (or `pnpm local:up` for db + api + web)
+pnpm --filter @hs-erp/api prisma:generate
+pnpm --filter @hs-erp/api prisma:deploy
+pnpm --filter @hs-erp/api prisma:seed   # solo local; nunca en Hostinger (reescribe passwordHash)
+pnpm --filter @hs-erp/api dev
 ```
 
-Demo: `dennis.ventas@demo.hs.local` / `Demo1234!`. El frontend en Hostinger sigue en `mock` hasta que Actions compile con `VITE_API_MODE=api`.
+Demo: `dennis@hscontrol.com` / `dennis` (ver `config/users.json`). El frontend en Hostinger sigue en `mock` hasta que Actions compile con `VITE_API_MODE=api`.
 
 ## Estructura del monorepo
 
@@ -86,7 +86,7 @@ aca/
 1. `pnpm install`
 2. `pnpm dev:web`
 3. Login con una cuenta demo → [demo-accounts.md](./demo-accounts.md)
-4. Para el sitio en Hostinger: `git push origin migration/frontend-poc` y esperar el commit de Actions `chore: refresh web dist` (ver [deployment/hostinger-frontend.md](../deployment/hostinger-frontend.md))
+4. Para publicar en Hostinger: ver [deployment/hostinger.md](../deployment/hostinger.md)
 
 ## Solución de problemas
 

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": { "outDir": "./.dev-dist", "declaration": false },
+  "exclude": ["node_modules", "dist", ".dev-dist", "prisma", "test", "**/*spec.ts"]
+}

@@ -1,0 +1,1 @@
+import{j as o}from"./index-U-qtEa-E.js";import{U as e}from"./UnderConstructionPage-u2gQ3Hys.js";import"./Helmet-CE39TftF.js";import"./Layout-oDypDFFR.js";const a=()=>o.jsx(e,{moduleName:"Vehículos"});export{a as default};

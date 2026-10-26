@@ -10,19 +10,24 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
-const prisma_module_1 = require("./prisma/prisma.module");
-const auth_module_1 = require("./auth/auth.module");
-const clients_module_1 = require("./clients/clients.module");
-const quotations_module_1 = require("./quotations/quotations.module");
-const sucursales_module_1 = require("./sucursales/sucursales.module");
-const relevamientos_module_1 = require("./relevamientos/relevamientos.module");
-const goals_module_1 = require("./goals/goals.module");
-const sales_module_1 = require("./sales/sales.module");
-const metrics_module_1 = require("./metrics/metrics.module");
-const tasks_module_1 = require("./tasks/tasks.module");
-const schedules_module_1 = require("./schedules/schedules.module");
-const categories_module_1 = require("./categories/categories.module");
-const realtime_module_1 = require("./realtime/realtime.module");
+const common_module_1 = require("./common/common.module");
+const auth_1 = require("./modules/auth");
+const clients_1 = require("./modules/clients");
+const quotations_1 = require("./modules/quotations");
+const sucursales_1 = require("./modules/sucursales");
+const relevamientos_1 = require("./modules/relevamientos");
+const goals_1 = require("./modules/goals");
+const sales_1 = require("./modules/sales");
+const metrics_1 = require("./modules/metrics");
+const tasks_1 = require("./modules/tasks");
+const schedules_1 = require("./modules/schedules");
+const categories_1 = require("./modules/categories");
+const pedidos_internos_1 = require("./modules/pedidos-internos");
+const solicitudes_web_1 = require("./modules/solicitudes-web");
+const projects_1 = require("./modules/projects");
+const finance_1 = require("./modules/finance");
+const reporting_1 = require("./modules/reporting");
+const inventory_1 = require("./modules/inventory");
 const health_controller_1 = require("./health.controller");
 let AppModule = class AppModule {
 };
@@ -45,19 +50,24 @@ exports.AppModule = AppModule = __decorate([
                     };
                 },
             }),
-            prisma_module_1.PrismaModule,
-            auth_module_1.AuthModule,
-            clients_module_1.ClientsModule,
-            quotations_module_1.QuotationsModule,
-            sucursales_module_1.SucursalesModule,
-            relevamientos_module_1.RelevamientosModule,
-            goals_module_1.GoalsModule,
-            sales_module_1.SalesModule,
-            metrics_module_1.MetricsModule,
-            tasks_module_1.TasksModule,
-            schedules_module_1.SchedulesModule,
-            categories_module_1.CategoriesModule,
-            realtime_module_1.RealtimeModule,
+            common_module_1.CommonModule,
+            auth_1.AuthModule,
+            clients_1.ClientsModule,
+            quotations_1.QuotationsModule,
+            sucursales_1.SucursalesModule,
+            relevamientos_1.RelevamientosModule,
+            goals_1.GoalsModule,
+            sales_1.SalesModule,
+            metrics_1.MetricsModule,
+            tasks_1.TasksModule,
+            schedules_1.SchedulesModule,
+            categories_1.CategoriesModule,
+            pedidos_internos_1.PedidosInternosModule,
+            solicitudes_web_1.SolicitudesWebModule,
+            projects_1.ProjectsModule,
+            finance_1.FinanceModule,
+            reporting_1.ReportingModule,
+            inventory_1.InventoryModule,
         ],
         controllers: [health_controller_1.HealthController],
     })

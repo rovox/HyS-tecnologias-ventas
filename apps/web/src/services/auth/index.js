@@ -7,7 +7,7 @@ function publicUser(user) {
   return safe;
 }
 
-export const authService = {
+const authService = {
   async login(email, password, options = {}) {
     const data = await apiClient.post('auth/login', { email, password });
     authStore.save(data.accessToken, publicUser(data.user), { remember: options.remember !== false });
@@ -34,6 +34,16 @@ export const authService = {
   async listUsers() {
     const rows = await apiClient.get('users', { token: authStore.token });
     return (rows || []).map(publicUser);
+  },
+
+  /** Id, name and role of active users; allowed for every role with access (técnico included). */
+  async userDirectory() {
+    return (await apiClient.get('users/directory', { token: authStore.token })) || [];
+  },
+
+  /** One profile: own, or any for admin/ventas. */
+  async getUser(id) {
+    return publicUser(await apiClient.get(`users/${id}`, { token: authStore.token }));
   },
 
   async requestPasswordReset(email) {

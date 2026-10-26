@@ -7,32 +7,34 @@ import {
   ClipboardList,
   Settings,
   CalendarDays,
-  Package,
-  Receipt,
   CarFront,
   Megaphone,
-  Calculator,
   Wallet,
+  Boxes,
+  Inbox,
+  Briefcase,
 } from 'lucide-react';
 import { ROLES } from '@/constants/roles.js';
 
 export { ROLES };
 
-export const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
+const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONTA];
 
-const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
-const CLIENT_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
-const SURVEY_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
-const TASK_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC];
+// Contabilidad (CONTA) reads every module; what it can change is decided by each page and the API.
+const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONTA];
+const CLIENT_ROLES = ALL_ROLES;
+const SURVEY_ROLES = ALL_ROLES;
+const TASK_ROLES = ALL_ROLES;
 const REPORT_ROLES = [ROLES.ADMIN];
 const ADMIN_ONLY = [ROLES.ADMIN];
-const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
+const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONTA];
+const SOLICITUDES_WEB_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
 
 /**
  * Menú unificado: OPERACIONES primero para todos los roles.
  * Admin añade extras al final.
  */
-export const operationalMenuSections = [
+const operationalMenuSections = [
   {
     title: 'PRINCIPAL',
     items: [
@@ -43,10 +45,13 @@ export const operationalMenuSections = [
     title: 'OPERACIONES',
     items: [
       { to: '/quotations', icon: FileStack, label: 'Cotizaciones', allowedRoles: QUOTE_ROLES },
+      { to: '/projects', icon: Briefcase, label: 'Proyectos', allowedRoles: QUOTE_ROLES },
       { to: '/clientes', icon: Building2, label: 'Clientes', allowedRoles: CLIENT_ROLES },
-      { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos', allowedRoles: SURVEY_ROLES },
+      { to: '/solicitudes-web', icon: Inbox, label: 'Solicitudes web', allowedRoles: SOLICITUDES_WEB_ROLES },
+      { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos y asistencias', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
-      { to: '/pedidos-internos', icon: Package, label: 'Pedidos Internos', allowedRoles: PEDIDOS_ROLES },
+      { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
+      { to: '/inventario', icon: Boxes, label: 'Inventario', allowedRoles: ALL_ROLES },
     ],
   },
   {
@@ -60,26 +65,15 @@ export const operationalMenuSections = [
 ];
 
 /** Extras solo ADMINISTRADOR (después de OPERACIONES / ADMINISTRACIÓN base). */
-export const adminExtraMenuSections = [
+const adminExtraMenuSections = [
   {
     title: 'GESTIÓN ADMIN',
     items: [
-      { to: '/gastos-operativos', icon: Receipt, label: 'Gastos Operativos', allowedRoles: ADMIN_ONLY },
       { to: '/vehicle-control', icon: CarFront, label: 'Control Vehicular', allowedRoles: ADMIN_ONLY },
       { to: '/marketing', icon: Megaphone, label: 'Marketing', allowedRoles: ADMIN_ONLY },
-      { to: '/accounting', icon: Calculator, label: 'Costos Operativos', allowedRoles: ADMIN_ONLY },
-      { to: '/finanzas', icon: Wallet, label: 'Finanzas y Contabilidad', allowedRoles: ADMIN_ONLY },
     ],
   },
 ];
-
-/** @deprecated Prefer getMenuSections — kept for imports that still reference admin menu. */
-export const adminMenuSections = [
-  ...operationalMenuSections,
-  ...adminExtraMenuSections,
-];
-
-export const menuSections = operationalMenuSections;
 
 export function getMenuSections(role) {
   if (role === ROLES.NONE) return [];
@@ -100,23 +94,14 @@ export const routeRoles = {
   activity: ALL_ROLES,
   admin: ADMIN_ONLY,
   pedidos: PEDIDOS_ROLES,
+  solicitudesWeb: SOLICITUDES_WEB_ROLES,
   frozen: ADMIN_ONLY,
   users: ALL_ROLES,
+  finanzas: ALL_ROLES,
+  inventario: ALL_ROLES,
 };
 
 export function canWriteQuotations(role) {
   return role === ROLES.ADMIN || role === ROLES.VENTAS;
 }
 
-/** Quien puede ver /quotations también puede editar en esta vista. */
-export function canEditQuotationsView(role) {
-  return routeRoles.quotations.includes(role);
-}
-
-export function canWriteClients(role) {
-  return role === ROLES.ADMIN || role === ROLES.VENTAS;
-}
-
-export function sucursalOf(user) {
-  return user?.sucursalId || user?.sucursal_id || user?.department || '';
-}

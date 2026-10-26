@@ -1,6 +1,6 @@
 # Diseño responsive — web y mobile
 
-Guía práctica para adaptar pantallas del ERP H&S entre desktop y dispositivos móviles. Complementa [design-system-manual.md](./design-system-manual.md) y [`DESIGN.md`](../../DESIGN.md).
+Guía práctica para adaptar pantallas del ERP H&S entre desktop y dispositivos móviles. Complementa [`DESIGN.md`](../../DESIGN.md).
 
 ## 1. Filosofía responsive
 

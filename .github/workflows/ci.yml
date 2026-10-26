@@ -1,0 +1,65 @@
+name: ci
+
+# D7: `pnpm check` (api build, unit, e2e, web lint, web build, knip) on every PR and on
+# main / develop / feat/* / fix/* / chore/* / analysis/*. CI never commits dist/;
+# the built output is only uploaded as an artifact (deploys come later, after LOCAL-04).
+
+on:
+  push:
+    branches: [main, mvp, release, develop, 'feat/**', 'fix/**', 'chore/**', 'analysis/**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uci -pci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
+      JWT_SECRET: ci-test-secret
+      CORS_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Prepare database
+        run: |
+          pnpm --filter @hs-erp/api prisma:deploy
+          pnpm --filter @hs-erp/api prisma:seed
+
+      - name: pnpm check
+        run: pnpm check
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            apps/api/dist
+            apps/web/dist

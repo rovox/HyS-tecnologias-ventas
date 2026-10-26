@@ -1,0 +1,68 @@
+name: release
+
+# REL-01 (owner approved 2026-10-26). Hostinger Cloud Startup runs each app from its folder of the branch it watches —
+# `migration/backend-api` for now (owner, 2026-10-26) — and does not build (empty Build command: `vite build` needs a
+# native esbuild binary the host cannot execute). This job takes `release`, merges it into `migration/backend-api`,
+# builds what Hostinger only serves and commits it there in the same commit:
+#   apps/api/dist (Nest, entry dist/main.js) · apps/web/dist (SPA, served by serve-dist.mjs)
+#   apps/api/pnpm-lock.yaml · apps/web/pnpm-lock.yaml (each app installs with its own folder as root)
+# One commit per release, so Hostinger deploys once and never sees source without its build. Only this job writes to
+# `migration/backend-api`; dev branches never carry build files (PLAT-06).
+# Publish: merge `mvp` into `release` and push. Roll back: `git revert` on `release` and push.
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  TARGET: migration/backend-api
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge release into the branch Hostinger watches (build files are rebuilt below)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$TARGET" "origin/$TARGET"
+          git merge --no-ff --no-commit -X theirs "$GITHUB_SHA" || true
+          git rm -r -q --cached --ignore-unmatch apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
+          rm -rf apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then git diff --name-only --diff-filter=U; echo "Merge conflicts"; exit 1; fi
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the API and the SPA (apps/web/.env.production is baked into the SPA)
+        run: |
+          pnpm --filter @hs-erp/api build
+          pnpm --filter @hs-erp/web build
+
+      - name: Lockfile per app (Hostinger installs apps/api and apps/web on their own)
+        run: |
+          pnpm --dir apps/api install --lockfile-only --no-frozen-lockfile
+          pnpm --dir apps/web install --lockfile-only --no-frozen-lockfile
+
+      - name: Commit source and build together and push
+        run: |
+          git add -f apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
+          git commit -m "release ${GITHUB_SHA::8}: source + Hostinger build"
+          git push origin "$TARGET"

@@ -15,6 +15,8 @@ const buttonVariants = cva(
           "bg-[hsl(var(--action))] text-[hsl(var(--action-foreground))] shadow-sm hover:bg-[hsl(var(--action))]/90 font-semibold",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        success:
+          "bg-success text-success-foreground shadow-sm hover:bg-success/90",
         outline:
           "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
         secondary:

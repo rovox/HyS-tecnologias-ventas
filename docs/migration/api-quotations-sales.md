@@ -2,7 +2,7 @@
 
 PocketBase → **NestJS + Prisma + MySQL** on Hostinger. One sales microservice. The rest of the ERP stays on the frontend mock until later services exist.
 
-Implemented in [`apps/api`](../../apps/api). Hostinger production: [hostinger-api.md](../deployment/hostinger-api.md). Model: [microservice-model.md](./microservice-model.md).
+Implemented in [`apps/api`](../../apps/api). Hostinger production: [hostinger.md](../deployment/hostinger.md). Model: [microservice-model.md](./microservice-model.md).
 
 ## Scope
 

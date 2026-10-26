@@ -1,0 +1,14 @@
+[
+  { "id": "usr_admin", "email": "julio@hscontrol.com", "name": "Julio", "role": "ADMINISTRADOR", "sucursalId": "suc_central", "monthlyGoalBs": 12000, "phone": "70000001" },
+  { "id": "usr_mabel", "email": "mavel@hscontrol.com", "name": "Mavel", "role": "ADMINISTRADOR", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000008" },
+  { "id": "usr_tec", "email": "elias@hscontrol.com", "name": "Elias", "role": "ADMINISTRADOR", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000003" },
+  { "id": "usr_conta", "email": "estefany@hscontrol.com", "name": "Estefany Gonzales", "role": "CONTABILIDAD", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000004" },
+  { "id": "usr_ventas", "email": "dennis@hscontrol.com", "name": "Dennis", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_central", "monthlyGoalBs": 18000, "phone": "70000002" },
+  { "id": "usr_giovanni", "email": "giovanni@hscontrol.com", "name": "Giovanni", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_central", "monthlyGoalBs": 14000, "phone": "70000007" },
+  { "id": "usr_vanesa", "email": "vanessa@hscontrol.com", "name": "Vanessa", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_quillacollo", "monthlyGoalBs": 14000, "phone": "70000006" },
+  { "id": "usr_wilson", "email": "wilson@hscontrol.com", "name": "Wilson", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_punata", "monthlyGoalBs": 14000, "phone": "70000005" },
+  { "id": "usr_marcelo", "email": "marcelo@hscontrol.com", "name": "Marcelo", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000010" },
+  { "id": "usr_ronald", "email": "ronald@hscontrol.com", "name": "Ronald", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000011" },
+  { "id": "usr_rodrigo", "email": "rodrigo@hscontrol.com", "name": "Rodrigo", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000012" },
+  { "id": "usr_tecnico", "email": "marcos.tec@demo.hs.local", "name": "Marcos", "role": "SEGURIDAD ELECTRÓNICA", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000009", "localOnly": true }
+]

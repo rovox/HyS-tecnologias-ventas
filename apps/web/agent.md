@@ -24,4 +24,4 @@ The SPA is the current product. Keep it. Improve working flows; do not rewrite t
 
 ## Deploy
 
-Hostinger serves committed `dist/`. It cannot run `vite build` (esbuild `noexec`). Push source only; GitHub Actions compiles and commits `apps/web/dist`. Hostinger copies that folder after `pnpm install`. Details: `.cursor/rules/frontend-cicd.mdc`.
+Hostinger cannot run `vite build` (esbuild `noexec`). GitHub Actions builds `release` into `migration/backend-api`, which Hostinger serves with `serve-dist.mjs`. Never commit `dist/`. Details: `docs/deployment/hostinger.md`.

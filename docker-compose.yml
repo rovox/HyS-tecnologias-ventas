@@ -1,0 +1,84 @@
+# Local stack: db + api + web (LOCAL-01). One command: `pnpm local:up`.
+# Local only. Never point this at Hostinger. Credentials below are local demo values.
+name: hs-erp
+
+x-app: &app
+  # api and web run the same dev image: one build, one image on disk.
+  image: hs-erp-dev:local
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.dev
+  working_dir: /app
+  volumes:
+    - .:/app
+    # Dependencies come from the image (named volumes, shared by api and web) instead of the host's node_modules.
+    # They are filled from the image only when empty: after a lockfile change run `pnpm local:reset`.
+    - hs_erp_node_modules:/app/node_modules
+    - hs_erp_api_node_modules:/app/apps/api/node_modules
+    - hs_erp_web_node_modules:/app/apps/web/node_modules
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: hys_sales
+      MYSQL_USER: hys
+      MYSQL_PASSWORD: hys
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - hs_erp_mysql:/var/lib/mysql
+
+  api:
+    <<: *app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - apps/api/.env.example
+    environment:
+      DATABASE_URL: mysql://hys:hys@db:3306/hys_sales
+      UPLOAD_DIR: /app/apps/api/uploads
+      API_STRICT_DTO: "1"
+    command: >
+      sh -c "pnpm --filter @hs-erp/api exec prisma generate
+      && pnpm --filter @hs-erp/api exec prisma migrate deploy
+      && pnpm --filter @hs-erp/api exec prisma db seed
+      && pnpm --filter @hs-erp/api dev"
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health/db').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+
+  web:
+    <<: *app
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    command: pnpm --filter @hs-erp/web dev
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+
+volumes:
+  hs_erp_mysql:
+  hs_erp_node_modules:
+  hs_erp_api_node_modules:
+  hs_erp_web_node_modules:

@@ -1,10 +1,10 @@
 {
-  "name": "api",
+  "name": "@hs-erp/api",
   "version": "0.0.0",
   "private": true,
   "scripts": {
     "postinstall": "prisma generate --schema=./prisma/schema.prisma",
-    "dev": "nest build && nest start --watch -e \"node dist/main.js\"",
+    "dev": "API_STRICT_DTO=1 nest start --watch -p tsconfig.dev.json",
     "build": "nest build",
     "start": "node dist/main.js",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
@@ -13,9 +13,9 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "jest --config ./test/jest-unit.json",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
-    "db:reset": "docker compose down -v && docker compose up -d && sleep 3 && pnpm prisma:migrate && pnpm prisma:seed"
+    "db:up": "docker compose -f ../../docker-compose.yml up -d --wait db",
+    "db:down": "docker compose -f ../../docker-compose.yml down",
+    "db:reset": "docker compose -f ../../docker-compose.yml down -v && docker compose -f ../../docker-compose.yml up -d --wait db && prisma migrate deploy && prisma db seed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -28,14 +28,12 @@
     "@nestjs/platform-express": "^11.2.1",
     "@nestjs/swagger": "^11.4.7",
     "@prisma/adapter-mariadb": "6.16.3",
-    "@prisma/client": "^6.16.3",
+    "@prisma/client": "6.19.3",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "mariadb": "^3.5.3",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "swagger-ui-express": "^5.0.1"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
@@ -44,7 +42,7 @@
     "@types/node": "^20.19.43",
     "@types/supertest": "^7.2.1",
     "jest": "^30.4.2",
-    "prisma": "^6.16.3",
+    "prisma": "6.19.3",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
     "tsx": "^4.23.12",
