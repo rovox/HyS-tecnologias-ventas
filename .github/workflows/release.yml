@@ -1,13 +1,14 @@
 name: release
 
-# REL-01 (owner approved 2026-10-26). Hostinger Cloud Startup runs each app from its folder of the `deploy` branch and
-# does not build (empty Build command: `vite build` needs a native esbuild binary the host cannot execute). This job
-# takes `release`, builds what Hostinger only serves and force-pushes the result to `deploy`:
+# REL-01 (owner approved 2026-10-26). Hostinger Cloud Startup runs each app from its folder of the branch it watches —
+# `migration/backend-api` for now (owner, 2026-10-26) — and does not build (empty Build command: `vite build` needs a
+# native esbuild binary the host cannot execute). This job takes `release`, merges it into `migration/backend-api`,
+# builds what Hostinger only serves and commits it there in the same commit:
 #   apps/api/dist (Nest, entry dist/main.js) · apps/web/dist (SPA, served by serve-dist.mjs)
 #   apps/api/pnpm-lock.yaml · apps/web/pnpm-lock.yaml (each app installs with its own folder as root)
-# So Hostinger only ever sees a complete build, deploys once per release, and dev branches never carry build files
-# (PLAT-06). Cut a release: merge `mvp` into `release` and push. Roll back: run this workflow on an older commit of
-# `release` (Actions → release → Run workflow), or revert on `release` and push.
+# One commit per release, so Hostinger deploys once and never sees source without its build. Only this job writes to
+# `migration/backend-api`; dev branches never carry build files (PLAT-06).
+# Publish: merge `mvp` into `release` and push. Roll back: `git revert` on `release` and push.
 
 on:
   push:
@@ -18,6 +19,9 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  TARGET: migration/backend-api
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,6 +29,18 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge release into the branch Hostinger watches (build files are rebuilt below)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$TARGET" "origin/$TARGET"
+          git merge --no-ff --no-commit -X theirs "$GITHUB_SHA" || true
+          git rm -r -q --cached --ignore-unmatch apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
+          rm -rf apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then git diff --name-only --diff-filter=U; echo "Merge conflicts"; exit 1; fi
 
       - uses: pnpm/action-setup@v4
 
@@ -45,11 +61,8 @@ jobs:
           pnpm --dir apps/api install --lockfile-only --no-frozen-lockfile
           pnpm --dir apps/web install --lockfile-only --no-frozen-lockfile
 
-      - name: Publish the build to the deploy branch
+      - name: Commit source and build together and push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B deploy
           git add -f apps/api/dist apps/web/dist apps/api/pnpm-lock.yaml apps/web/pnpm-lock.yaml
-          git commit -m "chore(deploy): Hostinger build of release ${GITHUB_SHA::8}"
-          git push --force origin deploy
+          git commit -m "release ${GITHUB_SHA::8}: source + Hostinger build"
+          git push origin "$TARGET"

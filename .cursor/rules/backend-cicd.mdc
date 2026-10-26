@@ -1,5 +1,5 @@
 ---
-description: Deploy — Hostinger Cloud Startup (never VPS). GitHub Actions builds from `release`, Hostinger runs the `deploy` branch.
+description: Deploy — Hostinger Cloud Startup (never VPS). GitHub Actions builds `release` into `migration/backend-api`, which Hostinger runs.
 alwaysApply: true
 ---
 
@@ -7,8 +7,8 @@ alwaysApply: true
 
 Single guide: `docs/deployment/hostinger.md`.
 
-- Two Hostinger Node sites on Cloud Startup, both on the `deploy` branch: API (root `apps/api`, entry `dist/main.js`) and SPA (root `apps/web`, output `dist`, entry `serve-dist.mjs`). Build command **empty** on both: the host cannot run `vite build` (native esbuild, `noexec`).
-- `.github/workflows/release.yml` builds `release` and force-pushes `deploy` with `apps/*/dist` and one `pnpm-lock.yaml` per app. Never commit build output to other branches (PLAT-06) and never edit `deploy` by hand.
+- Two Hostinger Node sites on Cloud Startup, both on the `migration/backend-api` branch (for now, owner 2026-10-26): API (root `apps/api`, entry `dist/main.js`) and SPA (root `apps/web`, output `dist`, entry `serve-dist.mjs`). Build command **empty** on both: the host cannot run `vite build` (native esbuild, `noexec`).
+- `.github/workflows/release.yml` merges `release` into `migration/backend-api` and commits `apps/*/dist` and one `pnpm-lock.yaml` per app in the same commit. Never commit build output to other branches (PLAT-06) and never push to `migration/backend-api` by hand.
 - Cut a release: `git checkout release && git merge --ff-only mvp && git push origin release`.
 - Database: one SQL file from `node apps/api/scripts/build-hostinger-sql.mjs` (`--users` for the importable file with users, gitignored). Never `prisma db seed` on the host. Never a VPS, never a second MySQL.
 - Env only in hPanel (`DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `UPLOAD_DIR` outside the site folder, `WEB_LEADS_KEY`); the SPA's API URL is baked from `apps/web/.env.production`.

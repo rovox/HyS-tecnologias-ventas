@@ -24,4 +24,4 @@ The SPA is the current product. Keep it. Improve working flows; do not rewrite t
 
 ## Deploy
 
-Hostinger cannot run `vite build` (esbuild `noexec`). GitHub Actions builds `release` into the `deploy` branch, which Hostinger serves with `serve-dist.mjs`. Never commit `dist/`. Details: `docs/deployment/hostinger.md`.
+Hostinger cannot run `vite build` (esbuild `noexec`). GitHub Actions builds `release` into `migration/backend-api`, which Hostinger serves with `serve-dist.mjs`. Never commit `dist/`. Details: `docs/deployment/hostinger.md`.
