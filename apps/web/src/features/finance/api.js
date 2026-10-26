@@ -39,7 +39,7 @@ function useLedgerMutation(fn) {
   return useMutation({
     mutationFn: fn,
     onSuccess: () => {
-      for (const key of ['movement', 'project', 'schedule', 'client']) queryClient.invalidateQueries({ queryKey: [key] });
+      for (const key of ['movement', 'project', 'schedule', 'relevamiento', 'client']) queryClient.invalidateQueries({ queryKey: [key] });
     },
   });
 }
@@ -61,9 +61,9 @@ export function useMovementAction() {
 
 /** A payment of a project or of a job: the API checks it against what is still owed. */
 export function useRegisterIncome() {
-  return useLedgerMutation(({ target, concepto, ...payment }) =>
-    target.kind === 'project'
-      ? apiClient.post(`projects/${target.id}/cobros`, { concepto, ...payment }, opts())
-      : apiClient.post(`schedules/${target.id}/payments`, { tipo: concepto === 'adicional' ? 'extra_asistencia' : concepto, ...payment }, opts()),
-  );
+  return useLedgerMutation(({ target, concepto, ...payment }) => {
+    if (target.kind === 'project') return apiClient.post(`projects/${target.id}/cobros`, { concepto, ...payment }, opts());
+    if (target.kind === 'visit') return apiClient.post(`relevamientos/${target.id}/cobros`, payment, opts());
+    return apiClient.post(`schedules/${target.id}/payments`, { tipo: concepto === 'adicional' ? 'extra_asistencia' : concepto, ...payment }, opts());
+  });
 }

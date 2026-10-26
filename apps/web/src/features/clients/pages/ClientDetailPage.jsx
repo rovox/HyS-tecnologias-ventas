@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FileStack, FolderKanban, HandCoins, Pencil, Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
-import { ControlPanel, Field, FieldGrid, FormView, ListView, ToneTag } from '@/shared/views';
+import { ControlPanel, Field, FieldGrid, FormView, ListView, LocationLink, StatusBadge, ToneTag } from '@/shared/views';
 import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useClientSummary } from '../api.js';
@@ -72,12 +72,12 @@ const paymentColumns = [
 ];
 const visitColumns = [
   { key: 'fecha', header: 'Fecha', cell: (r) => formatDay(r.fecha) },
-  { key: 'lugar', header: 'Lugar', cell: (r) => r.lugar || '—' },
-  { key: 'tipo', header: 'Tipo', cell: (r) => r.tipoVisita },
-  { key: 'estado', header: 'Estado', cell: (r) => r.estado },
+  { key: 'tipo', header: 'Tipo', cell: (r) => (r.tipoVisita === 'asistencia' ? 'Asistencia' : 'Relevamiento') },
+  { key: 'motivo', header: 'Motivo', cell: (r) => <span className="line-clamp-1">{r.motivo || r.necesidadCliente || r.lugar || '—'}</span> },
+  { key: 'estado', header: 'Estado', cell: (r) => <StatusBadge entity="visit" state={r.estado} /> },
 ];
 
-const FIELDS = { nombre: 'Nombre', tipo: 'Rubro', contacto: 'Contacto', telefono: 'Teléfono', email: 'Correo', direccion: 'Dirección', sucursalId: 'Sucursal', observaciones: 'Observaciones' };
+const FIELDS = { nombre: 'Nombre', tipo: 'Rubro', contacto: 'Contacto', telefono: 'Teléfono', email: 'Correo', direccion: 'Dirección', mapsLink: 'Link de ubicación', sucursalId: 'Sucursal', observaciones: 'Observaciones' };
 
 /** One client: what was contracted, what it owes, warranties, quotations, payments and visits. */
 export default function ClientDetailPage() {
@@ -125,7 +125,7 @@ export default function ClientDetailPage() {
           <Field label="Contacto">{client.contacto || null}</Field>
           <Field label="Teléfono">{client.telefono || null}</Field>
           <Field label="Correo">{client.email || null}</Field>
-          <Field label="Dirección">{client.direccion || null}</Field>
+          <Field label="Dirección">{client.direccion || client.mapsLink ? <LocationLink address={client.direccion} link={client.mapsLink} /> : null}</Field>
           <Field label="Sucursal">{client.sucursal?.nombre}</Field>
           <Field label="Total contratado">{formatBs(client.totalContratado)}</Field>
           {client.observaciones && <Field label="Observaciones">{client.observaciones}</Field>}
@@ -155,7 +155,10 @@ export default function ClientDetailPage() {
             <ListView columns={paymentColumns} rows={client.cobros} empty="Sin cobros" />
           </TabsContent>
           <TabsContent value="relevamientos">
-            <ListView columns={visitColumns} rows={client.relevamientos} empty="Sin relevamientos" />
+            <div className="mb-2 flex justify-end">
+              <Link className="text-sm text-primary hover:underline" to={`/surveys?cliente=${client.id}`}>Ver y registrar visitas de este cliente</Link>
+            </div>
+            <ListView columns={visitColumns} rows={client.relevamientos} onRowClick={(r) => navigate(`/surveys?cliente=${client.id}&visita=${r.id}`)} empty="Sin relevamientos" />
           </TabsContent>
         </Tabs>
       </FormView>

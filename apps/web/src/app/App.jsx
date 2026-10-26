@@ -12,13 +12,13 @@ import { ConfirmProvider } from '@/shared/views';
 import { ClientDetailPage, ClientsPage } from '@/features/clients';
 import { FinancePage } from '@/features/finance';
 import { ProjectDetailPage, ProjectsPage } from '@/features/projects';
+import { SurveysPage } from '@/features/surveys';
 import { InventoryPage } from '@/features/inventory';
 import { OrderDetailPage } from '@/features/orders';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage.jsx'));
-const ScheduleSurveysPage = lazy(() => import('@/pages/ScheduleSurveysPage.jsx'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
 const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
@@ -114,7 +114,7 @@ function App() {
 
             <Route path="/surveys" element={
               <ProtectedRoute allowedRoles={routeRoles.surveys}>
-                <ScheduleSurveysPage />
+                <SurveysPage />
               </ProtectedRoute>
             } />
 

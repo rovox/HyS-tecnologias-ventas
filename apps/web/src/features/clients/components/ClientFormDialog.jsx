@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useSucursales } from '@/features/catalogs';
+import { LocationField } from '@/shared/views';
 import { notify } from '@/shared/lib/notify.js';
 import { useSaveClient } from '../api.js';
 
 const RUBROS = ['Banco', 'Cooperativa', 'Institución pública', 'Empresa', 'Comercio', 'Persona'];
-const FIELDS = ['nombre', 'tipo', 'contacto', 'telefono', 'email', 'direccion', 'sucursalId', 'observaciones'];
+const FIELDS = ['nombre', 'tipo', 'contacto', 'telefono', 'email', 'direccion', 'mapsLink', 'sucursalId', 'observaciones'];
 
 const initial = (client, user) => Object.fromEntries(FIELDS.map((f) => [f, client?.[f] ?? (f === 'sucursalId' ? user?.sucursalId || '' : '')]));
 
@@ -72,9 +73,8 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }) {
             <Label htmlFor="cl-email">Correo</Label>
             <Input id="cl-email" type="email" value={form.email} onChange={set('email')} />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cl-dir">Dirección</Label>
-            <Input id="cl-dir" value={form.direccion} onChange={set('direccion')} />
+          <div className="sm:col-span-2">
+            <LocationField id="cl-dir" label="Dirección" address={form.direccion} link={form.mapsLink} onChange={({ address, link }) => setForm((f) => ({ ...f, direccion: address, mapsLink: link }))} />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="cl-obs">Observaciones</Label>

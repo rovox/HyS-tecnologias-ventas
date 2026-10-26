@@ -33,6 +33,6 @@ export function useClientOptions() {
   return useQuery({
     queryKey: ['client', 'options'],
     queryFn: () => get('clients'),
-    select: (rows) => rows.map((c) => ({ id: c.id, nombre: c.nombre, direccion: c.direccion, contacto: c.contacto, telefono: c.telefono })),
+    select: (rows) => rows.map((c) => ({ id: c.id, nombre: c.nombre, direccion: c.direccion, mapsLink: c.mapsLink, contacto: c.contacto, telefono: c.telefono, sucursalId: c.sucursalId })),
   });
 }

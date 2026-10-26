@@ -6,7 +6,7 @@ import { useCustody } from '../api.js';
 import { CONCEPTO_LABEL } from '../constants.js';
 import { MovementActions } from './MovementActions.jsx';
 
-const origin = (m) => (m.project ? `${m.project.codigo} — ${m.project.titulo}` : m.schedule?.descripcionTrabajo || m.nota || '—');
+const origin = (m) => (m.project ? `${m.project.codigo} — ${m.project.titulo}` : m.schedule?.descripcionTrabajo || (m.relevamiento ? `Visita del ${formatDay(m.relevamiento.fecha)}` : null) || m.nota || '—');
 
 /**
  * Por rendir: money collected and not yet validated, per person who holds it (a técnico who collected on site, a

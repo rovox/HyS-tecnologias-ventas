@@ -15,9 +15,6 @@ const VISIT_FLOW: Record<string, readonly string[]> = {
   cancelado: [],
 };
 
-export const VISIT_ESTADOS = Object.keys(VISIT_FLOW);
-export const VISIT_TIPOS = ['relevamiento', 'asistencia'] as const;
-
 export function nextVisitStates(estado: string): readonly string[] {
   return VISIT_FLOW[estado] ?? [];
 }

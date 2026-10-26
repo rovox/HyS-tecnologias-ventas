@@ -33,7 +33,7 @@ const ROUTES = [
   ['/dashboard', ALL], ['/quotations', AVC], ['/quotations/:quotationId', AVC], ['/projects', AVC], ['/projects/:projectId', AVC], ['/clientes', ALL], ['/clientes/:clientId', ALL],
   ['/surveys', ALL], ['/schedule', ALL], ['/activity-wall', ALL], ['/reports', A],
   ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AV],
-  ['/pedidos-internos', AVC], ['/pedidos-internos/:pedidoId', AVC],
+  ['/inventario/pedidos/:pedidoId', AVC],
   ['/vehicle-control', A], ['/vehicle-control/:id', A], ['/vehicles', A], ['/vehicles/:id', A],
   ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/inventario', ALL], ['/usuarios/:userId', ALL],
 ];

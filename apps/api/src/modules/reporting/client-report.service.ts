@@ -67,7 +67,7 @@ export class ClientReportService {
           select: { id: true, concepto: true, monto: true, estado: true, fecha: true, metodo: true, project: { select: { id: true, codigo: true } }, schedule: { select: { id: true, descripcionTrabajo: true } } },
           orderBy: { fecha: 'desc' },
         },
-        relevamientos: { select: { id: true, fecha: true, estado: true, lugar: true, tipoVisita: true }, orderBy: { fecha: 'desc' } },
+        relevamientos: { select: { id: true, fecha: true, estado: true, lugar: true, tipoVisita: true, motivo: true, necesidadCliente: true }, orderBy: { fecha: 'desc' } },
       },
     });
     // Equipment delivered to the client's projects (through internal orders), covered by the project's warranty.
