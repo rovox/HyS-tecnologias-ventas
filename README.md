@@ -103,7 +103,7 @@ Reglas: [`docs/rules/architecture.md`](./docs/rules/architecture.md). Negocio y 
 
 ## Deploy
 
-Hostinger Cloud Startup: two Node sites (API and SPA) from the `deploy` branch, built by GitHub Actions from `release`; the database is created from one SQL file. Guide: [`docs/deployment/hostinger.md`](./docs/deployment/hostinger.md).
+Hostinger Cloud Startup: two Node sites (API and SPA) from the `migration/backend-api` branch, built by GitHub Actions from `release`; the database is created from one SQL file. Guide: [`docs/deployment/hostinger.md`](./docs/deployment/hostinger.md).
 
 ```bash
 git checkout release && git merge --ff-only mvp && git push origin release

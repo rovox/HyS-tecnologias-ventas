@@ -5,26 +5,26 @@ Guía única de despliegue. Plan **Cloud Startup**, no VPS: Hostinger no compila
 ## Cómo encaja
 
 ```text
-mvp ──(merge)──▶ release ──(GitHub Actions: compila)──▶ deploy ──(Hostinger: instala y arranca)──▶ sitios
+mvp ──(merge)──▶ release ──(GitHub Actions: fusiona y compila)──▶ migration/backend-api ──(Hostinger: instala y arranca)──▶ sitios
 ```
 
 | Pieza | Qué es | Dónde |
 |---|---|---|
 | `release` | lo que se publica: se actualiza fusionando `mvp` | GitHub |
-| `deploy` | `release` + lo compilado (`apps/api/dist`, `apps/web/dist`, un `pnpm-lock.yaml` por app). Lo escribe solo el workflow [`release.yml`](../../.github/workflows/release.yml); nunca se edita a mano | GitHub |
+| `migration/backend-api` | la rama que Hostinger publica (por ahora, decisión 2026-10-26): `release` + lo compilado (`apps/api/dist`, `apps/web/dist`, un `pnpm-lock.yaml` por app) en un solo commit por versión. La escribe solo el workflow [`release.yml`](../../.github/workflows/release.yml); nunca se sube nada a mano a esta rama | GitHub |
 | API | sitio Node `lime-chamois-337700.hostingersite.com` (NestJS) | Hostinger |
 | Web | sitio Node `white-goat-213580.hostingersite.com` (sirve el SPA con `serve-dist.mjs`) | Hostinger |
-| Base de datos | MySQL `u656468476_hys_sales`, usuario `u656468476_hys_api` (solo la API la usa, por `localhost`) | Hostinger |
+| Base de datos | MySQL del plan (hoy `u656468476_hys_sales`, usuario `u656468476_hys_api`; puede ser una nueva). Solo la API la usa, por `localhost`, vía `DATABASE_URL` | Hostinger |
 
 Por qué Hostinger no compila: `vite build` lanza un binario nativo (`esbuild`) que el disco de compilación de Hostinger no deja ejecutar (`EACCES`). La API sí podría compilarse allí (`nest build` es TypeScript puro, se probó aislada), pero se compila en GitHub igual que la web para que ambas sigan el mismo camino ya probado.
 
 ## 1. Configuración de los sitios en hPanel (una sola vez)
 
-hPanel → Sitios web → (sitio) → **Despliegues / Configuración de Git**. En los dos sitios el repositorio es el mismo (`HyS-tecnologias-ventas`) y la rama pasa a ser **`deploy`** (hoy es `migration/backend-api`).
+hPanel → Sitios web → (sitio) → **Despliegues / Configuración de Git**. En los dos sitios el repositorio es el mismo (`HyS-tecnologias-ventas`) y la rama sigue siendo **`migration/backend-api`** (no se cambia).
 
 | Campo | API (lime-chamois) | Web (white-goat) |
 |---|---|---|
-| Rama | `deploy` | `deploy` |
+| Rama | `migration/backend-api` | `migration/backend-api` |
 | Framework | Other | Other (**no** Vite: forzaría `vite build`) |
 | Node.js | 22 | 22 |
 | Directorio raíz | `apps/api` | `apps/web` |
@@ -64,12 +64,16 @@ node apps/api/scripts/build-hostinger-sql.mjs --users      # → config/hostinge
 
 [`hostinger-db.sql`](./hostinger-db.sql) es la misma base **sin usuarios** (la que queda en git para revisar).
 
-Importar (la base actual no está en uso, se recrea vacía):
+Crear la base (recomendado: una **nueva**; la actual queda intacta como respaldo):
 
-1. hPanel → Bases de datos → **Copia de seguridad** de `u656468476_hys_sales` (aunque no tenga datos útiles).
-2. phpMyAdmin → `u656468476_hys_sales` → Estructura → marcar todas las tablas → **Eliminar**.
-3. Importar → `config/hostinger-db.local.sql` → Continuar. No se crea otra base: se usa la misma.
-4. Comprobar: `https://lime-chamois-337700.hostingersite.com/api/health/db` → `"db":true`.
+1. hPanel → Bases de datos → **Crear base de datos**: nombre (Hostinger antepone `u656468476_`, p. ej. `u656468476_hs_erp`), usuario nuevo y contraseña **solo letras y números** (sin `$ @ # /`). Asignarla al sitio de la API (lime-chamois).
+2. phpMyAdmin de esa base → **Importar** → `config/hostinger-db.local.sql` → Continuar (crea 26 tablas, los catálogos y los usuarios).
+3. Sitio de la API → Variables de entorno → cambiar **`DATABASE_URL`** a la base nueva: `mysql://u656468476_<usuario>:<contraseña>@localhost:3306/u656468476_<base>` → Guardar → **Reiniciar**. No hay que tocar código: NestJS solo lee esa variable.
+4. Comprobar: `https://lime-chamois-337700.hostingersite.com/api/health/db` → `"db":true`, y entrar con un usuario.
+
+Alternativa sin crear otra base: en phpMyAdmin de `u656468476_hys_sales` (copia de seguridad antes) → Estructura → marcar todas las tablas → Eliminar → Importar el mismo archivo; `DATABASE_URL` no cambia.
+
+Orden: primero la base, después publicar (la API nueva no funciona sobre la base vieja).
 
 Nunca correr `prisma db seed` en Hostinger (son datos de prueba). Cuando haya migraciones nuevas, se aplica solo el `migration.sql` nuevo en phpMyAdmin (o por SSH con `prisma migrate deploy`: la base ya lleva el historial de Prisma) y se vuelve a generar `hostinger-db.sql`.
 
@@ -79,11 +83,11 @@ Nunca correr `prisma db seed` en Hostinger (son datos de prueba). Cuando haya mi
 git checkout release && git merge --ff-only mvp && git push origin release
 ```
 
-GitHub Actions (`release`) compila y actualiza `deploy`; Hostinger despliega `deploy` solo (un despliegue por versión). En unos minutos: recargar con Ctrl+Shift+R.
+Son dos ramas distintas en GitHub: `mvp` es el trabajo del día a día (subirla no publica nada) y `release` es la orden de publicar. GitHub Actions (`release`) fusiona `release` en `migration/backend-api` con lo compilado en un solo commit; Hostinger lo despliega solo (un despliegue por versión). En unos minutos: recargar con Ctrl+Shift+R.
 
 Revisar después: `/api/health`, `/api/health/db`, entrar con un usuario de cada rol, una pantalla con datos.
 
-Volver atrás: en GitHub → Actions → release → **Run workflow** sobre un commit anterior de `release` (vuelve a armar `deploy` con esa versión), o `git revert` en `release` y push. hPanel no tiene botón de volver atrás.
+Volver atrás: `git revert` del cambio en `release` y push (se publica de nuevo sin ese cambio). hPanel no tiene botón de volver atrás. Si un despliegue falla en Hostinger, el sitio sigue con la versión anterior.
 
 ## Problemas conocidos
 
@@ -91,7 +95,7 @@ Volver atrás: en GitHub → Actions → release → **Run workflow** sobre un c
 |---|---|---|
 | Log con `$ vite build` o `spawn …/esbuild EACCES` | Framework = Vite o comando de build lleno | Framework **Other**, build **vacío** |
 | `ERR_PNPM_IGNORED_BUILDS` y falla la instalación | pnpm 11 bloquea los scripts de Prisma | ya resuelto con `allowBuilds` en `apps/api/pnpm-workspace.yaml`; si reaparece, revisar que la raíz sea `apps/api` |
-| `ERR_PNPM_OUTDATED_LOCKFILE` / `frozen-lockfile` | rama `deploy` sin el lockfile de la app | publicar de nuevo (el workflow genera `apps/*/pnpm-lock.yaml`) |
+| `ERR_PNPM_OUTDATED_LOCKFILE` / `frozen-lockfile` | se subió algo a mano a `migration/backend-api` sin pasar por el workflow | publicar de nuevo desde `release` (el workflow genera `apps/*/pnpm-lock.yaml`) |
 | Página 404 de Hostinger | archivo de entrada vacío | API `dist/main.js`, web `serve-dist.mjs` |
 | `/api/health` 503 | la API no arrancó: falta `JWT_SECRET` o `CORS_ORIGIN`, o variable en minúsculas | revisar variables y **Reiniciar** |
 | `/api/health/db` con `"db":false` | `DATABASE_URL` mal armada (caracteres especiales en la contraseña) | cambiar la contraseña a letras y números, rearmar la URL, reiniciar |
@@ -102,6 +106,6 @@ Volver atrás: en GitHub → Actions → release → **Run workflow** sobre un c
 
 ## Producción: reglas
 
-- Nunca VPS; nunca otra base MySQL (es la misma `u656468476_hys_sales`).
+- Nunca VPS. La base es MySQL del mismo plan; si se crea una nueva, solo cambia `DATABASE_URL`.
 - Nada apunta a la base de producción desde local; las lecturas por SSH son de solo lectura (`CLAUDE.md` §3).
 - Secretos solo en hPanel y en `config/*.local.*` (ignorados); nunca en git ni en el chat. Si se pegó uno, se cambia.
