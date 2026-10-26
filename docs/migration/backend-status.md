@@ -11,7 +11,7 @@ The sales API lives in [`apps/api`](../../apps/api). Local MySQL: `apps/api/dock
 
 ## Intentionally not done
 
-- Hostinger production deploy of this API (see [hostinger-api.md](../deployment/hostinger-api.md))
+- Hostinger production deploy of this API (see [hostinger.md](../deployment/hostinger.md))
 - Finance module (costos, egresos, ingresos, cajas)
 - Removal of `apps/pocketbase/`
 - Rewrite of remaining `pb.collection(...)` UI to HTTP

@@ -87,3 +87,5 @@ graphify-out/
 
 # Real passwords for the shared roster (config/users.js), never committed
 config/users.passwords.local.json
+# Production database SQL with user hashes (apps/api/scripts/build-hostinger-sql.mjs --users)
+config/*.local.sql
