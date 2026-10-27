@@ -55,7 +55,7 @@ async function act(label) {
 }
 
 await B.page.goto(`${WEB}/inventario`, { waitUntil: 'networkidle' });
-await p.goto(`${WEB}/inventario`, { waitUntil: 'networkidle' });
+await p.goto(`${WEB}/inventario?suc=`, { waitUntil: 'networkidle' }); // the whole company: every branch column (a seller starts on his own)
 await step('create a product; the other session lists it live', async () => {
   await p.getByRole('button', { name: 'Nuevo producto' }).click(T);
   await p.getByLabel('Código *').fill(code);
@@ -144,7 +144,7 @@ await step('salida a proyecto: the project shows the material and its cost, the 
   if (SHOTS) await p.screenshot({ path: `${SHOTS}/client-equipment.png` });
 });
 await step('movements tab lists the order delivery', async () => {
-  await p.goto(`${WEB}/inventario?vista=movimientos`, { waitUntil: 'networkidle' });
+  await p.goto(`${WEB}/inventario?vista=movimientos&suc=`, { waitUntil: 'networkidle' }); // Historial
   await p.getByRole('link', { name: /^Pedido PED-/ }).first().waitFor(T);
 });
 await step('a técnico reads the inventory without actions', async () => {

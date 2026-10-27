@@ -827,6 +827,34 @@ describe('hs-erp API (e2e)', () => {
       expect((await stock('prd_dvr_8')).stock.suc_quillacollo).toBe((before.stock.suc_quillacollo || 0));
     });
 
+    it('a seller buys into Central, moves several products at once, removes from his branch; history and kardex agree (INV-03)', async () => {
+      const wilson = { Authorization: `Bearer ${(await http().post('/api/auth/login').send(credentialsFor('wilson@hscontrol.com')).expect(201)).body.accessToken}` };
+      const lote = (body: object) => http().post('/api/inventory/movements/lote').set(wilson).send(body);
+      const two = [{ productoId: 'prd_utp6', cantidad: 4, costoUnitario: 3 }, { productoId: 'prd_dvr_8', cantidad: 1, costoUnitario: 950 }];
+      await lote({ tipo: 'entrada', sucursalDestinoId: 'suc_punata', items: two }).expect(403);
+      const before = { utp: await stock('prd_utp6'), dvr: await stock('prd_dvr_8') };
+      const bought = (await lote({ tipo: 'entrada', sucursalDestinoId: 'suc_central', items: two }).expect(201)).body;
+      expect(bought).toHaveLength(2);
+      await lote({ tipo: 'transferencia', sucursalOrigenId: 'suc_quillacollo', sucursalDestinoId: 'suc_punata', items: [{ productoId: 'prd_utp6', cantidad: 1 }] }).expect(403);
+      // All lines or none: one line above the stock leaves the other one unmoved.
+      const tooMuch = await lote({ tipo: 'transferencia', sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ productoId: 'prd_utp6', cantidad: 2 }, { productoId: 'prd_dvr_8', cantidad: 99999 }] }).expect(400);
+      expect(tooMuch.body.message).toMatch(/^DVR.*Stock insuficiente/);
+      expect((await stock('prd_utp6')).stock.suc_punata).toBe(before.utp.stock.suc_punata);
+      await lote({ tipo: 'transferencia', sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ productoId: 'prd_utp6', cantidad: 2 }, { productoId: 'prd_dvr_8', cantidad: 1 }] }).expect(201);
+      await lote({ tipo: 'baja', sucursalOrigenId: 'suc_punata', items: [{ productoId: 'prd_utp6', cantidad: 1 }] }).expect(400);
+      await lote({ tipo: 'baja', sucursalOrigenId: 'suc_central', motivo: 'Dañado', items: [{ productoId: 'prd_utp6', cantidad: 1 }] }).expect(403);
+      await lote({ tipo: 'baja', sucursalOrigenId: 'suc_punata', motivo: 'Dañado en la instalación', items: [{ productoId: 'prd_utp6', cantidad: 1 }] }).expect(201);
+      const after = await stock('prd_utp6');
+      expect(after.stock.suc_punata).toBe(before.utp.stock.suc_punata + 2 - 1);
+      const bajas = (await http().get('/api/inventory/movements?sucursalId=suc_punata&tipos=baja').set(ventas()).expect(200)).body;
+      expect(bajas[0]).toMatchObject({ tipo: 'baja', motivo: 'Dañado en la instalación', sucursalOrigen: { id: 'suc_punata' } });
+      expect(bajas.every((m: { tipo: string }) => m.tipo === 'baja')).toBe(true);
+      const k = (await http().get('/api/inventory/products/prd_utp6/kardex?sucursalId=suc_punata').set(ventas()).expect(200)).body;
+      expect(k.movimientos.at(-1).saldo).toBe(after.stock.suc_punata);
+      const company = (await http().get('/api/inventory/products/prd_utp6/kardex').set(ventas()).expect(200)).body;
+      expect(company.movimientos.at(-1).saldo).toBe(after.stockTotal);
+    });
+
     it('a técnico registers material only on a project where he has a job (SCH-04)', async () => {
       const tecH = { Authorization: `Bearer ${tecToken}` };
       const tecId = (await http().get('/api/auth/me').set(tecH).expect(200)).body.id;

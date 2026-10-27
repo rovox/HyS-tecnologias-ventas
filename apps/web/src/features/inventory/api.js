@@ -11,8 +11,18 @@ export function useProducts(enabled = true) {
   return useQuery({ queryKey: ['product', 'list'], queryFn: () => apiClient.get('inventory/products', opts()), enabled });
 }
 
-export function useStockMovements() {
-  return useQuery({ queryKey: ['stock', 'list'], queryFn: () => apiClient.get('inventory/movements', opts()) });
+/** The history (INV-03): { sucursalId, desde, hasta } (Bolivian days); types are filtered on the page. */
+export function useStockMovements(params = {}, enabled = true) {
+  return useQuery({ queryKey: ['stock', 'list', params], queryFn: () => apiClient.get('inventory/movements', opts({ query: params })), enabled });
+}
+
+/** Kardex of one product in a branch ('' = the company) with its running balance. */
+export function useKardex(productoId, sucursalId) {
+  return useQuery({
+    queryKey: ['stock', 'kardex', productoId, sucursalId],
+    queryFn: () => apiClient.get(`inventory/products/${productoId}/kardex`, opts(sucursalId ? { query: { sucursalId } } : undefined)),
+    enabled: Boolean(productoId),
+  });
 }
 
 function useInventoryMutation(fn) {
@@ -33,4 +43,9 @@ export function useSaveProduct() {
 /** tipo: entrada | transferencia | salida_proyecto | ajuste (Gerencia). */
 export function useRegisterStockMovement() {
   return useInventoryMutation((data) => apiClient.post('inventory/movements', data, opts()));
+}
+
+/** Several products moved the same way (INV-03): { tipo, sucursalOrigenId?, sucursalDestinoId?, motivo?, items }. */
+export function useRegisterStockBatch() {
+  return useInventoryMutation((data) => apiClient.post('inventory/movements/lote', data, opts()));
 }
