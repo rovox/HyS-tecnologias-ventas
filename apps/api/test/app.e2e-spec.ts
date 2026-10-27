@@ -756,6 +756,17 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('Tienda Digicorp (DIGI-01, no network in tests)', () => {
+    const http = () => request(app.getHttpServer());
+    it('lists the saved catalog for every role with inventory; only Gerencia refreshes it; an unknown code is 404', async () => {
+      const list = (await http().get('/api/digicorp/productos?limit=5').set({ Authorization: `Bearer ${ventasToken}` }).expect(200)).body;
+      expect(list).toMatchObject({ total: expect.any(Number), items: expect.any(Array), marcas: expect.any(Array) });
+      if (list.items[0]) expect(list.items[0].url).toMatch(/^https:\/\/digicorp\.com\.bo\/producto\//);
+      await http().post('/api/digicorp/sync').set({ Authorization: `Bearer ${ventasToken}` }).expect(403);
+      await http().get('/api/digicorp/productos/NO-EXISTE-E2E').set({ Authorization: `Bearer ${ventasToken}` }).expect(404);
+    });
+  });
+
   describe('relevamientos y asistencias (SUR-02)', () => {
     const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
     let tecToken = '';

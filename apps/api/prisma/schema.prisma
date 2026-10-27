@@ -763,3 +763,48 @@ model CierreCaja {
   @@index([dia])
   @@map("cierres_caja")
 }
+
+/// DIGI-01: Digicorp's public catalog, an internal reference (no prices: they need a Digicorp login).
+model DigicorpProducto {
+  sku             String    @id @db.VarChar(80)
+  nombre          String    @db.VarChar(500)
+  marca           String    @default("") @db.VarChar(120)
+  imagenUrl       String    @default("") @db.VarChar(500)
+  imagenGrandeUrl String    @default("") @db.VarChar(500)
+  descripcion     String?   @db.Text
+  seccion         String    @default("") @db.VarChar(120)
+  categoriaCodigo String    @default("") @db.VarChar(20)
+  stockTotal      Int?
+  moneda          String    @default("Bs") @db.VarChar(8)
+  /// Of the listing fields: a change of name, brand or image counts as "cambiado".
+  hash            String    @db.VarChar(64)
+  /// Last time the listing had it; `retiradoAt` when a complete sync no longer finds it.
+  vistoAt         DateTime
+  /// When its detail (description, stock, section) was fetched; refreshed on demand after 30 days.
+  detalleAt       DateTime?
+  retiradoAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([marca])
+  @@index([retiradoAt])
+  @@map("digicorp_productos")
+}
+
+/// DIGI-01: each run of the catalog sync (manual or monthly) and how it ended.
+model DigicorpSync {
+  id            String    @id @default(uuid())
+  iniciadoAt    DateTime  @default(now())
+  terminadoAt   DateTime?
+  /// en_curso | ok | bloqueado | error
+  estado        String    @default("en_curso") @db.VarChar(16)
+  paginas       Int       @default(0)
+  nuevos        Int       @default(0)
+  cambiados     Int       @default(0)
+  retirados     Int       @default(0)
+  error         String?   @db.Text
+  iniciadoPorId String?
+
+  @@index([iniciadoAt])
+  @@map("digicorp_syncs")
+}

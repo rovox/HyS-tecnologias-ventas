@@ -42,6 +42,7 @@ hPanel → Sitios web → (sitio) → **Despliegues / Configuración de Git**. E
 | `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` — con dominio propio, separados por coma: `https://white-goat-213580.hostingersite.com,https://erp.tudominio.com` |
 | `UPLOAD_DIR` | `/home/u656468476/hys-uploads/quotations` (fuera del repositorio: cada despliegue reemplaza la carpeta del sitio). Las fotos de visitas van en su subcarpeta `relevamientos/` |
 | `WEB_LEADS_KEY` | `openssl rand -hex 32`; el mismo valor en WordPress (`HS_ERP_LEADS_KEY`) para el formulario web |
+| `DIGICORP_AUTO_SYNC` | `1` para que la Tienda Digicorp se actualice sola cada mes (DIGI-01). Sin ella, solo con "Actualizar ahora" (Gerencia). La primera carga tarda unos 3 minutos (≈50 páginas, una cada 3 s); si Digicorp bloquea, se detiene y lo muestra en la pestaña |
 
 `PORT` lo pone Hostinger. Después de cambiar variables: **Reiniciar** el sitio (Guardar no basta).
 

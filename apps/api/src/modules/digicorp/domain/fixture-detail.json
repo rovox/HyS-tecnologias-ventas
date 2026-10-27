@@ -1,0 +1,47 @@
+{
+ "sku": "RG-ES105D",
+ "digicorpSku": "RG-ES105D                ",
+ "nombre": "SWITCH REYEE DE 5 PUERTOS* 10/100 MBPS* ",
+ "descripcion": "\"SWITCH REYEE DE 5 PUERTOS* 10/100 MBPS* AHORRO DE ENERGIA* CARCASA METALICA* DISEÑO DE SOBREMESA*PLUG AND PLAY*\n\"\n                                             ",
+ "marca": "RUIJIE",
+ "seccion": "OUTLET",
+ "categoriaCodigo": "11010104",
+ "precio": null,
+ "precioOriginal": null,
+ "precioCalSeccion": null,
+ "descuento": 0,
+ "peso": null,
+ "volumen": null,
+ "garantia": null,
+ "fechaNuevoStock": null,
+ "stockTotal": 0,
+ "moneda": "Bs",
+ "impuesto": "",
+ "assets": {
+  "imagenes": [
+   {
+    "fileName": "RGES105D-image-1-11-39-6.webp",
+    "url": "https://images-digicorp.nyc3.cdn.digitaloceanspaces.com/filesDigicorp/BO/img/large/RGES105D-image-1-11-39-6.webp",
+    "urlSmall": "https://images-digicorp.nyc3.cdn.digitaloceanspaces.com/filesDigicorp/BO/img/small/RGES105D-image-1-11-39-6.webp",
+    "posicion": 1,
+    "version": 1
+   }
+  ],
+  "descargas": [],
+  "videos": [],
+  "asset": [],
+  "resumen": null,
+  "descripcionExtendida": "<table border=\"1\" width=\"690\" cellspacing=\"0\" cellpadding=\"0\">\n<tbody>\n<tr>\n<td>\n<p><strong>Model</strong></p>\n</td>\n<td>\n<p><strong>ES105D</strong></p>\n</td>\n<td>\n<p><strong>ES108D</strong></p>\n</td>\n<td>\n<p><strong>ES105GD</strong></p>\n</td>\n<td>\n<p><strong>ES108GD</strong></p>\n</td>\n</tr>\n<tr>\n<td>\n<p><strong>Ports</strong></p>\n</td>\n<td>\n<p>5 10/100Mbps RJ45 ports</p>\n</td>\n<td>\n<p>8 10/100Mbp"
+ },
+ "almacenStock": [],
+ "infoExtra": [
+  {
+   "llave": "o_venta_monto",
+   "valor": "1747.00"
+  },
+  {
+   "llave": "o_nov_ofer_outl",
+   "valor": "2026-07-31T23:38:47.563Z"
+  }
+ ]
+}
