@@ -3,15 +3,44 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../../common/auth/current-user.decorator';
-import { CreateMovementDto, ExportMovementsQuery, ImpactQuery, ListMovementsQuery, ReasonDto, UpdateMovementDto, ValidateMovementDto } from './dto/finance.dto';
+import { CreateMovementDto, ExportMovementsQuery, ImpactQuery, ListMovementsQuery, ReasonDto, SettleAdvanceDto, UpdateMovementDto, ValidateMovementDto } from './dto/finance.dto';
 import { LedgerService } from './ledger.service';
+import { CashCloseService } from './cash-close.service';
+import { CashCloseQuery, CloseCashDto, ListCashClosesQuery } from './dto/cash-close.dto';
 
 @ApiTags('finance')
 @ApiBearerAuth()
 @Controller('finance')
 @UseGuards(AuthGuard)
 export class FinanceController {
-  constructor(private readonly ledger: LedgerService) {}
+  constructor(
+    private readonly ledger: LedgerService,
+    private readonly cashClose: CashCloseService,
+  ) {}
+
+  @Get('cierres/preview')
+  @ApiOperation({ summary: 'The day of a branch before counting: opening cash, cash movements, expected cash' })
+  closePreview(@Query() query: CashCloseQuery, @CurrentUser() user: User) {
+    return this.cashClose.preview(query.sucursalId, query.dia, user);
+  }
+
+  @Get('cierres')
+  @ApiOperation({ summary: 'Daily cash closes (branch, days)' })
+  closes(@Query() query: ListCashClosesQuery, @CurrentUser() user: User) {
+    return this.cashClose.list(query, user);
+  }
+
+  @Post('cierres')
+  @ApiOperation({ summary: 'Close the cash of a branch for a day (count by denomination; a difference needs a reason)' })
+  close(@Body() dto: CloseCashDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.cashClose.close(dto, user, sessionId);
+  }
+
+  @Post('cierres/:id/revisar')
+  @ApiOperation({ summary: 'Mark a close as reviewed (Administración, Contabilidad)' })
+  reviewClose(@Param('id') id: string, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.cashClose.review(id, user, sessionId);
+  }
 
   @Get('movements')
   @ApiOperation({ summary: 'Ledger (commercial roles see all, técnico his own)' })
@@ -24,6 +53,18 @@ export class FinanceController {
   async export(@Query() query: ExportMovementsQuery, @CurrentUser() user: User) {
     const { file, name, type } = await this.ledger.export(query, user);
     return new StreamableFile(file, { type, disposition: `attachment; filename="${name}"` });
+  }
+
+  @Get('anticipos')
+  @ApiOperation({ summary: 'Advances still to be accounted for, with days late' })
+  advances(@CurrentUser() user: User) {
+    return this.ledger.advances(user);
+  }
+
+  @Post('movements/:id/rendido')
+  @ApiOperation({ summary: 'Mark an advance as accounted for (Administración, Contabilidad)' })
+  settle(@Param('id') id: string, @Body() dto: SettleAdvanceDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.ledger.settleAdvance(id, dto.nota, user, sessionId);
   }
 
   @Get('por-rendir')

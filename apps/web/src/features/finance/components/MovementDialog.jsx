@@ -29,6 +29,9 @@ function initial(tipo, movement, user, defaults = {}) {
     cajaId: movement?.caja?.id || 'caja_central',
     cajaDestinoId: '',
     recibidoPorId: movement?.recibidoPor?.id || '',
+    responsableId: '',
+    asunto: '',
+    fechaLimite: '',
   };
 }
 
@@ -62,6 +65,8 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
     if (!(monto > 0)) return notify.error('El monto debe ser mayor a 0');
     if (kind === 'transferencia' && (!form.cajaDestinoId || form.cajaDestinoId === form.cajaId)) return notify.error('Elige dos cajas distintas');
     if (!movement && kind !== 'transferencia' && !form.sucursalId && !form.projectId) return notify.error('Elige la sucursal');
+    const advance = !movement && form.concepto === 'anticipo_por_rendir';
+    if (advance && (!form.responsableId || !form.asunto.trim() || !form.fechaLimite)) return notify.error('Un anticipo necesita a quién se entrega, el asunto y hasta cuándo se rinde');
     const data = {
       concepto: form.concepto,
       monto,
@@ -82,6 +87,7 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
           ...data,
           sucursalId: form.sucursalId || undefined,
           ...(kind === 'egreso' && form.projectId ? { projectId: form.projectId } : {}),
+          ...(advance ? { responsableId: form.responsableId, asunto: form.asunto.trim(), fechaLimite: form.fechaLimite, pagadoPor: 'empresa' } : {}),
           ...(kind === 'transferencia' ? { cajaId: form.cajaId, cajaDestinoId: form.cajaDestinoId } : {}),
         });
         notify.success(kind === 'transferencia' ? 'Transferencia registrada' : 'Registrado: queda por validar');
@@ -117,7 +123,26 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
               <Input id="mv-monto" type="number" min="0.01" step="0.01" autoFocus value={form.monto} onChange={(e) => set({ monto: e.target.value })} />
             </div>
           </div>
-          {kind === 'egreso' && (
+          {kind === 'egreso' && !movement && form.concepto === 'anticipo_por_rendir' && (
+            <div className="space-y-2 rounded-md border border-info-border bg-info-soft p-2">
+              <p className="text-xs text-info-fg">Dinero que se entrega para gastos que se rinden después (FIN-04). Queda en Anticipos hasta que se rinda.</p>
+              <div className="space-y-1.5">
+                <Label htmlFor="mv-resp">Se entrega a *</Label>
+                <SearchSelect id="mv-resp" aria-label="Se entrega a" value={form.responsableId} onChange={(responsableId) => set({ responsableId })} placeholder="Persona" searchPlaceholder="Buscar persona…" options={people.map((u) => ({ value: u.id, label: u.name }))} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="mv-asunto">Asunto *</Label>
+                  <Input id="mv-asunto" placeholder="Ej. insumos de limpieza" value={form.asunto} onChange={(e) => set({ asunto: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-limite">Rendir hasta *</Label>
+                  <Input id="mv-limite" type="date" value={form.fechaLimite} onChange={(e) => set({ fechaLimite: e.target.value })} />
+                </div>
+              </div>
+            </div>
+          )}
+          {kind === 'egreso' && form.concepto !== 'anticipo_por_rendir' && (
             <div className="space-y-1.5">
               <Label>¿Quién pagó?</Label>
               <div className="grid grid-cols-2 gap-2" role="radiogroup">

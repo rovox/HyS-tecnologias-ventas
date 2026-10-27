@@ -64,6 +64,29 @@ export class CreateMovementDto {
   @IsString()
   @Transform(emptyToUndef)
   sucursalId?: string;
+
+  @ApiPropertyOptional({ description: 'Anticipo por rendir: who receives the fund' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  responsableId?: string;
+
+  @ApiPropertyOptional({ description: 'Anticipo por rendir: what it is for' })
+  @IsOptional()
+  @IsString()
+  asunto?: string;
+
+  @ApiPropertyOptional({ description: 'Anticipo por rendir: day it must be accounted for' })
+  @IsOptional()
+  @IsDateString()
+  fechaLimite?: string;
+}
+
+export class SettleAdvanceDto {
+  @ApiPropertyOptional({ description: 'How it was accounted for (receipts, what was returned)' })
+  @IsOptional()
+  @IsString()
+  nota?: string;
 }
 
 export class UpdateMovementDto {

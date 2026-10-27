@@ -689,6 +689,73 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('daily cash close per branch (FIN-04)', () => {
+    const http = () => request(app.getHttpServer());
+    const H = (t: string) => ({ Authorization: `Bearer ${t}` });
+    let wilson = '';
+    let conta = '';
+    beforeAll(async () => {
+      wilson = (await http().post('/api/auth/login').send(credentialsFor('wilson@hscontrol.com')).expect(201)).body.accessToken;
+      conta = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.contabilidad)).expect(201)).body.accessToken;
+    });
+
+    it('expects the cash of the day: a cash sale in the branch raises it, a QR one does not', async () => {
+      const today = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
+      const preview = async () => (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${today}`).set(H(wilson)).expect(200)).body;
+      const before = await preview();
+      expect(before).toMatchObject({ caja: { id: 'caja_chica_punata' }, dia: today });
+      const sale = (pagos: object[]) => ({ sucursalId: 'suc_punata', items: [{ productoId: 'prd_utp6', cantidad: 1, precioUnitario: 7 }], pagos });
+      await http().post('/api/direct-sales').set(H(wilson)).send(sale([{ medio: 'efectivo', monto: 7 }])).expect(201);
+      await http().post('/api/direct-sales').set(H(wilson)).send(sale([{ medio: 'qr', monto: 7 }])).expect(201);
+      const after = await preview();
+      expect(after.efectivoEsperado).toBeCloseTo(before.efectivoEsperado + 7, 2);
+      expect(after.qr).toBeCloseTo(before.qr + 7, 2);
+      expect(after.ventas.cantidad).toBe(before.ventas.cantidad + 2);
+      expect(after.movimientos.some((m: { concepto: string; efecto: number }) => m.concepto === 'venta_directa' && m.efecto === 7)).toBe(true);
+    });
+
+    it('an advance to account for needs who, what for and until when; it shows as pending until Gerencia settles it', async () => {
+      const wilsonId = (await http().get('/api/auth/me').set(H(wilson)).expect(200)).body.id;
+      const base = { tipo: 'egreso', concepto: 'anticipo_por_rendir', monto: 300, pagadoPor: 'empresa', sucursalId: 'suc_punata' };
+      await http().post('/api/finance/movements').set(H(conta)).send({ ...base, responsableId: wilsonId, fechaLimite: '2026-10-01' }).expect(400);
+      const advance = (await http().post('/api/finance/movements').set(H(conta)).send({ ...base, responsableId: wilsonId, asunto: 'Insumos de limpieza', fechaLimite: '2026-10-01' }).expect(201)).body;
+      expect(advance).toMatchObject({ asunto: 'Insumos de limpieza', recibidoPor: { id: wilsonId } });
+      const mine = (await http().get('/api/finance/anticipos').set(H(wilson)).expect(200)).body;
+      expect(mine.find((a: { id: string }) => a.id === advance.id).diasAtraso).toBeGreaterThan(0);
+      await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(wilson)).send({}).expect(403);
+      const settled = (await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(conta)).send({ nota: 'Facturas por Bs 280, devolvió 20' }).expect(201)).body;
+      expect(settled.rendidoAt).toBeTruthy();
+      expect((await http().get('/api/finance/anticipos').set(H(conta)).expect(200)).body.some((a: { id: string }) => a.id === advance.id)).toBe(false);
+      await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(conta)).send({}).expect(400);
+    });
+
+    it('closes once per branch and day; a difference needs a reason and goes to validation; Gerencia reviews', async () => {
+      const day = new Date(Date.UTC(2024, 0, 1) + (Math.floor(Date.now() / 1000) % 700) * 86400e3).toISOString().slice(0, 10);
+      const body = { sucursalId: 'suc_punata', dia: day, saldoInicial: 100, conteo: { '50': 1, '20': 2 } };
+      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, sucursalId: 'suc_quillacollo' }).expect(403);
+      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, conteo: { '300': 1 } }).expect(400);
+      const pre = (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${day}`).set(H(wilson)).expect(200)).body;
+      const opening = pre.saldoInicial ?? 100;
+      const counted = 90;
+      const diff = Math.round((counted - (opening + pre.ingresosEfectivo - pre.egresosEfectivo)) * 100) / 100;
+      if (diff !== 0) {
+        const noReason = await http().post('/api/finance/cierres').set(H(wilson)).send(body).expect(400);
+        expect(noReason.body.message).toMatch(/indica el motivo/);
+      }
+      const closed = (await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, motivoDiferencia: 'Se pagó un taxi sin registrar' }).expect(201)).body;
+      expect(closed).toMatchObject({ dia: day, efectivoContado: '90', sucursal: { id: 'suc_punata' }, cerradoPor: { name: 'Wilson' } });
+      expect(Number(closed.diferencia)).toBeCloseTo(diff, 2);
+      if (diff !== 0) expect(closed.diferenciaMovimiento).toMatchObject({ estado: 'por_validar', tipo: diff < 0 ? 'egreso' : 'ingreso', monto: String(Math.abs(diff)) });
+      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, motivoDiferencia: 'x' }).expect(409);
+      await http().post(`/api/finance/cierres/${closed.id}/revisar`).set(H(wilson)).expect(403);
+      expect((await http().post(`/api/finance/cierres/${closed.id}/revisar`).set(H(conta)).expect(201)).body.revisadoPor.name).toBe('Estefany Gonzales');
+      const tomorrow = new Date(Date.now() + 2 * 86400e3).toISOString().slice(0, 10);
+      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, dia: tomorrow }).expect(400);
+      const list = (await http().get(`/api/finance/cierres?sucursalId=suc_punata&desde=${day}&hasta=${day}`).set(H(conta)).expect(200)).body;
+      expect(list.map((c: { id: string }) => c.id)).toEqual([closed.id]);
+    });
+  });
+
   describe('relevamientos y asistencias (SUR-02)', () => {
     const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
     let tecToken = '';
