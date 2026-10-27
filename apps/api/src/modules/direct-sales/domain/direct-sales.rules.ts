@@ -1,9 +1,8 @@
 // Direct sales (VD-01): products sold from one branch and paid on the spot. Pure TS, no Nest, no Prisma.
 
 /** Every branch is supplied by Central (owner 2026-10-27): a seller sells from his branch or from Central. */
-export const CENTRAL_SUCURSAL_ID = 'suc_central';
+const CENTRAL_SUCURSAL_ID = 'suc_central';
 export const PAYMENT_METHODS = ['efectivo', 'qr', 'transferencia'] as const;
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const cents = (value: number) => Math.round(value * 100) / 100;
 
