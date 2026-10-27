@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLES } from '../policy/policy';
+import { MANAGER_ROLES, ROLES } from '../policy/policy';
 
 const ROLES_KEY = 'roles';
 export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
@@ -17,7 +17,7 @@ export class RolesGuard implements CanActivate {
     if (!roles?.length) return true;
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    if (user && readsLikeAdmin(user.role, request.method, roles)) return true;
+    if (user && actsAsAdmin(user.role, roles)) return true;
     if (!user || !roles.includes(user.role)) {
       throw new ForbiddenException('Sin permiso para esta acción');
     }
@@ -25,7 +25,7 @@ export class RolesGuard implements CanActivate {
   }
 }
 
-/** Contabilidad reads whatever Gerencia reads (GET/HEAD); what it may change is decided by the policy of each action. */
-function readsLikeAdmin(role: string, method: string, roles: string[]) {
-  return role === ROLES.CONTA && (method === 'GET' || method === 'HEAD') && roles.includes(ROLES.ADMIN);
+/** Contabilidad has the same permissions as ADMINISTRADOR (ROLE-01): it passes wherever Gerencia does. */
+function actsAsAdmin(role: string, roles: string[]) {
+  return MANAGER_ROLES.includes(role) && roles.includes(ROLES.ADMIN);
 }

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { MANAGER_ROLES } from '@/constants/roles.js';
 import Layout from '@/components/Layout.jsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,7 +31,7 @@ const ManagementPanelPage = () => {
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditActionFilter, setAuditActionFilter] = useState('all');
 
-  const isAdmin = currentUser?.role === 'ADMINISTRADOR';
+  const isAdmin = MANAGER_ROLES.includes(currentUser?.role);
 
   const loadSummaryData = useCallback(async () => {
     if (!isAdmin) return;

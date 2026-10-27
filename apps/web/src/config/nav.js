@@ -14,21 +14,20 @@ import {
   Inbox,
   Briefcase,
 } from 'lucide-react';
-import { ROLES } from '@/constants/roles.js';
+import { COMMERCIAL_ROLES, MANAGER_ROLES, ROLES } from '@/constants/roles.js';
 
-export { ROLES };
 
 const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONTA];
 
-// Contabilidad (CONTA) reads every module; what it can change is decided by each page and the API.
-const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONTA];
+// Contabilidad (CONTA) has the same permissions as ADMINISTRADOR (ROLE-01).
+const QUOTE_ROLES = COMMERCIAL_ROLES;
 const CLIENT_ROLES = ALL_ROLES;
 const SURVEY_ROLES = ALL_ROLES;
 const TASK_ROLES = ALL_ROLES;
-const REPORT_ROLES = [ROLES.ADMIN];
-const ADMIN_ONLY = [ROLES.ADMIN];
-const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONTA];
-const SOLICITUDES_WEB_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
+const REPORT_ROLES = MANAGER_ROLES;
+const ADMIN_ONLY = MANAGER_ROLES;
+const PEDIDOS_ROLES = COMMERCIAL_ROLES;
+const SOLICITUDES_WEB_ROLES = COMMERCIAL_ROLES;
 
 /**
  * Menú unificado: OPERACIONES primero para todos los roles.
@@ -64,7 +63,7 @@ const operationalMenuSections = [
   },
 ];
 
-/** Extras solo ADMINISTRADOR (después de OPERACIONES / ADMINISTRACIÓN base). */
+/** Extras solo Gerencia (ADMINISTRADOR, CONTABILIDAD) (después de OPERACIONES / ADMINISTRACIÓN base). */
 const adminExtraMenuSections = [
   {
     title: 'GESTIÓN ADMIN',
@@ -77,7 +76,7 @@ const adminExtraMenuSections = [
 
 export function getMenuSections(role) {
   if (role === ROLES.NONE) return [];
-  if (role === ROLES.ADMIN) {
+  if (MANAGER_ROLES.includes(role)) {
     return [...operationalMenuSections, ...adminExtraMenuSections];
   }
   return operationalMenuSections;
@@ -102,6 +101,6 @@ export const routeRoles = {
 };
 
 export function canWriteQuotations(role) {
-  return role === ROLES.ADMIN || role === ROLES.VENTAS;
+  return COMMERCIAL_ROLES.includes(role);
 }
 

@@ -41,18 +41,18 @@ El equipo trabaja de forma dinámica: **todos ven todo y editan casi todo**. La 
 | Perfil | Rol guardado | Pantalla principal |
 |---|---|---|
 | Dueño / Gerencia | ADMINISTRADOR | Dashboard general |
-| Contabilidad | CONTABILIDAD (existe desde AUTH-01, 2026-10-25: lee todo; valida, edita y anula dinero; ajusta stock) | Bandeja de rendición, cuentas por cobrar |
+| Contabilidad | CONTABILIDAD: **los mismos permisos que Gerencia** (ROLE-01, dueño 2026-10-27); solo cambia el nombre para separar a sus usuarios | Bandeja de rendición, cuentas por cobrar |
 | Comercial | VENTAS | Cotizaciones y proyectos |
 | Técnico | SEGURIDAD ELECTRÓNICA (renombrable a TÉCNICO) | Mis actividades y asistencias |
 
-**Acciones restringidas** (lo único que se controla por perfil):
+**Acciones restringidas** (lo único que se controla por perfil; "Gerencia" = ADMINISTRADOR o CONTABILIDAD):
 
 | Acción | Quién |
 |---|---|
-| Validar u observar movimientos, gestionar cajas | Contabilidad, Gerencia |
+| Validar u observar movimientos, gestionar cajas | Gerencia |
 | Cambiar el monto oficial de un proyecto o anular un proyecto | Gerencia |
 | Aplicar descuento en una cotización | Comercial, Gerencia |
-| Ajustes de inventario | Gerencia, Contabilidad |
+| Ajustes de inventario | Gerencia |
 | Usuarios y roles | Gerencia |
 | Borrar cualquier registro | Nadie: se anula con un motivo |
 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import authService from '@/services/auth/index.js';
 import { authStore } from '@/lib/authStore.js';
-import { ROLES } from '@/constants/roles.js';
+import { MANAGER_ROLES, ROLES } from '@/constants/roles.js';
 
 const AuthContext = createContext(null);
 
@@ -46,13 +46,14 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  const isAdmin = () => currentUser?.role === ROLES.ADMIN;
+  /** Gerencia: ADMINISTRADOR or CONTABILIDAD, the same permissions (ROLE-01). */
+  const isAdmin = () => MANAGER_ROLES.includes(currentUser?.role);
   const isVentas = () => currentUser?.role === ROLES.VENTAS;
   const isSeguridad = () => currentUser?.role === ROLES.TEC;
   const isContabilidad = () => currentUser?.role === ROLES.CONTA;
   const isVentasLevel = () => isAdmin() || isVentas();
-  /** Gerencia and Contabilidad: validate, observe, edit and annul money; transfers, refunds, stock adjustments. */
-  const canManageMoney = () => isAdmin() || isContabilidad();
+  /** Gerencia: validate, observe, edit and annul money; transfers, refunds, stock adjustments. */
+  const canManageMoney = isAdmin;
 
   const value = {
     currentUser,
@@ -68,8 +69,8 @@ export const AuthProvider = ({ children }) => {
     isVentasLevel,
     isContabilidad,
     canManageMoney,
-    /** Reads every record (commercial roles and Contabilidad); writes are decided per action. */
-    readsAll: () => isVentasLevel() || isContabilidad(),
+    /** Reads every record (the commercial roles); writes are decided per action. */
+    readsAll: isVentasLevel,
     canAccessExecutivePanel: isAdmin,
   };
 
