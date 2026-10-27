@@ -2,7 +2,8 @@
 // Browser smoke for the ledger (FIN-01/02, FIN-03): técnico registers an expense he paid → Contabilidad observes it
 // with ✗ → técnico corrects it → Contabilidad validates it with ✓ and refunds it; ventas collects on a project for the
 // técnico and Contabilidad sees it live in "Por rendir"; Contabilidad annuls a validated movement after seeing its
-// effect on the box; boxes and receivables render; the técnico has no inbox.
+// effect on the box; the daily ledger moves by day and branch, downloads Excel and annuls with the red bin (FIN-06);
+// boxes and receivables render; the técnico has no inbox.
 //
 //   node scripts/smoke-finance.mjs [--web http://localhost:3000] [--api http://localhost:3001/api] [--shots dir]
 //
@@ -83,7 +84,7 @@ await step('Contabilidad observes it with ✗ and a quick reason', async () => {
 });
 await step('técnico corrects it and it returns to validation', async () => {
   await row(tec.page, note).getByText('Observado').waitFor(T);
-  await rowAction(tec.page, note, 'Corregir');
+  await row(tec.page, note).getByRole('button', { name: 'Corregir' }).click(T);
   await tec.page.getByText('Observación: Falta comprobante').waitFor(T);
   await tec.page.getByLabel('Monto (Bs) *').fill('85');
   await tec.page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click(T);
@@ -129,6 +130,25 @@ await step('Contabilidad validates it, then annuls it after seeing the effect on
   await confirm.getByRole('button', { name: 'Anular', exact: true }).click(T);
   await admin.page.getByText('Movimiento anulado').waitFor(T);
   await admin.page.keyboard.press('Escape');
+});
+await step('daily ledger (FIN-06): today by default, another day, one branch, Excel download, annul with the red bin', async () => {
+  const p = admin.page;
+  await p.goto(`${WEB}/finanzas?vista=movimientos`, { waitUntil: 'networkidle' });
+  await row(p, note).waitFor(T);
+  await p.getByRole('button', { name: 'Día anterior' }).click(T);
+  await row(p, note).waitFor({ state: 'detached', ...T }); // yesterday's book does not have today's expense
+  await p.getByRole('button', { name: 'Hoy' }).click(T);
+  await row(p, note).waitFor(T);
+  await p.getByLabel('Libro de').selectOption({ label: 'Sucursal Quillacollo' });
+  await row(p, note).waitFor({ state: 'detached', ...T });
+  await p.getByLabel('Libro de').selectOption({ label: 'Toda la empresa' });
+  await row(p, note).waitFor(T);
+  const [download] = await Promise.all([p.waitForEvent('download', T), p.getByRole('button', { name: 'Excel' }).click(T)]);
+  if (!download.suggestedFilename().endsWith('.xlsx')) throw new Error(`downloaded ${download.suggestedFilename()}`);
+  if (SHOTS) await p.screenshot({ path: `${SHOTS}/finance-ledger.png` });
+  await row(p, note).getByRole('button', { name: 'Anular (pide motivo)' }).click(T);
+  await confirmWith(p, 'Anular', 'Duplicado en el smoke');
+  await row(p, note).getByText('Anulado').waitFor(T);
 });
 await step('boxes and receivables render', async () => {
   await admin.page.goto(`${WEB}/finanzas?vista=cajas`, { waitUntil: 'networkidle' });

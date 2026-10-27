@@ -10,7 +10,7 @@ import { useUserDirectory } from '@/features/catalogs';
 import { IncomeDialog } from '@/features/finance';
 import { Field, FieldGrid, LocationLink, Money, StatusBadge, ToneTag } from '@/shared/views';
 import { cn } from '@/lib/utils';
-import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { formatBs, formatDay, formatBusinessDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { STATUS } from '@/shared/lib/status.js';
 import { usePhoto, useUploadVisitPhoto, useVisit } from '../api.js';
@@ -213,7 +213,7 @@ export function VisitSheet({ visitId, onClose }) {
                   {visit.movements.map((m) => (
                     <li key={m.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
                       <span>
-                        {formatDay(m.fecha)}, {m.metodo || 'sin método'}
+                        {formatBusinessDay(m.fecha)}, {m.metodo || 'sin método'}
                         <span className="block text-xs text-muted-foreground">Lo tiene {m.recibidoPor?.name}</span>
                       </span>
                       <span className="flex items-center gap-2">

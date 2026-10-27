@@ -1,6 +1,7 @@
 // Finance: one ledger of money movements (ingreso, egreso, transferencia) validated into cash boxes (rendición).
 // Pure TS, no Nest, no Prisma.
 
+import { atBusinessTime, businessDay } from '../../../common/domain/calendar';
 import type { TransitionCheck } from '../../../common/domain/state-machine';
 
 export const MOVEMENT_TIPOS = ['ingreso', 'egreso', 'transferencia'] as const;
@@ -199,13 +200,13 @@ export function movementImpact(
 }
 
 /**
- * When a movement happened. A day picked in a form ("2026-10-27") keeps the current time of day, so the ledger, sorted
- * newest first, shows it with the other movements of that day instead of below them (FIX-01). The same day as before
- * keeps the stored time.
+ * When a movement happened. A day picked in a form ("2026-10-27", a day in Bolivia) keeps the current time of day, so
+ * the ledger, sorted newest first, shows it with the other movements of that day instead of below them (FIX-01), and
+ * the daily ledger finds it on that Bolivian day. The same day as before keeps the stored time.
  */
 export function movementDate(fecha: string | undefined, now = new Date(), before?: Date): Date {
   if (!fecha) return before ?? now;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return new Date(fecha);
-  if (before && before.toISOString().slice(0, 10) === fecha) return before;
-  return new Date(`${fecha}T${now.toISOString().slice(11)}`);
+  if (before && businessDay(before) === fecha) return before;
+  return atBusinessTime(fecha, now);
 }

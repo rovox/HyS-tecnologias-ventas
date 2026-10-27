@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
 import { IncomeDialog, MovementDialog } from '@/features/finance';
 import { ControlPanel, Field, FieldGrid, FormView, ListView, StatusBadge, StatusBar } from '@/shared/views';
-import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { formatBs, formatDay, formatBusinessDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useProject } from '../api.js';
 import { PAYMENT_TYPE, PROJECT_FIELDS, PROJECT_TRANSITION, formatProjectValue, projectStages } from '../constants.js';
@@ -28,13 +28,13 @@ const jobColumns = [
 const total = (rows) => formatBs(rows.reduce((s, m) => s + Number(m.monto), 0));
 
 const materialColumns = [
-  { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+  { key: 'fecha', header: 'Fecha', cell: (m) => formatBusinessDay(m.fecha) },
   { key: 'producto', header: 'Producto', cell: (m) => <div><p className="font-medium">{m.producto.nombre}</p><p className="text-xs text-muted-foreground">{m.producto.codigo}</p></div> },
   { key: 'cantidad', header: 'Cantidad', align: 'right', cell: (m) => `${Number(m.cantidad)} ${m.producto.unidad}` },
   { key: 'costo', header: 'Costo', align: 'right', cell: (m) => formatBs(Number(m.cantidad) * Number(m.costoUnitario)) },
 ];
 const movementColumns = [
-  { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+  { key: 'fecha', header: 'Fecha', cell: (m) => formatBusinessDay(m.fecha) },
   { key: 'concepto', header: 'Concepto', cell: (m) => PAYMENT_TYPE[m.concepto] || m.concepto },
   { key: 'metodo', header: 'Método', cell: (m) => m.metodo || '—' },
   { key: 'por', header: 'Registró', cell: (m) => m.registradoPor?.name || '—' },

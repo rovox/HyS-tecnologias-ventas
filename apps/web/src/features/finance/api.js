@@ -3,11 +3,30 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
+import { API_URL } from '@/api/config.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
 
 export function useMovements() {
   return useQuery({ queryKey: ['movement', 'list'], queryFn: () => apiClient.get('finance/movements', opts()) });
+}
+
+/** The daily ledger: { desde, hasta } (Bolivian days) and optionally { sucursalId } (FIN-06). */
+export function useLedger(params, enabled = true) {
+  return useQuery({ queryKey: ['movement', 'list', 'ledger', params], queryFn: () => apiClient.get('finance/movements', opts({ query: params })), enabled });
+}
+
+/** Downloads the same ledger as CSV or Excel, built by the API (amounts as numbers, a summary sheet). */
+export async function downloadLedger(params, formato) {
+  const query = new URLSearchParams(Object.entries({ ...params, formato }).filter(([, v]) => v)).toString();
+  const response = await fetch(`${API_URL.replace(/\/$/, '')}/finance/movements/export?${query}`, { headers: { Authorization: `Bearer ${authToken()}` } });
+  if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || 'No se pudo descargar el libro');
+  const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') || '')?.[1] || `libro.${formato}`;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(await response.blob());
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 export function useMovement(id) {

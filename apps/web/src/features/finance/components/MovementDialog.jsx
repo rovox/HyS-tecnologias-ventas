@@ -7,20 +7,20 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useSucursales, useUserDirectory } from '@/features/catalogs';
 import { ROLES } from '@/constants/roles.js';
 import { useProjects } from '@/features/projects';
+import { businessDayOf } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { useCashBoxes, useCreateMovement, useUpdateMovement } from '../api.js';
 import { CONCEPTOS } from '../constants.js';
 import { SearchSelect } from '@/shared/views';
 
 const TITLES = { egreso: 'Registrar gasto', ingreso: 'Otro ingreso', transferencia: 'Transferencia entre cajas' };
-const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 
 function initial(tipo, movement, user, defaults = {}) {
   return {
     concepto: movement?.concepto || Object.keys(CONCEPTOS[tipo])[0],
     monto: movement ? String(Number(movement.monto)) : '',
-    fecha: movement ? String(movement.fecha).slice(0, 10) : today(),
+    fecha: businessDayOf(movement?.fecha),
     metodo: movement?.metodo || 'efectivo',
     nota: movement?.nota || '',
     pagadoPor: movement?.pagadoPor || 'empresa',

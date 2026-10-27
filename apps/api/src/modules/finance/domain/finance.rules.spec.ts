@@ -113,12 +113,15 @@ describe('finance rules', () => {
     ]);
   });
 
-  it('keeps the time of day when a form sends only the day (FIX-01)', () => {
-    const now = new Date('2026-10-27T15:42:10.000Z');
+  it('keeps the Bolivian time of day when a form sends only the day (FIX-01)', () => {
+    const now = new Date('2026-10-27T15:42:10.000Z'); // 11:42 in Bolivia
     expect(movementDate(undefined, now)).toEqual(now);
     expect(movementDate('2026-10-25', now).toISOString()).toBe('2026-10-25T15:42:10.000Z');
     expect(movementDate('2026-10-25T08:00:00.000Z', now).toISOString()).toBe('2026-10-25T08:00:00.000Z');
-    const before = new Date('2026-10-25T09:00:00.000Z');
+    // 22:30 in Bolivia is already the next day in UTC: the movement still belongs to the Bolivian day picked.
+    const night = new Date('2026-10-28T02:30:00.000Z');
+    expect(movementDate('2026-10-27', night).toISOString()).toBe('2026-10-28T02:30:00.000Z');
+    const before = new Date('2026-10-26T01:00:00.000Z'); // 25 Oct, 21:00 in Bolivia
     expect(movementDate('2026-10-25', now, before)).toBe(before);
     expect(movementDate('2026-10-26', now, before).toISOString()).toBe('2026-10-26T15:42:10.000Z');
   });

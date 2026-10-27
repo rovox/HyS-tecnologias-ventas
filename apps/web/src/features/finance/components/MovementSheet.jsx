@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Chatter } from '@/features/activity';
 import { useUserDirectory } from '@/features/catalogs';
 import { Field, FieldGrid, Money, StatusBadge } from '@/shared/views';
-import { formatBs, formatDateTime, formatDay } from '@/shared/lib/format.js';
+import { formatBs, formatDateTime, formatDay, formatBusinessDay } from '@/shared/lib/format.js';
 import { useCashBoxes, useMovement } from '../api.js';
 import { CONCEPTO_LABEL, ESTADO, MOVEMENT_FIELDS, TIPO_LABEL, sign } from '../constants.js';
 
@@ -84,7 +84,7 @@ export function MovementSheet({ movementId, actions, onClose }) {
             </div>
 
             <FieldGrid className="sm:grid-cols-1">
-              <Field label="Fecha">{formatDay(m.fecha)}</Field>
+              <Field label="Fecha">{formatBusinessDay(m.fecha)}</Field>
               {m.project && (
                 <Field label="Proyecto">
                   <Link className="text-primary hover:underline" to={`/projects/${m.project.id}`}>{m.project.codigo}</Link> — {m.project.titulo}

@@ -35,6 +35,10 @@ Live shadcn components today: alert-dialog, badge, button, card, checkbox, comma
 
 NestJS core/config/jwt/swagger, Prisma + `@prisma/adapter-mariadb`, class-validator/transformer, bcryptjs, rxjs. Testing: jest, supertest.
 
+| Job | Library | Rule |
+|---|---|---|
+| Excel export | **exceljs 4.4** (FIN-06, 2026-10-27) | Only in the API (`finance/ledger-export.ts`): real `.xlsx` with numeric amounts, filters and a summary sheet. Never in the web bundle. ~1 MB unpacked, pure JS (runs on Hostinger). |
+
 ## Adding a dependency
 
 Allowed only if: (1) no approved library covers it, (2) gzip size is stated, (3) it is maintained (release in last 12 months), (4) the plan says why. Prefer 20 lines of own code over a dependency for small helpers.
