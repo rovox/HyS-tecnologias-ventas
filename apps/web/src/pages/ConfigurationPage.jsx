@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import Layout from '@/components/Layout.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { goalsService } from '@/services/goals/index.js';
 import { apiClient, authToken } from '@/api/http.js';
 
 const ConfigurationPage = () => {
+  useDocumentTitle('Configuración');
   const { canAccessExecutivePanel, isAdmin } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -129,10 +130,9 @@ const ConfigurationPage = () => {
 
   return (
     <Layout>
-      <Helmet><title>Configuración General - H&S</title></Helmet>
       <div className="content-container space-y-8 py-6 w-full">
         <div className="w-full">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
             <Settings className="h-8 w-8 text-blue-600" /> Configuración General
           </h1>
           <p className="text-slate-500 mt-1 font-medium">Administración de sucursales, técnicos y metas corporativas</p>
@@ -142,7 +142,7 @@ const ConfigurationPage = () => {
           <div className="h-40 flex items-center justify-center w-full">Cargando datos...</div>
         ) : (
           <Tabs defaultValue="sales" className="w-full">
-            <TabsList className="bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl mb-6 flex flex-wrap h-auto">
+            <TabsList className="bg-slate-100 p-1 rounded-xl mb-6 flex flex-wrap h-auto">
               <TabsTrigger value="sales" className="rounded-lg gap-2"><Users className="h-4 w-4"/> Vendedores</TabsTrigger>
               <TabsTrigger value="branches" className="rounded-lg gap-2"><Building2 className="h-4 w-4"/> Sucursales</TabsTrigger>
               <TabsTrigger value="tecnicos" className="rounded-lg gap-2"><Wrench className="h-4 w-4"/> Técnicos</TabsTrigger>
@@ -150,7 +150,7 @@ const ConfigurationPage = () => {
             </TabsList>
 
             <TabsContent value="sales" className="w-full">
-              <Card className="border-slate-200 dark:border-slate-800 shadow-sm w-full">
+              <Card className="border-slate-200 shadow-sm w-full">
                 <CardHeader>
                   <CardTitle>Lista de Vendedores y Metas</CardTitle>
                   <p className="text-sm text-muted-foreground font-medium">
@@ -160,14 +160,14 @@ const ConfigurationPage = () => {
                 <CardContent className="w-full">
                   <div className="overflow-x-auto w-full">
                     <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-bold uppercase tracking-wider text-xs border-b">
+                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-xs border-b">
                         <tr>
                           <th className="px-4 py-3">Nombre</th>
                           <th className="px-4 py-3 text-right">Meta Mensual</th>
                           <th className="px-4 py-3 text-right">Acción</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      <tbody className="divide-y divide-slate-100">
                         {salespersonGoals.map((s) => (
                           <tr key={s.id}>
                             <td className="px-4 py-3 font-bold">{s.salesperson_name}</td>
@@ -177,7 +177,7 @@ const ConfigurationPage = () => {
                                   type="number" min="0"
                                   value={editGoalValue}
                                   onChange={(e) => setEditGoalValue(e.target.value)}
-                                  className="ml-auto w-32 p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-right tabular-nums"
+                                  className="ml-auto w-32 p-2 rounded-lg border border-slate-300 bg-white text-right tabular-nums"
                                   disabled={savingGoal}
                                   autoFocus
                                 />
@@ -221,43 +221,43 @@ const ConfigurationPage = () => {
 
             <TabsContent value="branches" className="w-full space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-                <Card className="border-slate-200 dark:border-slate-800 shadow-sm h-fit w-full">
+                <Card className="border-slate-200 shadow-sm h-fit w-full">
                   <CardHeader><CardTitle>Crear Sucursal Base</CardTitle></CardHeader>
                   <CardContent>
                     <form onSubmit={handleAddSucursal} className="space-y-4 w-full">
                       <div className="w-full">
                         <label className="block text-sm font-bold mb-1">Nombre (Ej: Central)</label>
-                        <input required type="text" value={newSucursal.nombre} onChange={(e) => setNewSucursal({ ...newSucursal, nombre: e.target.value })} className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white" />
+                        <input required type="text" value={newSucursal.nombre} onChange={(e) => setNewSucursal({ ...newSucursal, nombre: e.target.value })} className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900" />
                       </div>
                       <div className="w-full">
                         <label className="block text-sm font-bold mb-1">Código (Opcional)</label>
-                        <input type="text" value={newSucursal.codigo} onChange={(e) => setNewSucursal({ ...newSucursal, codigo: e.target.value })} className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white" />
+                        <input type="text" value={newSucursal.codigo} onChange={(e) => setNewSucursal({ ...newSucursal, codigo: e.target.value })} className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900" />
                       </div>
                       <Button type="submit" className="w-full">Registrar Sucursal Base</Button>
                     </form>
                   </CardContent>
                 </Card>
 
-                <Card className="lg:col-span-2 border-slate-200 dark:border-slate-800 shadow-sm w-full">
+                <Card className="lg:col-span-2 border-slate-200 shadow-sm w-full">
                   <CardHeader><CardTitle>Directorio de Sucursales</CardTitle></CardHeader>
                   <CardContent className="w-full">
                     <div className="overflow-x-auto w-full">
                       <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-bold uppercase tracking-wider text-xs border-b">
+                        <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-xs border-b">
                           <tr>
                             <th className="px-4 py-3">Nombre</th>
                             <th className="px-4 py-3 text-center">Estado</th>
                             <th className="px-4 py-3 text-right">Acción</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-slate-100">
                           {sucursales.map(s => (
                             editingSucursalId === s.id ? (
-                              <tr key={s.id} className="bg-blue-50/50 dark:bg-blue-900/10">
+                              <tr key={s.id} className="bg-blue-50/50">
                                 <td className="px-4 py-3">
                                   <div className="flex gap-2">
-                                    <input type="text" value={editSucursalForm.nombre} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, nombre: e.target.value })} className="w-full p-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm" placeholder="Nombre" />
-                                    <input type="text" value={editSucursalForm.codigo} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, codigo: e.target.value })} className="w-24 p-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm" placeholder="Código" />
+                                    <input type="text" value={editSucursalForm.nombre} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, nombre: e.target.value })} className="w-full p-1.5 rounded-md border border-slate-300 bg-white text-sm" placeholder="Nombre" />
+                                    <input type="text" value={editSucursalForm.codigo} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, codigo: e.target.value })} className="w-24 p-1.5 rounded-md border border-slate-300 bg-white text-sm" placeholder="Código" />
                                   </div>
                                 </td>
                                 <td className="px-4 py-3 text-center">
@@ -302,16 +302,16 @@ const ConfigurationPage = () => {
             </TabsContent>
 
             <TabsContent value="tecnicos" className="w-full">
-              <Card className="border-slate-200 dark:border-slate-800 shadow-sm w-full">
+              <Card className="border-slate-200 shadow-sm w-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Wrench className="h-5 w-5"/> Técnicos del Sistema</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
                     <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Los técnicos se administran como usuarios del sistema</p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      <p className="text-sm font-bold text-blue-900">Los técnicos se administran como usuarios del sistema</p>
+                      <p className="text-sm text-blue-700 mt-1">
                         Los técnicos son usuarios con rol <strong>SEGURIDAD ELECTRÓNICA</strong>. Para agregar o gestionar técnicos, solicita al administrador del sistema que cree o actualice la cuenta de usuario correspondiente.
                       </p>
                     </div>
@@ -321,16 +321,16 @@ const ConfigurationPage = () => {
             </TabsContent>
 
             <TabsContent value="global" className="w-full">
-              <Card className="border-slate-200 dark:border-slate-800 shadow-sm w-full">
+              <Card className="border-slate-200 shadow-sm w-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/> Metas Globales y Metas por Sucursal</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
                     <Info className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-bold text-amber-900 dark:text-amber-100">Módulo en desarrollo</p>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                      <p className="text-sm font-bold text-amber-900">Módulo en desarrollo</p>
+                      <p className="text-sm text-amber-700 mt-1">
                         La configuración de metas globales y metas por sucursal estará disponible próximamente.
                       </p>
                     </div>

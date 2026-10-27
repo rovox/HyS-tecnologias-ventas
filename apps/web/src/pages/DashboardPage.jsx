@@ -4,13 +4,14 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import Layout from '@/components/Layout.jsx';
 import SalesMetricsRow from '@/components/SalesMetricsRow.jsx';
 import SalesActivityCharts from '@/components/SalesActivityCharts.jsx';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { FileStack, Building2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { ROLES } from '@/constants/roles.js';
 import { canWriteQuotations } from '@/config/nav.js';
 
 const DashboardPage = () => {
+  useDocumentTitle('Dashboard');
   const navigate = useNavigate();
   const { currentUser, userRole } = useAuth();
   const isVentas = userRole === ROLES.VENTAS;
@@ -24,7 +25,6 @@ const DashboardPage = () => {
 
   return (
     <Layout>
-      <Helmet><title>Dashboard - H&S Tecnologías</title></Helmet>
       <div className="content-container space-y-6 py-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">

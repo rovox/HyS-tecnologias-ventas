@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { ROLES } from '@/constants/roles.js';
@@ -40,6 +40,7 @@ const EmptyState = ({ msg = 'Sin datos para el período seleccionado.' }) => (
 );
 
 const ReportsPage = () => {
+  useDocumentTitle('Reportes');
   const { isAdmin, isVentasLevel } = useAuth();
   const canView = isVentasLevel();
 
@@ -222,10 +223,6 @@ const ReportsPage = () => {
 
   return (
     <Layout>
-      <Helmet>
-        <title>Reportes - H&S Tecnologías</title>
-        <meta name="description" content="Reportes integrales de ventas, operaciones y contabilidad" />
-      </Helmet>
 
       <div className="content-container py-6 space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { toast } from 'sonner';
 
 const UserProfilePage = () => {
+  useDocumentTitle('Perfil');
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, isAdmin } = useAuth();
@@ -55,7 +56,6 @@ const UserProfilePage = () => {
 
   return (
     <Layout>
-      <Helmet><title>Perfil · H&S</title></Helmet>
       <div className="content-container py-6 space-y-4 max-w-2xl">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-extrabold tracking-tight">Perfil de usuario</h1>

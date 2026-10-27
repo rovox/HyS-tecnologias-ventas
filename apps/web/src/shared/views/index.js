@@ -9,5 +9,5 @@ export { RowQuickActions } from './RowQuickActions.jsx';
 export { Money } from './Money.jsx';
 export { LocationField, LocationLink } from './Location.jsx';
 export { FormView, FieldGrid, Field } from './FormView.jsx';
-export { ConfirmProvider, useConfirm } from './confirm.jsx';
+export { useConfirm } from './confirm.jsx';
 export { useListControls } from './useListControls.js';

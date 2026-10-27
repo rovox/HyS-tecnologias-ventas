@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, Inbox, Search, UserPlus, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -30,6 +30,7 @@ const fecha = (value) => (value ? format(new Date(value), "d MMM yyyy, HH:mm", {
 const EstadoBadge = ({ estado }) => <StatusBadge entity="lead" state={estado} />;
 
 const SolicitudesWebPage = () => {
+  useDocumentTitle('Solicitudes web');
   const navigate = useNavigate();
   const { rows, loading, error, fetchSolicitudes, updateSolicitud, convertSolicitud } = useSolicitudesWeb();
   const [estado, setEstado] = useState('nueva');
@@ -76,9 +77,6 @@ const SolicitudesWebPage = () => {
 
   return (
     <Layout>
-      <Helmet>
-        <title>Solicitudes web - H&S Tecnologías</title>
-      </Helmet>
 
       <div className="content-container space-y-6 py-8 pb-24 w-full">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full bg-card p-6 rounded-2xl border shadow-sm">

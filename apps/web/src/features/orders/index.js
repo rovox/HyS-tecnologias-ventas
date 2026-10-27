@@ -1,6 +1,3 @@
-// Public entry of the internal orders feature: the orders tab of Inventario and the order page (lazy: the inventory
-// feature imports this entry).
-import { lazy } from 'react';
-
-export const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage.jsx'));
+// Public entry of the internal orders feature: the orders tab of Inventario. The order page is loaded by app/App.jsx
+// straight from its file (GATE-01).
 export { OrdersView } from './components/OrdersView.jsx';

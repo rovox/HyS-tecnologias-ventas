@@ -11,24 +11,24 @@ const fmtBs = (value) =>
 
 const TONES = {
   quotes: {
-    value: 'text-sky-700 dark:text-sky-300',
-    iconWrap: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
-    label: 'text-sky-800/70 dark:text-sky-300/80',
+    value: 'text-sky-700',
+    iconWrap: 'bg-sky-100 text-sky-700',
+    label: 'text-sky-800/70',
   },
   sales: {
-    value: 'text-emerald-700 dark:text-emerald-300',
-    iconWrap: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
-    label: 'text-emerald-800/70 dark:text-emerald-300/80',
+    value: 'text-emerald-700',
+    iconWrap: 'bg-emerald-100 text-emerald-700',
+    label: 'text-emerald-800/70',
   },
   goal: {
-    value: 'text-amber-700 dark:text-amber-300',
-    iconWrap: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
-    label: 'text-amber-800/70 dark:text-amber-300/80',
+    value: 'text-amber-700',
+    iconWrap: 'bg-amber-100 text-amber-700',
+    label: 'text-amber-800/70',
   },
   remaining: {
-    value: 'text-rose-700 dark:text-rose-300',
-    iconWrap: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
-    label: 'text-rose-800/70 dark:text-rose-300/80',
+    value: 'text-rose-700',
+    iconWrap: 'bg-rose-100 text-rose-700',
+    label: 'text-rose-800/70',
   },
 };
 
