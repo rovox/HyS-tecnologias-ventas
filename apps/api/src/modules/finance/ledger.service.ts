@@ -18,6 +18,7 @@ import {
   movementError,
   advanceError,
   daysLate,
+  monthMoney,
   movementDate,
   movementImpact,
   pendingRefund,
@@ -219,6 +220,35 @@ export class LedgerService {
   }
 
   /** Active boxes with their validated balance. */
+  /**
+   * The dashboard's money (DASH-01): the month (Bolivian days) — cobrado, en caja, expenses, net —, every box balance
+   * and, per branch, today's direct sales and whether its cash was closed. Commercial roles and Gerencia.
+   */
+  async summary(user: User, mes?: string) {
+    if (!canSeeLedger(user)) throw new ForbiddenException('Sin acceso al resumen de dinero');
+    const today = businessToday(new Date());
+    const month = /^\d{4}-\d{2}$/.test(mes ?? '') ? mes! : today.slice(0, 7);
+    const [y, mo] = month.split('-').map(Number);
+    const lastDay = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+    const [movements, boxes, sucursales, sales, closes] = await Promise.all([
+      this.prisma.cashMovement.findMany({ where: { fecha: { gte: businessDayStart(`${month}-01`), lte: businessDayEnd(lastDay) } }, select: { tipo: true, monto: true, estado: true } }),
+      this.cashBoxes(user),
+      this.prisma.sucursal.findMany({ orderBy: { nombre: 'asc' } }),
+      this.prisma.directSale.groupBy({ by: ['sucursalId'], where: { estado: 'registrada', fecha: { gte: businessDayStart(today), lte: businessDayEnd(today) } }, _count: true, _sum: { total: true } }),
+      this.prisma.cierreCaja.findMany({ where: { dia: today }, select: { sucursalId: true, diferencia: true } }),
+    ]);
+    return {
+      mes: month,
+      ...monthMoney(movements),
+      cajas: boxes.map((b) => ({ id: b.id, nombre: b.nombre, sucursal: b.sucursal?.nombre, saldo: b.saldo })),
+      hoy: sucursales.map((s) => {
+        const sold = sales.find((x) => x.sucursalId === s.id);
+        const closed = closes.find((c) => c.sucursalId === s.id);
+        return { sucursal: { id: s.id, nombre: s.nombre }, ventas: sold?._count ?? 0, total: Number(sold?._sum.total ?? 0), cierre: closed ? { diferencia: Number(closed.diferencia) } : null };
+      }),
+    };
+  }
+
   async cashBoxes(user: User) {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
     const [boxes, movements] = await Promise.all([

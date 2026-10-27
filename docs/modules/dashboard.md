@@ -1,6 +1,6 @@
 # Dashboard (Inicio) — priority 1
 
-**Status:** 🟡 `/dashboard` loads for all three roles; it does not follow the target layout yet.
+**Status:** 🟢 DASH-01/02 (2026-10-27): quick actions per role, the month's real money, today per branch, commercial metrics and (Gerencia) the latest activity. Panel de control and Reportes were merged here and removed (PLAT-07).
 
 ## Purpose
 Home, ordered from most to least urgent (`business-design.md` §6):
@@ -16,10 +16,10 @@ Each profile sees its own first (técnico: "Mis actividades y asistencias"). Num
 | `/dashboard` | ✅ | ✅ | ✅ (very short: 228 chars) |
 
 ## Checklist
-- [ ] DASH-01 Quick-actions row (depends on the forms of Quotations, Finance).
+- [x] DASH-01 Quick-actions row (2026-10-27): Nueva venta · Cierre del día · Nueva cotización · Programar trabajo · Agregar material · Mover material (each opens its form at once: `?vender=1`, `?programar=1`, `?accion=`); técnico: Mis trabajos.
 - [ ] DASH-02 "Requiere atención" block with API-computed counters (needs Projects + Finance + Inventory).
-- [ ] DASH-03 Recent-activity feed from the audit log (RT-01) + SSE (RT-02).
-- [ ] DASH-04 Month indicators per role; técnico home = own activities.
+- [x] DASH-03 Recent-activity feed from the audit log for Gerencia (2026-10-27, `ActivityFeed`, refreshed every minute).
+- [x] DASH-04 Month money (2026-10-27, `GET /finance/resumen`, `monthMoney`): Cobrado (waiting + validated), En caja (validated), Egresos validados, Neto; every box balance; today per branch: direct sales and whether its cash was closed. Commercial metrics (quotations, sales goal) kept.
 
 ## Smoke steps
 1. Each role logs in and lands on `/dashboard` with no console errors (S1).

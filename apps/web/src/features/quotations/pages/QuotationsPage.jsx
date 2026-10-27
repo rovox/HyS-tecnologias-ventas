@@ -12,6 +12,7 @@ import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useQuotations } from '../api.js';
 import { QUOTATION_STATE, displayState } from '../constants.js';
 import { QuotationFormDialog } from '../components/QuotationFormDialog.jsx';
+import { QuotationRowActions } from '../components/QuotationRowActions.jsx';
 import { QuotationTabs } from '../components/QuotationTabs.jsx';
 import { QuotationCard, daysLeft, quotationColumns, quotationCsv } from '../components/quotationColumns.jsx';
 
@@ -47,7 +48,9 @@ export default function QuotationsPage() {
   const { currentUser, isVentasLevel } = useAuth();
   const { data: categories } = useCategories();
   const { data: quotes = [], isLoading } = useQuotations(vista);
+  // false, true (new) or { prefill } (Duplicar, QUO-03).
   const [creating, setCreating] = useState(false);
+  const duplicate = (q) => setCreating({ prefill: { titulo: `${q.titulo} (copia)`, clienteId: q.clienteId, categoriaId: q.categoriaId, subcategoria: q.subcategoria, monto: q.monto, observacion: q.observacion } });
   useDocumentTitle(vista === 'abiertas' ? 'Cotizaciones' : 'Cotizaciones cerradas');
 
   const filters = useMemo(() => buildFilters(vista, categories?.divisions || [], currentUser?.id), [vista, categories, currentUser]);
@@ -83,7 +86,7 @@ export default function QuotationsPage() {
         {view === 'list' ? (
           <ListView
             id="cotizaciones"
-            columns={quotationColumns}
+            columns={isVentasLevel() ? [...quotationColumns, { key: 'acciones', header: '', cell: (q) => <QuotationRowActions quote={q} onDuplicate={duplicate} /> }] : quotationColumns}
             rows={rows}
             groups={groups}
             loading={isLoading}
@@ -102,7 +105,7 @@ export default function QuotationsPage() {
           />
         )}
       </div>
-      <QuotationFormDialog open={creating} onOpenChange={setCreating} onSaved={(q) => q?.id && navigate(`/quotations/${q.id}`)} />
+      <QuotationFormDialog open={Boolean(creating)} onOpenChange={(o) => !o && setCreating(false)} prefill={creating?.prefill} onSaved={(q) => q?.id && navigate(`/quotations/${q.id}`)} />
     </Layout>
   );
 }

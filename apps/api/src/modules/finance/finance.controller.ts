@@ -55,6 +55,12 @@ export class FinanceController {
     return new StreamableFile(file, { type, disposition: `attachment; filename="${name}"` });
   }
 
+  @Get('resumen')
+  @ApiOperation({ summary: 'Dashboard money: month cobrado / en caja / expenses, box balances, today per branch' })
+  summary(@Query('mes') mes: string | undefined, @CurrentUser() user: User) {
+    return this.ledger.summary(user, mes);
+  }
+
   @Get('anticipos')
   @ApiOperation({ summary: 'Advances still to be accounted for, with days late' })
   advances(@CurrentUser() user: User) {

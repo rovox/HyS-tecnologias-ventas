@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, CalendarRange, Check, ChevronLeft, ChevronRight, List, Play, Plus, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,12 @@ export default function SchedulePage() {
   const [creating, setCreating] = useState(null);
   const jobState = useJobState();
   useDocumentTitle('Cronograma');
+  // "Programar trabajo" from the dashboard opens the form at once.
+  useEffect(() => {
+    if (params.get('programar') !== '1') return;
+    setCreating(today());
+    setParams((p) => { const n = new URLSearchParams(p); n.delete('programar'); return n; }, { replace: true });
+  }, [params, setParams]);
 
   const days = view === 'mes' ? monthGrid(anchor) : weekDays(weekStart(anchor));
   const from = days[0];
