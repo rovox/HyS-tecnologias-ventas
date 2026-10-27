@@ -638,6 +638,8 @@ describe('hs-erp API (e2e)', () => {
       const sold = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 3, [{ medio: 'efectivo', monto: 15 }, { medio: 'qr', monto: 6 }])).expect(201)).body;
       expect(sold).toMatchObject({ estado: 'registrada', total: '21', clienteNombre: 'JOSE TICONA', sucursal: { id: 'suc_punata' } });
       expect(sold.codigo).toMatch(/^NV-\d{4,}$/);
+      expect(sold.tieneNota).toBe(true);
+      expect(sold).not.toHaveProperty('notaPdfPath');
       expect(sold.cobros.map((c: { medioPago: string; estado: string; cajaId: string }) => [c.medioPago, c.estado, c.cajaId]).sort()).toEqual([['efectivo', 'validado', 'caja_chica_punata'], ['qr', 'validado', 'caja_qr']]);
       expect((await stock()).suc_punata).toBe(before.suc_punata - 3);
       expect(await box('caja_chica_punata')).toBeCloseTo(chica + 15, 2);
@@ -668,6 +670,14 @@ describe('hs-erp API (e2e)', () => {
       const annulled = (await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: 'Precio mal cargado' }).expect(201)).body;
       expect(annulled).toMatchObject({ estado: 'anulada', motivoAnulacion: 'Precio mal cargado' });
       expect(annulled.cobros.every((c: { estado: string }) => c.estado === 'anulado')).toBe(true);
+      // VD-03: the stored note is served as it was; the annulled sale shows its ANULADA copy, the original stays.
+      const pdf = (q = '') => http().get(`/api/direct-sales/${sold.id}/nota.pdf${q}`).set(H(wilson)).buffer(true)
+        .parse((res, cb) => { const chunks: Buffer[] = []; res.on('data', (c: Buffer) => chunks.push(c)); res.on('end', () => cb(null, Buffer.concat(chunks))); });
+      const copy = await pdf().expect(200);
+      expect(copy.headers['content-disposition']).toMatch(/-ANULADA\.pdf/);
+      expect((copy.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+      const first = await pdf('?original=1').expect(200);
+      expect(first.headers['content-disposition']).not.toMatch(/ANULADA/);
       expect((await stock()).suc_punata).toBe(before.suc_punata + 2);
       expect(await box('caja_chica_punata')).toBeCloseTo(chica - 14, 2);
       await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: 'otra vez' }).expect(400);

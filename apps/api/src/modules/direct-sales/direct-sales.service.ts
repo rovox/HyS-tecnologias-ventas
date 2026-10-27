@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma, User } from '@prisma/client';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { businessDayEnd, businessDayStart } from '../../common/domain/calendar';
@@ -7,6 +9,16 @@ import { isAdmin, isVentas } from '../../common/policy/policy';
 import { stockBySede } from '../inventory';
 import { AnnulDirectSaleDto, CreateDirectSaleDto, ListDirectSalesQuery } from './dto/direct-sale.dto';
 import { annulError, boxForPayment, canSellFromBranch, saleError, saleNumber, saleTotals } from './domain/direct-sales.rules';
+import { renderSaleNote } from './sale-note';
+
+/** Stored sale notes: the backup of each sale (VD-03), next to the other uploads. */
+const notesDir = () => path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'), 'notas-venta');
+
+async function storeNote(name: string, bytes: Buffer) {
+  await fs.mkdir(notesDir(), { recursive: true });
+  await fs.writeFile(path.join(notesDir(), name), bytes);
+  return name;
+}
 
 const USER_NAME = { select: { id: true, name: true, phone: true } } as const;
 const SALE_DETAIL = {
@@ -76,6 +88,18 @@ export class DirectSalesService {
   async get(id: string, user: User) {
     this.assertSeller(user);
     return presentSale(await this.row(id));
+  }
+
+  /** The stored note (never generated again): the ANULADA copy of an annulled sale unless `original`. */
+  async note(id: string, user: User, original = false) {
+    this.assertSeller(user);
+    const sale = await this.row(id);
+    const name = !original && sale.notaAnuladaPdfPath ? sale.notaAnuladaPdfPath : sale.notaPdfPath;
+    if (!name) throw new NotFoundException('Esta venta no tiene nota guardada');
+    const bytes = await fs.readFile(path.join(notesDir(), path.basename(name))).catch(() => {
+      throw new NotFoundException('No se encontró el archivo de la nota en el servidor');
+    });
+    return { bytes, name: `Nota-${saleNumber(sale.numero)}${name.includes('anulada') ? '-ANULADA' : ''}.pdf` };
   }
 
   /** The sale, built and checked inside the transaction (stock and number are read under it). */
@@ -170,7 +194,11 @@ export class DirectSalesService {
         validadoAt: now,
       })),
     });
-    return this.row(sale.id, tx);
+    // The note is generated and stored inside the transaction: if it cannot be written, the sale is not registered.
+    const full = await this.row(sale.id, tx);
+    const notaPdfPath = await storeNote(`${code}-${sale.id}.pdf`, await renderSaleNote(full));
+    await tx.directSale.update({ where: { id: sale.id }, data: { notaPdfPath } });
+    return { ...full, notaPdfPath };
   }
 
   async create(dto: CreateDirectSaleDto, user: User, sessionId?: string) {
@@ -202,7 +230,11 @@ export class DirectSalesService {
     });
     await tx.cashMovement.updateMany({ where: { ventaDirectaId: sale.id, estado: { not: 'anulado' } }, data: { estado: 'anulado', motivo: `Venta ${code} anulada: ${dto.motivo.trim()}` } });
     await tx.directSale.update({ where: { id }, data: { estado: 'anulada', motivoAnulacion: dto.motivo.trim(), anuladaPorId: user.id, anuladaAt: now } });
-    return this.row(id, tx);
+    // The original note stays as it was; a copy marked ANULADA is stored next to it.
+    const annulled = await this.row(id, tx);
+    const notaAnuladaPdfPath = await storeNote(`${code}-${sale.id}-anulada.pdf`, await renderSaleNote(annulled, { annulled: true }));
+    await tx.directSale.update({ where: { id }, data: { notaAnuladaPdfPath } });
+    return { ...annulled, notaAnuladaPdfPath };
   }
 
   async annul(id: string, dto: AnnulDirectSaleDto, user: User, sessionId?: string) {
