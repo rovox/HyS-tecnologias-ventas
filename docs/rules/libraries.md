@@ -37,6 +37,7 @@ NestJS core/config/jwt/swagger, Prisma + `@prisma/adapter-mariadb`, class-valida
 
 | Job | Library | Rule |
 |---|---|---|
+| Sale note PDF | **pdfmake 0.2.23** (VD-03, 2026-10-27) | Only in the API (`direct-sales/sale-note.ts`), standard PDF fonts (no font files), pure JS (runs on Hostinger, no Chromium). The note is generated once and stored. |
 | Excel export | **exceljs 4.4** (FIN-06, 2026-10-27) | Only in the API (`finance/ledger-export.ts`): real `.xlsx` with numeric amounts, filters and a summary sheet. Never in the web bundle. ~1 MB unpacked, pure JS (runs on Hostinger). |
 
 ## Adding a dependency

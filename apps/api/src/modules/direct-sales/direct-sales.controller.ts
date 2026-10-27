@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, StreamableFile, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
@@ -17,6 +17,13 @@ export class DirectSalesController {
   @ApiOperation({ summary: 'Direct sales (branch, days, seller, state)' })
   list(@Query() query: ListDirectSalesQuery, @CurrentUser() user: User) {
     return this.sales.list(query, user);
+  }
+
+  @Get(':id/nota.pdf')
+  @ApiOperation({ summary: 'The stored sale note (the ANULADA copy of an annulled sale; ?original=1 for the first one)' })
+  async note(@Param('id') id: string, @Query('original') original: string | undefined, @CurrentUser() user: User) {
+    const { bytes, name } = await this.sales.note(id, user, original === '1');
+    return new StreamableFile(bytes, { type: 'application/pdf', disposition: `inline; filename="${name}"` });
   }
 
   @Get(':id')

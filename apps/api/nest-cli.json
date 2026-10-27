@@ -5,6 +5,12 @@
   "entryFile": "main",
   "compilerOptions": {
     "deleteOutDir": false,
-    "tsConfigPath": "tsconfig.build.json"
+    "tsConfigPath": "tsconfig.build.json",
+    "assets": [
+      {
+        "include": "modules/direct-sales/assets/*",
+        "watchAssets": true
+      }
+    ]
   }
 }
