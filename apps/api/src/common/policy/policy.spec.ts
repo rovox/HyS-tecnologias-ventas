@@ -1,5 +1,11 @@
 import {
   canAdjustInventory,
+  canCreateSchedules,
+  canManageProjects,
+  canMutateClients,
+  canMutateQuotes,
+  isAdmin,
+  isCommercial,
   canManageInventory,
   canRegisterMovements,
   canSeeLedger,
@@ -28,13 +34,15 @@ const none = { id: 'n', role: ROLES.NONE };
 const conta = { id: 'c', role: ROLES.CONTA };
 
 describe('policy', () => {
-  it('Contabilidad reads everything, changes money and adjusts stock, but does not sell or manage orders (AUTH-01)', () => {
+  it('Contabilidad has the same permissions as Administración (ROLE-01)', () => {
     expect([admin, ventas, tec, conta].map(canValidateMovements)).toEqual([true, false, false, true]);
     expect([admin, ventas, tec, conta].map(canAdjustInventory)).toEqual([true, false, false, true]);
     expect([admin, ventas, tec, conta].map(canSeeLedger)).toEqual([true, true, false, true]);
     expect(canRegisterMovements(conta)).toBe(true);
     expect([canSeeQuotations(conta), canSeePedidos(conta), canListUsers(conta), canListUserDirectory(conta)]).toEqual([true, true, true, true]);
-    expect([canManagePedidos(conta), canManageInventory(conta), canMutateRelevamientos(conta)]).toEqual([false, false, false]);
+    // It sells and manages like Gerencia: quotations, clients, orders, inventory, visits, schedules, projects.
+    expect([canMutateQuotes(conta), canMutateClients(conta), canManagePedidos(conta), canManageInventory(conta), canMutateRelevamientos(conta), canCreateSchedules(conta), canManageProjects(conta)]).toEqual([true, true, true, true, true, true, true]);
+    expect([isAdmin(conta), isCommercial(conta)]).toEqual([true, true]);
     expect([scheduleWhere(conta), quotationWhere(conta), clientWhere(conta), goalWhere(conta)]).toEqual([{}, {}, {}, {}]);
     expect(metricsUserId(conta, 'v')).toBe('v');
   });

@@ -3,10 +3,13 @@ export const ROLES = {
   ADMIN: 'ADMINISTRADOR',
   VENTAS: 'VENTAS / ADMINISTRACIÓN',
   TEC: 'SEGURIDAD ELECTRÓNICA',
-  /** Reads everything; validates, edits and annuls money; adjusts stock (AUTH-01). */
+  /** The same permissions as ADMINISTRADOR; a separate name for its users (ROLE-01). */
   CONTA: 'CONTABILIDAD',
   NONE: 'SIN ACCESO',
 };
 
-/** Roles that sell: quotations, projects, clients. */
-export const COMMERCIAL_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
+/** Gerencia: ADMINISTRADOR and CONTABILIDAD have the same permissions (ROLE-01, owner 2026-10-27). */
+export const MANAGER_ROLES = [ROLES.ADMIN, ROLES.CONTA];
+
+/** Roles that sell: quotations, projects, clients (Gerencia and Ventas). */
+export const COMMERCIAL_ROLES = [...MANAGER_ROLES, ROLES.VENTAS];

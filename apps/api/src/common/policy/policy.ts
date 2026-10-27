@@ -4,7 +4,7 @@ export const ROLES = {
   ADMIN: 'ADMINISTRADOR',
   VENTAS: 'VENTAS / ADMINISTRACIÓN',
   TEC: 'SEGURIDAD ELECTRÓNICA',
-  /** Contabilidad (AUTH-01): reads everything, changes money (validates, edits, annuls) and adjusts stock. */
+  /** Contabilidad: the same permissions as ADMINISTRADOR, a separate name for its users (ROLE-01, owner 2026-10-27). */
   CONTA: 'CONTABILIDAD',
   NONE: 'SIN ACCESO',
 } as const;
@@ -15,17 +15,20 @@ export type Actor = { id: string; role: string };
 /** Query filter that matches no row. */
 const NO_ROWS = { id: '__none__' };
 
-export const isAdmin = (actor?: Actor | null) => actor?.role === ROLES.ADMIN;
+/** The roles of Gerencia: ADMINISTRADOR and CONTABILIDAD have the same permissions (ROLE-01). */
+export const MANAGER_ROLES: readonly string[] = [ROLES.ADMIN, ROLES.CONTA];
+/** Gerencia: ADMINISTRADOR or CONTABILIDAD. */
+export const isAdmin = (actor?: Actor | null) => Boolean(actor && MANAGER_ROLES.includes(actor.role));
 export const isVentas = (actor?: Actor | null) => actor?.role === ROLES.VENTAS;
 export const isTec = (actor?: Actor | null) => actor?.role === ROLES.TEC;
 export const isConta = (actor?: Actor | null) => actor?.role === ROLES.CONTA;
 const isNone = (actor?: Actor | null) => actor?.role === ROLES.NONE;
-/** Roles that sell: Gerencia and Ventas. */
+/** Roles that sell: Gerencia (Administración, Contabilidad) and Ventas. */
 export const isCommercial = (actor?: Actor | null) => isAdmin(actor) || isVentas(actor);
-/** Who reads every record (commercial roles and Contabilidad); writing is decided per action. */
-const readsAll = (actor?: Actor | null) => isCommercial(actor) || isConta(actor);
-/** Gerencia and Contabilidad: the money and stock controls. */
-const isFinance = (actor?: Actor | null) => isAdmin(actor) || isConta(actor);
+/** Who reads every record (the commercial roles); writing is decided per action. */
+const readsAll = isCommercial;
+/** Gerencia: the money and stock controls. */
+const isFinance = isAdmin;
 
 export const canMutateQuotes = isCommercial;
 export const canMutateClients = isCommercial;

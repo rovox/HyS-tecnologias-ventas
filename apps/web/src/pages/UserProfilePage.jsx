@@ -5,7 +5,7 @@ import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import authService from '@/services/auth/index.js';
 import goalsService from '@/services/goals/index.js';
-import { ROLES } from '@/config/nav.js';
+import { COMMERCIAL_ROLES } from '@/constants/roles.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
@@ -33,7 +33,7 @@ const UserProfilePage = () => {
       try {
         const found = await authService.getUser(id);
         if (!cancelled) setUser(found);
-        if (found && (found.role === ROLES.VENTAS || found.role === ROLES.ADMIN)) {
+        if (found && COMMERCIAL_ROLES.includes(found.role)) {
           try {
             const goals = await goalsService.listSellerGoals();
             const g = (goals || []).find((row) => row.userId === id || row.usuarioId === id || row.user_id === id);

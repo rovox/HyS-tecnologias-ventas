@@ -100,7 +100,7 @@ export class IncomeService {
    */
   async register(ref: IncomeRef, dto: IncomeDto, user: User, sessionId?: string) {
     const target = await this.target(ref);
-    const allowed = isAdmin(user) || isVentas(user) || isConta(user) || (isTec(user) && target.technicians.includes(user.id));
+    const allowed = isAdmin(user) || isVentas(user) || (isTec(user) && target.technicians.includes(user.id));
     if (!allowed) throw new ForbiddenException('Solo registras cobros de tus trabajos');
     const error =
       movementError({ tipo: 'ingreso', concepto: dto.concepto, monto: dto.monto }) ||
