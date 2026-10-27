@@ -143,6 +143,7 @@ export class LedgerService {
    */
   async update(id: string, dto: UpdateMovementDto, user: User, sessionId?: string) {
     const before = await this.row(id);
+    if (before.ventaDirectaId) throw new BadRequestException('Es el cobro de una venta directa: se corrige anulando la venta');
     const manager = canValidateMovements(user);
     if (before.registradoPorId !== user.id && !manager) throw new ForbiddenException('Solo quien lo registró, Gerencia o Contabilidad lo corrigen');
     const blocked = editMovementError(before, manager);
@@ -187,6 +188,7 @@ export class LedgerService {
    */
   async transition(id: string, to: 'validado' | 'observado' | 'anulado', input: { cajaId?: string; motivo?: string }, user: User, sessionId?: string) {
     const before = await this.row(id);
+    if (before.ventaDirectaId) throw new BadRequestException('Es el cobro de una venta directa: se corrige anulando la venta');
     const ownWaiting = to === 'anulado' && before.registradoPorId === user.id && before.estado !== 'validado';
     if (!ownWaiting) this.assertValidator(user);
     const check = checkMovementTransition(before, to, input);
