@@ -65,6 +65,8 @@ await step('create a product; the other session lists it live', async () => {
   await p.getByRole('button', { name: 'Crear' }).click(T);
   await p.getByText('Producto creado').waitFor(T);
   await row(B.page).waitFor({ timeout: 3000 });
+  // Like a user: find it by code (the local list grows with every e2e run and refreshes live).
+  await p.getByPlaceholder(/Buscar por código/).fill(code);
 });
 await step('a product without stock shows in "Stock bajo"', async () => {
   await p.getByRole('button', { name: 'Filtros' }).click(T);

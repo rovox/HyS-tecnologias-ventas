@@ -98,6 +98,7 @@ export function OrdersView({ tabs }) {
       />
       <div className="px-4 py-4 sm:px-6">
         <ListView
+          id="pedidos"
           columns={columns}
           rows={rows}
           groups={groups}
