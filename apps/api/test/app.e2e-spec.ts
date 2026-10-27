@@ -617,6 +617,68 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
+  describe('direct sales per branch (VD-01)', () => {
+    const http = () => request(app.getHttpServer());
+    const H = (t: string) => ({ Authorization: `Bearer ${t}` });
+    let wilson = '';
+    let conta = '';
+    const stock = async () => (await http().get('/api/inventory/products').set(H(ventasToken)).expect(200)).body.find((p: { id: string }) => p.id === 'prd_utp6').stock;
+    const box = async (id: string) => (await http().get('/api/finance/cajas').set(H(conta)).expect(200)).body.find((b: { id: string }) => b.id === id).saldo;
+    const sale = (sucursalId: string, cantidad: number, pagos: { medio: string; monto: number }[], extra = {}) => ({
+      sucursalId, clienteNombre: 'JOSE TICONA', clienteCelular: '67415760', clienteNit: '6741760', items: [{ productoId: 'prd_utp6', cantidad, precioUnitario: 7 }], pagos, ...extra,
+    });
+
+    beforeAll(async () => {
+      wilson = (await http().post('/api/auth/login').send(credentialsFor('wilson@hscontrol.com')).expect(201)).body.accessToken;
+      conta = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.contabilidad)).expect(201)).body.accessToken;
+    });
+
+    it('a seller sells from his branch: stock leaves it and each payment is validated into the box of its method', async () => {
+      const [before, chica, qr] = [await stock(), await box('caja_chica_punata'), await box('caja_qr')];
+      const sold = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 3, [{ medio: 'efectivo', monto: 15 }, { medio: 'qr', monto: 6 }])).expect(201)).body;
+      expect(sold).toMatchObject({ estado: 'registrada', total: '21', clienteNombre: 'JOSE TICONA', sucursal: { id: 'suc_punata' } });
+      expect(sold.codigo).toMatch(/^NV-\d{4,}$/);
+      expect(sold.cobros.map((c: { medioPago: string; estado: string; cajaId: string }) => [c.medioPago, c.estado, c.cajaId]).sort()).toEqual([['efectivo', 'validado', 'caja_chica_punata'], ['qr', 'validado', 'caja_qr']]);
+      expect((await stock()).suc_punata).toBe(before.suc_punata - 3);
+      expect(await box('caja_chica_punata')).toBeCloseTo(chica + 15, 2);
+      expect(await box('caja_qr')).toBeCloseTo(qr + 6, 2);
+      const next = (await http().post('/api/direct-sales').set(H(conta)).send(sale('suc_central', 1, [{ medio: 'transferencia', monto: 7 }])).expect(201)).body;
+      expect(next.numero).toBe(sold.numero + 1);
+      expect(next.cobros[0]).toMatchObject({ medioPago: 'transferencia', cajaId: 'caja_banco' });
+    });
+
+    it('sells from Central too, never from another branch, never without stock or with payments that do not add up', async () => {
+      await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_central', 1, [{ medio: 'efectivo', monto: 7 }])).expect(201);
+      await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_quillacollo', 1, [{ medio: 'efectivo', monto: 7 }])).expect(403);
+      const none = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 999999, [{ medio: 'efectivo', monto: 6999993 }])).expect(400);
+      expect(none.body.message).toMatch(/Stock insuficiente/);
+      const short = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }])).expect(400);
+      expect(short.body.message).toMatch(/no suman el total/);
+      const tecToken = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico))).body.accessToken;
+      await http().post('/api/direct-sales').set(H(tecToken)).send(sale('suc_central', 1, [{ medio: 'efectivo', monto: 7 }])).expect(403);
+    });
+
+    it('is annulled only by Gerencia with a reason: stock comes back, payments leave the boxes; "Corregir" links a new sale once', async () => {
+      const sold = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 2, [{ medio: 'efectivo', monto: 14 }])).expect(201)).body;
+      await http().patch(`/api/finance/movements/${sold.cobros[0].id}`).set(H(conta)).send({ monto: 1 }).expect(400);
+      await http().post(`/api/finance/movements/${sold.cobros[0].id}/anular`).set(H(conta)).send({ motivo: 'x' }).expect(400);
+      const [before, chica] = [await stock(), await box('caja_chica_punata')];
+      await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(wilson)).send({ motivo: 'Precio mal cargado' }).expect(403);
+      await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: '' }).expect(400);
+      const annulled = (await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: 'Precio mal cargado' }).expect(201)).body;
+      expect(annulled).toMatchObject({ estado: 'anulada', motivoAnulacion: 'Precio mal cargado' });
+      expect(annulled.cobros.every((c: { estado: string }) => c.estado === 'anulado')).toBe(true);
+      expect((await stock()).suc_punata).toBe(before.suc_punata + 2);
+      expect(await box('caja_chica_punata')).toBeCloseTo(chica - 14, 2);
+      await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: 'otra vez' }).expect(400);
+      const fixed = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 2, [{ medio: 'efectivo', monto: 12 }], { items: [{ productoId: 'prd_utp6', cantidad: 2, precioUnitario: 6 }], reemplazaAId: sold.id })).expect(201)).body;
+      expect(fixed.reemplazaA).toEqual({ id: sold.id, numero: sold.numero });
+      await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 7 }], { reemplazaAId: sold.id })).expect(400);
+      const list = (await http().get(`/api/direct-sales?sucursalId=suc_punata&estado=anulada`).set(H(wilson)).expect(200)).body;
+      expect(list.find((s: { id: string }) => s.id === sold.id).reemplazadaPor).toEqual({ id: fixed.id, numero: fixed.numero });
+    });
+  });
+
   describe('relevamientos y asistencias (SUR-02)', () => {
     const ventas = () => ({ Authorization: `Bearer ${ventasToken}` });
     let tecToken = '';
