@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, NavLink, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Archive, MoreHorizontal, Plus } from 'lucide-react';
+import { AlertTriangle, Archive, MoreHorizontal, Plus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Layout from '@/components/Layout.jsx';
@@ -168,7 +168,16 @@ export default function InventoryPage() {
       {tabs}
       <ControlPanel
         breadcrumbs={[{ label: 'Inventario' }, { label: vista === 'productos' ? 'Productos' : 'Movimientos' }]}
-        actions={manage && vista === 'productos' && <Button onClick={() => setEditing({})}><Plus /> Nuevo producto</Button>}
+        actions={
+          manage && (
+            <>
+              <Button variant="success" asChild>
+                <Link to="/ventas-directas?vender=1"><ShoppingCart /> Vender</Link>
+              </Button>
+              {vista === 'productos' && <Button variant="outline" onClick={() => setEditing({})}><Plus /> Nuevo producto</Button>}
+            </>
+          )
+        }
         searchPlaceholder="Buscar por código, nombre, marca…"
         {...(vista === 'productos' ? list.panel : moves.panel)}
         onExport={vista === 'productos' ? () => downloadCsv('inventario.csv', csv, list.rows) : undefined}

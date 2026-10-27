@@ -44,6 +44,7 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 | S10 | ventas, admin, técnico | Client list without tags, filters, create/edit (live in another session), client page with balance and warranty, quotation from the client | `node scripts/smoke-clients.mjs` |
 | S11 | contabilidad | Libro: totals above the rows, header stuck under the app header while scrolling, hide/move a column (kept after reload, reset), fold/unfold groups keeping subtotals | `node scripts/smoke-lists.mjs` |
 | S12 | ventas, admin | Tasks in Cotizaciones: red counter for tasks nobody is in charge of, Tomar (live for the other session), hand over with a deadline, green Completar → Archivadas → Reabrir; green ✓ with no tasks of my own | `node scripts/smoke-tasks.mjs` |
+| S13 | ventas (Punata), contabilidad | Direct sale from Inventario › Vender (own branch or Central), note opens, stock and ledger move live; annul with reason (stock back, note ANULADA); Corregir linked | `node scripts/smoke-direct-sales.mjs` |
 | S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)

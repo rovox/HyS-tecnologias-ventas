@@ -90,17 +90,18 @@ export function TaskRow({ task, userId, people, canTake, canQuote, onComplete, o
         )}
       </div>
       {editing && (
-        <form onSubmit={save} className="grid grid-cols-[1fr_9.5rem] gap-2">
+        <form onSubmit={save} className="grid grid-cols-3 gap-2">
           <SearchSelect
             value={draft.asignadoId}
             onChange={(asignadoId) => setDraft({ ...draft, asignadoId })}
             emptyOption="Sin responsable"
             placeholder="Responsable"
             aria-label="Responsable"
+            className="col-span-2"
             options={people}
           />
           <Input type="date" aria-label="Plazo" value={draft.plazo} onChange={(e) => setDraft({ ...draft, plazo: e.target.value })} />
-          <div className="col-span-2 flex justify-end gap-2">
+          <div className="col-span-3 flex justify-end gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
               Cancelar
             </Button>

@@ -19,6 +19,7 @@ const ProjectDetailPage = lazy(() => import('@/features/projects/pages/ProjectDe
 const SurveysPage = lazy(() => import('@/features/surveys/pages/SurveysPage.jsx'));
 const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage.jsx'));
 const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPage.jsx'));
+const DirectSalesPage = lazy(() => import('@/features/direct-sales/pages/DirectSalesPage.jsx'));
 
 const AppToaster = lazy(() => import('./AppToaster.jsx'));
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
@@ -208,6 +209,11 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/ventas-directas" element={
+              <ProtectedRoute allowedRoles={routeRoles.ventasDirectas}>
+                <DirectSalesPage />
+              </ProtectedRoute>
+            } />
             <Route path="/inventario" element={
               <ProtectedRoute allowedRoles={routeRoles.inventario}>
                 <InventoryPage />
