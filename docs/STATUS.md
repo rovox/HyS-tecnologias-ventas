@@ -82,18 +82,20 @@ Plan `~/.claude/plans/pasted-content-id-a8ce-continuando-con-goofy-hejlsberg.md`
 - [x] SUR-02 Relevamientos y asistencias, 2026-10-26 (`feat/sur-02`). API: migration `20261026000000_visit_fields` keeps the ~20 fields the form already asked for (the API dropped them: motivo, problema, causa, diagnóstico, solución, necesidad, área, medidas, cantidad, observaciones, requiere material/volver/cotización), `hora`, `mapsLink` on visits and clients, `trabajoRelacionadoId` + `garantiaHasta` (warranty from the delivered project or 12 months after a stand-alone job), `motivoCancelacion`, `cash_movements.relevamientoId`; rules `relevamientos/domain/relevamientos.rules.ts` (flow, resolve needs a photo, cancel needs a reason, warranty, money); `POST /relevamientos/:id/estado` and `/:id/cobros` (concept `asistencia`, por validar, who holds the money); técnico edits his open visits but not who attends them; audited with before/after. Web: `features/surveys` (list on the kit with counters and red/amber rows, next step per row, side panel with photos, warranty, payments and history; form in parts: visit · asistencia or relevamiento · closing, client/técnico/vendor/job with search, location link copied from the client); one `IncomeDialog` also for visits; client form and page show the location link; client and quotation link to their visits. Removed: `ScheduleSurveysPage`, `VisitaFormModal`, `services/surveys`, `services/clients`, `services/schedules`, `ui/switch` + `@radix-ui/react-switch`. e2e uploads go to a temp folder. Verified: unit 231, e2e 51, `scripts/smoke-surveys.mjs` 9/9 (ventas + técnico on phone, live), smoke-clients 7/7, smoke-finance 9/9, sweep 100/0, `pnpm check`. Doc `docs/modules/relevamientos.md`.
 
 ### OPS plan (2026-10-27, approved) · branches from `mvp` — current priority
-Plan `~/.claude/plans/quiero-que-generes-un-gleaming-hejlsberg.md`. Owner decisions in the log below. Order: FIX-01 → LIST-01 → FIN-06 → TSK-03 → ROLE-01 → SCH-04 → VD-01 → VD-02 → VD-03 → INV-03 → FIN-04 → DIGI-01 → QUO-03 + DASH-02.
+Plan `~/.claude/plans/quiero-que-generes-un-gleaming-hejlsberg.md`. Owner decisions in the log below. Published in blocks, each through `docs/deployment/hostinger.md` (production still holds test data; the DB is recreated a last time with block 2, incremental migrations with a backup after that). Block 0: push what is in `mvp` (USERS-03, FIX-01). Block 1: FIX-01 → LIST-01 → FIN-06 → TSK-03 → ROLE-01 → SCH-04 → GATE-01. Block 2: CLEAN-01 → VD-01 → VD-02 → VD-03. Block 3: INV-03 → FIN-04. Block 4: DIGI-01 → QUO-03 + DASH-01/02 + PLAT-07.
 - [x] FIX-01 A registered expense "did not appear" in the Libro, 2026-10-27 (`fix/fix-01`): a day picked in the form was stored at 00:00 UTC and the ledger sorted only by `fecha desc`, so it sank below every payment of that day (stored with their time). `movementDate()` (finance rules) keeps the current time of day for a day-only date (and the stored time when the day does not change on edit); the ledger sorts by `fecha` then `createdAt`. The expense dialog no longer shows a branch it will not send: without one it asks "Elige sucursal" (the API answered 400). Verified: unit (new case), e2e "an expense registered for today is the first row of that day", smoke-finance 9/9, `pnpm check`.
 - [ ] LIST-01 Totals summary on top, sticky header, column menu, collapsible groups (`ListView`).
 - [ ] FIN-06 Daily ledger by branch and company-wide, CSV + XLSX export (`exceljs`), edit/annul row icons.
 - [ ] TSK-03 Task counters (red unassigned, green when none of mine), Tomar via `/claim`, green Completar, reassign/deadline inline, completed archived and purged after 30 days.
 - [ ] ROLE-01 CONTABILIDAD gets the same permissions as ADMINISTRADOR.
-- [ ] SCH-04 Cronograma: state chips first, 3-step "Programar trabajo", visible permissions, técnico start/finish, cobro and material.
+- [ ] SCH-04 Cronograma: state chips first, 3-step "Programar trabajo", visible permissions, técnico start/finish, cobro and material (also checks SCH-01).
+- [ ] GATE-01 `pnpm local:gate` passes again: pages and charts lazy-loaded so the entry JS is ≤ 300 kB (today 577.9 kB; LOCAL-04 parked since 2026-10-21).
+- [ ] CLEAN-01 (owner approved 2026-10-27, before VD-01): drop `sales`, `sale_jobs`, `sale_payments`, `schedule_payments` and the frozen `modules/sales`.
 - [ ] VD-01 / VD-02 / VD-03 Venta directa per branch (API, screen, stored sale note PDF with `pdfmake`).
 - [ ] INV-03 Inventory per branch: Historial with filters, kardex, multi-line quick actions, `baja`.
 - [ ] FIN-04 Daily cash close per branch (count by denomination) + fondos por rendir.
 - [ ] DIGI-01 "Tienda Digicorp" tab (catalog sync, no evasion; stops when blocked).
-- [ ] QUO-03 + DASH-02 Quotation row actions, dashboard quick actions and direct sales per branch.
+- [ ] QUO-03 + DASH-01/02 + PLAT-07 Quotation row actions; read-only dashboard with quick actions and direct sales per branch (Panel de control and Reportes merged); unused legacy pages removed.
 
 ### MVP focus (2026-10-21) · branch `mvp`
 Goal: the core flow works locally (Docker MySQL) for admin, ventas and técnico. Everything not listed here is parked or post-MVP; the hs-erp phases below stay as reference.
@@ -147,26 +149,26 @@ Documented exception to *one item per branch*: `chore/phase0-safety` groups P0-1
 - [x] PLAT-01 `ScheduleFormModal.jsx` return wrapped in a fragment; `esbuild` parses it, `pnpm check` builds the web. 2026-10-20
 - [x] PLAT-02 `tasks.service.spec.ts` no longer uses `ROLES.CONT` (replaced by a técnico-claim test). 2026-10-20
 - [x] PLAT-03 `knip` exits 0: `knip.json` rewritten, `vite.config.js` ESM `__dirname`, 76 unused web files deleted (incl. dead `ui/*`), 26 web deps + `mariadb`/`swagger-ui-express` removed, `tailwindcss-animate` → devDependencies, unused exports cleaned; `duplicates` rule off until FE-01. `react-hook-form`/`zod`/`@hookform/resolvers`/`framer-motion` were removed as unused; UI-03 may re-add them with a written reason. 2026-10-20
-- [ ] PLAT-04 ❓ Make `rebuild` the default branch (was ENV-01), create `develop`, freeze cloud deploys until staging.
+- [x] PLAT-04 ❓ Make `rebuild` the default branch (was ENV-01), create `develop`, freeze cloud deploys until staging. — **Closed 2026-10-27 (OPS review):** superseded: the real flow is `mvp` → `release` → `migration/backend-api` (REL-01).
 - [x] PLAT-05 Compare production's `schema.prisma` with local — unblocked 2026-10-26 (SSH works from this machine). Filesystem-only, read-only: production is at migration `20260923010000_pedidos_internos` (15 folders, same order as local — not diverged, just behind); `mvp` has 10 more — 6 new tables and changes in 8 (summary in the 2026-10-26 log entry). Superseded by REL-01: the owner confirmed the production DB holds nothing to keep, so it is recreated from the single SQL file (`docs/deployment/hostinger.md`).
 - [x] PLAT-06 `apps/*/dist` untracked and ignored; `.github/workflows/ci.yml` replaces `api.yml`/`web.yml` (runs `pnpm check` on PRs and main/develop/feat/fix/chore/analysis, uploads `dist` as an artifact, never commits). Deploy from CI artifact is REL-01/02. 2026-10-20
 
 ### C — Data model (needs approval: schema, roles) — `business-design.md` §8, P1-a
-- [ ] AUTH-01 ❓ Decide role model (see decisions log); rename técnico → TÉCNICO.
-- [ ] PRO-01 New schema: Project, Activity, Assistance, Movimiento/Caja, QuotationItem, Product… replacing Sale/SaleJob/SalePayment/SchedulePayment/Schedule.
+- [x] AUTH-01 ❓ Decide role model (see decisions log); rename técnico → TÉCNICO. — **Closed 2026-10-27 (OPS review):** decided 2026-10-25 (role model in the log); adjusted by ROLE-01 (CONTABILIDAD = ADMINISTRADOR). The técnico rename stays as MVP-8, on hold.
+- [x] PRO-01 New schema: Project, Activity, Assistance, Movimiento/Caja, QuotationItem, Product… replacing Sale/SaleJob/SalePayment/SchedulePayment/Schedule. — **Closed 2026-10-27 (OPS review):** covered by PRO-01/FIN-01/INV-01 (Project, CashMovement/CashBox, Product, StockMovement). What is left is VD-01 (direct sales) and CLEAN-01 (drop Sale/SaleJob/SalePayment/SchedulePayment), both in the OPS plan.
 - [ ] RT-01 `AuditService` records who/when/field/old value for every mutation (missing: clients, orders, categories, goals, sucursales) and emits a realtime event.
 - [ ] Seed covers every status; `pnpm check` green.
 
 ### D — Priority 1 modules (`docs/modules/*`)
 - [ ] P1-b Clients + Quotations · P1-c Projects + Finance · P1-d Dashboard (checklists in each module file).
-- [ ] RT-02 🔴 TanStack Query + one SSE listener → `invalidateQueries`; remove per-page listeners and manual reloads. RT-03 SSE filters by user scope and rejects inactive users.
-- [ ] GAP-03 Remove the ~30 silent `catch(() => [] / null)`; surface errors.
+- [x] RT-02 🔴 TanStack Query + one SSE listener → `invalidateQueries`; remove per-page listeners and manual reloads. RT-03 SSE filters by user scope and rejects inactive users. — **Closed 2026-10-27 (OPS review):** done: `app/RealtimeProvider.jsx` (one EventSource → `invalidateQueries`). Only `hooks/useRealtimeRefresh.js` remains, used by `SolicitudesWebPage`; removed in LIST-01. RT-03 stays open.
+- [x] GAP-03 Remove the ~30 silent `catch(() => [] / null)`; surface errors. — **Closed 2026-10-27 (OPS review):** 1 silent `catch` left in `apps/web/src`; fixed in LIST-01.
 
 ### E — Priority 2
 - [ ] SCH-01 Cronograma shows only Activities; técnico must not trigger 403 on `/schedule` (`useTecnicosList`/`useVendedorList` call `/api/users`; the page also calls `/api/quotations`).
 - [x] SUR-01 `VisitaFormModal` `equipos_instalados` is stored nowhere: removed with the form (SUR-02, 2026-10-26); equipment of a client comes from inventory (Cliente › Equipos).
 - [ ] ORD-01 Run S6 and align orders with Inventory (delivery → stock out → project cost).
-- [ ] Asistencias, Inventory, Direct sales (`business-design.md` §4.2, §4.3, §4.5).
+- [x] Asistencias, Inventory, Direct sales (`business-design.md` §4.2, §4.3, §4.5). — **Closed 2026-10-27 (OPS review):** Asistencias and Inventory done (SUR-02, INV-01/02); direct sales are VD-01..03 in the OPS plan.
 - [ ] AUTH-02 `forgot-password`: implement or remove endpoint + UI. AUTH-03 Branches `POST/PATCH/DELETE /sucursales` (admin) or remove the UI.
 
 ### F — Priority 3–4 and weight
