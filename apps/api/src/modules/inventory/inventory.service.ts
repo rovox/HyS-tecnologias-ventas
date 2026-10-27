@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
-import { canAdjustInventory, canManageInventory, canRegisterMovements } from '../../common/policy/policy';
+import { canAdjustInventory, canManageInventory, canRegisterMovements, usesMaterialOnOwnJobs } from '../../common/policy/policy';
 import { CategoriesService } from '../categories';
 import { CreateProductDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
 import { isLowStock, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './domain/inventory.rules';
@@ -41,6 +41,14 @@ export class InventoryService {
 
   private assertRead(user: User) {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso al inventario');
+  }
+
+  /** The técnico's material goes only to a project where he has an open job (SCH-04). */
+  private async assertOwnProjectJob(projectId: string | undefined, user: User) {
+    const job = projectId
+      ? await this.prisma.schedule.findFirst({ where: { projectId, tecnicoId: user.id, estado: { in: ['programado', 'en_proceso', 'terminado'] } }, select: { id: true } })
+      : null;
+    if (!job) throw new ForbiddenException('Solo registras material en los proyectos donde tienes un trabajo');
   }
 
   private assertManage(user: User) {
@@ -93,8 +101,11 @@ export class InventoryService {
 
   /** Entradas, transfers and outputs to a project (commercial); adjustments (Gerencia, Contabilidad). Never below zero. */
   async registerMovement(dto: StockMovementDto, user: User, sessionId?: string) {
-    if (dto.tipo !== 'ajuste') this.assertManage(user);
-    else if (!canAdjustInventory(user)) throw new ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
+    if (dto.tipo === 'ajuste') {
+      if (!canAdjustInventory(user)) throw new ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
+    } else if (dto.tipo === 'salida_proyecto' && usesMaterialOnOwnJobs(user)) {
+      await this.assertOwnProjectJob(dto.projectId, user);
+    } else this.assertManage(user);
     const row = await this.prisma.$transaction(async (tx) => {
       const product = await this.product(dto.productoId, tx);
       const available = dto.sucursalOrigenId ? (stockBySede(product.movements)[dto.sucursalOrigenId] ?? 0) : 0;

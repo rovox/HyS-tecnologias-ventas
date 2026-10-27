@@ -38,3 +38,16 @@ export const JOB_FIELDS = {
   monto: 'Monto',
   fechaFinalizacion: 'Terminado el',
 };
+
+/** The main filter of the cronograma (SCH-04): one state at a time; "Activos" (to do and in progress) is the default. */
+export const STATE_TABS = [
+  { key: 'activos', label: 'Activos', states: ['programado', 'en_proceso'] },
+  { key: 'programado', label: 'Programados', states: ['programado'] },
+  { key: 'en_proceso', label: 'En proceso', states: ['en_proceso'] },
+  { key: 'terminado', label: 'Terminados', states: ['terminado'] },
+  { key: 'cancelado', label: 'Cancelados', states: ['cancelado'] },
+  { key: 'todos', label: 'Todos', states: null },
+];
+
+/** Start and end times every 30 minutes, 07:00 to 21:00 (the horario is stored as "09:00–12:00"). */
+export const HOURS = Array.from({ length: 29 }, (_, i) => `${String(7 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);

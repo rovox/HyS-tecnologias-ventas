@@ -159,6 +159,8 @@ export class SchedulesService {
       if (keys.some((k) => !['estado', 'observaciones', 'fechaFinalizacion', 'horario'].includes(k))) {
         throw new ForbiddenException('Técnico solo actualiza estado u observaciones');
       }
+      // The técnico starts and finishes his jobs; cancelling one is decided by the commercial side (SCH-04, owner).
+      if (dto.estado === 'cancelado' && current.estado !== 'cancelado') throw new ForbiddenException('El técnico inicia y termina; la cancelación la hace ventas o Gerencia');
     }
     if (dto.estado && dto.estado !== current.estado) {
       const transition = checkScheduleTransition(current.estado, dto.estado);

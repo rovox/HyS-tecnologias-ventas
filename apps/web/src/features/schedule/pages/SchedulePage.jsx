@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, List, Plus, UserX } from 'lucide-react';
+import { CalendarDays, CalendarRange, Check, ChevronLeft, ChevronRight, List, Play, Plus, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -11,7 +11,9 @@ import { formatBs, formatDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useIsPhone } from '@/shared/lib/useIsPhone.js';
 import { useJobs } from '../api.js';
-import { DIVISION, JOB_STATE } from '../constants.js';
+import { DIVISION, JOB_STATE, STATE_TABS } from '../constants.js';
+import { jobPermissions } from '../permissions.js';
+import { useJobState } from '../components/useJobState.js';
 import { addDays, addMonths, jobDay, monthGrid, monthLabel, rangeLabel, today, weekDays, weekStart } from '../dates.js';
 import { DivisionTag, StateLegend } from '../components/JobChip.jsx';
 import { JobDetailSheet } from '../components/JobDetailSheet.jsx';
@@ -38,6 +40,19 @@ const listColumns = [
   { key: 'saldo', header: 'Saldo', align: 'right', cell: (j) => (j.projectId ? '—' : formatBs(j.saldo)) },
 ];
 
+/** The next step of a job as a button in its row (SCH-04): Iniciar, or Terminar in green. */
+function QuickCell({ quick }) {
+  if (!quick) return null;
+  const finish = quick.estado === 'terminado';
+  return (
+    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+      <Button size="sm" variant={finish ? 'success' : 'outline'} className="h-8" disabled={quick.busy} onClick={quick.run}>
+        {finish ? <Check /> : <Play />} {quick.label}
+      </Button>
+    </div>
+  );
+}
+
 const csv = [
   { header: 'Fecha', value: jobDay },
   { header: 'Horario', value: (j) => j.horario },
@@ -57,21 +72,30 @@ export default function SchedulePage() {
   const [params, setParams] = useSearchParams();
   const view = VIEWS.some((v) => v.key === params.get('view')) ? params.get('view') : 'semana';
   const anchor = params.get('dia') || today();
+  const stateTab = STATE_TABS.find((t) => t.key === params.get('estado')) || STATE_TABS[0];
   const [openId, setOpenId] = useState(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(null);
+  const jobState = useJobState();
   useDocumentTitle('Cronograma');
 
   const days = view === 'mes' ? monthGrid(anchor) : weekDays(weekStart(anchor));
   const from = days[0];
   const to = days[days.length - 1];
-  const { data: jobs = [], isLoading } = useJobs(from, to);
+  const { data: inRange = [], isLoading } = useJobs(from, to);
+  // The main filter (SCH-04): only the jobs of one state (Activos = to do and in progress, by default).
+  const countOf = (tab) => (tab.states ? inRange.filter((j) => tab.states.includes(j.estado)).length : inRange.length);
+  const jobs = useMemo(() => (stateTab.states ? inRange.filter((j) => stateTab.states.includes(j.estado)) : inRange), [inRange, stateTab]);
+  /** Iniciar / Terminar on the card or row, for whoever may do it (the técnico on his own jobs). */
+  const quickOf = (job) => {
+    const action = jobPermissions(job, currentUser, commercial).changeState && jobState.next(job);
+    return action ? { label: action.label, estado: action.estado, busy: jobState.busy, run: () => jobState.run(job, action) } : null;
+  };
 
   const filters = useMemo(
     () => [
       { key: 'mios', label: 'Mis trabajos', section: 'Responsable', test: (j) => j.tecnicoId === currentUser?.id || j.vendedorId === currentUser?.id },
       { key: 'sin_tecnico', label: 'Sin técnico', section: 'Responsable', tone: 'danger', count: jobs.filter(unassigned).length, test: unassigned },
       ...Object.entries(DIVISION).map(([id, d]) => ({ key: id, label: d.short, section: 'Categoría', test: (j) => j.categoriaId === id })),
-      ...Object.entries(JOB_STATE).map(([id, s]) => ({ key: id, label: s.label, section: 'Estado', test: (j) => j.estado === id })),
     ],
     [currentUser, jobs],
   );
@@ -110,8 +134,8 @@ export default function SchedulePage() {
         actions={
           <>
             {commercial && (
-              <Button onClick={() => setCreating(true)}>
-                <Plus /> Nuevo trabajo
+              <Button onClick={() => setCreating(anchor)}>
+                <Plus /> Programar trabajo
               </Button>
             )}
             <div className="flex items-center gap-1">
@@ -130,6 +154,28 @@ export default function SchedulePage() {
         meta={`${rows.length} trabajos`}
       />
       <div className="space-y-3 px-4 py-4 sm:px-6">
+        <nav className="flex flex-wrap gap-1.5" aria-label="Estado de los trabajos">
+          {STATE_TABS.map((tab) => {
+            const active = tab.key === stateTab.key;
+            const tone = tab.states?.length === 1 ? JOB_STATE[tab.states[0]] : null;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => go({ estado: tab.key })}
+                className={cn(
+                  'inline-flex min-h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold',
+                  active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted',
+                )}
+              >
+                {tone && <tone.icon className="h-4 w-4" aria-hidden />}
+                {tab.label}
+                <span className={cn('rounded-full px-1.5 text-xs', active ? 'bg-primary-foreground/20' : 'bg-muted')}>{countOf(tab)}</span>
+              </button>
+            );
+          })}
+        </nav>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <StateLegend />
           {(missing > 0 || showingMissing) && (
@@ -143,14 +189,14 @@ export default function SchedulePage() {
             </button>
           )}
         </div>
-        {view === 'semana' && <WeekView days={days} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} phone={phone} />}
-        {view === 'mes' && <MonthView grid={days} month={anchor} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} onShowWeek={(day) => go({ view: 'semana', dia: day })} />}
+        {view === 'semana' && <WeekView days={days} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} phone={phone} quickOf={quickOf} onCreate={commercial ? setCreating : undefined} />}
+        {view === 'mes' && <MonthView grid={days} month={anchor} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} onShowWeek={(day) => go({ view: 'semana', dia: day })} onCreate={commercial ? setCreating : undefined} />}
         {view === 'lista' && (
-          <ListView id="cronograma" columns={listColumns} rows={rows} groups={groups} loading={isLoading} tone={(j) => (unassigned(j) ? 'danger' : undefined)} onRowClick={(j) => setOpenId(j.id)} empty="No hay trabajos en estas fechas" />
+          <ListView id="cronograma" columns={[...listColumns, { key: 'accion', header: '', cell: (j) => <QuickCell quick={quickOf(j)} /> }]} rows={rows} groups={groups} loading={isLoading} tone={(j) => (unassigned(j) ? 'danger' : undefined)} onRowClick={(j) => setOpenId(j.id)} empty={`No hay trabajos ${stateTab.key === 'todos' ? '' : `${stateTab.label.toLowerCase()} `}en estas fechas`} />
         )}
       </div>
       <JobDetailSheet jobId={openId} onClose={() => setOpenId(null)} />
-      <JobFormDialog open={creating} onOpenChange={setCreating} day={anchor} onCreated={(job) => job?.id && setOpenId(job.id)} />
+      <JobFormDialog open={Boolean(creating)} onOpenChange={(o) => !o && setCreating(null)} day={creating || anchor} onCreated={(job) => job?.id && setOpenId(job.id)} />
     </Layout>
   );
 }

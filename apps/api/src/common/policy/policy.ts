@@ -43,6 +43,8 @@ export const canSeeLedger = readsAll;
 /** Inventory: everyone reads stock; commercial roles keep the catalog and move stock; Gerencia and Contabilidad adjust it. */
 export const canManageInventory = isCommercial;
 export const canAdjustInventory = isFinance;
+/** A técnico registers the material he uses on a project where he has a job (SCH-04); the service checks the job. */
+export const usesMaterialOnOwnJobs = isTec;
 /** Projects (approved quotations, with money): commercial roles. */
 export const canManageProjects = isCommercial;
 export const canSeeProjects = readsAll;
