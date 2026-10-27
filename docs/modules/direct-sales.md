@@ -63,6 +63,6 @@ Vocabulario de `docs/domain/business-design.md` §4.3. Decisiones del dueño (20
 
 ## Pendientes
 
-- [ ] El cierre de caja diario (FIN-04) suma las ventas en efectivo de la sucursal.
+- [x] El cierre de caja diario (FIN-04) suma las ventas en efectivo de la sucursal (2026-10-27).
 - [ ] Datos de la empresa en la nota (NIT 4416960, direcciones por sucursal) se cambian hoy en la migración/BD; sin pantalla de edición (AUTH-03 fuera de alcance).
 - [ ] El correlativo empieza en 1; si se quiere continuar la numeración anterior (p. ej. desde 445), se ajusta `doc_counters` antes de la primera venta real.

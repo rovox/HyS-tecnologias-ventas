@@ -1,6 +1,8 @@
 # Finanzas
 
-> Un solo libro de dinero (ingresos, egresos y transferencias) que Contabilidad y Gerencia validan en cajas; todo lo demás son vistas de ese libro · Ruta: `/finanzas` (Libro · Bandeja de rendición · Por rendir · Cajas · Por cobrar · Reembolsos) · Estado: 🟢 FIN-03 (2026-10-25)
+> Un solo libro de dinero (ingresos, egresos y transferencias) que Contabilidad y Gerencia validan en cajas; todo lo demás son vistas de ese libro · Ruta: `/finanzas` (Libro · Bandeja de rendición · Cierre del día · Cierres · Anticipos · Por rendir · Cajas · Por cobrar · Reembolsos) · Estado: 🟢 FIN-04 (2026-10-27)
+
+Las pestañas se ordenan por rol (FIN-05): Gerencia abre en la Bandeja (modo contable: bandeja, cierres, libro); el vendedor en su Cierre del día (modo operativo); el técnico en su libro.
 
 ## Roles
 
@@ -35,6 +37,9 @@
 | Cajas | tarjetas | saldo validado por caja y total | — |
 | Por cobrar | lista | proyectos con saldo, mayor deuda primero | clic → proyecto |
 | Reembolsos | lista | gastos pagados por empleados sin reembolsar | Marcar reembolsado |
+| Cierre del día | sucursal (el vendedor, la suya) y día; saldo inicial (lo contado en el cierre anterior; el primer cierre lo escribe), lo que entró y salió en efectivo, "Debe haber", QR y transferencias (no van al cajón), ventas del día, **qué movió el efectivo** línea por línea; conteo por billete y moneda con total en vivo; semáforo: verde cuadra, ámbar diferencia con motivo, **rojo diferencia sin motivo (no deja cerrar)**; cerrado = solo lectura | — | Cerrar caja (confirmación con el efecto) |
+| Cierres | lista de cierres de las sucursales; verde cuadra, rojo diferencia sin revisar, ámbar revisada; resumen arriba (cuadran, sin revisar, faltantes, sobrantes) | sucursal, desde/hasta | Revisar (Gerencia) |
+| Anticipos | anticipos por rendir: responsable, asunto, sucursal, entregado, rendir hasta, **días de atraso en rojo**, monto | — | Marcar rendido (Gerencia, con cómo se rindió) |
 
 "Gastos operativos", "costos operativos" y "finanzas y contabilidad" son vistas del mismo libro (business-design §4.4).
 
@@ -65,6 +70,12 @@
 | Saldo de caja = solo validados | `cashBoxBalance` | — |
 | Validar, observar, editar validados, anular validados, reembolsar, transferir: Contabilidad y Gerencia | `common/policy` `canValidateMovements` | 403 |
 | Técnico: solo sus movimientos, cobros de sus trabajos, el dinero lo recibe él | `canSeeLedger`, `IncomeService` | 403 |
+| Cierre: un día por sucursal, nunca un día futuro, nunca se edita; cierra el vendedor de esa sucursal o Gerencia | `CashCloseService` | 409 / 400 / 403 |
+| Efectivo esperado = saldo inicial + ingresos en efectivo (validados; o por validar si los tiene alguien del mostrador de esa sucursal, no un técnico) − egresos en efectivo pagados por la empresa ± transferencias validadas de esa caja | `cash-close.rules.ts` (`expectedCash`) | — |
+| Conteo: solo billetes y monedas de Bolivia, cantidades enteras | `countError` | 400 |
+| Una diferencia exige motivo y crea un movimiento `diferencia_arqueo` por validar (faltante = egreso, sobrante = ingreso) | `closeError`, `differenceMovement` | 400 |
+| Anticipo por rendir: a quién, asunto y hasta cuándo; pendiente hasta que Gerencia lo marca rendido | `advanceError`, `daysLate` · `GET /finance/anticipos`, `POST /finance/movements/:id/rendido` | 400 / 403 |
+| El cobro de una venta directa no se edita ni se anula desde el libro | `LedgerService` | 400 |
 
 ## Eventos en tiempo real
 

@@ -11,7 +11,10 @@ import { cn } from '@/lib/utils';
 import { useCustody, useLedger, useMovements } from '../api.js';
 import { businessDayOf } from '@/shared/lib/format.js';
 import { CONCEPTO_LABEL, ESTADO, TIPO_LABEL } from '../constants.js';
+import { AdvancesView } from '../components/AdvancesView.jsx';
 import { CashBoxesView } from '../components/CashBoxesView.jsx';
+import { CashCloseView } from '../components/CashCloseView.jsx';
+import { CashClosesView } from '../components/CashClosesView.jsx';
 import { CustodyView } from '../components/CustodyView.jsx';
 import { LedgerToolbar } from '../components/LedgerToolbar.jsx';
 import { MovementActions } from '../components/MovementActions.jsx';
@@ -31,11 +34,23 @@ const waiting = (m) => ['por_validar', 'observado'].includes(m.estado);
 const VIEWS = [
   { key: 'movimientos', label: 'Libro', test: () => true },
   { key: 'por_validar', label: 'Bandeja de rendición', test: waiting, manager: true, count: true },
+  { key: 'cierre', label: 'Cierre del día', reader: true },
+  { key: 'cierres', label: 'Cierres', manager: true },
+  { key: 'anticipos', label: 'Anticipos' },
   { key: 'por_rendir', label: 'Por rendir', reader: true },
   { key: 'cajas', label: 'Cajas' },
   { key: 'por_cobrar', label: 'Por cobrar', reader: true },
   { key: 'reembolsos', label: 'Reembolsos', test: (m) => m.reembolsoPendiente },
 ];
+/**
+ * The first tabs per role (FIN-05): Gerencia works in "accounting mode" (inbox, closes, ledger); a seller in
+ * "operating mode" (his daily close first); the técnico in his ledger. The first one opens by default.
+ */
+const ORDER = {
+  manager: ['por_validar', 'cierres', 'movimientos', 'cierre', 'anticipos', 'por_cobrar', 'cajas', 'por_rendir', 'reembolsos'],
+  seller: ['cierre', 'movimientos', 'anticipos', 'por_rendir', 'reembolsos', 'cajas', 'por_cobrar'],
+  other: ['movimientos', 'anticipos', 'reembolsos', 'cajas'],
+};
 
 const TONE_OF_STATE = { por_validar: 'warning', observado: 'danger', validado: 'success', anulado: 'neutral' };
 
@@ -50,7 +65,8 @@ const GROUPS = [
 export default function FinancePage() {
   const { canManageMoney, readsAll, currentUser } = useAuth();
   const [params, setParams] = useSearchParams();
-  const views = VIEWS.filter((v) => (!v.manager || canManageMoney()) && (!v.reader || readsAll()));
+  const order = ORDER[canManageMoney() ? 'manager' : readsAll() ? 'seller' : 'other'];
+  const views = order.map((k) => VIEWS.find((v) => v.key === k)).filter((v) => (!v.manager || canManageMoney()) && (!v.reader || readsAll()));
   const view = views.find((v) => v.key === params.get('vista')) || views[0];
   const { data: movements = [], isLoading: loadingAll } = useMovements();
   // The Libro is a daily book (FIN-06): today by default; a seller sees the book of his branch, Gerencia and
@@ -158,6 +174,9 @@ export default function FinancePage() {
         )}
         {book && <LedgerToolbar value={ledgerParams} onChange={setLedger} />}
         {book && ledger.isError && <p className="mb-3 text-sm text-danger-fg">No se pudo cargar el libro: {ledger.error?.message}</p>}
+        {view.key === 'cierre' && <CashCloseView />}
+        {view.key === 'cierres' && <CashClosesView />}
+        {view.key === 'anticipos' && <AdvancesView onOpen={openMovement} />}
         {view.key === 'cajas' && <CashBoxesView />}
         {view.key === 'por_cobrar' && <ReceivablesView />}
         {view.key === 'por_rendir' && <CustodyView actions={actions} onOpen={openMovement} />}

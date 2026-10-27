@@ -86,3 +86,41 @@ export function useRegisterIncome() {
     return apiClient.post(`schedules/${target.id}/payments`, { tipo: concepto === 'adicional' ? 'extra_asistencia' : concepto, ...payment }, opts());
   });
 }
+
+/** The day of a branch before counting (FIN-04). Under 'movement': a sale or an expense refreshes it. */
+export function useCashClosePreview(sucursalId, dia) {
+  return useQuery({
+    queryKey: ['movement', 'cierre-preview', sucursalId, dia],
+    queryFn: () => apiClient.get('finance/cierres/preview', opts({ query: { sucursalId, dia } })),
+    enabled: Boolean(sucursalId && dia),
+  });
+}
+
+export function useCashCloses(params, enabled = true) {
+  return useQuery({ queryKey: ['cashClose', 'list', params], queryFn: () => apiClient.get('finance/cierres', opts({ query: params })), enabled });
+}
+
+/** { sucursalId, dia, conteo, saldoInicial?, motivoDiferencia?, observaciones? }. */
+export function useCloseCash() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => apiClient.post('finance/cierres', data, opts()),
+    onSuccess: () => {
+      for (const key of ['cashClose', 'movement']) queryClient.invalidateQueries({ queryKey: [key] });
+    },
+  });
+}
+
+export function useReviewClose() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: (id) => apiClient.post(`finance/cierres/${id}/revisar`, {}, opts()), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashClose'] }) });
+}
+
+/** Advances still to be accounted for, with days late (FIN-04). */
+export function useAdvances(enabled = true) {
+  return useQuery({ queryKey: ['movement', 'anticipos'], queryFn: () => apiClient.get('finance/anticipos', opts()), enabled });
+}
+
+export function useSettleAdvance() {
+  return useLedgerMutation(({ id, nota }) => apiClient.post(`finance/movements/${id}/rendido`, { nota }, opts()));
+}
