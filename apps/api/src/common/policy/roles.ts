@@ -26,7 +26,6 @@ export {
   metricsUserId,
   quotationWhere,
   relevamientoWhere,
-  saleWhere,
   scheduleWhere,
   taskWhere,
 } from './policy';

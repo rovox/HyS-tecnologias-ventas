@@ -76,13 +76,6 @@ export function clientWhere(actor: Actor) {
   return readsAll(actor) || isTec(actor) ? {} : NO_ROWS;
 }
 
-export function saleWhere(actor: Actor) {
-  if (isFinance(actor)) return {};
-  if (isVentas(actor)) {
-    return { quotation: { OR: [{ vendedorId: actor.id }, { sellers: { some: { userId: actor.id } } }] } };
-  }
-  return NO_ROWS;
-}
 
 export function relevamientoWhere(actor: Actor, cotizacionId?: string) {
   const base = cotizacionId ? { cotizacionId } : {};

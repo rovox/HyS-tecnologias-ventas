@@ -51,7 +51,6 @@ model User {
   designatedTasks     Task[]                    @relation("TaskAssignedBy")
   schedulesVendedor   Schedule[]                @relation("ScheduleVendedor")
   schedulesTecnico    Schedule[]                @relation("ScheduleTecnico")
-  schedulePayments    SchedulePayment[]         @relation("PaymentCollector")
   pedidosResponsable  PedidoInterno[]           @relation("PedidoResponsable")
   pedidosSolicitados  PedidoInterno[]           @relation("PedidoSolicitante")
   comentariosPedidos  PedidoInternoComentario[] @relation("ComentarioPedidoAutor")
@@ -165,11 +164,9 @@ model Quotation {
   vendedorId         String
   vendedor           User              @relation("VendorQuotations", fields: [vendedorId], references: [id])
   sellers            QuotationSeller[]
-  sale               Sale?
   relevamientos      Relevamiento[]
   schedules          Schedule[]
   tasks              Task[]
-  schedulePayments   SchedulePayment[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   project            Project?
@@ -214,7 +211,6 @@ model Relevamiento {
   fotosUrl             Json?
   cotizacionId         String?
   cotizacion           Quotation?        @relation(fields: [cotizacionId], references: [id])
-  payments             SchedulePayment[]
   /// SUR-02: what the visit form asks. Asistencia: motivo … solucion; relevamiento: necesidadCliente … observacionTecnica.
   hora                 String?           @db.VarChar(16)
   mapsLink             String            @default("") @db.VarChar(500)
@@ -269,44 +265,8 @@ model SellerGoal {
   @@map("seller_goals")
 }
 
-model Sale {
-  id          String        @id @default(uuid())
-  quotationId String        @unique
-  quotation   Quotation     @relation(fields: [quotationId], references: [id])
-  total       Decimal       @db.Decimal(12, 2)
-  status      String        @default("abierta")
-  createdAt   DateTime      @default(now())
-  jobs        SaleJob[]
-  payments    SalePayment[]
 
-  @@map("sales")
-}
 
-model SaleJob {
-  id         String  @id @default(uuid())
-  saleId     String
-  sale       Sale    @relation(fields: [saleId], references: [id])
-  titulo     String
-  estado     String  @default("programado")
-  monto      Decimal @default(0) @db.Decimal(12, 2)
-  asignadoId String?
-
-  @@index([saleId])
-  @@map("sale_jobs")
-}
-
-model SalePayment {
-  id     String   @id @default(uuid())
-  saleId String
-  sale   Sale     @relation(fields: [saleId], references: [id])
-  monto  Decimal  @db.Decimal(12, 2)
-  metodo String   @default("")
-  nota   String   @default("")
-  at     DateTime @default(now())
-
-  @@index([saleId])
-  @@map("sale_payments")
-}
 
 model Schedule {
   id                 String            @id @default(uuid())
@@ -318,8 +278,6 @@ model Schedule {
   lugar              String            @default("") @db.VarChar(300)
   descripcionTrabajo String            @db.Text
   monto              Decimal           @default(0) @db.Decimal(12, 2)
-  adelanto           Decimal           @default(0) @db.Decimal(12, 2)
-  saldo              Decimal           @default(0) @db.Decimal(12, 2)
   fechaProgramada    DateTime
   horario            String?           @db.VarChar(32)
   fechaFinalizacion  DateTime?
@@ -341,7 +299,6 @@ model Schedule {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   tasks              Task[]
-  payments           SchedulePayment[]
   movements          CashMovement[]
   visits             Relevamiento[]    @relation("VisitRelatedJob")
 
@@ -356,29 +313,6 @@ model Schedule {
   @@map("schedules")
 }
 
-model SchedulePayment {
-  id             String        @id @default(uuid())
-  scheduleId     String?
-  schedule       Schedule?     @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  relevamientoId String?
-  relevamiento   Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
-  quotationId    String?
-  quotation      Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
-  tipo           String        @db.VarChar(32)
-  monto          Decimal       @db.Decimal(12, 2)
-  metodo         String        @default("") @db.VarChar(64)
-  nota           String        @default("") @db.Text
-  cobradoPorId   String?
-  cobradoPor     User?         @relation("PaymentCollector", fields: [cobradoPorId], references: [id])
-  at             DateTime      @default(now())
-  createdAt      DateTime      @default(now())
-
-  @@index([scheduleId])
-  @@index([relevamientoId])
-  @@index([quotationId])
-  @@index([tipo])
-  @@map("schedule_payments")
-}
 
 model Task {
   id              String     @id @default(uuid())

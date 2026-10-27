@@ -8,7 +8,6 @@ import { QuotationsModule } from './modules/quotations';
 import { SucursalesModule } from './modules/sucursales';
 import { RelevamientosModule } from './modules/relevamientos';
 import { GoalsModule } from './modules/goals';
-import { SalesModule } from './modules/sales';
 import { MetricsModule } from './modules/metrics';
 import { TasksModule } from './modules/tasks';
 import { SchedulesModule } from './modules/schedules';
@@ -47,7 +46,6 @@ import { HealthController } from './health.controller';
     SucursalesModule,
     RelevamientosModule,
     GoalsModule,
-    SalesModule,
     MetricsModule,
     TasksModule,
     SchedulesModule,

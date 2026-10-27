@@ -895,11 +895,4 @@ describe('hs-erp API (e2e)', () => {
     });
   });
 
-  it('frozen sales jobs require admin', async () => {
-    await request(app.getHttpServer())
-      .post('/api/sales/sale_andina/jobs')
-      .set('Authorization', `Bearer ${ventasToken}`)
-      .send({ titulo: 'x' })
-      .expect(403);
-  });
 });
