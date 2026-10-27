@@ -30,10 +30,13 @@ export function compareTasks(a: TaskLike, b: TaskLike): number {
   return ta - tb;
 }
 
-/** Counters of the always-visible tasks badge: mine, unassigned (anyone can take them) and overdue. */
+/**
+ * Counters of the always-visible tasks badge: mine (I am in charge), without anyone in charge (red: anyone can take
+ * them, also the ones I created without a person) and my overdue ones.
+ */
 export function pendingSummary(tasks: TaskLike[], userId: string, now: Date) {
   const pending = tasks.filter((t) => t.estado === 'pendiente');
-  const mine = pending.filter((t) => t.asignadoId === userId || (!t.asignadoId && t.creadorId === userId));
+  const mine = pending.filter((t) => t.asignadoId === userId);
   return {
     mias: mine.length,
     sinAsignar: pending.filter((t) => !t.asignadoId).length,
@@ -47,3 +50,12 @@ export function convertError(task: Pick<TaskLike, 'estado'> & { cotizacionId?: s
   if (task.estado !== 'pendiente') return 'Solo una tarea pendiente se convierte en cotización';
   return null;
 }
+
+/** Tasks are transient (TSK-03): archived ones are deleted after this many days. */
+const ARCHIVE_DAYS = 30;
+
+/** Archived before this instant → purged. */
+export const purgeBefore = (now: Date) => new Date(now.getTime() - ARCHIVE_DAYS * 24 * 60 * 60 * 1000);
+
+/** A task leaves the list when it is completed or discarded and comes back when it is reopened. */
+export const archivedAtFor = (estado: string, now: Date): Date | null => (estado === 'pendiente' ? null : now);

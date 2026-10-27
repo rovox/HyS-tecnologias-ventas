@@ -6,8 +6,13 @@ import { authToken } from '@/api/http.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
 
-export function useTasks(enabled = true) {
-  return useQuery({ queryKey: ['task', 'list'], queryFn: () => apiClient.get('tasks', opts()), enabled });
+/** Pending tasks, or with `archivadas` the completed and discarded ones (kept 30 days, TSK-03). */
+export function useTasks(enabled = true, { archivadas = false } = {}) {
+  return useQuery({
+    queryKey: ['task', 'list', archivadas ? 'archivadas' : 'pendientes'],
+    queryFn: () => apiClient.get('tasks', opts(archivadas ? { query: { archivadas: '1' } } : undefined)),
+    enabled,
+  });
 }
 
 /** { mias, sinAsignar, vencidas } for the badge. */
@@ -27,4 +32,9 @@ export function useCreateTask() {
 /** Any change: estado (pendiente | completada | descartada), asignadoId, plazo, prioridad, titulo, clienteId. */
 export function useUpdateTask() {
   return useTaskMutation(({ id, ...data }) => apiClient.patch(`tasks/${id}`, data, opts()));
+}
+
+/** Take an unassigned task; the API refuses (409) when someone took it first. */
+export function useClaimTask() {
+  return useTaskMutation((id) => apiClient.post(`tasks/${id}/claim`, {}, opts()));
 }

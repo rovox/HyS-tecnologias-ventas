@@ -16,9 +16,9 @@ export class TasksController {
   constructor(private readonly tasks: TasksService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List tasks visible to the user' })
-  list(@CurrentUser() user: User, @Query('tipo') tipo?: string) {
-    return this.tasks.list(user, tipo);
+  @ApiOperation({ summary: 'Pending tasks visible to the user; ?archivadas=1 the completed or discarded ones (kept 30 days)' })
+  list(@CurrentUser() user: User, @Query('tipo') tipo?: string, @Query('archivadas') archivadas?: string) {
+    return this.tasks.list(user, tipo, archivadas === '1' || archivadas === 'true');
   }
 
   @Get('resumen')

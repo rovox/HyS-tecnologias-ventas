@@ -408,10 +408,13 @@ model Task {
   horario         String?    @db.VarChar(16)
   archivosUrl     Json?
   completedAt     DateTime?
+  /// TSK-03: set when it is completed or discarded (it leaves the list); purged 30 days later.
+  archivadaAt     DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
   @@index([sucursalId, estado])
+  @@index([archivadaAt])
   @@index([asignadoId])
   @@index([creadorId])
   @@index([completedAt])
