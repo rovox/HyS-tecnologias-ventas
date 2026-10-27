@@ -14,6 +14,7 @@ export const MOVEMENT = {
   transferencia: { title: 'Transferir entre sucursales', done: 'Transferencia registrada' },
   salida_proyecto: { title: 'Salida a un proyecto', done: 'Salida registrada: suma al costo del proyecto' },
   ajuste: { title: 'Ajuste de inventario', done: 'Ajuste registrado' },
+  baja: { title: 'Quitar material' },
   // Made by a direct sale (VD-01), not from this dialog.
   salida_venta_directa: { title: 'Venta directa' },
   devolucion_venta: { title: 'Devolución (venta anulada)' },
