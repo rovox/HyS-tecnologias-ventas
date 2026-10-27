@@ -4,12 +4,12 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { businessDayEnd, businessDayStart } from '../../common/domain/calendar';
 import { isAdmin, isVentas } from '../../common/policy/policy';
-import { stockBySede } from '../inventory/domain/inventory.rules';
+import { stockBySede } from '../inventory';
 import { AnnulDirectSaleDto, CreateDirectSaleDto, ListDirectSalesQuery } from './dto/direct-sale.dto';
 import { annulError, boxForPayment, canSellFromBranch, saleError, saleNumber, saleTotals } from './domain/direct-sales.rules';
 
 const USER_NAME = { select: { id: true, name: true, phone: true } } as const;
-export const SALE_DETAIL = {
+const SALE_DETAIL = {
   sucursal: { select: { id: true, nombre: true, direccion: true } },
   vendedor: USER_NAME,
   anuladaPor: USER_NAME,
@@ -20,11 +20,11 @@ export const SALE_DETAIL = {
   reemplazadaPor: { select: { id: true, numero: true } },
 } satisfies Prisma.DirectSaleInclude;
 
-export type SaleRow = Prisma.DirectSaleGetPayload<{ include: typeof SALE_DETAIL }>;
+type SaleRow = Prisma.DirectSaleGetPayload<{ include: typeof SALE_DETAIL }>;
 type Tx = Prisma.TransactionClient;
 
 /** API shape: the sale plus its readable number (NV-0445). The stored note path stays on the server. */
-export const presentSale = ({ notaPdfPath, notaAnuladaPdfPath, ...row }: SaleRow) => ({
+const presentSale = ({ notaPdfPath, notaAnuladaPdfPath, ...row }: SaleRow) => ({
   ...row,
   codigo: saleNumber(row.numero),
   tieneNota: Boolean(notaPdfPath),
