@@ -27,6 +27,7 @@ model Sucursal {
   /// Printed on the sale note (VD-01); one NIT for the whole company.
   direccion      String          @default("") @db.VarChar(255)
   ventasDirectas DirectSale[]
+  cierresCaja    CierreCaja[]
 
   @@map("sucursales")
 }
@@ -65,6 +66,8 @@ model User {
   stockRegistered     StockMovement[]           @relation("StockRegisteredBy")
   ventasDirectas      DirectSale[]              @relation("DirectSaleSeller")
   ventasAnuladas      DirectSale[]              @relation("DirectSaleAnnulledBy")
+  cierresCerrados     CierreCaja[]              @relation("CashCloseBy")
+  cierresRevisados    CierreCaja[]              @relation("CashCloseReviewedBy")
 
   @@index([sucursalId])
   @@map("users")
@@ -521,59 +524,65 @@ model CashBox {
   updatedAt  DateTime       @updatedAt
   movements  CashMovement[] @relation("CashBoxOrigin")
   incoming   CashMovement[] @relation("CashBoxDestination")
+  cierres    CierreCaja[]
 
   @@map("cash_boxes")
 }
 
 /// The single money ledger (FIN-01): ingreso | egreso | transferencia, validated into a cash box (rendición).
 model CashMovement {
-  id              String        @id @default(uuid())
-  tipo            String        @db.VarChar(16)
-  concepto        String        @db.VarChar(40)
-  monto           Decimal       @db.Decimal(12, 2)
-  fecha           DateTime      @default(now())
-  metodo          String        @default("") @db.VarChar(40)
-  nota            String        @default("") @db.VarChar(500)
+  id               String        @id @default(uuid())
+  tipo             String        @db.VarChar(16)
+  concepto         String        @db.VarChar(40)
+  monto            Decimal       @db.Decimal(12, 2)
+  fecha            DateTime      @default(now())
+  metodo           String        @default("") @db.VarChar(40)
+  nota             String        @default("") @db.VarChar(500)
   /// por_validar → validado | observado | anulado (domain/finance.rules.ts).
-  estado          String        @default("por_validar") @db.VarChar(16)
-  motivo          String?       @db.Text
-  projectId       String?
-  project         Project?      @relation(fields: [projectId], references: [id])
-  scheduleId      String?
-  schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
-  clienteId       String?
-  cliente         Client?       @relation(fields: [clienteId], references: [id])
+  estado           String        @default("por_validar") @db.VarChar(16)
+  motivo           String?       @db.Text
+  projectId        String?
+  project          Project?      @relation(fields: [projectId], references: [id])
+  scheduleId       String?
+  schedule         Schedule?     @relation(fields: [scheduleId], references: [id])
+  clienteId        String?
+  cliente          Client?       @relation(fields: [clienteId], references: [id])
   /// A payment taken on a visit (asistencia) (SUR-02).
-  relevamientoId  String?
-  relevamiento    Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
-  cajaId          String?       @db.VarChar(64)
-  caja            CashBox?      @relation("CashBoxOrigin", fields: [cajaId], references: [id])
-  cajaDestinoId   String?       @db.VarChar(64)
-  cajaDestino     CashBox?      @relation("CashBoxDestination", fields: [cajaDestinoId], references: [id])
+  relevamientoId   String?
+  relevamiento     Relevamiento? @relation(fields: [relevamientoId], references: [id], onDelete: SetNull)
+  cajaId           String?       @db.VarChar(64)
+  caja             CashBox?      @relation("CashBoxOrigin", fields: [cajaId], references: [id])
+  cajaDestinoId    String?       @db.VarChar(64)
+  cajaDestino      CashBox?      @relation("CashBoxDestination", fields: [cajaDestinoId], references: [id])
   /// Expenses only: empresa | empleado (an employee's expense is refunded later).
-  pagadoPor       String?       @db.VarChar(16)
-  reembolsadoAt   DateTime?
-  comprobanteUrl  String?       @db.VarChar(500)
+  pagadoPor        String?       @db.VarChar(16)
+  reembolsadoAt    DateTime?
+  comprobanteUrl   String?       @db.VarChar(500)
   /// Validated movement this one reverses (a validated movement is never edited).
-  reversaDeId     String?       @unique
-  reversaDe       CashMovement? @relation("Reversal", fields: [reversaDeId], references: [id])
-  reversa         CashMovement? @relation("Reversal")
-  sucursalId      String
-  sucursal        Sucursal      @relation(fields: [sucursalId], references: [id])
-  registradoPorId String
-  registradoPor   User          @relation("MovementRegisteredBy", fields: [registradoPorId], references: [id])
-  validadoPorId   String?
-  validadoPor     User?         @relation("MovementValidatedBy", fields: [validadoPorId], references: [id])
+  reversaDeId      String?       @unique
+  reversaDe        CashMovement? @relation("Reversal", fields: [reversaDeId], references: [id])
+  reversa          CashMovement? @relation("Reversal")
+  sucursalId       String
+  sucursal         Sucursal      @relation(fields: [sucursalId], references: [id])
+  registradoPorId  String
+  registradoPor    User          @relation("MovementRegisteredBy", fields: [registradoPorId], references: [id])
+  validadoPorId    String?
+  validadoPor      User?         @relation("MovementValidatedBy", fields: [validadoPorId], references: [id])
   /// Incomes: who received the money (a técnico may collect from the client); it is "por rendir" until validated.
-  recibidoPorId   String?
-  recibidoPor     User?         @relation("MovementReceivedBy", fields: [recibidoPorId], references: [id])
-  validadoAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  recibidoPorId    String?
+  recibidoPor      User?         @relation("MovementReceivedBy", fields: [recibidoPorId], references: [id])
+  validadoAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   /// VD-01: efectivo | qr | transferencia (payments of a direct sale).
-  medioPago       String?       @db.VarChar(16)
-  ventaDirectaId  String?
-  ventaDirecta    DirectSale?   @relation(fields: [ventaDirectaId], references: [id], onDelete: SetNull)
+  medioPago        String?       @db.VarChar(16)
+  ventaDirectaId   String?
+  ventaDirecta     DirectSale?   @relation(fields: [ventaDirectaId], references: [id], onDelete: SetNull)
+  /// FIN-04: a fund handed out to be accounted for (anticipo_por_rendir): subject, deadline and when it was settled.
+  asunto           String?       @db.VarChar(200)
+  fechaLimite      DateTime?
+  rendidoAt        DateTime?
+  cierreDiferencia CierreCaja?   @relation("CashCloseDifference")
 
   @@index([estado])
   @@index([projectId])
@@ -715,4 +724,42 @@ model DirectSaleItem {
   @@index([ventaId])
   @@index([productoId])
   @@map("direct_sale_items")
+}
+
+/// FIN-04: the daily cash close of a branch (no shifts): the count by denomination against the cash expected.
+model CierreCaja {
+  id                     String        @id @default(uuid())
+  sucursalId             String
+  sucursal               Sucursal      @relation(fields: [sucursalId], references: [id])
+  cajaId                 String        @db.VarChar(64)
+  caja                   CashBox       @relation(fields: [cajaId], references: [id])
+  /// Bolivian day YYYY-MM-DD.
+  dia                    String        @db.VarChar(10)
+  saldoInicial           Decimal       @db.Decimal(12, 2)
+  ingresosEfectivo       Decimal       @db.Decimal(12, 2)
+  egresosEfectivo        Decimal       @db.Decimal(12, 2)
+  efectivoEsperado       Decimal       @db.Decimal(12, 2)
+  /// { "200": 3, "100": 5, …, "0.1": 4 }
+  conteo                 Json
+  efectivoContado        Decimal       @db.Decimal(12, 2)
+  diferencia             Decimal       @db.Decimal(12, 2)
+  motivoDiferencia       String?       @db.Text
+  totalQr                Decimal       @default(0) @db.Decimal(12, 2)
+  totalTransferencia     Decimal       @default(0) @db.Decimal(12, 2)
+  ventasCantidad         Int           @default(0)
+  ventasTotal            Decimal       @default(0) @db.Decimal(12, 2)
+  observaciones          String?       @db.Text
+  cerradoPorId           String
+  cerradoPor             User          @relation("CashCloseBy", fields: [cerradoPorId], references: [id])
+  cerradoAt              DateTime      @default(now())
+  revisadoPorId          String?
+  revisadoPor            User?         @relation("CashCloseReviewedBy", fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  revisadoAt             DateTime?
+  /// The faltante/sobrante movement it generated (por validar: Contabilidad decides).
+  diferenciaMovimientoId String?       @unique
+  diferenciaMovimiento   CashMovement? @relation("CashCloseDifference", fields: [diferenciaMovimientoId], references: [id], onDelete: SetNull)
+
+  @@unique([sucursalId, dia])
+  @@index([dia])
+  @@map("cierres_caja")
 }

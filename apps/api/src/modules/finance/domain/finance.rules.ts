@@ -7,8 +7,8 @@ import type { TransitionCheck } from '../../../common/domain/state-machine';
 export const MOVEMENT_TIPOS = ['ingreso', 'egreso', 'transferencia'] as const;
 
 const CONCEPTOS: Record<string, readonly string[]> = {
-  ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'otro'],
-  egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'otro'],
+  ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'diferencia_arqueo', 'devolucion_anticipo', 'otro'],
+  egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'anticipo_por_rendir', 'diferencia_arqueo', 'otro'],
   transferencia: ['deposito', 'retiro'],
 };
 
@@ -209,4 +209,19 @@ export function movementDate(fecha: string | undefined, now = new Date(), before
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return new Date(fecha);
   if (before && businessDay(before) === fecha) return before;
   return atBusinessTime(fecha, now);
+}
+
+/** A fund handed out to be accounted for (FIN-04): who receives it, what for and until when. */
+export function advanceError(input: { concepto: string; responsableId?: string | null; asunto?: string | null; fechaLimite?: string | null }): string | null {
+  if (input.concepto !== 'anticipo_por_rendir') return null;
+  if (!input.responsableId) return 'Indica a quién se entrega el anticipo';
+  if (!input.asunto?.trim()) return 'Indica el asunto del anticipo';
+  if (!input.fechaLimite) return 'Indica hasta cuándo se rinde';
+  return null;
+}
+
+/** Days past the deadline (0 while on time), counted in Bolivian days. */
+export function daysLate(fechaLimite: Date | string, today: string): number {
+  const limit = new Date(fechaLimite).toISOString().slice(0, 10);
+  return Math.max(0, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${limit}T00:00:00Z`)) / 86400e3));
 }

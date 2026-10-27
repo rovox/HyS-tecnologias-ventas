@@ -7,6 +7,8 @@ import {
   incomeConceptError,
   incomeError,
   incomeOf,
+  advanceError,
+  daysLate,
   movementDate,
   movementError,
   custody,
@@ -124,5 +126,15 @@ describe('finance rules', () => {
     const before = new Date('2026-10-26T01:00:00.000Z'); // 25 Oct, 21:00 in Bolivia
     expect(movementDate('2026-10-25', now, before)).toBe(before);
     expect(movementDate('2026-10-26', now, before).toISOString()).toBe('2026-10-26T15:42:10.000Z');
+  });
+
+  it('an advance to account for needs who, what for and until when; lateness in days (FIN-04)', () => {
+    expect(advanceError({ concepto: 'material' })).toBeNull();
+    expect(advanceError({ concepto: 'anticipo_por_rendir', asunto: 'x', fechaLimite: '2026-10-30' })).toMatch(/a quién/);
+    expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', fechaLimite: '2026-10-30' })).toMatch(/asunto/);
+    expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', asunto: 'Insumos' })).toMatch(/hasta cuándo/);
+    expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', asunto: 'Insumos', fechaLimite: '2026-10-30' })).toBeNull();
+    expect(daysLate('2026-10-30', '2026-10-27')).toBe(0);
+    expect(daysLate('2026-10-20T00:00:00Z', '2026-10-27')).toBe(7);
   });
 });
