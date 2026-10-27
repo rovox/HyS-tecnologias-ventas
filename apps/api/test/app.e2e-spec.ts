@@ -612,6 +612,7 @@ describe('hs-erp API (e2e)', () => {
       const job = bigger.trabajos[0];
       await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ tecnicoId: tecId }).expect(200);
       const paid = (await http().post(`/api/projects/${id}/cobros`).set(tec()).send({ concepto: 'cobro', monto: 100 }).expect(201)).body;
+      await http().patch(`/api/schedules/${job.id}`).set(tec()).send({ estado: 'cancelado' }).expect(403); // SCH-04: he starts and finishes, does not cancel
       expect(paid).toMatchObject({ cobrado: 100, porValidar: 100, saldo: 2400 });
     });
   });
@@ -752,6 +753,24 @@ describe('hs-erp API (e2e)', () => {
       await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado' }).expect(403);
       await http().post('/api/inventory/movements').set(admin()).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalOrigenId: 'suc_quillacollo', motivo: 'Dañado en traslado' }).expect(201);
       expect((await stock('prd_dvr_8')).stock.suc_quillacollo).toBe((before.stock.suc_quillacollo || 0));
+    });
+
+    it('a técnico registers material only on a project where he has a job (SCH-04)', async () => {
+      const tecH = { Authorization: `Bearer ${tecToken}` };
+      const tecId = (await http().get('/api/auth/me').set(tecH).expect(200)).body.id;
+      const q = (await http().post('/api/quotations').set(ventas())
+        .send({ titulo: `E2E SCH-04 ${Date.now()}`, categoriaId: 'cableado_estructurado', clienteId: 'cli_mall', sucursalId: 'suc_central', monto: 900 }).expect(201)).body;
+      await http().post(`/api/quotations/${q.id}/files`).set(ventas()).attach('file', Buffer.from('%PDF-1.4 e2e'), 'c.pdf').expect(201);
+      await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'enviado' }).expect(201);
+      const projectId = (await http().post(`/api/quotations/${q.id}/status`).set(ventas()).send({ estado: 'aprobado' }).expect(201)).body.proyectoId;
+      const out = { productoId: 'prd_utp6', tipo: 'salida_proyecto', cantidad: 2, sucursalOrigenId: 'suc_central', projectId };
+      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: 'prd_utp6', tipo: 'entrada', cantidad: 5, costoUnitario: 3, sucursalDestinoId: 'suc_central' }).expect(201);
+      await http().post('/api/inventory/movements').set(tecH).send(out).expect(403);
+      const job = (await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body.trabajos[0];
+      await http().patch(`/api/schedules/${job.id}`).set(ventas()).send({ tecnicoId: tecId }).expect(200);
+      await http().post('/api/inventory/movements').set(tecH).send(out).expect(201);
+      await http().post('/api/inventory/movements').set(tecH).send({ productoId: 'prd_utp6', tipo: 'transferencia', cantidad: 1, sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata' }).expect(403);
+      expect((await http().get(`/api/projects/${projectId}`).set(ventas()).expect(200)).body.material.some((m: { cantidad: string | number }) => Number(m.cantidad) === 2)).toBe(true);
     });
 
     it('a delivered order for a project job takes stock out to the project (material cost, client equipment)', async () => {

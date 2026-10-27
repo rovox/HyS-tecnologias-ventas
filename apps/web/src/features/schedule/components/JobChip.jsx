@@ -1,3 +1,4 @@
+import { Check, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TONE, statusOf } from '@/shared/lib/status.js';
 import { DIVISION, JOB_STATE } from '../constants.js';
@@ -11,16 +12,19 @@ const CARD = {
   neutral: 'bg-neutral-soft border-neutral-border border-l-neutral',
 };
 
-/** One job in the calendar, painted with its state's colour; the division is a small text tag. */
-export function JobChip({ job, onOpen, compact }) {
+/**
+ * One job in the calendar, painted with its state's colour; the division is a small text tag. `quick` = { label, run }
+ * adds the next step (Iniciar, Terminar) under the card for whoever may do it (SCH-04).
+ */
+export function JobChip({ job, onOpen, compact, quick }) {
   const division = DIVISION[job.categoriaId];
   const state = statusOf('job', job.estado);
   const StateIcon = state.icon;
-  return (
+  const card = (
     <button
       type="button"
       onClick={() => onOpen(job)}
-      className={cn('w-full rounded-md border border-l-4 px-2 py-1 text-left text-xs shadow-sm hover:shadow-md', CARD[state.tone])}
+      className={cn('w-full rounded-md border border-l-4 px-2 py-1 text-left text-xs shadow-sm hover:shadow-md', quick && 'rounded-b-none', CARD[state.tone])}
       title={`${job.cliente?.nombre} — ${job.descripcionTrabajo} (${state.label})`}
     >
       <span className={cn('flex items-center gap-1 font-semibold', TONE[state.tone].text)}>
@@ -36,6 +40,25 @@ export function JobChip({ job, onOpen, compact }) {
         </span>
       )}
     </button>
+  );
+  if (!quick || compact) return card;
+  const finish = quick.estado === 'terminado';
+  return (
+    <div>
+      {card}
+      <button
+        type="button"
+        onClick={() => quick.run()}
+        disabled={quick.busy}
+        aria-label={`${quick.label}: ${job.cliente?.nombre} — ${job.descripcionTrabajo}`}
+        className={cn(
+          'flex w-full items-center justify-center gap-1 rounded-b-md border border-t-0 px-2 py-1 text-xs font-semibold disabled:opacity-50',
+          finish ? 'border-success bg-success text-success-foreground hover:opacity-90' : 'border-progress-border bg-card text-progress-fg hover:bg-progress-soft',
+        )}
+      >
+        {finish ? <Check className="h-3 w-3" /> : <Play className="h-3 w-3" />} {quick.label}
+      </button>
+    </div>
   );
 }
 
