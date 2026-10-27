@@ -11,6 +11,7 @@ import {
   Megaphone,
   Wallet,
   Boxes,
+  ShoppingCart,
   Inbox,
   Briefcase,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ const operationalMenuSections = [
       { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos y asistencias', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
+      { to: '/ventas-directas', icon: ShoppingCart, label: 'Ventas directas', allowedRoles: COMMERCIAL_ROLES },
       { to: '/inventario', icon: Boxes, label: 'Inventario', allowedRoles: ALL_ROLES },
     ],
   },
@@ -98,6 +100,7 @@ export const routeRoles = {
   users: ALL_ROLES,
   finanzas: ALL_ROLES,
   inventario: ALL_ROLES,
+  ventasDirectas: COMMERCIAL_ROLES,
 };
 
 export function canWriteQuotations(role) {

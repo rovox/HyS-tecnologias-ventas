@@ -28,14 +28,15 @@ const roleNames = (args.roles ?? 'admin,ventas,tecnico,contabilidad').split(',')
 
 // Mirrors routeRoles in apps/web/src/config/nav.js (A = admin, V = ventas, T = técnico, C = contabilidad).
 // Replaced by generated constants in FE-03; `checkRouteTable` fails if App.jsx and this table drift.
-const ALL = 'AVTC', AV = 'AV', AVC = 'AVC', A = 'A';
+// Contabilidad has the same permissions as Administración (ROLE-01): "admin only" routes are A + C.
+const ALL = 'AVTC', AVC = 'AVC', A = 'AC';
 const ROUTES = [
   ['/dashboard', ALL], ['/quotations', AVC], ['/quotations/:quotationId', AVC], ['/projects', AVC], ['/projects/:projectId', AVC], ['/clientes', ALL], ['/clientes/:clientId', ALL],
   ['/surveys', ALL], ['/schedule', ALL], ['/activity-wall', ALL], ['/reports', A],
-  ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AV],
+  ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AVC],
   ['/inventario/pedidos/:pedidoId', AVC],
   ['/vehicle-control', A], ['/vehicle-control/:id', A], ['/vehicles', A], ['/vehicles/:id', A],
-  ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/inventario', ALL], ['/usuarios/:userId', ALL],
+  ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/inventario', ALL], ['/ventas-directas', AVC], ['/usuarios/:userId', ALL],
 ];
 const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T', contabilidad: 'C' };
 // Routes that intentionally redirect (ActivityWallPage is `<Navigate to="/dashboard">`); classified `redirect-ok`, not failing.

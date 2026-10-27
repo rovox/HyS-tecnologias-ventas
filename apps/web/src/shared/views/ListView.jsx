@@ -51,7 +51,7 @@ function Summary({ columns, rows = [], loading, summary, menu, folding }) {
     <div className="flex flex-wrap items-center gap-2">
       {items.map((item) => (
         <div key={item.label} className="rounded-md border border-border bg-card px-3 py-1.5 shadow-sm">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
           <p className={cn('text-sm font-bold tabular-nums', item.tone && TONE[item.tone].text)}>{item.value}</p>
         </div>
       ))}
@@ -193,7 +193,7 @@ function TableList({ columns, rows = [], groups, rowKey = (r) => r.id, onRowClic
     // scroll box of its own, so there is one scroll only. Narrow screens keep the sideways scroll of a wide table.
     <div className="overflow-x-auto rounded-md border border-border bg-card lg:overflow-x-clip">
       <table className="w-full min-w-[40rem] border-collapse">
-        <thead className="bg-muted shadow-[0_1px_0_hsl(var(--border))] lg:sticky lg:top-16 lg:z-10">
+        <thead className="bg-muted shadow-sm lg:sticky lg:top-16 lg:z-10">
           <tr>
             <th scope="col" className="w-10 border-r border-border/70 px-2 py-2 text-right text-xs font-semibold text-muted-foreground">
               #

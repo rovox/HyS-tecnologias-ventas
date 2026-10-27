@@ -81,6 +81,11 @@ export const STATUS = {
     convertida: { label: 'Cliente', tone: 'success', icon: CheckCircle2 },
     descartada: { label: 'Descartada', tone: 'neutral', icon: Ban, strike: true },
   },
+  /** A direct sale (VD-02): registered = paid and closed; annulled keeps its note marked ANULADA. */
+  directSale: {
+    registrada: { label: 'Cancelada', tone: 'success', icon: CheckCircle2 },
+    anulada: { label: 'Anulada', tone: 'danger', icon: Ban, strike: true },
+  },
   product: {
     activo: { label: 'Activo', tone: 'success', icon: CheckCircle2 },
     archivado: { label: 'Archivado', tone: 'neutral', icon: Archive },
