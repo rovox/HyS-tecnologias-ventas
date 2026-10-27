@@ -61,6 +61,7 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
     const monto = Number(form.monto);
     if (!(monto > 0)) return notify.error('El monto debe ser mayor a 0');
     if (kind === 'transferencia' && (!form.cajaDestinoId || form.cajaDestinoId === form.cajaId)) return notify.error('Elige dos cajas distintas');
+    if (!movement && kind !== 'transferencia' && !form.sucursalId && !form.projectId) return notify.error('Elige la sucursal');
     const data = {
       concepto: form.concepto,
       monto,
@@ -163,6 +164,7 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
               <div className="space-y-1.5">
                 <Label htmlFor="mv-suc">Sucursal</Label>
                 <select id="mv-suc" className={select} value={form.sucursalId} onChange={(e) => set({ sucursalId: e.target.value })}>
+                  {!form.sucursalId && <option value="">Elige sucursal</option>}
                   {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                 </select>
               </div>

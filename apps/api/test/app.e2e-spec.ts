@@ -543,6 +543,16 @@ describe('hs-erp API (e2e)', () => {
       await http().post(`/api/finance/movements`).set(ventas()).send({ tipo: 'ingreso', concepto: 'cobro', monto: 10 }).expect(400);
     });
 
+    it('an expense registered for today is the first row of that day in the ledger (FIX-01)', async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const g = (await http().post('/api/finance/movements').set(ventas())
+        .send({ tipo: 'egreso', concepto: 'material', monto: 12, fecha: today, pagadoPor: 'empresa', sucursalId: 'suc_central', nota: 'FIX-01' }).expect(201)).body;
+      expect(String(g.fecha).slice(0, 10)).toBe(today);
+      expect(String(g.fecha).slice(11)).not.toBe('00:00:00.000Z');
+      const rows = (await http().get(`/api/finance/movements?desde=${today}&hasta=${today}`).set(ventas()).expect(200)).body;
+      expect(rows[0].id).toBe(g.id);
+    });
+
     it('transfers between boxes are Gerencia only and move both balances', async () => {
       const body = { tipo: 'transferencia', concepto: 'deposito', monto: 50, cajaId: 'caja_central', cajaDestinoId: 'caja_chica_punata', sucursalId: 'suc_central' };
       await http().post('/api/finance/movements').set(ventas()).send(body).expect(403);

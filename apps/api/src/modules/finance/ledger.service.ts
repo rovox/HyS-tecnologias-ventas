@@ -13,6 +13,7 @@ import {
   incomeError,
   incomeOf,
   movementError,
+  movementDate,
   movementImpact,
   pendingRefund,
 } from './domain/finance.rules';
@@ -63,7 +64,8 @@ export class LedgerService {
           : {}),
       },
       include: MOVEMENT_DETAIL,
-      orderBy: { fecha: 'desc' },
+      // Same instant (or a day without time from before FIX-01): the last registered first.
+      orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
       take: 1000,
     });
     return rows.map(presentMovement);
@@ -89,7 +91,7 @@ export class LedgerService {
         tipo: dto.tipo,
         concepto: dto.concepto,
         monto: dto.monto,
-        fecha: dto.fecha ? new Date(dto.fecha) : new Date(),
+        fecha: movementDate(dto.fecha),
         metodo: dto.metodo || '',
         nota: dto.nota || '',
         projectId: project?.id ?? null,
@@ -140,7 +142,7 @@ export class LedgerService {
       data: {
         ...(dto.concepto !== undefined ? { concepto: dto.concepto } : {}),
         ...(dto.monto !== undefined ? { monto: dto.monto } : {}),
-        ...(dto.fecha !== undefined ? { fecha: new Date(dto.fecha) } : {}),
+        ...(dto.fecha !== undefined ? { fecha: movementDate(dto.fecha, new Date(), before.fecha) } : {}),
         ...(dto.metodo !== undefined ? { metodo: dto.metodo } : {}),
         ...(dto.nota !== undefined ? { nota: dto.nota } : {}),
         ...(dto.pagadoPor !== undefined && before.tipo === 'egreso' ? { pagadoPor: dto.pagadoPor } : {}),
