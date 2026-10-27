@@ -11,7 +11,6 @@ export const DETAIL = {
   categoria: CATEGORY,
   vendedor: USER_NAME,
   eliminadaPor: USER_NAME,
-  sale: true,
   project: { select: { id: true, codigo: true, estado: true } },
   _count: { select: { relevamientos: true, tasks: true } },
 } satisfies Prisma.QuotationInclude;

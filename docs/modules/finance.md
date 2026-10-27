@@ -84,4 +84,4 @@
 
 - [ ] Comprobante (foto de la factura) en cada movimiento (FILE-01).
 - [ ] Exportación contable mensual (resultado del mes, flujo de caja) — prioridad 3.
-- [ ] Borrar la tabla `schedule_payments` y las columnas `schedules.adelanto/saldo` (CLEAN-01, con aprobación).
+- [x] Borrar la tabla `schedule_payments` y las columnas `schedules.adelanto/saldo` (CLEAN-01, 2026-10-27).
