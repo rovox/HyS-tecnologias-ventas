@@ -7,6 +7,7 @@ import {
   incomeConceptError,
   incomeError,
   incomeOf,
+  movementDate,
   movementError,
   custody,
   movementImpact,
@@ -110,5 +111,15 @@ describe('finance rules', () => {
       { tipo: 'caja', cajaId: 'c1', antes: 5200, despues: 5250 },
       { tipo: 'caja', cajaId: 'c2', antes: 100, despues: 50 },
     ]);
+  });
+
+  it('keeps the time of day when a form sends only the day (FIX-01)', () => {
+    const now = new Date('2026-10-27T15:42:10.000Z');
+    expect(movementDate(undefined, now)).toEqual(now);
+    expect(movementDate('2026-10-25', now).toISOString()).toBe('2026-10-25T15:42:10.000Z');
+    expect(movementDate('2026-10-25T08:00:00.000Z', now).toISOString()).toBe('2026-10-25T08:00:00.000Z');
+    const before = new Date('2026-10-25T09:00:00.000Z');
+    expect(movementDate('2026-10-25', now, before)).toBe(before);
+    expect(movementDate('2026-10-26', now, before).toISOString()).toBe('2026-10-26T15:42:10.000Z');
   });
 });
