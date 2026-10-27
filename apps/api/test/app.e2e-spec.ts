@@ -348,15 +348,29 @@ describe('hs-erp API (e2e)', () => {
     const auth = () => ({ Authorization: `Bearer ${ventasToken}` });
     const http = () => request(app.getHttpServer());
 
-    it('counts my pending tasks and validates the state', async () => {
+    it('counts the tasks nobody is in charge of and mine; closing one archives it (TSK-03)', async () => {
+      const me = (await http().get('/api/auth/me').set(auth()).expect(200)).body;
       const before = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
       const task = (await http().post('/api/tasks').set(auth()).send({ titulo: 'Llamar a la clínica', clienteId: 'cli_hospital', plazo: '2020-01-01' }).expect(201)).body;
       expect(task.cliente).toEqual({ id: 'cli_hospital', nombre: 'Clínica Horizonte' });
-      const after = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
-      expect(after.mias).toBe(before.mias + 1);
-      expect(after.vencidas).toBe(before.vencidas + 1);
+      const unassigned = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
+      expect(unassigned).toMatchObject({ sinAsignar: before.sinAsignar + 1, mias: before.mias });
+      await http().post(`/api/tasks/${task.id}/claim`).set(auth()).expect(201);
+      const mine = (await http().get('/api/tasks/resumen').set(auth()).expect(200)).body;
+      expect(mine).toMatchObject({ sinAsignar: before.sinAsignar, mias: before.mias + 1, vencidas: before.vencidas + 1 });
+      await http().post(`/api/tasks/${task.id}/claim`).set(auth()).expect(409);
       await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'hecha' }).expect(400);
       await http().post('/api/tasks').set(auth()).send({ titulo: 'x', clienteId: 'no-existe' }).expect(400);
+      const done = (await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'completada' }).expect(200)).body;
+      expect(done.archivadaAt).toBeTruthy();
+      const pending = (await http().get('/api/tasks').set(auth()).expect(200)).body;
+      expect(pending.map((t: { id: string }) => t.id)).not.toContain(task.id);
+      const archived = (await http().get('/api/tasks?archivadas=1').set(auth()).expect(200)).body;
+      expect(archived.map((t: { id: string }) => t.id)).toContain(task.id);
+      const reopened = (await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'pendiente' }).expect(200)).body;
+      expect(reopened.archivadaAt).toBeNull();
+      expect(reopened.asignado.id).toBe(me.id);
+      await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'descartada' }).expect(200);
     });
 
     it('converts a pending task into a quotation once', async () => {

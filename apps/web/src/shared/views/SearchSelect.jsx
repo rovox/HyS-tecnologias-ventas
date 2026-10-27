@@ -22,6 +22,7 @@ export function SearchSelect({
   disabled,
   className,
   invalid,
+  'aria-label': ariaLabel,
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
@@ -38,6 +39,7 @@ export function SearchSelect({
           type="button"
           variant="outline"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           disabled={disabled}
           className={cn('h-9 min-h-9 w-full justify-between px-3 font-normal', invalid && 'border-danger', className)}
