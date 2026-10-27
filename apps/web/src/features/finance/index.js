@@ -2,3 +2,4 @@
 // app/App.jsx straight from its file (GATE-01).
 export { IncomeDialog } from './components/IncomeDialog.jsx';
 export { MovementDialog } from './components/MovementDialog.jsx';
+export { MoneySummary } from './components/MoneySummary.jsx';

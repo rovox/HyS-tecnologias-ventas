@@ -25,20 +25,11 @@ const AppToaster = lazy(() => import('./AppToaster.jsx'));
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage.jsx'));
-const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
-const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
-const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
 const QuotationsPage = lazy(() => import('@/features/quotations/pages/QuotationsPage.jsx'));
 const QuotationDetailPage = lazy(() => import('@/features/quotations/pages/QuotationDetailPage.jsx'));
 const SchedulePage = lazy(() => import('@/features/schedule/pages/SchedulePage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
-const VehicleControlPage = lazy(() => import('@/pages/VehicleControlPage.jsx'));
-const VehicleDetailPage = lazy(() => import('@/pages/VehicleDetailPage.jsx'));
-const VehiclesPage = lazy(() => import('@/pages/VehiclesPage.jsx'));
-const MaintenancePage = lazy(() => import('@/pages/MaintenancePage.jsx'));
-const MarketingPage = lazy(() => import('@/pages/MarketingPage.jsx'));
-const CampaignPage = lazy(() => import('@/pages/CampaignPage.jsx'));
 const UserProfilePage = lazy(() => import('@/pages/UserProfilePage.jsx'));
 
 function RouteFallback() {
@@ -125,6 +116,18 @@ function App() {
             } />
 
             <Route path="/tareas" element={<Navigate to="/dashboard" replace />} />
+            {/* Panel de control and Reportes were merged into the Dashboard; the empty modules were removed (PLAT-07). */}
+            <Route path="/reports" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/reports/admin" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/admin/management" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/activity-wall" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicle-control" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicle-control/:id" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicles" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicles/:id" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/maintenance" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/marketing" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/campaigns" element={<Navigate to="/dashboard" replace />} />
 
             <Route path="/schedule" element={
               <ProtectedRoute allowedRoles={routeRoles.schedule}>
@@ -132,23 +135,8 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/activity-wall" element={
-              <ProtectedRoute allowedRoles={routeRoles.activity}>
-                <ActivityWallPage />
-              </ProtectedRoute>
-            } />
 
-            <Route path="/reports" element={
-              <ProtectedRoute allowedRoles={routeRoles.reports}>
-                <ReportsPage />
-              </ProtectedRoute>
-            } />
 
-            <Route path="/admin/management" element={
-              <ProtectedRoute allowedRoles={routeRoles.admin}>
-                <ManagementPanelPage />
-              </ProtectedRoute>
-            } />
 
             <Route path="/configuration" element={
               <ProtectedRoute allowedRoles={routeRoles.admin}>
@@ -172,42 +160,7 @@ function App() {
             <Route path="/pedidos-internos/:id" element={<OldOrderLink />} />
             <Route path="/orders" element={<Navigate to="/inventario?vista=pedidos" replace />} />
 
-            <Route path="/vehicle-control" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehicleControlPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/vehicle-control/:id" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehicleDetailPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/vehicles" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehiclesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/vehicles/:id" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehicleDetailPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/maintenance" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <MaintenancePage />
-              </ProtectedRoute>
-            } />
 
-            <Route path="/marketing" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <MarketingPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/campaigns" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <CampaignPage />
-              </ProtectedRoute>
-            } />
 
             <Route path="/ventas-directas" element={
               <ProtectedRoute allowedRoles={routeRoles.ventasDirectas}>
@@ -230,7 +183,6 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/reports/admin" element={<Navigate to="/reports" replace />} />
 
             <Route path="*" element={
               <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center p-4">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Archive, ArrowLeftRight, History, MoreHorizontal, PackageMinus, PackagePlus, Plus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -91,6 +91,13 @@ export default function InventoryPage() {
   const [moving, setMoving] = useState(null);
   const [batch, setBatch] = useState(null);
   const [kardexOf, setKardexOf] = useState(null);
+  // "Agregar material" / "Mover material" from the dashboard open the quick action at once.
+  useEffect(() => {
+    const accion = params.get('accion');
+    if (!['entrada', 'transferencia', 'baja'].includes(accion)) return;
+    setBatch(accion);
+    setParams((p) => { const n = new URLSearchParams(p); n.delete('accion'); return n; }, { replace: true });
+  }, [params, setParams]);
   useDocumentTitle('Inventario');
 
   const active = products.filter((p) => p.active);

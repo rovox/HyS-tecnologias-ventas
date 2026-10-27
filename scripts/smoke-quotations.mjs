@@ -73,7 +73,7 @@ await B.page.goto(`${WEB}/quotations`, { waitUntil: 'networkidle' });
 await p.goto(`${WEB}/quotations`, { waitUntil: 'networkidle' });
 
 await step('create a draft from the form', async () => {
-  await p.getByRole('button', { name: 'Nueva' }).click(T);
+  await p.getByRole('button', { name: 'Nueva', exact: true }).click(T);
   await p.getByLabel('Título *').fill(title);
   await p.getByRole('combobox').filter({ hasText: 'Selecciona un cliente' }).click(T);
   await p.getByPlaceholder('Buscar cliente…').fill('Andina');

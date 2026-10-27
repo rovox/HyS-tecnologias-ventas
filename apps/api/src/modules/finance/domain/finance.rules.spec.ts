@@ -8,6 +8,7 @@ import {
   incomeError,
   incomeOf,
   advanceError,
+  monthMoney,
   daysLate,
   movementDate,
   movementError,
@@ -136,5 +137,10 @@ describe('finance rules', () => {
     expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', asunto: 'Insumos', fechaLimite: '2026-10-30' })).toBeNull();
     expect(daysLate('2026-10-30', '2026-10-27')).toBe(0);
     expect(daysLate('2026-10-20T00:00:00Z', '2026-10-27')).toBe(7);
+  });
+
+  it('the money of a month: cobrado (waiting + validated), en caja (validated), expenses and net (DASH-01)', () => {
+    expect(monthMoney([m('ingreso', 'cobro', 100), m('ingreso', 'cobro', 50, 'por_validar'), m('ingreso', 'cobro', 999, 'anulado'), m('egreso', 'material', 30), m('egreso', 'material', 7, 'por_validar'), m('transferencia', 'deposito', 500)]))
+      .toEqual({ cobrado: 150, enCaja: 100, egresosValidados: 30, neto: 70, porValidar: 50 });
   });
 });

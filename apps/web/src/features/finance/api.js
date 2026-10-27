@@ -124,3 +124,8 @@ export function useAdvances(enabled = true) {
 export function useSettleAdvance() {
   return useLedgerMutation(({ id, nota }) => apiClient.post(`finance/movements/${id}/rendido`, { nota }, opts()));
 }
+
+/** The dashboard's money (DASH-01): month cobrado / en caja / expenses, box balances, today per branch. */
+export function useFinanceSummary(mes) {
+  return useQuery({ queryKey: ['movement', 'resumen', mes], queryFn: () => apiClient.get('finance/resumen', opts(mes ? { query: { mes } } : undefined)) });
+}

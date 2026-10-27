@@ -3,12 +3,8 @@ import {
   FileStack,
   Building2,
   ClipboardCheck,
-  FileText,
-  ClipboardList,
   Settings,
   CalendarDays,
-  CarFront,
-  Megaphone,
   Wallet,
   Boxes,
   ShoppingCart,
@@ -17,7 +13,6 @@ import {
 } from 'lucide-react';
 import { COMMERCIAL_ROLES, MANAGER_ROLES, ROLES } from '@/constants/roles.js';
 
-
 const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONTA];
 
 // Contabilidad (CONTA) has the same permissions as ADMINISTRADOR (ROLE-01).
@@ -25,14 +20,12 @@ const QUOTE_ROLES = COMMERCIAL_ROLES;
 const CLIENT_ROLES = ALL_ROLES;
 const SURVEY_ROLES = ALL_ROLES;
 const TASK_ROLES = ALL_ROLES;
-const REPORT_ROLES = MANAGER_ROLES;
 const ADMIN_ONLY = MANAGER_ROLES;
 const PEDIDOS_ROLES = COMMERCIAL_ROLES;
 const SOLICITUDES_WEB_ROLES = COMMERCIAL_ROLES;
 
 /**
  * Menú unificado: OPERACIONES primero para todos los roles.
- * Admin añade extras al final.
  */
 const operationalMenuSections = [
   {
@@ -58,29 +51,13 @@ const operationalMenuSections = [
   {
     title: 'ADMINISTRACIÓN',
     items: [
-      { to: '/reports', icon: FileText, label: 'Reportes', allowedRoles: REPORT_ROLES },
-      { to: '/admin/management', icon: ClipboardList, label: 'Panel de Control', allowedRoles: ADMIN_ONLY },
       { to: '/configuration', icon: Settings, label: 'Configuración', allowedRoles: ADMIN_ONLY },
-    ],
-  },
-];
-
-/** Extras solo Gerencia (ADMINISTRADOR, CONTABILIDAD) (después de OPERACIONES / ADMINISTRACIÓN base). */
-const adminExtraMenuSections = [
-  {
-    title: 'GESTIÓN ADMIN',
-    items: [
-      { to: '/vehicle-control', icon: CarFront, label: 'Control Vehicular', allowedRoles: ADMIN_ONLY },
-      { to: '/marketing', icon: Megaphone, label: 'Marketing', allowedRoles: ADMIN_ONLY },
     ],
   },
 ];
 
 export function getMenuSections(role) {
   if (role === ROLES.NONE) return [];
-  if (MANAGER_ROLES.includes(role)) {
-    return [...operationalMenuSections, ...adminExtraMenuSections];
-  }
   return operationalMenuSections;
 }
 
@@ -91,19 +68,11 @@ export const routeRoles = {
   surveys: SURVEY_ROLES,
   tareas: TASK_ROLES,
   schedule: TASK_ROLES,
-  reports: REPORT_ROLES,
-  activity: ALL_ROLES,
   admin: ADMIN_ONLY,
   pedidos: PEDIDOS_ROLES,
   solicitudesWeb: SOLICITUDES_WEB_ROLES,
-  frozen: ADMIN_ONLY,
   users: ALL_ROLES,
   finanzas: ALL_ROLES,
   inventario: ALL_ROLES,
   ventasDirectas: COMMERCIAL_ROLES,
 };
-
-export function canWriteQuotations(role) {
-  return COMMERCIAL_ROLES.includes(role);
-}
-

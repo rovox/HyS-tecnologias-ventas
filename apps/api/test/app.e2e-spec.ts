@@ -729,6 +729,17 @@ describe('hs-erp API (e2e)', () => {
       await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(conta)).send({}).expect(400);
     });
 
+    it('the dashboard money: month cobrado ≥ en caja, every box, today per branch with sales and close (DASH-01)', async () => {
+      const r = (await http().get('/api/finance/resumen').set(H(wilson)).expect(200)).body;
+      expect(r.mes).toMatch(/^\d{4}-\d{2}$/);
+      expect(r.cobrado).toBeGreaterThanOrEqual(r.enCaja);
+      expect(r.neto).toBeCloseTo(r.enCaja - r.egresosValidados, 2);
+      expect(r.cajas.map((c: { id: string }) => c.id)).toEqual(expect.arrayContaining(['caja_central', 'caja_qr', 'caja_banco']));
+      expect(r.hoy.find((s: { sucursal: { id: string } }) => s.sucursal.id === 'suc_punata').ventas).toBeGreaterThan(0);
+      const tec = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico))).body.accessToken;
+      await http().get('/api/finance/resumen').set(H(tec)).expect(403);
+    });
+
     it('closes once per branch and day; a difference needs a reason and goes to validation; Gerencia reviews', async () => {
       const day = new Date(Date.UTC(2024, 0, 1) + (Math.floor(Date.now() / 1000) % 700) * 86400e3).toISOString().slice(0, 10);
       const body = { sucursalId: 'suc_punata', dia: day, saldoInicial: 100, conteo: { '50': 1, '20': 2 } };

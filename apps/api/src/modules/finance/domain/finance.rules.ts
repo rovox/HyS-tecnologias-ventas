@@ -225,3 +225,16 @@ export function daysLate(fechaLimite: Date | string, today: string): number {
   const limit = new Date(fechaLimite).toISOString().slice(0, 10);
   return Math.max(0, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${limit}T00:00:00Z`)) / 86400e3));
 }
+
+type MonthMove = { tipo: string; monto: number | string | { toString(): string }; estado: string };
+/**
+ * The money of a month for the dashboard (DASH-01, owner 2026-10-24): Cobrado = incomes registered (waiting or
+ * validated), En caja = incomes validated, expenses validated and their net. Transfers only move between boxes.
+ */
+export function monthMoney(movements: MonthMove[]) {
+  const sum = (list: MonthMove[]) => cents(list.reduce((s, m) => s + Number(m.monto), 0));
+  const incomes = movements.filter((m) => m.tipo === 'ingreso' && COUNTED.includes(m.estado));
+  const enCaja = sum(incomes.filter((m) => m.estado === 'validado'));
+  const egresos = sum(movements.filter((m) => m.tipo === 'egreso' && m.estado === 'validado'));
+  return { cobrado: sum(incomes), enCaja, egresosValidados: egresos, neto: cents(enCaja - egresos), porValidar: sum(incomes.filter((m) => m.estado === 'por_validar')) };
+}

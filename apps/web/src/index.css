@@ -91,8 +91,6 @@
     --radius: 0.75rem;
 
     /* Legacy tables (ReportsPage) until DASH-01 removes them. */
-    --table-row-hover: 210 40% 98%;
-    --table-header-bg: 210 40% 96%;
 
     --content-padding: clamp(1rem, 3vw, 2rem);
     --header-height: 4rem;
@@ -130,22 +128,8 @@
   }
 
 
-  /* Table Utilities */
-  .table-container {
-    @apply w-full overflow-x-auto rounded-xl border border-border bg-card shadow-sm;
-  }
-  
-  .table-header {
-    @apply bg-[hsl(var(--table-header-bg))] text-muted-foreground text-xs font-bold uppercase tracking-wider text-left;
-  }
-  
-  .table-row {
-    @apply border-b border-border transition-colors duration-200 hover:bg-[hsl(var(--table-row-hover))];
-  }
 
-  .table-cell {
-    @apply px-4 py-3 align-middle text-sm text-foreground;
-  }
+
 
 }
 
