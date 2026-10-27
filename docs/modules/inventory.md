@@ -1,6 +1,6 @@
 # Inventario
 
-> Productos básicos con su stock por sucursal, calculado siempre desde los movimientos; los pedidos internos mueven stock al entregarse · Ruta: `/inventario` (Productos, Pedidos internos, Historial) y `/inventario/pedidos/:id` · Estado: 🟢 INV-03 (2026-10-27)
+> Productos básicos con su stock por sucursal, calculado siempre desde los movimientos; los pedidos internos mueven stock al entregarse · Ruta: `/inventario` (Productos, Pedidos internos, Historial, Tienda Digicorp) y `/inventario/pedidos/:id` · Estado: 🟢 INV-03 (2026-10-27)
 
 ## Roles
 
@@ -35,6 +35,7 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 |---|---|---|---|
 | Acciones rápidas (arriba) | botones | — | **Vender** · **Agregar material** (compra a Central) · **Mover a otra sucursal** · **Quitar material**: varios productos en un diálogo, todos o ninguno |
 | Productos | lista (tarjetas en teléfono): con una sucursal elegida, su columna "En X" + toda la empresa y "Solo lo que hay en esta sucursal" (los recién creados, sin stock en ninguna, se siguen viendo); con "Toda la empresa", una columna por sucursal + total; rojo si está bajo el mínimo | sucursal; stock bajo (N, rojo), archivados (N), tipo, categoría · agrupar por categoría, tipo, marca · CSV | Nuevo producto · 🕘 **Kardex** · menú por fila: Entrada, Transferir, Salida a proyecto, Quitar material, Ajustar (Gerencia), Editar, Archivar |
+| Tienda Digicorp | cuadrícula con foto, nombre, marca y código (5055 productos en la carga inicial) y la fecha de la última actualización | búsqueda (código, nombre, marca), marca · "Ver más" | ficha: foto grande, stock en Digicorp, sección, descripción, **Ver en Digicorp**; Gerencia: Actualizar ahora |
 | Kardex | diálogo | sucursal o toda la empresa | entradas, salidas y saldo corrido, del más antiguo al más reciente, con el detalle (venta NV-…, proyecto, pedido, motivo) |
 | Pedidos internos | lista: código `PED-…`, estado, destino en palabras (cliente, trabajo y proyecto, o la sucursal), lo pide / lo recibe, ítems y costo, prioridad, fecha; fila roja si está atrasado, ámbar si espera aprobación | abiertos, cada estado, atrasados, para trabajo / sucursal (con contadores) · agrupar por estado, quien recibe, origen · CSV | Nuevo pedido · el siguiente paso en la fila (Aprobar, Rechazar, Preparar, Listo para entregar, Entregar) |
 | Pedido interno (ficha) | `FormView` con barra de estado | — | transiciones con confirmación (rechazar y cancelar piden motivo, entregar muestra qué stock sale y a dónde), Editar mientras está abierto, comentarios, botones a Proyecto y Trabajo, **historial** (quién cambió qué, con nombres) |
@@ -74,6 +75,7 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 | Quitar material: origen y motivo | `stockMovementError` | 400 |
 | Lote: todas las líneas en una transacción; el error nombra el producto | `InventoryService.registerBatch` | 400 "DVR…: Stock insuficiente" |
 | Kardex con saldo corrido por sucursal o empresa (en la empresa las transferencias no cuentan) | `kardex` | — |
+| Tienda Digicorp: catálogo público de Digicorp como referencia interna; carga inicial y actualización mensual (`DIGICORP_AUTO_SYNC=1`), una página cada 3 s con un cliente HTTP común, sin datos de H&S y sin disfrazarse; ante 403, 429 o una página anti-bots se detiene y lo registra (nunca reintenta ni evade); el detalle se pide al abrir un producto si tiene más de 30 días; sin precios (requieren cuenta) | `modules/digicorp` (`digicorp.rules.ts`, `DigicorpService`) | 403 (actualizar: Gerencia), 404, 409 (ya se actualiza) |
 
 API: `GET/POST /inventory/products`, `PATCH /inventory/products/:id`, `GET /inventory/products/:id/kardex?sucursalId=`, `GET /inventory/movements?sucursalId&tipos&desde&hasta&productoId`, `POST /inventory/movements`, `POST /inventory/movements/lote`; `GET/POST /pedidos-internos`, `GET/PATCH/DELETE /pedidos-internos/:id`, `PATCH /pedidos-internos/:id/status`, `POST /pedidos-internos/:id/comments`. El pedido sale con `codigo`, `destino`, `solicitante`, `entregadoPor`, `costoTotal` y `transicionesValidas` (`pedido.presenter.ts`); la ficha suma `comentarios` y `movimientos`. Cada cambio se guarda en el historial (`/activity`, entidad `pedido_interno`).
 

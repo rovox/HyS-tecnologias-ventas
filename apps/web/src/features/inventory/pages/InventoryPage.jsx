@@ -18,6 +18,7 @@ import { ProductDialog } from '../components/ProductDialog.jsx';
 import { MOVEMENT, StockMovementDialog } from '../components/StockMovementDialog.jsx';
 import { BatchMovementDialog } from '../components/BatchMovementDialog.jsx';
 import { KardexDialog } from '../components/KardexDialog.jsx';
+import { DigicorpView } from '../components/DigicorpView.jsx';
 
 const TIPO = { equipo: 'Equipo', material: 'Material', servicio: 'Servicio' };
 
@@ -71,7 +72,7 @@ export default function InventoryPage() {
   const { canManageMoney, isVentasLevel, readsAll, currentUser, isAdmin } = useAuth();
   const manage = isVentasLevel();
   const [params, setParams] = useSearchParams();
-  const vistas = [['productos', 'Productos'], ...(readsAll() ? [['pedidos', 'Pedidos internos']] : []), ['movimientos', 'Historial']];
+  const vistas = [['productos', 'Productos'], ...(readsAll() ? [['pedidos', 'Pedidos internos']] : []), ['movimientos', 'Historial'], ['digicorp', 'Tienda Digicorp']];
   const vista = vistas.some(([k]) => k === params.get('vista')) ? params.get('vista') : 'productos';
   // A seller starts on his branch; Gerencia on the whole company (kept in the URL, both can change it).
   const suc = params.has('suc') ? params.get('suc') : isAdmin() ? '' : currentUser?.sucursalId || '';
@@ -221,6 +222,17 @@ export default function InventoryPage() {
   );
 
   if (vista === 'pedidos') return <Layout><OrdersView tabs={tabs} /></Layout>;
+  if (vista === 'digicorp') {
+    return (
+      <Layout>
+        {tabs}
+        <ControlPanel breadcrumbs={[{ label: 'Inventario' }, { label: 'Tienda Digicorp' }]} />
+        <div className="px-4 py-4 sm:px-6">
+          <DigicorpView />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

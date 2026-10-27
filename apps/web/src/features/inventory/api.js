@@ -49,3 +49,19 @@ export function useRegisterStockMovement() {
 export function useRegisterStockBatch() {
   return useInventoryMutation((data) => apiClient.post('inventory/movements/lote', data, opts()));
 }
+
+/** Digicorp's public catalog (DIGI-01): { q, marca, offset, limit } → { total, items, marcas, ultimaSync, actualizando }. */
+export function useDigicorp(params, enabled = true) {
+  return useQuery({ queryKey: ['digicorp', 'list', params], queryFn: () => apiClient.get('digicorp/productos', opts({ query: params })), enabled, placeholderData: (previous) => previous });
+}
+
+/** One product; its detail is refreshed on demand (the API fetches it when older than 30 days). */
+export function useDigicorpProduct(sku) {
+  return useQuery({ queryKey: ['digicorp', 'detail', sku], queryFn: () => apiClient.get(`digicorp/productos/${encodeURIComponent(sku)}`, opts()), enabled: Boolean(sku) });
+}
+
+/** Gerencia: refresh the catalog now (it runs in the background). */
+export function useSyncDigicorp() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: () => apiClient.post('digicorp/sync', {}, opts()), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['digicorp'] }) });
+}

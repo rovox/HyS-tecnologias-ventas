@@ -47,6 +47,7 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 | S13 | ventas (Punata), contabilidad | Direct sale from Inventario › Vender (own branch or Central), note opens, stock and ledger move live; annul with reason (stock back, note ANULADA); Corregir linked | `node scripts/smoke-direct-sales.mjs` |
 | S14 | ventas (Punata) | Inventario on his branch; Agregar material only into Central; move two products Central → Punata at once; Quitar material with reason; Historial "Quitados"; kardex ends on the branch stock | `node scripts/smoke-inventory-branch.mjs` |
 | S15 | ventas (Punata), contabilidad | Cierre del día: count notes and coins, red light until a reason, close (read-only); Contabilidad reviews it in Cierres; an advance late in Anticipos, marked rendido | `node scripts/smoke-cierre-caja.mjs` |
+| S16 | ventas | Tienda Digicorp: catalog with photos and last update, search, brand, a product with "Ver en Digicorp" (needs one load by Gerencia) | `node scripts/smoke-digicorp.mjs` |
 | S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)

@@ -19,6 +19,7 @@ import { FinanceModule } from './modules/finance';
 import { ReportingModule } from './modules/reporting';
 import { InventoryModule } from './modules/inventory';
 import { DirectSalesModule } from './modules/direct-sales';
+import { DigicorpModule } from './modules/digicorp';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -58,6 +59,7 @@ import { HealthController } from './health.controller';
     ReportingModule,
     InventoryModule,
     DirectSalesModule,
+    DigicorpModule,
   ],
   controllers: [HealthController],
 })
