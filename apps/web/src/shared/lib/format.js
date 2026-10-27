@@ -1,6 +1,4 @@
 // The only place dates and money are formatted for the UI. Currency is Bs.
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 const money = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -44,8 +42,24 @@ export function formatDateTime(value) {
   return valid(date) ? dayTime.format(date) : '—';
 }
 
-/** "hace 5 minutos". */
+const relative = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+const STEPS = [
+  [60, 'second'],
+  [60, 'minute'],
+  [24, 'hour'],
+  [30, 'day'],
+  [12, 'month'],
+  [Infinity, 'year'],
+];
+
+/** "hace 5 minutos", "ayer" (Intl, no date library in the entry bundle: GATE-01). */
 export function formatRelative(value) {
   const date = toDate(value);
-  return valid(date) ? formatDistanceToNow(date, { addSuffix: true, locale: es }) : '—';
+  if (!valid(date)) return '—';
+  let amount = (date.getTime() - Date.now()) / 1000;
+  for (const [size, unit] of STEPS) {
+    if (Math.abs(amount) < size) return relative.format(Math.round(amount), unit);
+    amount /= size;
+  }
+  return '—';
 }

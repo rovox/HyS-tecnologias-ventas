@@ -255,26 +255,26 @@ const CategoryChart = ({ data, insights, loading }) => {
         {!loading && (topSuc.length > 0 || topVend.length > 0) && (
           <div className="grid grid-cols-1 gap-2 border-t border-border/60 pt-2 text-[11px] leading-snug sm:grid-cols-2">
             <div className="min-w-0 space-y-1">
-              <p className="font-semibold text-sky-800 dark:text-sky-300">Sucursal líder por categoría</p>
+              <p className="font-semibold text-sky-800">Sucursal líder por categoría</p>
               {topSuc.length === 0 ? (
                 <p className="text-muted-foreground">Sin datos.</p>
               ) : topSuc.map((row) => (
                 <p key={row.categoriaId} className="truncate text-muted-foreground">
                   <span className="font-medium text-foreground">{row.categoria}</span>
                   {' · '}{row.sucursal}
-                  <span className="tabular-nums text-sky-700 dark:text-sky-300"> ({row.total})</span>
+                  <span className="tabular-nums text-sky-700"> ({row.total})</span>
                 </p>
               ))}
             </div>
             <div className="min-w-0 space-y-1">
-              <p className="font-semibold text-emerald-800 dark:text-emerald-300">Categoría más registrada por vendedor</p>
+              <p className="font-semibold text-emerald-800">Categoría más registrada por vendedor</p>
               {topVend.length === 0 ? (
                 <p className="text-muted-foreground">Sin datos.</p>
               ) : topVend.map((row) => (
                 <p key={row.vendedorId} className="truncate text-muted-foreground">
                   <span className="font-medium text-foreground">{row.vendedor}</span>
                   {' · '}{row.categoria}
-                  <span className="tabular-nums text-emerald-700 dark:text-emerald-300"> ({row.total})</span>
+                  <span className="tabular-nums text-emerald-700"> ({row.total})</span>
                 </p>
               ))}
             </div>

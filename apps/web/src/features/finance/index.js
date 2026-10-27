@@ -1,7 +1,4 @@
-// Public entry of the finance feature. The page is lazy: projects and the cronograma import the payment dialog, and
-// that must not pull the whole finance page into their chunks.
-import { lazy } from 'react';
-
-export const FinancePage = lazy(() => import('./pages/FinancePage.jsx'));
+// Public entry of the finance feature: the payment dialogs used by projects and the cronograma. The page is loaded by
+// app/App.jsx straight from its file (GATE-01).
 export { IncomeDialog } from './components/IncomeDialog.jsx';
 export { MovementDialog } from './components/MovementDialog.jsx';

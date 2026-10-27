@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Lock, Mail, Users, ShieldCheck, TrendingUp, ArrowRight, Eye, EyeOff, Wifi, Cpu } from 'lucide-react';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { toast } from 'sonner';
 import authService from '@/services/auth/index.js';
 import { ROLES } from '@/constants/roles.js';
@@ -25,6 +25,7 @@ const API_ACCOUNT_CHIPS = USERS
   .map((u) => ({ email: u.email, name: u.name.split(' ')[0], role: CHIP_ROLE_LABEL[u.role] ?? u.role }));
 
 const LoginPage = () => {
+  useDocumentTitle('Acceso');
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -55,10 +56,6 @@ const LoginPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Acceso - H&S Tecnologías</title>
-        <meta name="description" content="Acceso operativo a la plataforma de gestión H&S Tecnologías." />
-      </Helmet>
 
       <style>{`
         .hs-input-dark {

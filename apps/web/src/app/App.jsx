@@ -3,19 +3,24 @@ import { Route, Routes, BrowserRouter as Router, Navigate, useParams } from 'rea
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 import { routeRoles } from '@/config/nav.js';
-import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient.js';
 import { RealtimeProvider } from './RealtimeProvider.jsx';
-import { ConfirmProvider } from '@/shared/views';
-import { ClientDetailPage, ClientsPage } from '@/features/clients';
-import { FinancePage } from '@/features/finance';
-import { ProjectDetailPage, ProjectsPage } from '@/features/projects';
-import { SurveysPage } from '@/features/surveys';
-import { InventoryPage } from '@/features/inventory';
-import { OrderDetailPage } from '@/features/orders';
+// Straight from their files, not from the barrels: a barrel also re-exports dialogs and pickers, which would land in
+// the entry bundle (GATE-01).
+import { ConfirmProvider } from '@/shared/views/confirm.jsx';
 
+const ClientsPage = lazy(() => import('@/features/clients/pages/ClientsPage.jsx'));
+const ClientDetailPage = lazy(() => import('@/features/clients/pages/ClientDetailPage.jsx'));
+const FinancePage = lazy(() => import('@/features/finance/pages/FinancePage.jsx'));
+const ProjectsPage = lazy(() => import('@/features/projects/pages/ProjectsPage.jsx'));
+const ProjectDetailPage = lazy(() => import('@/features/projects/pages/ProjectDetailPage.jsx'));
+const SurveysPage = lazy(() => import('@/features/surveys/pages/SurveysPage.jsx'));
+const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage.jsx'));
+const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPage.jsx'));
+
+const AppToaster = lazy(() => import('./AppToaster.jsx'));
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage.jsx'));
@@ -23,9 +28,9 @@ const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
 const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
 const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
-const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
-const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
-const SchedulePage = lazy(() => import('@/features/schedule').then((m) => ({ default: m.SchedulePage })));
+const QuotationsPage = lazy(() => import('@/features/quotations/pages/QuotationsPage.jsx'));
+const QuotationDetailPage = lazy(() => import('@/features/quotations/pages/QuotationDetailPage.jsx'));
+const SchedulePage = lazy(() => import('@/features/schedule/pages/SchedulePage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
 const VehicleControlPage = lazy(() => import('@/pages/VehicleControlPage.jsx'));
 const VehicleDetailPage = lazy(() => import('@/pages/VehicleDetailPage.jsx'));
@@ -230,7 +235,9 @@ function App() {
             } />
           </Routes>
         </Suspense>
-        <Toaster position="top-center" richColors closeButton />
+        <Suspense fallback={null}>
+          <AppToaster />
+        </Suspense>
       </Router>
     </ConfirmProvider>
     </RealtimeProvider>

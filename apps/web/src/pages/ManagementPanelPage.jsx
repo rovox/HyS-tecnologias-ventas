@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { apiClient, authToken } from '@/api/http.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { MANAGER_ROLES } from '@/constants/roles.js';
@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { reportLoadError } from '@/lib/loadError.js';
 
 const ManagementPanelPage = () => {
+  useDocumentTitle('Panel de control');
   const { currentUser } = useAuth();
   
   const [loading, setLoading] = useState(true);
@@ -108,9 +109,6 @@ const ManagementPanelPage = () => {
 
   return (
     <Layout>
-      <Helmet>
-        <title>Management Panel - H&S</title>
-      </Helmet>
       
       <div className="content-container py-6 space-y-8">
         <header>
@@ -277,10 +275,10 @@ const ManagementPanelPage = () => {
                               </td>
                               <td className="px-6 py-3">
                                 <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold capitalize
-                                  ${accion === 'crear' || accion === 'CREATE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                    accion === 'eliminar' || accion === 'DELETE' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                                    accion === 'editar' || accion === 'UPDATE' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                    'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'}`}>
+                                  ${accion === 'crear' || accion === 'CREATE' ? 'bg-emerald-100 text-emerald-800' :
+                                    accion === 'eliminar' || accion === 'DELETE' ? 'bg-red-100 text-red-800' :
+                                    accion === 'editar' || accion === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-slate-100 text-slate-800'}`}>
                                   {accion.replace(/_/g, ' ').toLowerCase()}
                                 </span>
                               </td>
