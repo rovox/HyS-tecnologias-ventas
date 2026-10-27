@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, StreamableFile, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../../common/auth/current-user.decorator';
-import { CreateMovementDto, ImpactQuery, ListMovementsQuery, ReasonDto, UpdateMovementDto, ValidateMovementDto } from './dto/finance.dto';
+import { CreateMovementDto, ExportMovementsQuery, ImpactQuery, ListMovementsQuery, ReasonDto, UpdateMovementDto, ValidateMovementDto } from './dto/finance.dto';
 import { LedgerService } from './ledger.service';
 
 @ApiTags('finance')
@@ -17,6 +17,13 @@ export class FinanceController {
   @ApiOperation({ summary: 'Ledger (commercial roles see all, técnico his own)' })
   list(@Query() query: ListMovementsQuery, @CurrentUser() user: User) {
     return this.ledger.list(query, user);
+  }
+
+  @Get('movements/export')
+  @ApiOperation({ summary: 'The ledger (day, range, branch or company) as CSV or Excel' })
+  async export(@Query() query: ExportMovementsQuery, @CurrentUser() user: User) {
+    const { file, name, type } = await this.ledger.export(query, user);
+    return new StreamableFile(file, { type, disposition: `attachment; filename="${name}"` });
   }
 
   @Get('por-rendir')

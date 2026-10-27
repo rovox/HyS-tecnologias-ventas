@@ -8,7 +8,7 @@ import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Chatter } from '@/features/activity';
 import { ControlPanel, Field, FieldGrid, FormView, ListView, LocationLink, StatusBadge, ToneTag } from '@/shared/views';
-import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { formatBs, formatDay, formatBusinessDay } from '@/shared/lib/format.js';
 import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useClientSummary } from '../api.js';
 import { ClientFormDialog } from '../components/ClientFormDialog.jsx';
@@ -64,7 +64,7 @@ const quoteColumns = [
   { key: 'monto', header: 'Monto', align: 'right', cell: (q) => formatBs(q.monto) },
 ];
 const paymentColumns = [
-  { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+  { key: 'fecha', header: 'Fecha', cell: (m) => formatBusinessDay(m.fecha) },
   { key: 'concepto', header: 'Concepto', cell: (m) => CONCEPTO[m.concepto] || m.concepto },
   { key: 'origen', header: 'De', cell: (m) => m.project?.codigo || m.schedule?.descripcionTrabajo || '—' },
   { key: 'estado', header: 'Estado', cell: (m) => STATE[m.estado] },

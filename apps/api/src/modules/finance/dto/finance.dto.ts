@@ -174,6 +174,18 @@ export class ListMovementsQuery {
   @IsOptional()
   @IsDateString()
   hasta?: string;
+
+  @ApiPropertyOptional({ description: 'Only this branch (without it: the whole company)' })
+  @IsOptional()
+  @IsString()
+  sucursalId?: string;
+}
+
+/** The ledger as a file (FIN-06): the same filters, csv or xlsx. */
+export class ExportMovementsQuery extends ListMovementsQuery {
+  @ApiProperty({ enum: ['csv', 'xlsx'] })
+  @IsIn(['csv', 'xlsx'], { message: 'Formato no válido: csv o xlsx' })
+  formato: 'csv' | 'xlsx';
 }
 
 /** A payment of a project or job: advance, payment against the balance, or an additional charge on top. */

@@ -553,6 +553,24 @@ describe('hs-erp API (e2e)', () => {
       expect(rows[0].id).toBe(g.id);
     });
 
+    it('the daily ledger filters by Bolivian day and branch and downloads as CSV or Excel (FIN-06)', async () => {
+      const today = new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10);
+      const g = (await http().post('/api/finance/movements').set(ventas())
+        .send({ tipo: 'egreso', concepto: 'servicios', monto: 7, fecha: today, pagadoPor: 'empresa', sucursalId: 'suc_punata', nota: 'FIN-06 Punata' }).expect(201)).body;
+      const day = (q: string) => http().get(`/api/finance/movements?desde=${today}&hasta=${today}${q}`).set(ventas()).expect(200);
+      expect((await day('&sucursalId=suc_punata')).body.map((r: { id: string }) => r.id)).toContain(g.id);
+      expect((await day('&sucursalId=suc_central')).body.map((r: { id: string }) => r.id)).not.toContain(g.id);
+      const csv = await http().get(`/api/finance/movements/export?formato=csv&desde=${today}&hasta=${today}&sucursalId=suc_punata`).set(ventas()).expect(200);
+      expect(csv.headers['content-type']).toContain('text/csv');
+      expect(csv.text).toContain('FIN-06 Punata');
+      expect(csv.text.split('\n')[0]).toContain('Fecha;Hora;Tipo;Concepto;Monto Bs');
+      const xlsx = await http().get(`/api/finance/movements/export?formato=xlsx&desde=${today}&hasta=${today}`).set(ventas())
+        .buffer(true).parse((res, cb) => { const chunks: Buffer[] = []; res.on('data', (c: Buffer) => chunks.push(c)); res.on('end', () => cb(null, Buffer.concat(chunks))); }).expect(200);
+      expect(xlsx.headers['content-disposition']).toMatch(/attachment; filename="libro-toda-la-empresa-.*\.xlsx"/);
+      expect((xlsx.body as Buffer).subarray(0, 2).toString()).toBe('PK');
+      await http().get('/api/finance/movements/export?formato=pdf').set(ventas()).expect(400);
+    });
+
     it('transfers between boxes are Gerencia only and move both balances', async () => {
       const body = { tipo: 'transferencia', concepto: 'deposito', monto: 50, cajaId: 'caja_central', cajaDestinoId: 'caja_chica_punata', sucursalId: 'suc_central' };
       await http().post('/api/finance/movements').set(ventas()).send(body).expect(403);

@@ -1,4 +1,4 @@
-import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { businessDayOf, formatBs, formatBusinessDay, formatDay } from '@/shared/lib/format.js';
 import { cn } from '@/lib/utils';
 import { StatusBadge, ToneTag } from '@/shared/views';
 import { CONCEPTO_LABEL, TIPO_LABEL, sign } from '../constants.js';
@@ -72,7 +72,7 @@ export function movementSummary(rows) {
 
 export function movementColumns(renderActions) {
   return [
-    { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+    { key: 'fecha', header: 'Fecha', cell: (m) => formatBusinessDay(m.fecha) },
     {
       key: 'concepto',
       header: 'Concepto',
@@ -102,7 +102,7 @@ export function MovementCard({ movement: m, actions }) {
       </div>
       <Detail movement={m} />
       <div className="flex items-center justify-between">
-        <span className="text-xs">{formatDay(m.fecha)}, {m.registradoPor?.name}</span>
+        <span className="text-xs">{formatBusinessDay(m.fecha)}, {m.registradoPor?.name}</span>
         <div className="flex items-center gap-1">
           <MovementStateBadge movement={m} />
           {actions}
@@ -113,7 +113,7 @@ export function MovementCard({ movement: m, actions }) {
 }
 
 export const movementCsv = [
-  { header: 'Fecha', value: (m) => String(m.fecha).slice(0, 10) },
+  { header: 'Fecha', value: (m) => businessDayOf(m.fecha) },
   { header: 'Tipo', value: (m) => m.tipo },
   { header: 'Concepto', value: (m) => CONCEPTO_LABEL[m.concepto] || m.concepto },
   { header: 'Proyecto', value: (m) => m.project?.codigo },

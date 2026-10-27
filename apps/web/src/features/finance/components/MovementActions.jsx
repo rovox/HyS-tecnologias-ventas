@@ -1,36 +1,32 @@
-import { Check, MoreHorizontal, Pencil, X } from 'lucide-react';
+import { Check, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { RowQuickActions } from '@/shared/views';
 
 /**
- * Actions of a movement row. `quick` (rendición inbox): ✓ validates into the branch's box in one click and ✗ observes
- * it with a reason; the ⋯ menu keeps the rest. `actions` comes from useMovementActions.
+ * Actions of a movement row, as icons first (FIN-06): ✓ validates into the branch's box (green), the pencil edits, the
+ * red bin annuls with a reason (nothing is deleted: it stays crossed out). `quick` (rendición inbox): ✓, ✗ observes
+ * with a reason, pencil. The ⋯ menu keeps the rest. `actions` comes from useMovementActions.
  */
 export function MovementActions({ movement: m, actions, quick = false }) {
   const can = actions.allowed(m);
+  const editLabel = m.estado === 'validado' ? 'Editar (queda en el historial)' : 'Corregir';
+  const icons = [
+    { key: 'ok', icon: Check, label: 'Validar en la caja de la sucursal', tone: 'success', hidden: !can.validate, disabled: actions.busy, onClick: () => actions.validate(m) },
+    quick && { key: 'no', icon: X, label: 'Observar: no es correcto', tone: 'danger', hidden: !can.observe, disabled: actions.busy, onClick: () => actions.observe(m) },
+    { key: 'edit', icon: Pencil, label: editLabel, hidden: !can.edit, onClick: () => actions.edit(m) },
+    !quick && { key: 'annul', icon: Trash2, label: 'Anular (pide motivo)', tone: 'danger', hidden: !can.annul, disabled: actions.busy, onClick: () => actions.annul(m) },
+  ].filter(Boolean);
   const menu = [
     can.validate && { key: 'box', label: 'Validar en otra caja…', run: () => actions.chooseBox(m) },
-    !quick && can.validate && { key: 'validate', label: 'Validar en la caja de la sucursal', run: () => actions.validate(m) },
     !quick && can.observe && { key: 'observe', label: 'Observar…', run: () => actions.observe(m) },
-    can.edit && { key: 'edit', label: m.estado === 'validado' ? 'Editar (queda en el historial)' : 'Corregir', run: () => actions.edit(m) },
     can.refund && { key: 'refund', label: 'Marcar reembolsado', run: () => actions.refund(m) },
-    can.annul && { key: 'annul', label: 'Anular…', destructive: true, run: () => actions.annul(m) },
+    quick && can.annul && { key: 'annul', label: 'Anular…', destructive: true, run: () => actions.annul(m) },
   ].filter(Boolean);
-  if (!menu.length && !(quick && (can.validate || can.observe))) return null;
+  if (!menu.length && icons.every((i) => i.hidden)) return null;
 
   return (
-    <RowQuickActions
-      actions={
-        quick
-          ? [
-              { key: 'ok', icon: Check, label: 'Validar en la caja de la sucursal', tone: 'success', hidden: !can.validate, disabled: actions.busy, onClick: () => actions.validate(m) },
-              { key: 'no', icon: X, label: 'Observar: no es correcto', tone: 'danger', hidden: !can.observe, disabled: actions.busy, onClick: () => actions.observe(m) },
-              { key: 'edit', icon: Pencil, label: 'Corregir', hidden: !can.edit, onClick: () => actions.edit(m) },
-            ]
-          : []
-      }
-    >
+    <RowQuickActions actions={icons}>
       {menu.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

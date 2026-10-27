@@ -7,6 +7,9 @@ const day = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', y
 /** Date-only values (due dates, scheduled days) are stored at UTC midnight: read them in UTC, not local time. */
 const dateOnly = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const dayTime = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+/** Instants of money (movements, sales) belong to a day in Bolivia: the day of the daily ledger and the cash close. */
+const BUSINESS_TZ = 'America/La_Paz';
+const businessDayFmt = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric', timeZone: BUSINESS_TZ });
 
 const toDate = (value) => (value ? new Date(value) : null);
 const valid = (date) => date && !Number.isNaN(date.getTime());
@@ -22,6 +25,18 @@ export function formatDate(value) {
 export function formatDay(value) {
   const date = toDate(value);
   return valid(date) ? dateOnly.format(date) : '—';
+}
+
+/** The Bolivian day of an instant (a movement): "27 oct 2026", whatever the browser time zone. */
+export function formatBusinessDay(value) {
+  const date = toDate(value);
+  return valid(date) ? businessDayFmt.format(date) : '—';
+}
+
+/** YYYY-MM-DD of an instant in Bolivia (forms, filters, exports); today when no value. */
+export function businessDayOf(value = new Date()) {
+  const date = toDate(value);
+  return valid(date) ? date.toLocaleDateString('en-CA', { timeZone: BUSINESS_TZ }) : '';
 }
 
 export function formatDateTime(value) {
