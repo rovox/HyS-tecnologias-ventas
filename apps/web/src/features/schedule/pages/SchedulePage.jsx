@@ -146,7 +146,7 @@ export default function SchedulePage() {
         {view === 'semana' && <WeekView days={days} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} phone={phone} />}
         {view === 'mes' && <MonthView grid={days} month={anchor} jobsByDay={jobsByDay} onOpen={(j) => setOpenId(j.id)} onShowWeek={(day) => go({ view: 'semana', dia: day })} />}
         {view === 'lista' && (
-          <ListView columns={listColumns} rows={rows} groups={groups} loading={isLoading} tone={(j) => (unassigned(j) ? 'danger' : undefined)} onRowClick={(j) => setOpenId(j.id)} empty="No hay trabajos en estas fechas" />
+          <ListView id="cronograma" columns={listColumns} rows={rows} groups={groups} loading={isLoading} tone={(j) => (unassigned(j) ? 'danger' : undefined)} onRowClick={(j) => setOpenId(j.id)} empty="No hay trabajos en estas fechas" />
         )}
       </div>
       <JobDetailSheet jobId={openId} onClose={() => setOpenId(null)} />

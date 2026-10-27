@@ -52,6 +52,7 @@ export default function ProjectsPage() {
       />
       <div className="px-4 py-4 sm:px-6">
         <ListView
+          id="proyectos"
           columns={projectColumns}
           rows={rows}
           groups={groups}

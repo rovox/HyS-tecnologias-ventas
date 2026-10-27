@@ -176,6 +176,7 @@ export default function SurveysPage() {
       />
       <div className="px-4 py-4 sm:px-6">
         <ListView
+          id="visitas"
           columns={columns}
           rows={rows}
           groups={groups}

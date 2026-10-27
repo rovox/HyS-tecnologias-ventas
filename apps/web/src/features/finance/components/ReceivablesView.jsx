@@ -19,5 +19,5 @@ export function ReceivablesView() {
   const navigate = useNavigate();
   const { data: projects = [], isLoading } = useProjects();
   const owing = projects.filter((p) => p.saldo > 0).sort((a, b) => b.saldo - a.saldo);
-  return <ListView columns={columns} rows={owing} loading={isLoading} onRowClick={(p) => navigate(`/projects/${p.id}`)} empty="Ningún proyecto tiene saldo pendiente" />;
+  return <ListView id="por-cobrar" columns={columns} rows={owing} loading={isLoading} onRowClick={(p) => navigate(`/projects/${p.id}`)} empty="Ningún proyecto tiene saldo pendiente" />;
 }

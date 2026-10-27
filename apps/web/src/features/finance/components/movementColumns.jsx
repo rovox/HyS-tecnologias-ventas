@@ -52,6 +52,24 @@ const boxes = (m) => (m.tipo === 'transferencia' ? `${m.caja?.nombre || '—'} �
 /** Net effect on cash (incomes minus expenses; transfers net to zero). */
 const net = (rows) => formatBs(rows.filter((m) => m.estado !== 'anulado').reduce((sum, m) => sum + sign(m) * Number(m.monto), 0));
 
+/**
+ * The figures read before the rows (LIST-01): incomes, expenses and their net (annulled ones do not count; transfers
+ * only move money between boxes), plus what still waits for validation.
+ */
+export function movementSummary(rows) {
+  const live = rows.filter((m) => m.estado !== 'anulado');
+  const sum = (list) => list.reduce((total, m) => total + Number(m.monto), 0);
+  const ingresos = sum(live.filter((m) => m.tipo === 'ingreso'));
+  const egresos = sum(live.filter((m) => m.tipo === 'egreso'));
+  const pending = live.filter((m) => m.estado === 'por_validar' && m.tipo !== 'transferencia');
+  return [
+    { label: 'Ingresos', value: `+${formatBs(ingresos)}`, tone: 'success' },
+    { label: 'Egresos', value: `−${formatBs(egresos)}`, tone: 'danger' },
+    { label: 'Neto', value: formatBs(ingresos - egresos), tone: ingresos - egresos < 0 ? 'danger' : undefined },
+    { label: `Por validar (${pending.length})`, value: formatBs(pending.reduce((t, m) => t + sign(m) * Number(m.monto), 0)), tone: pending.length ? 'warning' : undefined },
+  ];
+}
+
 export function movementColumns(renderActions) {
   return [
     { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },

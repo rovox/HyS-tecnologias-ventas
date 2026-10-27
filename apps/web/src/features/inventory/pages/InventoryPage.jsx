@@ -177,6 +177,7 @@ export default function InventoryPage() {
       <div className="px-4 py-4 sm:px-6">
         {vista === 'productos' ? (
           <ListView
+            id="inventario-productos"
             columns={columns}
             rows={list.rows}
             tone={(p) => (!p.active ? 'neutral' : p.stockBajo ? 'danger' : undefined)}
@@ -197,7 +198,7 @@ export default function InventoryPage() {
             )}
           />
         ) : (
-          <ListView columns={movementColumns} rows={moves.rows} loading={loadingMoves} empty="Sin movimientos" />
+          <ListView id="inventario-movimientos" columns={movementColumns} rows={moves.rows} loading={loadingMoves} empty="Sin movimientos" />
         )}
       </div>
       <ProductDialog open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)} product={editing?.id ? editing : null} />

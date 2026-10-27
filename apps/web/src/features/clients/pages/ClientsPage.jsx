@@ -70,6 +70,7 @@ export default function ClientsPage() {
       />
       <div className="px-4 py-4 sm:px-6">
         <ListView
+          id="clientes"
           columns={columns}
           rows={rows}
           groups={groups}

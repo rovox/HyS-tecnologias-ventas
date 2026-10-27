@@ -15,7 +15,7 @@ import { CustodyView } from '../components/CustodyView.jsx';
 import { MovementActions } from '../components/MovementActions.jsx';
 import { MovementDialog } from '../components/MovementDialog.jsx';
 import { MovementSheet } from '../components/MovementSheet.jsx';
-import { MovementCard, movementColumns, movementCsv } from '../components/movementColumns.jsx';
+import { MovementCard, movementColumns, movementCsv, movementSummary } from '../components/movementColumns.jsx';
 import { ReceivablesView } from '../components/ReceivablesView.jsx';
 import { ValidateDialog } from '../components/ValidateDialog.jsx';
 import { useMovementActions } from '../components/useMovementActions.js';
@@ -140,8 +140,10 @@ export default function FinancePage() {
         {view.key === 'por_rendir' && <CustodyView actions={actions} onOpen={openMovement} />}
         {view.test && (
           <ListView
+            id="finanzas-movimientos"
             columns={columns}
             rows={rows}
+            summary={movementSummary}
             groups={groups}
             loading={isLoading}
             tone={(m) => (m.estado === 'observado' ? 'danger' : m.estado === 'por_validar' ? 'warning' : undefined)}
