@@ -55,7 +55,9 @@ export function boxForPayment(medio: string, sucursalId: string, boxes: Box[]): 
   if (medio === 'efectivo') return active.find((b) => b.sucursalId === sucursalId && ['caja', 'caja_chica'].includes(b.tipo))?.id ?? null;
   const tipo = medio === 'qr' ? 'qr' : medio === 'transferencia' ? 'banco' : null;
   if (!tipo) return null;
-  return (active.find((b) => b.tipo === tipo && b.sucursalId === sucursalId) ?? active.find((b) => b.tipo === tipo))?.id ?? null;
+  // By id, so with two QR boxes (QR Empresa `caja_qr`, QR Socia `caja_qr_socia`) a sale always goes to the company's.
+  const byId = active.filter((b) => b.tipo === tipo).sort((a, b) => a.id.localeCompare(b.id));
+  return (byId.find((b) => b.sucursalId === sucursalId) ?? byId[0])?.id ?? null;
 }
 
 /** NV-0445. */

@@ -31,6 +31,7 @@ describe('direct sales rules (VD-01)', () => {
     const boxes = [
       { id: 'caja_central', tipo: 'caja', sucursalId: 'suc_central', active: true },
       { id: 'caja_chica_punata', tipo: 'caja_chica', sucursalId: 'suc_punata', active: true },
+      { id: 'caja_qr_socia', tipo: 'qr', sucursalId: 'suc_central', active: true },
       { id: 'caja_qr', tipo: 'qr', sucursalId: 'suc_central', active: true },
       { id: 'caja_banco', tipo: 'banco', sucursalId: 'suc_central', active: true },
     ];

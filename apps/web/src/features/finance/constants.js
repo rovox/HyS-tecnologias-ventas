@@ -27,6 +27,7 @@ export const CONCEPTO_LABEL = {
   asistencia: 'Asistencia',
   cobro: 'Cobro',
   venta_directa: 'Venta directa',
+  saldo_inicial: 'Saldo inicial',
   diferencia_arqueo: 'Diferencia de arqueo',
   adicional: 'Adicional',
   ...CONCEPTOS.ingreso,
