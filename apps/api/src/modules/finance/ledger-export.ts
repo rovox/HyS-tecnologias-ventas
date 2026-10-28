@@ -1,4 +1,4 @@
-import { Workbook } from 'exceljs';
+import type { Workbook as WorkbookType } from 'exceljs';
 import { LEDGER_COLUMNS, LedgerRow, LedgerSummary } from './domain/ledger-export.rules';
 
 const csvCell = (value: string | number) => {
@@ -16,7 +16,9 @@ const MONEY = '#,##0.00;[Red]-#,##0.00';
 
 /** A real workbook: sheet "Libro" (amounts as numbers, filters, frozen header) and sheet "Resumen". */
 export async function ledgerXlsx(rows: LedgerRow[], summary: LedgerSummary, title: string): Promise<Buffer> {
-  const book = new Workbook();
+  // Loaded on first export, not at boot (exceljs alone takes ~0.7 s to load; Hostinger needs a fast listen()).
+  const { Workbook } = await import('exceljs');
+  const book: WorkbookType = new Workbook();
   book.creator = 'H&S Tecnologías ERP';
   book.created = new Date();
 

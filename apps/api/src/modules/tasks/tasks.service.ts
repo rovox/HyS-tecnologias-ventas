@@ -6,7 +6,6 @@ import {
   Logger,
   NotFoundException,
   OnModuleDestroy,
-  OnModuleInit,
 } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -31,7 +30,7 @@ function titleFromDescription(text?: string | null) {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
-export class TasksService implements OnModuleInit, OnModuleDestroy {
+export class TasksService implements OnModuleDestroy {
   private readonly logger = new Logger(TasksService.name);
   private purgeTimer?: NodeJS.Timeout;
 
@@ -40,7 +39,8 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     private readonly audit: AuditService,
   ) {}
 
-  onModuleInit() {
+  /** Called by main.ts after app.listen(): nothing runs before the port is open. */
+  startTimers() {
     const run = () => this.purgeArchived().catch((err) => this.logger.error(`Purga de tareas archivadas: ${err}`));
     run();
     this.purgeTimer = setInterval(run, DAY_MS);

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -18,7 +18,7 @@ const HOUR_MS = 60 * 60 * 1000;
 
 /** Quotation states: send, approve (creates the project), reject, reopen, expire, delete and restore. */
 @Injectable()
-export class QuotationFlowService implements OnModuleInit, OnModuleDestroy {
+export class QuotationFlowService implements OnModuleDestroy {
   private readonly logger = new Logger(QuotationFlowService.name);
   private expiryTimer?: NodeJS.Timeout;
 
@@ -38,7 +38,8 @@ export class QuotationFlowService implements OnModuleInit, OnModuleDestroy {
     return present(await this.row(id, user));
   }
 
-  onModuleInit() {
+  /** Called by main.ts after app.listen(): nothing runs before the port is open. */
+  startTimers() {
     const run = () => this.expireOverdue().catch((err) => this.logger.error(`Vencimiento de cotizaciones: ${err}`));
     run();
     this.expiryTimer = setInterval(run, HOUR_MS);

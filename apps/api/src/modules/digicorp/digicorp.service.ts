@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { canRegisterMovements, isAdmin } from '../../common/policy/policy';
@@ -21,14 +21,15 @@ class Blocked extends Error {}
  * evaded. The monthly refresh only runs where `DIGICORP_AUTO_SYNC=1` (production), never in tests.
  */
 @Injectable()
-export class DigicorpService implements OnModuleInit, OnModuleDestroy {
+export class DigicorpService implements OnModuleDestroy {
   private readonly logger = new Logger(DigicorpService.name);
   private timer?: NodeJS.Timeout;
   private running = false;
 
   constructor(private readonly prisma: PrismaService) {}
 
-  onModuleInit() {
+  /** Called by main.ts after app.listen(): nothing runs before the port is open. */
+  startTimers() {
     if (process.env.DIGICORP_AUTO_SYNC !== '1') return;
     const check = () => this.syncIfDue().catch((err) => this.logger.error(`Tienda Digicorp: ${err}`));
     check();
