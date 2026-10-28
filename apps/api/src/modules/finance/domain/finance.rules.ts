@@ -7,7 +7,7 @@ import type { TransitionCheck } from '../../../common/domain/state-machine';
 export const MOVEMENT_TIPOS = ['ingreso', 'egreso', 'transferencia'] as const;
 
 const CONCEPTOS: Record<string, readonly string[]> = {
-  ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'diferencia_arqueo', 'devolucion_anticipo', 'otro'],
+  ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'diferencia_arqueo', 'devolucion_anticipo', 'saldo_inicial', 'otro'],
   egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'anticipo_por_rendir', 'diferencia_arqueo', 'otro'],
   transferencia: ['deposito', 'retiro'],
 };

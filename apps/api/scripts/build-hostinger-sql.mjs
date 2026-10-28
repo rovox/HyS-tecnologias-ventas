@@ -1,18 +1,23 @@
 #!/usr/bin/env node
-// Builds the ONE SQL file that creates the production database on Hostinger Cloud Startup (phpMyAdmin → the empty
-// database u656468476_hys_sales → Import). In order:
-//   1. every prisma/migrations/*/migration.sql in folder order: tables, indexes, keys and the fixed catalogs (branches,
-//      the 3 divisions, cash boxes);
-//   2. `_prisma_migrations` with those migrations marked applied (checksum = sha256 of the file, as Prisma computes it),
-//      so the database and the migration history agree for later updates;
-//   3. with --users: the production users from config/users.json (not `localOnly`), passwords hashed with bcrypt from
-//      the gitignored config/users.passwords.local.json. A user without a password there is left out (warning).
+// Builds the ONE SQL file that creates the production database on Hostinger Cloud Startup (empty database
+// u656468476_hys_sales, after a backup). In order:
+//   1. the schema of prisma/schema.prisma, from `prisma migrate diff --from-empty --to-schema-datamodel` (LAUNCH P0-1:
+//      the schema itself, not the replay of 32 migrations);
+//   2. the fixed catalogs the app needs: branches with their address, the 3 divisions, the cash boxes;
+//   3. `_prisma_migrations` with every migration marked applied (checksum = sha256 of the file, as Prisma computes it),
+//      so later delta migrations go in with `prisma migrate deploy`;
+//   4. with --users: the production users from config/users.json (not `localOnly`), passwords hashed with bcrypt from
+//      the gitignored config/users.passwords.local.json (a user without a password there is left out, warning), and
+//      the opening balance of each box given with --saldo (a validated `saldo_inicial` income dated the evening before
+//      --desde, so the first cash close starts from it).
 //
 //   node apps/api/scripts/build-hostinger-sql.mjs           → docs/deployment/hostinger-db.sql (committed: no users)
-//   node apps/api/scripts/build-hostinger-sql.mjs --users   → config/hostinger-db.local.sql (gitignored): import this one
+//   node apps/api/scripts/build-hostinger-sql.mjs --users --desde 2026-10-29 --saldo caja_central=1500 --saldo caja_qr=0
+//                                                           → config/hostinger-db.local.sql (gitignored): import this one
 //
-// Re-run it after every new migration. Never seed the host (no demo data).
+// Re-run it after every schema change. Never seed the host (no demo data).
 
+import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -22,35 +27,71 @@ import USERS from '../../../config/users.json' with { type: 'json' };
 import { localPasswordFor } from '../../../config/users.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '../../..');
-const MIGRATIONS = join(HERE, '../prisma/migrations');
-const withUsers = process.argv.includes('--users');
+const API = join(HERE, '..');
+const ROOT = join(API, '../..');
+const MIGRATIONS = join(API, 'prisma/migrations');
+const args = process.argv.slice(2);
+const withUsers = args.includes('--users');
 const OUT = withUsers ? join(ROOT, 'config/hostinger-db.local.sql') : join(ROOT, 'docs/deployment/hostinger-db.sql');
 
-const sql = (value) => `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
+const valuesOf = (flag) => args.flatMap((a, i) => (a === flag && args[i + 1] ? [args[i + 1]] : []));
+const sql = (value) => (value === null ? 'NULL' : `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "''")}'`);
 const folders = readdirSync(MIGRATIONS).filter((f) => statSync(join(MIGRATIONS, f)).isDirectory()).sort();
+
+// The catalogs the migrations insert, in one place (verified against a migrated database, see hostinger.md).
+const BRANCHES = [
+  ['suc_central', 'Central', 'C. México N° 290 esq. España, Cochabamba'],
+  ['suc_punata', 'Punata', 'Calle Ingavi N° 10 entre Avaroa y Tumusla N° 104, Punata'],
+  ['suc_quillacollo', 'Quillacollo', 'Av. General Pando esq. Antofagasta N° 230, Quillacollo'],
+];
+const DIVISIONS = [
+  ['computo_comunicacion', 'Cómputo y comunicación', 1],
+  ['seguridad_electronica', 'Seguridad electrónica', 2],
+  ['cableado_estructurado', 'Cableado estructurado', 3],
+];
+const BOXES = [
+  ['caja_central', 'Caja central Cochabamba', 'caja', 'suc_central'],
+  ['caja_chica_punata', 'Caja chica Punata', 'caja_chica', 'suc_punata'],
+  ['caja_chica_quillacollo', 'Caja chica Quillacollo', 'caja_chica', 'suc_quillacollo'],
+  ['caja_banco', 'Banco (transferencias)', 'banco', 'suc_central'],
+  ['caja_qr', 'QR Empresa', 'qr', 'suc_central'],
+  ['caja_qr_socia', 'QR Socia', 'qr', 'suc_central'],
+];
+
+const schema = execFileSync(
+  join(API, 'node_modules/.bin/prisma'),
+  ['migrate', 'diff', '--from-empty', '--to-schema-datamodel', 'prisma/schema.prisma', '--script'],
+  { cwd: API, encoding: 'utf8', env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL || 'mysql://u:p@127.0.0.1:3306/x' } },
+)
+  // MySQL 8 refuses a literal default on TEXT (`@default("") @db.Text`); the migrations create those columns without
+  // one and the Prisma client sends the '' itself.
+  .replace(/(` (?:TINY|MEDIUM|LONG)?TEXT NOT NULL) DEFAULT ''/g, '$1');
 
 const out = [
   `-- H&S ERP: production database for Hostinger Cloud Startup, in ONE file.`,
-  `-- Import into the EMPTY database (hPanel → Databases → phpMyAdmin → u656468476_hys_sales → Import). It creates`,
-  `-- every table and the fixed catalogs; it does not create the database itself (Hostinger does) nor demo data.`,
-  `-- Generated by apps/api/scripts/build-hostinger-sql.mjs from ${folders.length} migrations (${folders[0]} … ${folders.at(-1)}).`,
+  `-- Import into the EMPTY database after a backup. It creates every table and the fixed catalogs; it does not create`,
+  `-- the database itself (Hostinger does) nor demo data.`,
+  `-- Generated by apps/api/scripts/build-hostinger-sql.mjs: schema from prisma/schema.prisma (prisma migrate diff`,
+  `-- --from-empty), history of ${folders.length} migrations (${folders[0]} … ${folders.at(-1)}).`,
   withUsers
     ? `-- Includes the production users with bcrypt hashes: DO NOT commit or share this file.`
     : `-- No users here: run the script with --users (passwords in config/users.passwords.local.json) to get the file to import.`,
   `-- Do not edit by hand: re-run the script.`,
   '',
   'SET NAMES utf8mb4;',
-  'SET time_zone = \'+00:00\';',
+  "SET time_zone = '+00:00';",
   '',
-];
-
-for (const folder of folders) {
-  const body = readFileSync(join(MIGRATIONS, folder, 'migration.sql'), 'utf8');
-  out.push(`-- ===== ${folder} =====`, body.trim(), '');
-}
-
-out.push(
+  '-- ===== Schema (prisma/schema.prisma) =====',
+  schema.trim(),
+  '',
+  '-- ===== Catalogs =====',
+  'INSERT INTO `sucursales` (`id`, `nombre`, `direccion`, `createdAt`, `updatedAt`) VALUES',
+  BRANCHES.map(([id, nombre, direccion]) => `  (${sql(id)}, ${sql(nombre)}, ${sql(direccion)}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`).join(',\n') + ';',
+  'INSERT INTO `quotation_categories` (`id`, `label`, `active`, `principal`, `sortOrder`, `createdAt`, `updatedAt`) VALUES',
+  DIVISIONS.map(([id, label, order]) => `  (${sql(id)}, ${sql(label)}, true, true, ${order}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`).join(',\n') + ';',
+  'INSERT INTO `cash_boxes` (`id`, `nombre`, `tipo`, `sucursalId`, `active`, `createdAt`, `updatedAt`) VALUES',
+  BOXES.map(([id, nombre, tipo, suc]) => `  (${[id, nombre, tipo, suc].map(sql).join(', ')}, true, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`).join(',\n') + ';',
+  '',
   '-- ===== Migration history (Prisma) =====',
   `CREATE TABLE \`_prisma_migrations\` (
   \`id\` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -71,10 +112,11 @@ out.push(
     })
     .join(',\n') + ';',
   '',
-);
+];
 
 if (withUsers) {
   const rows = [];
+  const ids = new Map();
   for (const u of USERS.filter((x) => !x.localOnly)) {
     const password = localPasswordFor(u.email);
     if (!password) {
@@ -82,6 +124,7 @@ if (withUsers) {
       continue;
     }
     const id = `usr_${u.email.split('@')[0].replace(/[^a-z0-9]/gi, '_')}`;
+    ids.set(u.email, { id, role: u.role });
     rows.push(`  (${[id, u.email, bcrypt.hashSync(password, 10), u.name, u.role, '', u.sucursalId ?? 'suc_central'].map(sql).join(', ')}, true, 0, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`);
   }
   if (!rows.length) throw new Error('No user has a password in config/users.passwords.local.json: nobody could log in');
@@ -91,7 +134,32 @@ if (withUsers) {
     rows.join(',\n') + ';',
     '',
   );
+
+  // Opening balances: --desde YYYY-MM-DD is the first working day; the balance is dated 23:59 of the day before in
+  // Bolivia (UTC−4), so it is the box's balance when the first day opens and never a movement of that day.
+  const desde = valuesOf('--desde')[0];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde ?? '')) throw new Error('--users needs --desde YYYY-MM-DD (first working day in production)');
+  const fecha = new Date(new Date(`${desde}T00:00:00.000Z`).getTime() + 4 * 3600_000 - 60_000).toISOString().slice(0, 23).replace('T', ' ');
+  const saldos = new Map(valuesOf('--saldo').map((pair) => {
+    const [box, amount] = pair.split('=');
+    if (!BOXES.some(([id]) => id === box)) throw new Error(`--saldo: unknown box ${box} (${BOXES.map(([id]) => id).join(', ')})`);
+    if (!/^\d+(\.\d{1,2})?$/.test(amount ?? '')) throw new Error(`--saldo ${box}: amount like 1500 or 1500.50`);
+    return [box, amount];
+  }));
+  const admin = [...ids.values()].find((u) => u.role === 'ADMINISTRADOR');
+  if (!admin) throw new Error('No ADMINISTRADOR with a password: the opening balances need someone who registered them');
+  const balanceRows = BOXES.filter(([id]) => Number(saldos.get(id) ?? 0) > 0).map(([id, , tipo, suc]) =>
+    `  (${[randomUUID(), 'ingreso', 'saldo_inicial', saldos.get(id), fecha, { qr: 'qr', banco: 'transferencia' }[tipo] ?? 'efectivo', 'Saldo inicial al empezar a usar el sistema', 'validado', id, suc, admin.id, admin.id, fecha].map(sql).join(', ')}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
+  );
+  out.push(`-- ===== Opening balances (validated saldo_inicial, ${fecha} UTC = 23:59 the day before ${desde} in Bolivia) =====`);
+  for (const [id] of BOXES.filter(([id]) => !(Number(saldos.get(id) ?? 0) > 0))) out.push(`-- REVISAR: ${id} starts at Bs 0.00 (no --saldo ${id}=…)`);
+  if (balanceRows.length)
+    out.push(
+      'INSERT INTO `cash_movements` (`id`, `tipo`, `concepto`, `monto`, `fecha`, `metodo`, `nota`, `estado`, `cajaId`, `sucursalId`, `registradoPorId`, `validadoPorId`, `validadoAt`, `createdAt`, `updatedAt`) VALUES',
+      balanceRows.join(',\n') + ';',
+    );
+  out.push('');
 }
 
 writeFileSync(OUT, out.join('\n'));
-console.log(`${relative(ROOT, OUT)}: ${folders.length} migrations${withUsers ? ' + users' : ''}`);
+console.log(`${relative(ROOT, OUT)}: schema + catalogs + ${folders.length} migrations${withUsers ? ' + users + opening balances' : ''}`);
