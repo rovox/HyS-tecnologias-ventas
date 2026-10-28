@@ -4,9 +4,6 @@ import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { montoEnLetras } from '../../common/domain/monto-en-letras';
 import { saleNumber } from './domain/direct-sales.rules';
 
-// pdfmake on the server, with the 14 standard PDF fonts (no font files to ship).
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PdfPrinter = require('pdfmake');
 
 /** One NIT for every branch (owner 2026-10-27); the address is the branch's. */
 const COMPANY = { nombre: 'H&S TECNOLOGÍAS', nit: '4416960', pais: 'Bolivia' };
@@ -141,6 +138,10 @@ export function saleNoteDefinition(sale: NoteSale, { annulled = false } = {}): T
 
 /** The PDF bytes of a sale note. */
 export function renderSaleNote(sale: NoteSale, options: { annulled?: boolean } = {}): Promise<Buffer> {
+  // pdfmake on the server, with the 14 standard PDF fonts (no font files to ship). Loaded on the first note, not at
+  // boot (keeps app.listen() fast on Hostinger).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const PdfPrinter = require('pdfmake');
   const printer = new PdfPrinter(FONTS);
   const doc = printer.createPdfKitDocument(saleNoteDefinition(sale, options));
   return new Promise((resolve, reject) => {
