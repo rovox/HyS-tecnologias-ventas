@@ -1,4 +1,4 @@
-import { closeError, countError, countTotal, differenceMovement, expectedCash, otherMethods } from './cash-close.rules';
+import { closeError, closeRequirements, countError, countTotal, differenceMovement, expectedCash, otherMethods } from './cash-close.rules';
 
 const mv = (id: string, tipo: string, monto: number, extra = {}) => ({ id, tipo, concepto: 'x', monto, estado: 'validado', metodo: 'efectivo', ...extra });
 
@@ -36,5 +36,15 @@ describe('daily cash close (FIN-04)', () => {
     expect(differenceMovement(-12.5)).toEqual({ tipo: 'egreso', concepto: 'diferencia_arqueo', monto: 12.5, label: 'Faltante' });
     expect(differenceMovement(3)).toMatchObject({ tipo: 'ingreso', label: 'Sobrante' });
     expect(differenceMovement(0)).toBeNull();
+  });
+
+  it('lists what a day needs before closing: arrived, not closed, earlier days closed in order (LAUNCH P1-2)', () => {
+    const ok = closeRequirements({ dia: '2026-10-28', today: '2026-10-29', closed: false, pendingDay: null });
+    expect(ok.every((r) => r.ok)).toBe(true);
+    const future = closeRequirements({ dia: '2026-10-30', today: '2026-10-29', closed: false, pendingDay: null });
+    expect(future.find((r) => !r.ok)?.texto).toMatch(/todavía no llegó/);
+    const late = closeRequirements({ dia: '2026-10-29', today: '2026-10-29', closed: false, pendingDay: '2026-10-27' });
+    expect(late.filter((r) => !r.ok).map((r) => r.texto)).toEqual(['Falta cerrar el 2026-10-27: los días con movimientos se cierran en orden']);
+    expect(closeRequirements({ dia: '2026-10-29', today: '2026-10-29', closed: true, pendingDay: null }).find((r) => !r.ok)?.texto).toBe('Este día ya está cerrado');
   });
 });

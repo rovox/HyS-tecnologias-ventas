@@ -61,8 +61,12 @@ await step('counting with a difference turns red until there is a reason; then i
   const p = seller.page;
   await p.getByLabel('Día del cierre').fill(day);
   await p.getByText('Debe haber').waitFor(T);
-  if (await p.getByLabel('Saldo inicial').count()) await p.getByLabel('Saldo inicial').fill('100');
   if (await p.getByText(/Cerrado por/).count()) throw new Error(`the day ${day} is already closed`);
+  // LAUNCH P1-2: the opening cash comes from the API (no input) and the checklist to close is all green.
+  if (await p.getByLabel('Saldo inicial').count()) throw new Error('the opening cash can still be typed');
+  const reqs = p.getByRole('list', { name: 'Requisitos para cerrar' });
+  await reqs.getByText('Los días anteriores con movimientos están cerrados').waitFor(T);
+  if ((await reqs.locator('li').count()) !== 3) throw new Error('requirements missing');
   await p.getByLabel('Cantidad de Bs 50', { exact: true }).fill('1');
   await p.getByLabel('Cantidad de Bs 20', { exact: true }).fill('2');
   await p.getByLabel('Cantidad de 50 ctvs', { exact: true }).fill('1');
@@ -79,6 +83,12 @@ await step('counting with a difference turns red until there is a reason; then i
   await p.getByRole('dialog').filter({ hasText: '¿Cerrar la caja' }).getByRole('button', { name: 'Cerrar caja' }).click(T);
   await p.getByText('Caja de Punata cerrada').waitFor(T);
   await p.getByText(/Cerrado por Wilson/).waitFor(T);
+  // The branch's latest closes under the form; one click opens that day (read-only).
+  const latest = p.getByRole('list', { name: 'Últimos cierres' }).getByRole('button').first();
+  const other = await latest.innerText();
+  await latest.click(T);
+  if ((await p.getByLabel('Día del cierre').inputValue()) !== other) throw new Error('history does not open the day');
+  await p.getByText(/Cerrado por/).waitFor(T);
 });
 await step('Contabilidad sees it in "Cierres" and reviews it', async () => {
   const p = conta.page;

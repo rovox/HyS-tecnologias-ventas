@@ -767,11 +767,14 @@ describe('hs-erp API (e2e)', () => {
 
     it('closes once per branch and day; a difference needs a reason and goes to validation; Gerencia reviews', async () => {
       const day = new Date(Date.UTC(2024, 0, 1) + (Math.floor(Date.now() / 1000) % 700) * 86400e3).toISOString().slice(0, 10);
-      const body = { sucursalId: 'suc_punata', dia: day, saldoInicial: 100, conteo: { '50': 1, '20': 2 } };
+      const body = { sucursalId: 'suc_punata', dia: day, conteo: { '50': 1, '20': 2 } };
       await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, sucursalId: 'suc_quillacollo' }).expect(403);
       await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, conteo: { '300': 1 } }).expect(400);
       const pre = (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${day}`).set(H(wilson)).expect(200)).body;
-      const opening = pre.saldoInicial ?? 100;
+      // LAUNCH P1-2: the opening cash always comes from the API, with the checklist to close.
+      expect(typeof pre.saldoInicial).toBe('number');
+      expect(pre.requisitos.map((r: { texto: string }) => r.texto)).toEqual(expect.arrayContaining(['El día ya llegó', 'Este día todavía no está cerrado']));
+      const opening = pre.saldoInicial;
       const counted = 90;
       const diff = Math.round((counted - (opening + pre.ingresosEfectivo - pre.egresosEfectivo)) * 100) / 100;
       if (diff !== 0) {

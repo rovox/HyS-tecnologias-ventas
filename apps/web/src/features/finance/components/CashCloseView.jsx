@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Lock } from 'lucide-react';
+import { CheckCircle2, Lock, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { businessDayOf, formatBs, formatDateTime, roundCents } from '@/shared/li
 import { notify } from '@/shared/lib/notify.js';
 import { TONE } from '@/shared/lib/status.js';
 import { cn } from '@/lib/utils';
-import { useCashClosePreview, useCloseCash } from '../api.js';
+import { useCashClosePreview, useCashCloses, useCloseCash } from '../api.js';
 import { CONCEPTO_LABEL } from '../constants.js';
 
 /** Bolivian notes and coins, as the API counts them (cash-close.rules.ts). */
@@ -40,17 +40,16 @@ export function CashCloseView() {
   const [sucursalId, setSucursalId] = useState(currentUser?.sucursalId || 'suc_central');
   const [dia, setDia] = useState(today);
   const [conteo, setConteo] = useState({});
-  const [inicial, setInicial] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const confirm = useConfirm();
   const close = useCloseCash();
   const { data: day, isLoading, isError, error } = useCashClosePreview(sucursalId, dia);
+  const { data: history = [] } = useCashCloses({ sucursalId });
   useEffect(() => {
     setConteo({});
     setMotivo('');
     setObservaciones('');
-    setInicial('');
   }, [sucursalId, dia]);
 
   const branches = manager ? sucursales : sucursales.filter((s) => s.id === currentUser?.sucursalId);
@@ -71,9 +70,9 @@ export function CashCloseView() {
   if (isError) return <div className="space-y-3">{header}<p className="text-sm text-danger-fg">No se pudo cargar el día: {error?.message}</p></div>;
   if (isLoading || !day) return <div className="space-y-3">{header}<Skeleton className="h-64 w-full" /></div>;
 
-  const firstClose = day.saldoInicial === null;
-  const saldoInicial = firstClose ? Number(inicial) || 0 : day.saldoInicial;
-  const esperado = roundCents(saldoInicial + day.ingresosEfectivo - day.egresosEfectivo);
+  // Opening cash comes from the API: the previous count, or the box balance on the branch's first close.
+  const esperado = roundCents(day.saldoInicial + day.ingresosEfectivo - day.egresosEfectivo);
+  const blocked = day.requisitos.filter((r) => !r.ok);
   const contado = roundCents([...NOTES, ...COINS].reduce((s, d) => s + d * (Number(conteo[d]) || 0), 0));
   const diferencia = roundCents(contado - esperado);
   const state = light(diferencia, motivo);
@@ -93,7 +92,6 @@ export function CashCloseView() {
         sucursalId,
         dia,
         conteo: Object.fromEntries(Object.entries(conteo).filter(([, n]) => Number(n) > 0).map(([d, n]) => [String(Number(d)), Number(n)])),
-        ...(firstClose ? { saldoInicial } : {}),
         ...(motivo.trim() ? { motivoDiferencia: motivo.trim() } : {}),
         ...(observaciones.trim() ? { observaciones: observaciones.trim() } : {}),
       });
@@ -112,7 +110,7 @@ export function CashCloseView() {
         ['Debe haber', formatBs(closed.efectivoEsperado), 'bold'],
       ]
     : [
-        ['Saldo inicial', firstClose ? null : formatBs(day.saldoInicial), day.cierreAnterior ? `Contado el ${day.cierreAnterior.dia}` : 'Primer cierre'],
+        ['Saldo inicial', formatBs(day.saldoInicial), day.cierreAnterior ? `Contado el ${day.cierreAnterior.dia}` : 'Primer cierre: saldo de la caja'],
         ['Entró en efectivo', `+${formatBs(day.ingresosEfectivo)}`, 'success'],
         ['Salió en efectivo', `−${formatBs(day.egresosEfectivo)}`, 'danger'],
         ['Debe haber', formatBs(esperado), 'bold'],
@@ -125,11 +123,7 @@ export function CashCloseView() {
         {figures.map(([title, value, hint]) => (
           <div key={title} className="rounded-md border border-border bg-card px-3 py-2 shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
-            {value === null ? (
-              <Input aria-label="Saldo inicial" type="number" min="0" step="0.01" className="mt-1 h-8 w-28" placeholder="Bs" value={inicial} onChange={(e) => setInicial(e.target.value)} />
-            ) : (
-              <p className={cn('text-sm font-bold tabular-nums', hint === 'success' && TONE.success.text, hint === 'danger' && TONE.danger.text, hint === 'bold' && 'text-base')}>{value}</p>
-            )}
+            <p className={cn('text-sm font-bold tabular-nums', hint === 'success' && TONE.success.text, hint === 'danger' && TONE.danger.text, hint === 'bold' && 'text-base')}>{value}</p>
             {hint && !['success', 'danger', 'bold'].includes(hint) && <p className="text-[10px] text-muted-foreground">{hint}</p>}
           </div>
         ))}
@@ -164,6 +158,13 @@ export function CashCloseView() {
         </section>
       ) : (
         <section className="space-y-3 rounded-md border border-border bg-card p-3">
+          <ul aria-label="Requisitos para cerrar" className="space-y-0.5 text-sm">
+            {day.requisitos.map((r) => (
+              <li key={r.texto} className={cn('flex items-center gap-1.5', r.ok ? TONE.success.text : 'font-semibold ' + TONE.danger.text)}>
+                {r.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />} {r.texto}
+              </li>
+            ))}
+          </ul>
           <h3 className="text-sm font-semibold">Conteo del cajón</h3>
           {[['Billetes', NOTES], ['Monedas', COINS]].map(([title, list]) => (
             <div key={title}>
@@ -198,12 +199,30 @@ export function CashCloseView() {
             <Label htmlFor="close-notes">Observaciones (opcional)</Label>
             <Textarea id="close-notes" rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
           </div>
-          <Button variant={state.tone === 'success' ? 'success' : 'default'} disabled={close.isPending || state.tone === 'danger' || (firstClose && inicial === '')} onClick={submit}>
+          <Button variant={state.tone === 'success' ? 'success' : 'default'} disabled={close.isPending || state.tone === 'danger' || blocked.length > 0} onClick={submit}>
             <Lock /> Cerrar caja
           </Button>
-          {firstClose && inicial === '' && <p className="text-xs text-danger-fg">Es el primer cierre de esta sucursal: escribe el saldo inicial.</p>}
         </section>
       )}
+      <section className="rounded-md border border-border bg-card p-3">
+        <h3 className="mb-2 text-sm font-semibold">Últimos cierres de {day.sucursal.nombre}</h3>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Todavía no hay cierres en esta sucursal.</p>
+        ) : (
+          <ul aria-label="Últimos cierres" className="divide-y divide-border text-sm">
+            {history.slice(0, 7).map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
+                <button type="button" className="font-medium text-primary hover:underline" onClick={() => setDia(c.dia)}>{c.dia}</button>
+                <span className="tabular-nums text-muted-foreground">Contado {formatBs(c.efectivoContado)}</span>
+                <span className={cn('tabular-nums font-semibold', Number(c.diferencia) < 0 ? TONE.danger.text : Number(c.diferencia) > 0 ? TONE.warning.text : TONE.success.text)}>
+                  {Number(c.diferencia) === 0 ? 'Cuadra' : `${Number(c.diferencia) < 0 ? 'Faltante' : 'Sobrante'} ${formatBs(Math.abs(c.diferencia))}`}
+                </span>
+                <span className="text-xs text-muted-foreground">{c.cerradoPor?.name}{c.revisadoPor ? ' · revisado' : ''}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

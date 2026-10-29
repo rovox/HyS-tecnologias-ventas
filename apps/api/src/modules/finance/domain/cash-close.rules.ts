@@ -80,3 +80,20 @@ export function differenceMovement(diferencia: number) {
   if (diferencia === 0) return null;
   return { tipo: diferencia < 0 ? 'egreso' : 'ingreso', concepto: 'diferencia_arqueo', monto: cents(Math.abs(diferencia)), label: diferencia < 0 ? 'Faltante' : 'Sobrante' };
 }
+
+/**
+ * What a day needs before it can be closed (LAUNCH P1-2), shown as a checklist and enforced on close: the day has
+ * arrived, it is not closed yet and, once the branch has closed a day, every later day with movements is closed first
+ * (days are closed in order). The count and a reason for a difference are checked by the form and closeError.
+ */
+export function closeRequirements(input: { dia: string; today: string; closed: boolean; pendingDay: string | null }) {
+  const future = input.dia > input.today;
+  return [
+    { ok: !future, texto: future ? 'Es un día que todavía no llegó' : 'El día ya llegó' },
+    { ok: !input.closed, texto: input.closed ? 'Este día ya está cerrado' : 'Este día todavía no está cerrado' },
+    {
+      ok: !input.pendingDay,
+      texto: input.pendingDay ? `Falta cerrar el ${input.pendingDay}: los días con movimientos se cierran en orden` : 'Los días anteriores con movimientos están cerrados',
+    },
+  ];
+}
