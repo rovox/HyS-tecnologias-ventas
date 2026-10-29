@@ -1,4 +1,5 @@
 import {
+  qrDestinationError,
   balanceOf,
   cashBoxBalance,
   checkMovementTransition,
@@ -20,6 +21,13 @@ import {
 const m = (tipo: string, concepto: string, monto: number, estado = 'validado', extra = {}) => ({ tipo, concepto, monto, estado, ...extra });
 
 describe('finance rules', () => {
+  it('a QR payment names its QR; other methods do not (LAUNCH P1-1)', () => {
+    expect(qrDestinationError('qr', undefined)).toMatch(/a qué QR/);
+    expect(qrDestinationError('QR', 'qr_personal')).toBeNull();
+    expect(qrDestinationError('efectivo', undefined)).toBeNull();
+    expect(qrDestinationError('efectivo', 'qr_empresa')).toMatch(/solo para cobros por QR/);
+  });
+
   it('validates type, concept, amount, transfers and who paid an expense', () => {
     expect(movementError({ tipo: 'ingreso', concepto: 'cobro', monto: 10 })).toBeNull();
     expect(movementError({ tipo: 'ingreso', concepto: 'combustible', monto: 10 })).toMatch(/Concepto no válido/);

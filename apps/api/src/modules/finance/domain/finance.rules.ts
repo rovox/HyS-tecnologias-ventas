@@ -113,6 +113,19 @@ export function balanceOf(monto: number, cobrado: number, cancelled: boolean): n
 }
 
 /** A visit (asistencia) is charged as "asistencia" and owes nothing beforehand; projects and jobs take the others. */
+/**
+ * A QR payment says which QR it reached (LAUNCH P1-1): the company's or the partner's account (a cash box) or the
+ * collector's personal QR, which he must hand over like an advance.
+ */
+export const QR_DESTINOS = { qr_empresa: 'caja_qr', qr_socia: 'caja_qr_socia', qr_personal: null } as const;
+
+export function qrDestinationError(metodo: string | undefined, cuentaDestino: string | undefined): string | null {
+  const qr = (metodo || '').toLowerCase() === 'qr';
+  if (qr && !cuentaDestino) return 'Indica a qué QR entró el cobro: QR Empresa, QR Socia o tu QR personal';
+  if (!qr && cuentaDestino) return 'La cuenta destino es solo para cobros por QR';
+  return null;
+}
+
 export function incomeConceptError(target: 'visita' | 'trabajo', concepto: string): string | null {
   if (target === 'visita') return concepto === 'asistencia' ? null : 'Una visita se cobra como asistencia';
   return concepto === 'asistencia' ? 'El cobro de asistencia es solo para visitas' : null;

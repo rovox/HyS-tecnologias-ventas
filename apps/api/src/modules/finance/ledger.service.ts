@@ -202,7 +202,15 @@ export class LedgerService {
     if (to === 'validado' && input.cajaId) await this.assertBox(input.cajaId);
     const data: Prisma.CashMovementUncheckedUpdateInput =
       to === 'validado'
-        ? { estado: 'validado', ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}), validadoPorId: user.id, validadoAt: new Date(), motivo: null }
+        ? {
+            estado: 'validado',
+            ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}),
+            // A cobro held in a personal QR is handed over when it is validated into a box.
+            ...(before.tipo === 'ingreso' && before.fechaLimite && !before.rendidoAt ? { rendidoAt: new Date() } : {}),
+            validadoPorId: user.id,
+            validadoAt: new Date(),
+            motivo: null,
+          }
         : { estado: to, motivo: input.motivo!.trim() };
     const after = await this.prisma.cashMovement.update({ where: { id }, data, include: MOVEMENT_DETAIL });
     await this.audit.record({ user, sessionId, action: `movement.${to}`, entity: 'movement', id, before, after, affects: this.affects(before) });
@@ -263,7 +271,12 @@ export class LedgerService {
   async advances(user: User) {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
     const rows = await this.prisma.cashMovement.findMany({
-      where: { concepto: 'anticipo_por_rendir', rendidoAt: null, estado: { not: 'anulado' }, ...(canSeeLedger(user) ? {} : { recibidoPorId: user.id }) },
+      where: {
+        rendidoAt: null,
+        // Advances handed out, and cobros a collector took into his personal QR (LAUNCH P1-1) until validated.
+        OR: [{ concepto: 'anticipo_por_rendir', estado: { not: 'anulado' } }, { tipo: 'ingreso', fechaLimite: { not: null }, estado: { in: ['por_validar', 'observado'] } }],
+        ...(canSeeLedger(user) ? {} : { recibidoPorId: user.id }),
+      },
       include: MOVEMENT_DETAIL,
       orderBy: { fechaLimite: 'asc' },
     });

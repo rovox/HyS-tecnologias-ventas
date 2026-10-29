@@ -46,7 +46,8 @@ export function useMovementActions({ onEdit, onChooseBox } = {}) {
   const { data: boxes = [] } = useCashBoxes();
   const manager = canManageMoney();
 
-  const suggestedBox = (m) => boxes.find((b) => b.sucursalId === m.sucursal?.id) || boxes[0];
+  // A movement that already names its box (a QR cobro into QR Empresa/Socia) is validated there; otherwise the branch's.
+  const suggestedBox = (m) => boxes.find((b) => b.id === m.caja?.id) || boxes.find((b) => b.sucursalId === m.sucursal?.id) || boxes[0];
 
   const run = async (m, key, body, done) => {
     try {

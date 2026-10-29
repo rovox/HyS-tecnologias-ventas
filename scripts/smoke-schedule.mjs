@@ -99,11 +99,15 @@ await step('the técnico sees it live on his phone and starts it', async () => {
   if (await sheet(p).getByRole('button', { name: 'Cancelar', exact: true }).count()) throw new Error('the técnico can cancel');
 });
 await step('ventas sees "En proceso" without reload', () => sheet(ventas.page).getByText('En proceso').first().waitFor({ timeout: 3000 }));
-await step('the técnico takes a payment', async () => {
+await step('the técnico takes a payment by QR into his own QR (it must say which QR)', async () => {
   const p = tec.page;
   await sheet(p).getByRole('button', { name: 'Registrar cobro' }).click(T);
   const dlg = p.getByRole('dialog').filter({ hasText: 'Registrar cobro' }).last();
   await dlg.getByLabel('Monto (Bs) *').fill('200');
+  await dlg.getByLabel('Método').selectOption('qr');
+  if (await dlg.getByRole('button', { name: 'Registrar cobro' }).isEnabled()) throw new Error('a QR cobro without its QR can be registered');
+  await dlg.getByRole('radio', { name: 'Mi QR personal' }).click(T);
+  await dlg.getByText(/queda en Anticipos hasta entregarlo/).waitFor(T);
   await dlg.getByRole('button', { name: 'Registrar' }).click(T);
   await p.getByText('Cobro de Bs 200.00 registrado: queda por validar').waitFor(T);
   await sheet(ventas.page).getByText('Bs 300.00').waitFor({ timeout: 4000 });
