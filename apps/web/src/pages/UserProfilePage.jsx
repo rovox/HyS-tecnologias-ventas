@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { toast } from 'sonner';
+import { formatBs } from '@/shared/lib/format.js';
 
 const UserProfilePage = () => {
   useDocumentTitle('Perfil');
@@ -91,7 +92,7 @@ const UserProfilePage = () => {
                 <div>
                   <dt className="text-muted-foreground font-semibold">Meta mensual</dt>
                   <dd className="font-bold tabular-nums">
-                    Bs {Number(goal.metaMonto ?? goal.monthly_goal ?? goal.monto ?? 0).toFixed(0)}
+                    {formatBs(goal.metaMonto ?? goal.monthly_goal ?? goal.monto)}
                   </dd>
                 </div>
               ) : null}

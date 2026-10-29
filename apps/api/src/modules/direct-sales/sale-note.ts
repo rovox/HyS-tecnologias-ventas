@@ -27,8 +27,9 @@ export type NoteSale = {
   motivoAnulacion?: string | null;
 };
 
-const money = (v: Num) => Number(v).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const qty = (v: Num) => Number(v).toLocaleString('es-BO', { maximumFractionDigits: 2 });
+// Same as the screens: dot decimal, 2 decimals, comma thousands (1,234.50).
+const money = (v: Num) => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const qty = (v: Num) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const when = (d: Date) => new Intl.DateTimeFormat('es-BO', { timeZone: 'America/La_Paz', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
 
 let logo: string | null = null;
@@ -44,7 +45,7 @@ export function saleNoteDefinition(sale: NoteSale, { annulled = false } = {}): T
     l.unidad.toUpperCase(),
     `${l.codigo} — ${l.descripcion}`,
     { text: money(l.precioUnitario), alignment: 'right' },
-    { text: Number(l.descuento) ? money(l.descuento) : '0,00', alignment: 'right' },
+    { text: Number(l.descuento) ? money(l.descuento) : '0.00', alignment: 'right' },
     { text: money(l.subtotal), alignment: 'right' },
   ]);
   const signature = (text: string): Content => ({ stack: [{ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 110, y2: 0, lineWidth: 0.7 }] }, { text, margin: [0, 3, 0, 0], alignment: 'center', fontSize: 8 }], alignment: 'center' });

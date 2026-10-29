@@ -66,7 +66,7 @@ await step('counting with a difference turns red until there is a reason; then i
   await p.getByLabel('Cantidad de Bs 50', { exact: true }).fill('1');
   await p.getByLabel('Cantidad de Bs 20', { exact: true }).fill('2');
   await p.getByLabel('Cantidad de 50 ctvs', { exact: true }).fill('1');
-  await p.getByText(/Contado: Bs 90,50/).waitFor(T);
+  await p.getByText(/Contado: Bs 90.50/).waitFor(T);
   const light = p.getByRole('status');
   if ((await light.innerText()) !== 'Cuadra') {
     await p.getByText(/falta el motivo/).waitFor(T);

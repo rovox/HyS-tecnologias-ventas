@@ -16,13 +16,14 @@ import { Building2, FolderTree, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { reportsService } from '@/services/reports/index.js';
+import { formatBs } from '@/shared/lib/format.js';
 
 const COLOR_COTIZ = '#0c4a6e';
 const COLOR_VENTA = '#15803d';
 const COLOR_REL = '#0284c7';
 const COLOR_META = '#be123c';
 
-const money = (value) => `Bs ${Number(value || 0).toLocaleString('es-BO')}`;
+const money = formatBs;
 
 const chartMargin = { top: 4, right: 4, left: -12, bottom: 0 };
 

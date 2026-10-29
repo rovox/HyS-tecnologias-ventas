@@ -89,8 +89,8 @@ await step('register an advance', async () => {
   await p.getByRole('radio', { name: 'Adelanto' }).click(T);
   await p.getByLabel('Monto (Bs) *').fill('1000');
   await p.getByRole('dialog').getByRole('button', { name: 'Registrar' }).click(T);
-  await p.getByText('Cobro de Bs 1.000,00 registrado').waitFor(T);
-  if (!(await saldoOf(p)).includes('2.000,00')) throw new Error(`saldo: ${await saldoOf(p)}`);
+  await p.getByText('Cobro de Bs 1,000.00 registrado').waitFor(T);
+  if (!(await saldoOf(p)).includes('2,000.00')) throw new Error(`saldo: ${await saldoOf(p)}`);
 });
 await step('a payment above the balance is refused by the API, with the reason', async () => {
   await p.getByRole('button', { name: 'Registrar cobro' }).click(T);
@@ -98,7 +98,7 @@ await step('a payment above the balance is refused by the API, with the reason',
   await p.getByRole('dialog').getByRole('button', { name: 'Registrar' }).click(T);
   await p.getByText(/supera el saldo pendiente/).first().waitFor(T);
   await p.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click(T);
-  if (!(await saldoOf(p)).includes('2.000,00')) throw new Error(`saldo changed: ${await saldoOf(p)}`);
+  if (!(await saldoOf(p)).includes('2,000.00')) throw new Error(`saldo changed: ${await saldoOf(p)}`);
 });
 await step('add a job to the cronograma', async () => {
   await p.getByRole('button', { name: 'Nuevo trabajo' }).click(T);
@@ -136,7 +136,7 @@ await step('pay the rest and close', async () => {
   await p.getByRole('button', { name: 'Registrar cobro' }).click(T);
   await p.getByLabel('Monto (Bs) *').fill('2000');
   await p.getByRole('dialog').getByRole('button', { name: 'Registrar' }).click(T);
-  await p.getByText('Cobro de Bs 2.000,00 registrado').waitFor(T);
+  await p.getByText('Cobro de Bs 2,000.00 registrado').waitFor(T);
   await p.getByRole('button', { name: 'Cerrar', exact: true }).click(T);
   await confirmWith('Cerrar proyecto');
   await p.getByText('Proyecto cerrado').waitFor(T);

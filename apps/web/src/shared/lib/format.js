@@ -1,6 +1,7 @@
 // The only place dates and money are formatted for the UI. Currency is Bs.
 
-const money = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Every amount: dot decimal, 2 decimals, comma thousands — Bs 1,234.50 (owner 2026-10-28). */
+const money = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
 /** Date-only values (due dates, scheduled days) are stored at UTC midnight: read them in UTC, not local time. */
 const dateOnly = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -13,6 +14,9 @@ const toDate = (value) => (value ? new Date(value) : null);
 const valid = (date) => date && !Number.isNaN(date.getTime());
 
 export const formatBs = (amount) => `Bs ${money.format(Number(amount) || 0)}`;
+
+/** Rounded to cents, the same way the API rounds totals. */
+export const roundCents = (value) => Math.round(value * 100) / 100;
 
 export function formatDate(value) {
   const date = toDate(value);

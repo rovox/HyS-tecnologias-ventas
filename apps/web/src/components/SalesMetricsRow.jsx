@@ -5,9 +5,9 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import reportsService from '@/services/reports/index.js';
 import { ROLES } from '@/constants/roles.js';
 import { cn } from '@/lib/utils.js';
+import { formatBs } from '@/shared/lib/format.js';
 
-const fmtBs = (value) =>
-  `Bs. ${Number(value || 0).toLocaleString('es-BO', { maximumFractionDigits: 0 })}`;
+const fmtBs = formatBs;
 
 const TONES = {
   quotes: {
