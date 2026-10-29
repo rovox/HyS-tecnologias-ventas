@@ -8,7 +8,7 @@ Passwords never go to git. Locally, `config/users.passwords.local.json` (gitigno
 |------|-------|
 | ADMINISTRADOR | Julio, Mavel, Elias |
 | CONTABILIDAD | Estefany Gonzales (same permissions as Administración) |
-| VENTAS / ADMINISTRACIÓN | Denis, Giovanny, Brian, Wilson |
+| VENTAS / ADMINISTRACIÓN | Denis, Brian (Central), Giovanny (Punata), Wilson (Quillacollo) |
 | SEGURIDAD ELECTRÓNICA (técnicos) | Marcelo, Ronald, Rodrigo; Marcos (local only) |
 | SIN ACCESO | Prueba Sin Acceso, local only |
 

@@ -35,7 +35,7 @@ async function session(email) {
   all.push(errors);
   return { page, user: login.user };
 }
-const seller = await session('wilson@hscontrol.com');
+const seller = await session('giovanny.collao@hys.com');
 const conta = await session(ROLE_ACCOUNTS.contabilidad);
 const steps = [];
 let failed = false;
@@ -83,7 +83,7 @@ await step('counting with a difference turns red until there is a reason; then i
   await p.getByRole('button', { name: 'Cerrar caja' }).click(T);
   await p.getByRole('dialog').filter({ hasText: '¿Cerrar la caja' }).getByRole('button', { name: 'Cerrar caja' }).click(T);
   await p.getByText('Caja de Punata cerrada').waitFor(T);
-  await p.getByText(/Cerrado por Wilson/).waitFor(T);
+  await p.getByText(/Cerrado por Giovanny/).waitFor(T);
   // The branch's latest closes under the form; one click opens that day (read-only).
   const latest = p.getByRole('list', { name: 'Últimos cierres' }).getByRole('button').first();
   const other = await latest.innerText();
