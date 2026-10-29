@@ -963,10 +963,17 @@ describe('hs-erp API (e2e)', () => {
       expect(utp.stock.suc_punata).toBeGreaterThanOrEqual(200);
       expect(utp).toHaveProperty('stockBajo');
       await http().get('/api/inventory/products').set({ Authorization: `Bearer ${tecToken}` }).expect(200);
-      const body = { codigo: `E2E-${Date.now()}`, nombre: 'Producto E2E', categoriaId: 'computo_comunicacion', tipo: 'equipo', costo: 100 };
+      const bare = { codigo: `E2E-${Date.now()}`, nombre: 'Producto E2E', categoriaId: 'computo_comunicacion', tipo: 'equipo', costo: 100 };
+      // LAUNCH P1-4: a product enters with its first purchase (a seller: at Central); a service has no stock.
+      const body = { ...bare, stockInicial: { cantidad: 4, costoUnitario: 120, sucursalId: 'suc_central' } };
       await http().post('/api/inventory/products').set({ Authorization: `Bearer ${tecToken}` }).send(body).expect(403);
-      await http().post('/api/inventory/products').set(ventas()).send(body).expect(201);
+      const noStock = await http().post('/api/inventory/products').set(ventas()).send(bare).expect(400);
+      expect(noStock.body.message).toMatch(/primera entrada/);
+      await http().post('/api/inventory/products').set(ventas()).send({ ...body, stockInicial: { ...body.stockInicial, sucursalId: 'suc_quillacollo' } }).expect(403);
+      const created = (await http().post('/api/inventory/products').set(ventas()).send(body).expect(201)).body;
+      expect(created).toMatchObject({ stock: { suc_central: 4 }, costo: '120' });
       await http().post('/api/inventory/products').set(ventas()).send(body).expect(409);
+      await http().post('/api/inventory/products').set(ventas()).send({ ...bare, codigo: `E2E-SRV-${Date.now()}`, tipo: 'servicio' }).expect(201);
     });
 
     it('moves stock: purchase (updates cost), transfer, never below zero, adjustments only by Gerencia', async () => {
@@ -1055,8 +1062,7 @@ describe('hs-erp API (e2e)', () => {
     it('a delivered branch order moves stock between branches; without stock the delivery is refused', async () => {
       // Its own product, so the test does not depend on seed products someone archived or moved by hand.
       const cable = (await http().post('/api/inventory/products').set(ventas())
-        .send({ codigo: `E2E-UTP-${Date.now()}`, nombre: 'Cable UTP Cat6 e2e', categoriaId: 'cableado_estructurado', tipo: 'material', unidad: 'm', costo: 3 }).expect(201)).body;
-      await http().post('/api/inventory/movements').set(ventas()).send({ productoId: cable.id, tipo: 'entrada', cantidad: 80, costoUnitario: 3, sucursalDestinoId: 'suc_central' }).expect(201);
+        .send({ codigo: `E2E-UTP-${Date.now()}`, nombre: 'Cable UTP Cat6 e2e', categoriaId: 'cableado_estructurado', tipo: 'material', unidad: 'm', stockInicial: { cantidad: 80, costoUnitario: 3, sucursalId: 'suc_central' } }).expect(201)).body;
       const ok = (await http().post('/api/pedidos-internos').set(ventas())
         .send({ sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata', items: [{ productoId: cable.id, materialNombre: cable.nombre, cantidad: 50 }] }).expect(201)).body;
       await deliver(ok.id).then((r) => expect(r.status).toBe(200));

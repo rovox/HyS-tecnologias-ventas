@@ -100,6 +100,18 @@ export function materialCost(movements: { tipo: string; cantidad: Qty; costoUnit
  * Where a seller may move stock (INV-03): purchases enter at Central; transfers and outputs to a project leave from his
  * branch or Central; he removes material (baja) only from his branch. Gerencia moves stock in any branch. Null = allowed.
  */
+/**
+ * A product enters the catalog with its first purchase (LAUNCH P1-4): quantity and unit cost above 0 and the branch
+ * it enters; a service has no stock.
+ */
+export function newProductStockError(tipo: string, stockInicial?: { cantidad: number; costoUnitario: number; sucursalId: string }): string | null {
+  if (tipo === 'servicio') return stockInicial ? 'Un servicio no tiene stock' : null;
+  if (!stockInicial) return 'Un producto se da de alta con su primera entrada: cantidad, costo y sucursal';
+  if (!(stockInicial.cantidad > 0)) return 'La cantidad de la primera entrada debe ser mayor a 0';
+  if (!(stockInicial.costoUnitario > 0)) return 'Indica el costo unitario de la primera entrada';
+  return null;
+}
+
 export function branchMoveError(input: Pick<StockInput, 'tipo' | 'sucursalOrigenId' | 'sucursalDestinoId'>, actor: { manager: boolean; sucursalId?: string | null }): string | null {
   if (actor.manager) return null;
   const own = actor.sucursalId;
