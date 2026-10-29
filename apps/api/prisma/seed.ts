@@ -42,6 +42,8 @@ async function main() {
       create: { id, ...rest, passwordHash, active: true },
     });
   }
+  // Someone taken off the roster can no longer log in; the row stays for the history (who registered what).
+  await prisma.user.updateMany({ where: { id: { notIn: USERS.map((u) => u.id) } }, data: { active: false } });
 
   // The 3 divisions (CAT-01): every quotation, job, project and product has one.
   for (const row of DIVISIONS) {

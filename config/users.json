@@ -6,10 +6,10 @@
   { "id": "usr_ventas", "email": "denis.palacios@hys.com", "name": "Denis Palacios", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_central", "monthlyGoalBs": 18000, "phone": "70000002" },
   { "id": "usr_giovanni", "email": "giovanny.collao@hys.com", "name": "Giovanny Collao", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_central", "monthlyGoalBs": 14000, "phone": "70000007" },
   { "id": "usr_brian", "email": "brian.mejia@hys.com", "name": "Brian Mejía", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000013" },
-  { "id": "usr_vanesa", "email": "vanessa@hscontrol.com", "name": "Vanessa", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_quillacollo", "monthlyGoalBs": 14000, "phone": "70000006" },
   { "id": "usr_wilson", "email": "wilson@hscontrol.com", "name": "Wilson", "role": "VENTAS / ADMINISTRACIÓN", "sucursalId": "suc_punata", "monthlyGoalBs": 14000, "phone": "70000005" },
-  { "id": "usr_marcelo", "email": "marcelo@hscontrol.com", "name": "Marcelo", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000010" },
-  { "id": "usr_ronald", "email": "ronald@hscontrol.com", "name": "Ronald", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000011" },
-  { "id": "usr_rodrigo", "email": "rodrigo@hscontrol.com", "name": "Rodrigo", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000012" },
-  { "id": "usr_tecnico", "email": "marcos.tec@demo.hs.local", "name": "Marcos", "role": "SEGURIDAD ELECTRÓNICA", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000009", "localOnly": true }
+  { "id": "usr_marcelo", "email": "marcelo@hscontrol.com", "name": "Marcelo", "role": "SEGURIDAD ELECTRÓNICA", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000010" },
+  { "id": "usr_ronald", "email": "ronald@hscontrol.com", "name": "Ronald", "role": "SEGURIDAD ELECTRÓNICA", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000011" },
+  { "id": "usr_rodrigo", "email": "rodrigo@hscontrol.com", "name": "Rodrigo", "role": "SEGURIDAD ELECTRÓNICA", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000012" },
+  { "id": "usr_tecnico", "email": "marcos.tec@demo.hs.local", "name": "Marcos", "role": "SEGURIDAD ELECTRÓNICA", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000009", "localOnly": true },
+  { "id": "usr_sinacceso", "email": "sin.acceso@demo.hs.local", "name": "Prueba Sin Acceso", "role": "SIN ACCESO", "sucursalId": "suc_central", "monthlyGoalBs": 0, "phone": "70000099", "localOnly": true }
 ]

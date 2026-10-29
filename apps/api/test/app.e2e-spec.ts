@@ -1147,7 +1147,7 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('keeps relevamientos away from users without access', async () => {
-      const none = await request(app.getHttpServer()).post('/api/auth/login').send(credentialsFor('marcelo@hscontrol.com'));
+      const none = await request(app.getHttpServer()).post('/api/auth/login').send(credentialsFor('sin.acceso@demo.hs.local'));
       const token = none.body?.accessToken || '';
       await request(app.getHttpServer())
         .post('/api/relevamientos')
