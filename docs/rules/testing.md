@@ -49,6 +49,7 @@ In local dev (`pnpm dev` sets `API_STRICT_DTO=1`) the API runs with `forbidNonWh
 | S15 | ventas (Punata), contabilidad | Cierre del día: count notes and coins, red light until a reason, close (read-only); Contabilidad reviews it in Cierres; an advance late in Anticipos, marked rendido | `node scripts/smoke-cierre-caja.mjs` |
 | S16 | ventas | Tienda Digicorp: catalog with photos and last update, search, brand, a product with "Ver en Digicorp" (needs one load by Gerencia) | `node scripts/smoke-digicorp.mjs` |
 | S17 | ventas, contabilidad | Dashboard money and today per branch; quick actions open their form; /reports → dashboard; activity for Gerencia; quotation row Duplicar and Tarea | `node scripts/smoke-dashboard.mjs` |
+| S18 | admin, ventas, contabilidad, técnico | Session closed elsewhere (or expired) while a screen is open → next screen goes to `/login` with "Tu sesión venció", storage cleared, never a blank page; a "Recordarme" off session survives a reload | `node scripts/smoke-session.mjs` |
 | S8 | all | Edit in tab A | Tab B updates with no reload, also after going offline and back (`node scripts/realtime-check.mjs`) |
 
 ## Automated (target)

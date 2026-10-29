@@ -6,16 +6,17 @@ import { notify } from '@/shared/lib/notify.js';
 // itself (`meta: { silentError: true }`).
 export const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true },
+    // A 401 ends the session (api/client.js): no retry and no toast while the login opens.
+    queries: { staleTime: 30_000, retry: (count, error) => error?.status !== 401 && count < 1, refetchOnWindowFocus: true },
   },
   queryCache: new QueryCache({
     onError: (error, query) => {
-      if (!query.meta?.silentError) notify.error(error, 'No se pudieron cargar los datos');
+      if (!query.meta?.silentError && error?.status !== 401) notify.error(error, 'No se pudieron cargar los datos');
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
-      if (!mutation.meta?.silentError) notify.error(error);
+      if (!mutation.meta?.silentError && error?.status !== 401) notify.error(error);
     },
   }),
 });

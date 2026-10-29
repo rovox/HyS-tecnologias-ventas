@@ -1,8 +1,7 @@
 // Visits (relevamientos y asistencias): the only file of this feature that talks HTTP. Keys start with 'relevamiento'
 // (its realtime entity); a payment taken on a visit also refreshes the ledger and the client.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/api/client.js';
-import { API_URL } from '@/api/config.js';
+import { apiClient, fetchFile } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
@@ -54,7 +53,7 @@ export function useUploadVisitPhoto() {
 
 async function photoBlob(url) {
   const path = String(url).replace(/^\/api\//, '').replace(/^\//, '');
-  const response = await fetch(`${API_URL.replace(/\/$/, '')}/${path}`, { headers: { Authorization: `Bearer ${authToken()}` } });
+  const response = await fetchFile(path);
   if (!response.ok) throw new Error('No se pudo cargar la foto');
   return URL.createObjectURL(await response.blob());
 }

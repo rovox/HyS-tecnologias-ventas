@@ -1,4 +1,17 @@
 import { API_URL } from './config.js';
+import { authStore } from '@/lib/authStore.js';
+
+let sessionEnded = false;
+/**
+ * A 401 on a request that carried a token: the session expired, was closed elsewhere or the account was deactivated.
+ * Clear it and go to the login once, instead of leaving the screen half-loaded with an error per query.
+ */
+function endSession() {
+  if (sessionEnded) return;
+  sessionEnded = true;
+  authStore.clear();
+  window.location.replace('/login?expirada=1');
+}
 
 function buildUrl(path, query) {
   const url = new URL(path.replace(/^\//, ''), API_URL.endsWith('/') ? API_URL : `${API_URL}/`);
@@ -27,6 +40,7 @@ async function request(method, path, { body, query, token } = {}) {
   }
 
   const response = await fetch(buildUrl(path, query), init);
+  if (response.status === 401 && token) endSession();
   const contentType = response.headers.get('Content-Type') || '';
   const payload = contentType.includes('application/json')
     ? await response.json().catch(() => ({}))
@@ -42,6 +56,13 @@ async function request(method, path, { body, query, token } = {}) {
     throw error;
   }
   return payload;
+}
+
+/** A file from the API (PDF, Excel) with the session token; same 401 handling as every other request. */
+export async function fetchFile(path) {
+  const response = await fetch(buildUrl(path), { headers: { Authorization: `Bearer ${authStore.token}` } });
+  if (response.status === 401) endSession();
+  return response;
 }
 
 export const apiClient = {

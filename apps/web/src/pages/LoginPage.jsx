@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,11 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  // api/client.js sends here with ?expirada=1 when the API answers 401 (session expired or closed).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('expirada')) toast.info('Tu sesión venció. Vuelve a entrar.', { id: 'session-expired' });
+  }, []);
 
   const accountChips = API_ACCOUNT_CHIPS;
 
