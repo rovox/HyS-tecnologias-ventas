@@ -68,6 +68,20 @@ await step('quick actions open their form at once (Nueva venta, Programar trabaj
   await dialog('Agregar material (compra)').waitFor(T);
   await dialog('Agregar material (compra)').getByRole('button', { name: 'Cancelar' }).click(T);
 });
+await step('goal in numbers (no goal line) and "ver ventas" opens Cotizaciones searched by that seller', async () => {
+  const c = conta.page;
+  await c.goto(`${WEB}/dashboard`, { waitUntil: 'networkidle' });
+  await c.getByText(/^(Falta para la meta|Meta superada por)$/).waitFor(T);
+  const lines = c.getByRole('list', { name: 'Avance de la meta' }).first();
+  const first = lines.getByRole('listitem').first();
+  await first.getByText(/ de Bs [\d,]+\.\d{2} \(\d+%\)|sin meta/).waitFor(T);
+  const name = await first.locator('span').first().innerText();
+  await first.getByRole('link', { name: 'ver ventas' }).click(T);
+  await c.waitForURL(/\/quotations\?/, T);
+  const url = new URL(c.url());
+  if (url.searchParams.get('q') !== name || url.searchParams.get('f') !== 'aprobado') throw new Error(`opened ${c.url()}`);
+  await c.getByText(/cotizaciones — total/).waitFor(T);
+});
 await step('old /reports lands on the dashboard; Contabilidad sees the latest activity', async () => {
   await p.goto(`${WEB}/reports`, { waitUntil: 'networkidle' });
   if (!p.url().endsWith('/dashboard')) throw new Error(`landed on ${p.url()}`);
