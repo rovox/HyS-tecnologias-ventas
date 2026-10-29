@@ -5,6 +5,31 @@ import { PRODUCT_TIPOS, STOCK_TIPOS } from '../domain/inventory.rules';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
 
+/** The first purchase that brings a new product into the catalog (LAUNCH P1-4). */
+export class FirstEntryDto {
+  @ApiProperty({ minimum: 0.01 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01, { message: 'La cantidad de la primera entrada debe ser mayor a 0' })
+  cantidad: number;
+
+  @ApiProperty({ minimum: 0.01 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01, { message: 'Indica el costo unitario de la primera entrada' })
+  costoUnitario: number;
+
+  @ApiProperty({ description: 'Branch the stock enters (a seller: Central)' })
+  @IsString()
+  @IsNotEmpty({ message: 'Elige la sucursal' })
+  sucursalId: string;
+
+  @ApiPropertyOptional({ description: 'Proveedor, factura…' })
+  @IsOptional()
+  @IsString()
+  nota?: string;
+}
+
 export class CreateProductDto {
   @ApiProperty()
   @IsString()
@@ -54,6 +79,12 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   stockMinimo?: number;
+
+  @ApiPropertyOptional({ type: FirstEntryDto, description: 'Required except for a service' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FirstEntryDto)
+  stockInicial?: FirstEntryDto;
 }
 
 export class UpdateProductDto {

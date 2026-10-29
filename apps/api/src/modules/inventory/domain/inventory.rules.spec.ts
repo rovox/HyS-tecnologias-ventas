@@ -1,8 +1,18 @@
-import { branchMoveError, isLowStock, kardex, materialCost, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './inventory.rules';
+import { branchMoveError, isLowStock, kardex, materialCost, movementsForDelivery, newProductStockError, stockBySede, stockMovementError, totalStock } from './inventory.rules';
 
 const ctx = { productTipo: 'material', available: 10, canAdjust: false };
 
 describe('inventory rules', () => {
+  it('a new product comes with its first purchase; a service has no stock (LAUNCH P1-4)', () => {
+    const entry = { cantidad: 5, costoUnitario: 450, sucursalId: 'suc_central' };
+    expect(newProductStockError('equipo', entry)).toBeNull();
+    expect(newProductStockError('material', undefined)).toMatch(/primera entrada/);
+    expect(newProductStockError('equipo', { ...entry, cantidad: 0 })).toMatch(/mayor a 0/);
+    expect(newProductStockError('equipo', { ...entry, costoUnitario: 0 })).toMatch(/costo unitario/);
+    expect(newProductStockError('servicio', undefined)).toBeNull();
+    expect(newProductStockError('servicio', entry)).toBe('Un servicio no tiene stock');
+  });
+
   it('computes stock per branch from the movements', () => {
     const stock = stockBySede([
       { cantidad: 20, sucursalDestinoId: 'central' },

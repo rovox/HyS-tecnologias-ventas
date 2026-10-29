@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Browser smoke for inventory (INV-01): create a product; register an entrada and a transfer (another session sees
-// the stock per branch live); low-stock filter; an internal order picks the product from the catalog and, once
+// Browser smoke for inventory (INV-01): create a product with its first purchase (LAUNCH P1-4: never without stock),
+// then an entrada and a transfer (another session sees the stock per branch live); low-stock filter; an internal order picks the product from the catalog and, once
 // delivered, moves the stock; a técnico reads the inventory without actions.
 //
 //   node scripts/smoke-inventory.mjs [--web http://localhost:3000] [--api http://localhost:3001/api] [--shots dir]
@@ -56,29 +56,34 @@ async function act(label) {
 
 await B.page.goto(`${WEB}/inventario`, { waitUntil: 'networkidle' });
 await p.goto(`${WEB}/inventario?suc=`, { waitUntil: 'networkidle' }); // the whole company: every branch column (a seller starts on his own)
-await step('create a product; the other session lists it live', async () => {
+await step('create a product with its first purchase (8 at Central); the other session lists it live', async () => {
   await p.getByRole('button', { name: 'Nuevo producto' }).click(T);
   await p.getByLabel('Código *').fill(code);
   await p.getByLabel('Nombre *').fill('Cámara domo smoke');
   await p.getByRole('radio', { name: 'Seguridad electrónica' }).click(T);
-  await p.getByLabel('Stock mínimo (alerta)').fill('5');
+  await p.getByLabel('Stock mínimo (alerta)').fill('15');
   await p.getByRole('button', { name: 'Crear' }).click(T);
-  await p.getByText('Producto creado').waitFor(T);
+  await p.getByText('Indica cuántos entran (mayor a 0)').waitFor(T); // no product without its first entry
+  await p.getByLabel('Cantidad *').fill('8');
+  await p.getByLabel('Costo unitario (Bs) *').fill('300');
+  await p.getByRole('button', { name: 'Crear' }).click(T);
+  await p.getByText('Producto creado con 8 unidad en stock').waitFor(T);
   await row(B.page).waitFor({ timeout: 3000 });
   // Like a user: find it by code (the local list grows with every e2e run and refreshes live).
   await p.getByPlaceholder(/Buscar por código/).fill(code);
 });
-await step('a product without stock shows in "Stock bajo"', async () => {
+await step('a product below its minimum shows in "Stock bajo"', async () => {
   await p.getByRole('button', { name: 'Filtros' }).click(T);
   await p.getByRole('menuitemcheckbox', { name: 'Stock bajo' }).click(T);
   await p.keyboard.press('Escape');
   await row(p).waitFor(T);
   await p.getByRole('button', { name: 'Quitar Stock bajo' }).click(T);
 });
-await step('entrada of 10 to Central; the other session sees the stock', async () => {
+await step('entrada of 2 more to Central; the other session sees the 10', async () => {
+  await stockIs(B.page, '8 0 0 8');
   await act('Entrada (compra)');
   await p.getByLabel('Entra a').selectOption({ label: 'Central' });
-  await p.getByLabel(/Cantidad/).fill('10');
+  await p.getByLabel(/Cantidad/).fill('2');
   await p.getByLabel('Costo unitario (Bs)').fill('300');
   await p.getByRole('button', { name: 'Registrar' }).click(T);
   await p.getByText('Entrada registrada').waitFor(T);

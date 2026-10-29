@@ -6,7 +6,7 @@ import { businessDayEnd, businessDayStart } from '../../common/domain/calendar';
 import { canAdjustInventory, canManageInventory, canRegisterMovements, isAdmin, usesMaterialOnOwnJobs } from '../../common/policy/policy';
 import { CategoriesService } from '../categories';
 import { CreateProductDto, ListMovementsQuery, StockBatchDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
-import { branchMoveError, isLowStock, kardex, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './domain/inventory.rules';
+import { branchMoveError, isLowStock, newProductStockError, kardex, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './domain/inventory.rules';
 import { orderCode } from '../../common/domain/codes';
 
 type Tx = Prisma.TransactionClient;
@@ -76,11 +76,23 @@ export class InventoryService {
     await this.categories.assertDivision(dto.categoriaId);
     const codigo = dto.codigo.trim().toUpperCase();
     if (await this.prisma.product.findUnique({ where: { codigo } })) throw new ConflictException(`Ya existe un producto con el código ${codigo}`);
-    const row = await this.prisma.product.create({
-      data: { ...dto, codigo, nombre: dto.nombre.trim(), marca: dto.marca?.trim() || '', unidad: dto.unidad || 'unidad' },
-      include: PRODUCT_INCLUDE,
+    const { stockInicial, ...product } = dto;
+    const error = newProductStockError(dto.tipo, stockInicial);
+    if (error) throw new BadRequestException(error);
+    const entry = stockInicial ? { tipo: 'entrada', sucursalDestinoId: stockInicial.sucursalId } : null;
+    if (entry) await this.assertMove(entry, user);
+    // The product and its first purchase in one step: never a product in the catalog without stock (LAUNCH P1-4).
+    const id = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: { ...product, codigo, nombre: dto.nombre.trim(), marca: dto.marca?.trim() || '', unidad: dto.unidad || 'unidad', ...(stockInicial ? { costo: stockInicial.costoUnitario } : {}) },
+      });
+      if (stockInicial) {
+        await this.moveIn(tx, { productoId: created.id, tipo: 'entrada', cantidad: stockInicial.cantidad, costoUnitario: stockInicial.costoUnitario, sucursalDestinoId: stockInicial.sucursalId, nota: stockInicial.nota?.trim() || 'Primera entrada (alta del producto)' }, user);
+      }
+      return created.id;
     });
-    await this.audit.record({ user, sessionId, action: 'product.create', entity: 'product', id: row.id });
+    const row = await this.product(id);
+    await this.audit.record({ user, sessionId, action: 'product.create', entity: 'product', id, affects: stockInicial ? ['stock'] : [] });
     return presentProduct(row);
   }
 
