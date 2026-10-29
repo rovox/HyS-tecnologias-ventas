@@ -31,7 +31,6 @@ export const goalsService = {
       usuarioId: userId,
       month,
       metaMonto,
-      metaCotiz: 0,
     }, { token: authToken() });
   },
 };

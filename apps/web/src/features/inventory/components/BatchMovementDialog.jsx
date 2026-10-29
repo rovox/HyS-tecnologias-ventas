@@ -66,7 +66,8 @@ export function BatchMovementDialog({ tipo, onClose }) {
         tipo,
         ...(needsOrigin ? { sucursalOrigenId: form.origen } : {}),
         ...(needsDestination ? { sucursalDestinoId: form.destino } : {}),
-        ...(form.motivo.trim() ? { motivo: form.motivo.trim() } : {}),
+        // A removal states its reason (motivo); an entry or transfer carries a note (proveedor, factura…).
+        ...(form.motivo.trim() ? { [tipo === 'baja' ? 'motivo' : 'nota']: form.motivo.trim() } : {}),
         items: lines.map((l) => ({ productoId: l.productoId, cantidad: Number(l.cantidad), ...(kind.cost && l.costoUnitario !== '' ? { costoUnitario: Number(l.costoUnitario) } : {}) })),
       });
       notify.success(`${kind.done}: ${lines.length} producto${lines.length > 1 ? 's' : ''}`);

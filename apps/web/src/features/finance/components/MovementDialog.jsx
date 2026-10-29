@@ -15,13 +15,15 @@ import { SearchSelect } from '@/shared/views';
 
 const TITLES = { egreso: 'Registrar gasto', ingreso: 'Otro ingreso', transferencia: 'Transferencia entre cajas' };
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
+/** How the money moved: the daily cash close only counts `efectivo`. */
+const METHODS = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia' };
 
 function initial(tipo, movement, user, defaults = {}) {
   return {
     concepto: movement?.concepto || Object.keys(CONCEPTOS[tipo])[0],
     monto: movement ? String(Number(movement.monto)) : '',
     fecha: businessDayOf(movement?.fecha),
-    metodo: movement?.metodo || 'efectivo',
+    metodo: (movement?.metodo || 'efectivo').toLowerCase(),
     nota: movement?.nota || '',
     pagadoPor: movement?.pagadoPor || 'empresa',
     projectId: movement?.project?.id || defaults.projectId || '',
@@ -195,6 +197,15 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
               </div>
             )}
           </div>
+          {kind !== 'transferencia' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="mv-metodo">Medio de pago</Label>
+              <select id="mv-metodo" className={select} value={form.metodo} onChange={(e) => set({ metodo: e.target.value })}>
+                {!METHODS[form.metodo] && <option value={form.metodo}>{form.metodo}</option>}
+                {Object.entries(METHODS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </div>
+          )}
           {movement && kind === 'ingreso' && (canManageMoney() || movement.estado !== 'validado') && (
             <div className="space-y-1.5">
               <Label htmlFor="mv-recibe">{movement.estado === 'por_validar' ? '¿Quién tiene el dinero?' : '¿Quién lo recibió?'}</Label>

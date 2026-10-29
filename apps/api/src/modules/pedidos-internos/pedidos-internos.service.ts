@@ -99,8 +99,9 @@ export class PedidosInternosService {
         responsableId: pedidoData.responsableId || user.id,
         solicitanteId: user.id,
         sucursalOrigenId: pedidoData.sucursalOrigenId,
-        sucursalDestinoId: pedidoData.sucursalDestinoId,
-        cronogramaId: pedidoData.cronogramaId,
+        // An order goes to a branch or to a job: the other one is null, never ''.
+        sucursalDestinoId: pedidoData.sucursalDestinoId || null,
+        cronogramaId: pedidoData.cronogramaId || null,
         prioridad: pedidoData.prioridad || 'Normal',
         estado: pedidoData.estado || 'solicitado',
         fechaEntregaEstimada: pedidoData.fechaEntregaEstimada
@@ -147,8 +148,8 @@ export class PedidosInternosService {
         data: {
           ...(pedidoData.responsableId && { responsableId: pedidoData.responsableId }),
           ...(pedidoData.sucursalOrigenId !== undefined && { sucursalOrigenId: pedidoData.sucursalOrigenId }),
-          ...(pedidoData.sucursalDestinoId !== undefined && { sucursalDestinoId: pedidoData.sucursalDestinoId }),
-          ...(pedidoData.cronogramaId !== undefined && { cronogramaId: pedidoData.cronogramaId }),
+          ...(pedidoData.sucursalDestinoId !== undefined && { sucursalDestinoId: pedidoData.sucursalDestinoId || null }),
+          ...(pedidoData.cronogramaId !== undefined && { cronogramaId: pedidoData.cronogramaId || null }),
           ...(pedidoData.prioridad && { prioridad: pedidoData.prioridad }),
           ...(pedidoData.estado && { estado: pedidoData.estado }),
           ...(pedidoData.fechaEntregaEstimada !== undefined && {
