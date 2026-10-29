@@ -121,7 +121,7 @@ export const QR_DESTINOS = { qr_empresa: 'caja_qr', qr_socia: 'caja_qr_socia', q
 
 export function qrDestinationError(metodo: string | undefined, cuentaDestino: string | undefined): string | null {
   const qr = (metodo || '').toLowerCase() === 'qr';
-  if (qr && !cuentaDestino) return 'Indica a qué QR entró el cobro: QR Empresa, QR Socia o tu QR personal';
+  if (qr && !cuentaDestino) return 'Indica a qué QR entró el cobro: QR primario, QR secundario o tu QR personal';
   if (!qr && cuentaDestino) return 'La cuenta destino es solo para cobros por QR';
   return null;
 }

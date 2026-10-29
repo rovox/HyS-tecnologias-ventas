@@ -63,7 +63,7 @@ export class CashCloseService {
       this.prisma.directSale.aggregate({ where: { sucursalId, estado: 'registrada', fecha: { gte: businessDayStart(day), lte: businessDayEnd(day) } }, _count: true, _sum: { total: true } }),
     ]);
     // Opening cash: the previous count; on the branch's first close, the box balance before the day (it starts with the
-    // `saldo_inicial` loaded with the production database), never a number typed by the cashier.
+    // `saldo_inicial` its operator registered on first use), never a number typed by the cashier.
     const inBox = { OR: [{ cajaId: box.id }, { cajaDestinoId: box.id }] };
     const saldoInicial = previous
       ? Number(previous.efectivoContado)

@@ -20,8 +20,8 @@ const TYPES = [
 const METHODS = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR', tarjeta: 'Tarjeta', otro: 'Otro' };
 /** A QR payment says which QR it reached (LAUNCH P1-1). */
 const QR_ACCOUNTS = [
-  ['qr_empresa', 'QR Empresa', 'Entra a la caja QR Empresa.'],
-  ['qr_socia', 'QR Socia', 'Entra a la caja QR Socia.'],
+  ['qr_empresa', 'QR primario', 'El QR de la empresa: entra a su caja.'],
+  ['qr_socia', 'QR secundario', 'El QR de la socia: entra a su caja.'],
   ['qr_personal', 'Mi QR personal', 'Lo tienes tú: queda en Anticipos hasta entregarlo a la empresa (mañana).'],
 ];
 

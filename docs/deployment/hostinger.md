@@ -54,27 +54,25 @@ hPanel → sitio → Dominios → conectar el dominio (por ejemplo `erp.hstecnol
 
 ## 2. Base de datos: un solo archivo SQL
 
-El esquema completo (`prisma migrate diff --from-empty` sobre `schema.prisma`), los catálogos fijos (sucursales con dirección, las 3 divisiones, las cajas: central, chicas, banco, QR Empresa, QR Socia), el historial de migraciones y, con `--users`, los usuarios y el saldo inicial de cada caja están en **un archivo**:
+El esquema completo (`prisma migrate diff --from-empty` sobre `schema.prisma`), los catálogos fijos (sucursales con dirección, las 3 divisiones, las cajas: central, chicas, banco, QR primario (empresa), QR secundario (socia)), el historial de migraciones y, con `--users`, los usuarios están en **un archivo**:
 
 ```bash
 # 1. Contraseñas reales de los usuarios (archivo ignorado por git): { "julio@hscontrol.com": "…", … }
 #    en config/users.passwords.local.json
-# 2. Archivo para importar (usuarios con su contraseña cifrada + saldos iniciales; no se sube a git).
-#    --desde = primer día de trabajo en producción; --saldo caja=monto por cada caja con dinero (las demás empiezan en 0).
-node apps/api/scripts/build-hostinger-sql.mjs --users --desde 2026-10-29 \
-  --saldo caja_central=1500 --saldo caja_chica_punata=200      # → config/hostinger-db.local.sql
+# 2. Archivo para importar (usuarios con su contraseña cifrada; no se sube a git).
+node apps/api/scripts/build-hostinger-sql.mjs --users           # → config/hostinger-db.local.sql
 ```
 
-El saldo inicial es un ingreso `saldo_inicial` validado, fechado a las 23:59 del día anterior a `--desde` (hora de Bolivia): es el saldo de la caja al abrir el primer día. Las cajas sin `--saldo` quedan marcadas `-- REVISAR` en el archivo.
+Las cajas empiezan en Bs 0.00. En el primer uso, el encargado de cada caja registra lo que ya tenía (Finanzas › Registrar ingreso › concepto **Saldo inicial**, con la fecha del día anterior al primero de trabajo) y Contabilidad lo valida en esa caja; el primer cierre parte de ese saldo.
 
-[`hostinger-db.sql`](./hostinger-db.sql) es la misma base **sin usuarios ni saldos** (la que queda en git para revisar).
+[`hostinger-db.sql`](./hostinger-db.sql) es la misma base **sin usuarios** (la que queda en git para revisar).
 
 **Automático por SSH (lo usado el 2026-10-26):** `scripts/hostinger-recreate-db.sh --yes` respalda la base que usa la API (`~/backups/<base>-<fecha>.sql.gz` en el servidor), borra sus tablas, importa `config/hostinger-db.local.sql`, comprueba tablas, usuarios y migraciones, y reinicia la API. Lee `DATABASE_URL` del entorno del sitio en el servidor (no se muestra ni se copia). Misma base y mismo usuario: no hay que tocar hPanel.
 
 Manual, con una base **nueva** (la actual queda intacta como respaldo):
 
 1. hPanel → Bases de datos → **Crear base de datos**: nombre (Hostinger antepone `u656468476_`, p. ej. `u656468476_hs_erp`), usuario nuevo y contraseña **solo letras y números** (sin `$ @ # /`). Asignarla al sitio de la API (lime-chamois).
-2. phpMyAdmin de esa base → **Importar** → `config/hostinger-db.local.sql` → Continuar (crea 28 tablas, los catálogos, los usuarios y los saldos iniciales).
+2. phpMyAdmin de esa base → **Importar** → `config/hostinger-db.local.sql` → Continuar (crea 28 tablas, los catálogos y los usuarios).
 3. Sitio de la API → Variables de entorno → cambiar **`DATABASE_URL`** a la base nueva: `mysql://u656468476_<usuario>:<contraseña>@localhost:3306/u656468476_<base>` → Guardar → **Reiniciar**. No hay que tocar código: NestJS solo lee esa variable.
 4. Comprobar: `https://lime-chamois-337700.hostingersite.com/api/health/db` → `"db":true`, y entrar con un usuario.
 
