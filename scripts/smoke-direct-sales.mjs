@@ -56,8 +56,15 @@ let stockBefore = 0;
 
 async function sell(s, name, qty) {
   const dlg = s.page.getByRole('dialog').filter({ hasText: /Nueva venta|Corregir la venta/ });
+  const fromPunata = (await dlg.locator('#sale-origin').inputValue()) === 'suc_punata';
   await dlg.getByRole('combobox', { name: 'Producto 1' }).click(T);
+  // Only products in stock in the branch: the seed switch is only in Central.
+  if (fromPunata) {
+    await s.page.getByPlaceholder('Código, nombre o marca…').fill('SW-24P-POE');
+    await s.page.getByText('Sin productos con stock en Punata').waitFor(T);
+  }
   await s.page.getByPlaceholder('Código, nombre o marca…').fill('UTP-CAT6');
+  await s.page.getByRole('option', { name: /UTP-CAT6/ }).getByText(/^Stock \d+(\.\d+)? metro · Bs /).first().waitFor(T);
   await s.page.getByRole('option', { name: /UTP-CAT6/ }).first().click(T);
   await dlg.getByLabel('Cantidad 1').fill(String(qty));
   await dlg.getByLabel('Nombre en la nota').fill(name);
@@ -79,7 +86,7 @@ await step('the Punata seller sells from Inventario › Vender; the stored note 
   await p.getByRole('link', { name: 'Vender' }).click(T);
   const dlg = p.getByRole('dialog').filter({ hasText: 'Nueva venta' });
   await dlg.waitFor(T);
-  if ((await dlg.getByLabel('Sale de').inputValue()) !== 'suc_punata') throw new Error('the sale does not start on his branch');
+  if ((await dlg.locator('#sale-origin').inputValue()) !== 'suc_punata') throw new Error('the sale does not start on his branch');
   const origins = await dlg.getByLabel('Sale de').locator('option').allInnerTexts();
   if (origins.some((o) => o.includes('Quillacollo'))) throw new Error(`a seller may sell from another branch: ${origins.join(', ')}`);
   await sell(seller, client, 3);
