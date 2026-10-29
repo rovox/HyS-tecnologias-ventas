@@ -10,6 +10,7 @@ import { RealtimeProvider } from './RealtimeProvider.jsx';
 // Straight from their files, not from the barrels: a barrel also re-exports dialogs and pickers, which would land in
 // the entry bundle (GATE-01).
 import { ConfirmProvider } from '@/shared/views/confirm.jsx';
+import { ErrorBoundary } from '@/shared/views/ErrorBoundary.jsx';
 
 const ClientsPage = lazy(() => import('@/features/clients/pages/ClientsPage.jsx'));
 const ClientDetailPage = lazy(() => import('@/features/clients/pages/ClientDetailPage.jsx'));
@@ -56,6 +57,7 @@ function App() {
     <RealtimeProvider>
     <ConfirmProvider>
       <Router>
+        <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
@@ -193,6 +195,7 @@ function App() {
             } />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
         <Suspense fallback={null}>
           <AppToaster />
         </Suspense>

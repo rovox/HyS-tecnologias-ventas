@@ -1,9 +1,8 @@
 // Finance: the only file of this feature that talks HTTP. Keys start with 'movement' (the realtime entity of the
 // ledger); every money change also moves boxes, projects, jobs and clients.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/api/client.js';
+import { apiClient, fetchFile } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
-import { API_URL } from '@/api/config.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
 
@@ -19,7 +18,7 @@ export function useLedger(params, enabled = true) {
 /** Downloads the same ledger as CSV or Excel, built by the API (amounts as numbers, a summary sheet). */
 export async function downloadLedger(params, formato) {
   const query = new URLSearchParams(Object.entries({ ...params, formato }).filter(([, v]) => v)).toString();
-  const response = await fetch(`${API_URL.replace(/\/$/, '')}/finance/movements/export?${query}`, { headers: { Authorization: `Bearer ${authToken()}` } });
+  const response = await fetchFile(`finance/movements/export?${query}`);
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || 'No se pudo descargar el libro');
   const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') || '')?.[1] || `libro.${formato}`;
   const link = document.createElement('a');

@@ -9,13 +9,16 @@ function dispatch(token, record) {
   window.dispatchEvent(new CustomEvent(EVENT, { detail: { token, record } }));
 }
 
+// "Recordarme" off keeps the session in sessionStorage: read both.
+const read = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+
 export const authStore = {
   get token() {
-    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+    try { return read(TOKEN_KEY) || ''; } catch { return ''; }
   },
   get record() {
     try {
-      const raw = localStorage.getItem(USER_KEY);
+      const raw = read(USER_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   },

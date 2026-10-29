@@ -1,8 +1,7 @@
 // Direct sales (VD-02): the only file of this feature that talks HTTP. Keys start with 'directSale' (realtime entity);
 // a sale also moves stock, boxes and the ledger, so those lists refresh too.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/api/client.js';
-import { API_URL } from '@/api/config.js';
+import { apiClient, fetchFile } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
@@ -33,7 +32,7 @@ export function useAnnulDirectSale() {
 
 /** The stored sale note as a blob URL (the ANULADA copy of an annulled sale, unless `original`). */
 export async function fetchSaleNote(id, original = false) {
-  const response = await fetch(`${API_URL.replace(/\/$/, '')}/direct-sales/${id}/nota.pdf${original ? '?original=1' : ''}`, { headers: { Authorization: `Bearer ${authToken()}` } });
+  const response = await fetchFile(`direct-sales/${id}/nota.pdf${original ? '?original=1' : ''}`);
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || 'No se pudo abrir la nota');
   const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') || '')?.[1] || 'nota.pdf';
   return { url: URL.createObjectURL(await response.blob()), name };
