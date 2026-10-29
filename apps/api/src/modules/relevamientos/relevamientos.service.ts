@@ -144,7 +144,8 @@ export class RelevamientosService {
     if (dto.trabajoRelacionadoId !== undefined && dto.trabajoRelacionadoId !== (current.trabajoRelacionadoId ?? '')) {
       data.trabajoRelacionadoId = dto.trabajoRelacionadoId || null;
       const garantia = dto.trabajoRelacionadoId ? await this.relatedJob(dto.trabajoRelacionadoId, current.clienteId) : null;
-      if (dto.garantiaHasta === undefined) data.garantiaHasta = garantia;
+      // A new job with the date left empty: the warranty is that job's again (the form empties it on change).
+      if (!dto.garantiaHasta) data.garantiaHasta = garantia;
     }
     const row = await this.prisma.relevamiento.update({ where: { id }, data, include: VISIT_INCLUDE });
     await this.audit.record({ user, sessionId, action: 'relevamiento.update', entity: 'relevamiento', id, before: current, after: row, affects: ['client'] });

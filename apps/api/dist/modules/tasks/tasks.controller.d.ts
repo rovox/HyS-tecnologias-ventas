@@ -4,7 +4,7 @@ import { TasksService } from './tasks.service';
 export declare class TasksController {
     private readonly tasks;
     constructor(tasks: TasksService);
-    list(user: User, tipo?: string): Promise<({
+    list(user: User, tipo?: string, archivadas?: string): Promise<({
         sucursal: {
             id: string;
             nombre: string;
@@ -47,6 +47,7 @@ export declare class TasksController {
         asignadoAt: Date | null;
         archivosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         completedAt: Date | null;
+        archivadaAt: Date | null;
     })[]>;
     summary(user: User): Promise<{
         mias: number;
@@ -96,6 +97,7 @@ export declare class TasksController {
         asignadoAt: Date | null;
         archivosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         completedAt: Date | null;
+        archivadaAt: Date | null;
     }>;
     create(dto: CreateTaskDto, user: User, sessionId?: string): Promise<{
         sucursal: {
@@ -140,6 +142,7 @@ export declare class TasksController {
         asignadoAt: Date | null;
         archivosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         completedAt: Date | null;
+        archivadaAt: Date | null;
     }>;
     claim(id: string, user: User, sessionId?: string): Promise<{
         sucursal: {
@@ -184,6 +187,7 @@ export declare class TasksController {
         asignadoAt: Date | null;
         archivosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         completedAt: Date | null;
+        archivadaAt: Date | null;
     }>;
     update(id: string, dto: UpdateTaskDto, user: User, sessionId?: string): Promise<{
         sucursal: {
@@ -228,5 +232,6 @@ export declare class TasksController {
         asignadoAt: Date | null;
         archivosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         completedAt: Date | null;
+        archivadaAt: Date | null;
     }>;
 }

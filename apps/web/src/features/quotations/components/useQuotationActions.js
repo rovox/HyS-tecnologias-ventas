@@ -21,6 +21,7 @@ const PROMPTS = {
     confirmLabel: 'Rechazar',
     destructive: true,
     reason: 'Motivo del rechazo',
+    reasonOptions: ['Precio alto', 'Eligió a otro proveedor', 'Ya no lo necesita', 'Sin respuesta del cliente'],
     done: 'Cotización rechazada',
   }),
   borrador: (q) => ({

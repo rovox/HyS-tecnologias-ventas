@@ -2,39 +2,7 @@ import { History } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime, formatDay, formatRelative } from '@/shared/lib/format.js';
 import { useRecordHistory } from '../api.js';
-
-const VERBS = {
-  create: 'creó el registro',
-  created: 'creó el registro',
-  update: 'editó',
-  status: 'cambió el estado',
-  accept: 'aprobó',
-  approve: 'aprobó',
-  reject: 'rechazó',
-  file: 'adjuntó un archivo',
-  payment: 'registró un movimiento',
-  delete: 'eliminó',
-  restore: 'restauró',
-  convert: 'convirtió',
-  complete: 'completó',
-  claim: 'tomó',
-  // Ledger (movement.*)
-  income: 'registró un cobro',
-  ingreso: 'registró un ingreso',
-  egreso: 'registró un gasto',
-  transferencia: 'registró una transferencia',
-  validado: 'validó en caja',
-  observado: 'observó',
-  anulado: 'anuló',
-  refund: 'marcó como reembolsado',
-  reverse: 'revirtió',
-  comment: 'comentó',
-};
-
-const verbOf = (action) => {
-  const last = action.split('.').pop().split('-').pop();
-  return VERBS[last] || action;
-};
+import { verbOf } from '../verbs.js';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/;
 /** Date-only fields (due date, scheduled day) are stored at UTC midnight. */

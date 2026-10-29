@@ -15,6 +15,7 @@ const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const tasks_rules_1 = require("../domain/tasks.rules");
 const emptyToUndef = ({ value }) => (value === '' || value === null ? undefined : value);
+const clearable = ({ value }) => (value === null ? '' : value);
 class CreateTaskDto {
     clienteId;
     titulo;
@@ -153,7 +154,7 @@ __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_transformer_1.Transform)(emptyToUndef),
+    (0, class_transformer_1.Transform)(clearable),
     __metadata("design:type", String)
 ], UpdateTaskDto.prototype, "asignadoId", void 0);
 __decorate([
@@ -180,8 +181,9 @@ __decorate([
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'ISO date YYYY-MM-DD' }),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateIf)((_, v) => v !== ''),
     (0, class_validator_1.IsDateString)(),
-    (0, class_transformer_1.Transform)(emptyToUndef),
+    (0, class_transformer_1.Transform)(clearable),
     __metadata("design:type", String)
 ], UpdateTaskDto.prototype, "plazo", void 0);
 __decorate([

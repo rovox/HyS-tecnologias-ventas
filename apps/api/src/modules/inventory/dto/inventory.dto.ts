@@ -1,9 +1,34 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { PRODUCT_TIPOS, STOCK_TIPOS } from '../domain/inventory.rules';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
+
+/** The first purchase that brings a new product into the catalog (LAUNCH P1-4). */
+export class FirstEntryDto {
+  @ApiProperty({ minimum: 0.01 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01, { message: 'La cantidad de la primera entrada debe ser mayor a 0' })
+  cantidad: number;
+
+  @ApiProperty({ minimum: 0.01 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01, { message: 'Indica el costo unitario de la primera entrada' })
+  costoUnitario: number;
+
+  @ApiProperty({ description: 'Branch the stock enters (a seller: Central)' })
+  @IsString()
+  @IsNotEmpty({ message: 'Elige la sucursal' })
+  sucursalId: string;
+
+  @ApiPropertyOptional({ description: 'Proveedor, factura…' })
+  @IsOptional()
+  @IsString()
+  nota?: string;
+}
 
 export class CreateProductDto {
   @ApiProperty()
@@ -54,6 +79,12 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   stockMinimo?: number;
+
+  @ApiPropertyOptional({ type: FirstEntryDto, description: 'Required except for a service' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FirstEntryDto)
+  stockInicial?: FirstEntryDto;
 }
 
 export class UpdateProductDto {
@@ -159,4 +190,94 @@ export class StockMovementDto {
   @IsOptional()
   @IsString()
   nota?: string;
+}
+
+/** One line of a batch (INV-03): the product, how much and, for a purchase, its unit cost. */
+export class StockBatchLineDto {
+  @ApiProperty()
+  @IsString()
+  productoId: string;
+
+  @ApiProperty({ minimum: 0.01 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01, { message: 'La cantidad debe ser mayor a 0' })
+  cantidad: number;
+
+  @ApiPropertyOptional({ description: 'Entrada: purchase unit cost (updates the product cost)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  costoUnitario?: number;
+}
+
+/** Several products moved the same way in one go (quick actions of Inventario): all lines or none. */
+export class StockBatchDto {
+  @ApiProperty({ enum: STOCK_TIPOS })
+  @IsIn(STOCK_TIPOS, { message: 'Tipo de movimiento no válido' })
+  tipo: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  sucursalOrigenId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  sucursalDestinoId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  projectId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  motivo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  nota?: string;
+
+  @ApiProperty({ type: [StockBatchLineDto] })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Agrega al menos un producto' })
+  @ValidateNested({ each: true })
+  @Type(() => StockBatchLineDto)
+  items: StockBatchLineDto[];
+}
+
+/** Filters of the history (INV-03). */
+export class ListMovementsQuery {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  productoId?: string;
+
+  @ApiPropertyOptional({ description: 'In or out of this branch' })
+  @IsOptional()
+  @IsString()
+  sucursalId?: string;
+
+  @ApiPropertyOptional({ description: 'Comma-separated types (entrada,transferencia,salida_venta_directa,…)' })
+  @IsOptional()
+  @IsString()
+  tipos?: string;
+
+  @ApiPropertyOptional({ description: 'Bolivian day (inclusive)' })
+  @IsOptional()
+  @IsDateString()
+  desde?: string;
+
+  @ApiPropertyOptional({ description: 'Bolivian day (inclusive)' })
+  @IsOptional()
+  @IsDateString()
+  hasta?: string;
 }

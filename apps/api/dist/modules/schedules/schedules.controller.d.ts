@@ -5,6 +5,15 @@ export declare class SchedulesController {
     private readonly schedules;
     constructor(schedules: SchedulesService);
     list(user: User, estado?: string, sucursalId?: string, from?: string, to?: string, tecnicoId?: string, quotationId?: string, clienteId?: string): Promise<{
+        project: {
+            monto: number;
+            cobrado: number;
+            saldo: number;
+            pctCobrado: number;
+            id: string;
+            estado: string;
+            codigo: string;
+        } | null;
         adelanto: number;
         saldo: number;
         movements: {
@@ -20,6 +29,7 @@ export declare class SchedulesController {
         sucursal: {
             id: string;
             nombre: string;
+            direccion: string;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -28,11 +38,6 @@ export declare class SchedulesController {
             titulo: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             numero: string;
-        } | null;
-        project: {
-            id: string;
-            estado: string;
-            codigo: string;
         } | null;
         cliente: {
             id: string;
@@ -68,11 +73,11 @@ export declare class SchedulesController {
         createdAt: Date;
         updatedAt: Date;
         tecnicoId: string | null;
-        vendedorId: string | null;
         clienteId: string;
         categoriaId: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         estado: string;
+        vendedorId: string | null;
         fechaProgramada: Date;
         lugar: string;
         horario: string | null;
@@ -92,6 +97,15 @@ export declare class SchedulesController {
         at: Date;
     }[]>;
     registerPayment(id: string, dto: CreateSchedulePaymentDto, user: User, sessionId?: string): Promise<{
+        project: {
+            monto: number;
+            cobrado: number;
+            saldo: number;
+            pctCobrado: number;
+            id: string;
+            estado: string;
+            codigo: string;
+        } | null;
         adelanto: number;
         saldo: number;
         movements: {
@@ -107,6 +121,7 @@ export declare class SchedulesController {
         sucursal: {
             id: string;
             nombre: string;
+            direccion: string;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -115,11 +130,6 @@ export declare class SchedulesController {
             titulo: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             numero: string;
-        } | null;
-        project: {
-            id: string;
-            estado: string;
-            codigo: string;
         } | null;
         cliente: {
             id: string;
@@ -155,11 +165,11 @@ export declare class SchedulesController {
         createdAt: Date;
         updatedAt: Date;
         tecnicoId: string | null;
-        vendedorId: string | null;
         clienteId: string;
         categoriaId: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         estado: string;
+        vendedorId: string | null;
         fechaProgramada: Date;
         lugar: string;
         horario: string | null;
@@ -170,6 +180,15 @@ export declare class SchedulesController {
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     get(id: string, user: User): Promise<{
+        project: {
+            monto: number;
+            cobrado: number;
+            saldo: number;
+            pctCobrado: number;
+            id: string;
+            estado: string;
+            codigo: string;
+        } | null;
         adelanto: number;
         saldo: number;
         movements: {
@@ -185,6 +204,7 @@ export declare class SchedulesController {
         sucursal: {
             id: string;
             nombre: string;
+            direccion: string;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -193,11 +213,6 @@ export declare class SchedulesController {
             titulo: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             numero: string;
-        } | null;
-        project: {
-            id: string;
-            estado: string;
-            codigo: string;
         } | null;
         cliente: {
             id: string;
@@ -233,11 +248,11 @@ export declare class SchedulesController {
         createdAt: Date;
         updatedAt: Date;
         tecnicoId: string | null;
-        vendedorId: string | null;
         clienteId: string;
         categoriaId: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         estado: string;
+        vendedorId: string | null;
         fechaProgramada: Date;
         lugar: string;
         horario: string | null;
@@ -248,6 +263,15 @@ export declare class SchedulesController {
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     create(dto: CreateScheduleDto, user: User, sessionId?: string): Promise<{
+        project: {
+            monto: number;
+            cobrado: number;
+            saldo: number;
+            pctCobrado: number;
+            id: string;
+            estado: string;
+            codigo: string;
+        } | null;
         adelanto: number;
         saldo: number;
         movements: {
@@ -263,6 +287,7 @@ export declare class SchedulesController {
         sucursal: {
             id: string;
             nombre: string;
+            direccion: string;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -271,11 +296,6 @@ export declare class SchedulesController {
             titulo: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             numero: string;
-        } | null;
-        project: {
-            id: string;
-            estado: string;
-            codigo: string;
         } | null;
         cliente: {
             id: string;
@@ -311,11 +331,11 @@ export declare class SchedulesController {
         createdAt: Date;
         updatedAt: Date;
         tecnicoId: string | null;
-        vendedorId: string | null;
         clienteId: string;
         categoriaId: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         estado: string;
+        vendedorId: string | null;
         fechaProgramada: Date;
         lugar: string;
         horario: string | null;
@@ -326,6 +346,15 @@ export declare class SchedulesController {
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     update(id: string, dto: UpdateScheduleDto, user: User, sessionId?: string): Promise<{
+        project: {
+            monto: number;
+            cobrado: number;
+            saldo: number;
+            pctCobrado: number;
+            id: string;
+            estado: string;
+            codigo: string;
+        } | null;
         adelanto: number;
         saldo: number;
         movements: {
@@ -341,6 +370,7 @@ export declare class SchedulesController {
         sucursal: {
             id: string;
             nombre: string;
+            direccion: string;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -349,11 +379,6 @@ export declare class SchedulesController {
             titulo: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             numero: string;
-        } | null;
-        project: {
-            id: string;
-            estado: string;
-            codigo: string;
         } | null;
         cliente: {
             id: string;
@@ -389,11 +414,11 @@ export declare class SchedulesController {
         createdAt: Date;
         updatedAt: Date;
         tecnicoId: string | null;
-        vendedorId: string | null;
         clienteId: string;
         categoriaId: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         estado: string;
+        vendedorId: string | null;
         fechaProgramada: Date;
         lugar: string;
         horario: string | null;
@@ -404,6 +429,15 @@ export declare class SchedulesController {
         fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     status(id: string, dto: ScheduleStatusDto, user: User, sessionId?: string): Promise<{
+        project: {
+            monto: number;
+            cobrado: number;
+            saldo: number;
+            pctCobrado: number;
+            id: string;
+            estado: string;
+            codigo: string;
+        } | null;
         adelanto: number;
         saldo: number;
         movements: {
@@ -419,6 +453,7 @@ export declare class SchedulesController {
         sucursal: {
             id: string;
             nombre: string;
+            direccion: string;
             createdAt: Date;
             updatedAt: Date;
         };
@@ -427,11 +462,6 @@ export declare class SchedulesController {
             titulo: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             numero: string;
-        } | null;
-        project: {
-            id: string;
-            estado: string;
-            codigo: string;
         } | null;
         cliente: {
             id: string;
@@ -467,11 +497,11 @@ export declare class SchedulesController {
         createdAt: Date;
         updatedAt: Date;
         tecnicoId: string | null;
-        vendedorId: string | null;
         clienteId: string;
         categoriaId: string;
         monto: import("@prisma/client/runtime/library").Decimal;
         estado: string;
+        vendedorId: string | null;
         fechaProgramada: Date;
         lugar: string;
         horario: string | null;

@@ -1,8 +1,18 @@
-import { isLowStock, materialCost, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './inventory.rules';
+import { branchMoveError, isLowStock, kardex, materialCost, movementsForDelivery, newProductStockError, stockBySede, stockMovementError, totalStock } from './inventory.rules';
 
 const ctx = { productTipo: 'material', available: 10, canAdjust: false };
 
 describe('inventory rules', () => {
+  it('a new product comes with its first purchase; a service has no stock (LAUNCH P1-4)', () => {
+    const entry = { cantidad: 5, costoUnitario: 450, sucursalId: 'suc_central' };
+    expect(newProductStockError('equipo', entry)).toBeNull();
+    expect(newProductStockError('material', undefined)).toMatch(/primera entrada/);
+    expect(newProductStockError('equipo', { ...entry, cantidad: 0 })).toMatch(/mayor a 0/);
+    expect(newProductStockError('equipo', { ...entry, costoUnitario: 0 })).toMatch(/costo unitario/);
+    expect(newProductStockError('servicio', undefined)).toBeNull();
+    expect(newProductStockError('servicio', entry)).toBe('Un servicio no tiene stock');
+  });
+
   it('computes stock per branch from the movements', () => {
     const stock = stockBySede([
       { cantidad: 20, sucursalDestinoId: 'central' },
@@ -54,5 +64,35 @@ describe('inventory rules', () => {
 
   it('values the material that left to a project', () => {
     expect(materialCost([{ tipo: 'salida_proyecto', cantidad: 3, costoUnitario: '4.50' }, { tipo: 'entrada', cantidad: 9, costoUnitario: 1 }])).toBe(13.5);
+  });
+
+  it('removes material (baja) from a branch, with a reason, never below zero (INV-03)', () => {
+    expect(stockMovementError({ tipo: 'baja', cantidad: 2, sucursalOrigenId: 'punata', motivo: 'Dañado' }, ctx)).toBeNull();
+    expect(stockMovementError({ tipo: 'baja', cantidad: 2, sucursalOrigenId: 'punata' }, ctx)).toMatch(/por qué/);
+    expect(stockMovementError({ tipo: 'baja', cantidad: 2, sucursalDestinoId: 'punata', motivo: 'x' }, ctx)).toMatch(/sucursal de la que sale/);
+    expect(stockMovementError({ tipo: 'baja', cantidad: 20, sucursalOrigenId: 'punata', motivo: 'x' }, ctx)).toMatch(/Stock insuficiente/);
+  });
+
+  it('a seller buys into Central, moves from his branch or Central and removes only from his branch (INV-03)', () => {
+    const seller = { manager: false, sucursalId: 'suc_punata' };
+    expect(branchMoveError({ tipo: 'entrada', sucursalDestinoId: 'suc_central' }, seller)).toBeNull();
+    expect(branchMoveError({ tipo: 'entrada', sucursalDestinoId: 'suc_punata' }, seller)).toMatch(/Central/);
+    expect(branchMoveError({ tipo: 'transferencia', sucursalOrigenId: 'suc_central', sucursalDestinoId: 'suc_punata' }, seller)).toBeNull();
+    expect(branchMoveError({ tipo: 'transferencia', sucursalOrigenId: 'suc_quillacollo', sucursalDestinoId: 'suc_punata' }, seller)).toMatch(/tu sucursal o desde Central/);
+    expect(branchMoveError({ tipo: 'baja', sucursalOrigenId: 'suc_punata' }, seller)).toBeNull();
+    expect(branchMoveError({ tipo: 'baja', sucursalOrigenId: 'suc_central' }, seller)).toMatch(/solo de tu sucursal/);
+    expect(branchMoveError({ tipo: 'baja', sucursalOrigenId: 'suc_quillacollo' }, { manager: true })).toBeNull();
+  });
+
+  it('builds the kardex of a branch or of the company with its running balance (INV-03)', () => {
+    const m = (id: string, fecha: string, tipo: string, cantidad: number, from?: string, to?: string) => ({ id, fecha, tipo, cantidad, sucursalOrigenId: from ?? null, sucursalDestinoId: to ?? null });
+    const moves = [
+      m('3', '2026-10-03', 'salida_venta_directa', 2, 'punata'),
+      m('1', '2026-10-01', 'entrada', 10, undefined, 'central'),
+      m('2', '2026-10-02', 'transferencia', 4, 'central', 'punata'),
+    ];
+    expect(kardex(moves, 'punata').map((r) => [r.id, r.entra, r.sale, r.saldo])).toEqual([['2', 4, 0, 4], ['3', 0, 2, 2]]);
+    expect(kardex(moves, 'central').map((r) => [r.id, r.saldo])).toEqual([['1', 10], ['2', 6]]);
+    expect(kardex(moves).map((r) => [r.id, r.saldo])).toEqual([['1', 10], ['3', 8]]);
   });
 });

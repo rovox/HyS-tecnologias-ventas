@@ -26,8 +26,8 @@ let TasksController = class TasksController {
     constructor(tasks) {
         this.tasks = tasks;
     }
-    list(user, tipo) {
-        return this.tasks.list(user, tipo);
+    list(user, tipo, archivadas) {
+        return this.tasks.list(user, tipo, archivadas === '1' || archivadas === 'true');
     }
     summary(user) {
         return this.tasks.summary(user);
@@ -48,11 +48,12 @@ let TasksController = class TasksController {
 exports.TasksController = TasksController;
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'List tasks visible to the user' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Pending tasks visible to the user; ?archivadas=1 the completed or discarded ones (kept 30 days)' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('tipo')),
+    __param(2, (0, common_1.Query)('archivadas')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", void 0)
 ], TasksController.prototype, "list", null);
 __decorate([

@@ -31,16 +31,6 @@ let PrismaService = class PrismaService extends client_1.PrismaClient {
     constructor() {
         super({ adapter: mariaAdapter() });
     }
-    async onModuleInit() {
-        if (!process.env.DATABASE_URL?.trim())
-            return;
-        try {
-            await this.$connect();
-        }
-        catch (err) {
-            console.error('[Prisma] $connect falló al arrancar:', err);
-        }
-    }
     async onModuleDestroy() {
         await this.$disconnect();
     }

@@ -30,7 +30,7 @@ let RolesGuard = class RolesGuard {
             return true;
         const request = context.switchToHttp().getRequest();
         const user = request.user;
-        if (user && readsLikeAdmin(user.role, request.method, roles))
+        if (user && actsAsAdmin(user.role, roles))
             return true;
         if (!user || !roles.includes(user.role)) {
             throw new common_1.ForbiddenException('Sin permiso para esta acción');
@@ -43,7 +43,7 @@ exports.RolesGuard = RolesGuard = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [core_1.Reflector])
 ], RolesGuard);
-function readsLikeAdmin(role, method, roles) {
-    return role === policy_1.ROLES.CONTA && (method === 'GET' || method === 'HEAD') && roles.includes(policy_1.ROLES.ADMIN);
+function actsAsAdmin(role, roles) {
+    return policy_1.MANAGER_ROLES.includes(role) && roles.includes(policy_1.ROLES.ADMIN);
 }
 //# sourceMappingURL=roles.guard.js.map

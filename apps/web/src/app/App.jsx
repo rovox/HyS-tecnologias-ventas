@@ -3,36 +3,34 @@ import { Route, Routes, BrowserRouter as Router, Navigate, useParams } from 'rea
 import { AuthProvider } from '@/contexts/AuthContext.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
 import { routeRoles } from '@/config/nav.js';
-import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient.js';
 import { RealtimeProvider } from './RealtimeProvider.jsx';
-import { ConfirmProvider } from '@/shared/views';
-import { ClientDetailPage, ClientsPage } from '@/features/clients';
-import { FinancePage } from '@/features/finance';
-import { ProjectDetailPage, ProjectsPage } from '@/features/projects';
-import { SurveysPage } from '@/features/surveys';
-import { InventoryPage } from '@/features/inventory';
-import { OrderDetailPage } from '@/features/orders';
+// Straight from their files, not from the barrels: a barrel also re-exports dialogs and pickers, which would land in
+// the entry bundle (GATE-01).
+import { ConfirmProvider } from '@/shared/views/confirm.jsx';
+import { ErrorBoundary } from '@/shared/views/ErrorBoundary.jsx';
 
+const ClientsPage = lazy(() => import('@/features/clients/pages/ClientsPage.jsx'));
+const ClientDetailPage = lazy(() => import('@/features/clients/pages/ClientDetailPage.jsx'));
+const FinancePage = lazy(() => import('@/features/finance/pages/FinancePage.jsx'));
+const ProjectsPage = lazy(() => import('@/features/projects/pages/ProjectsPage.jsx'));
+const ProjectDetailPage = lazy(() => import('@/features/projects/pages/ProjectDetailPage.jsx'));
+const SurveysPage = lazy(() => import('@/features/surveys/pages/SurveysPage.jsx'));
+const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage.jsx'));
+const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPage.jsx'));
+const DirectSalesPage = lazy(() => import('@/features/direct-sales/pages/DirectSalesPage.jsx'));
+
+const AppToaster = lazy(() => import('./AppToaster.jsx'));
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const NoAccessPage = lazy(() => import('@/pages/NoAccessPage.jsx'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage.jsx'));
-const ReportsPage = lazy(() => import('@/pages/ReportsPage.jsx'));
-const ManagementPanelPage = lazy(() => import('@/pages/ManagementPanelPage.jsx'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage.jsx'));
-const ActivityWallPage = lazy(() => import('@/pages/ActivityWallPage.jsx'));
-const QuotationsPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationsPage })));
-const QuotationDetailPage = lazy(() => import('@/features/quotations').then((m) => ({ default: m.QuotationDetailPage })));
-const SchedulePage = lazy(() => import('@/features/schedule').then((m) => ({ default: m.SchedulePage })));
+const QuotationsPage = lazy(() => import('@/features/quotations/pages/QuotationsPage.jsx'));
+const QuotationDetailPage = lazy(() => import('@/features/quotations/pages/QuotationDetailPage.jsx'));
+const SchedulePage = lazy(() => import('@/features/schedule/pages/SchedulePage.jsx'));
 const SolicitudesWebPage = lazy(() => import('@/pages/SolicitudesWebPage.jsx'));
-const VehicleControlPage = lazy(() => import('@/pages/VehicleControlPage.jsx'));
-const VehicleDetailPage = lazy(() => import('@/pages/VehicleDetailPage.jsx'));
-const VehiclesPage = lazy(() => import('@/pages/VehiclesPage.jsx'));
-const MaintenancePage = lazy(() => import('@/pages/MaintenancePage.jsx'));
-const MarketingPage = lazy(() => import('@/pages/MarketingPage.jsx'));
-const CampaignPage = lazy(() => import('@/pages/CampaignPage.jsx'));
 const UserProfilePage = lazy(() => import('@/pages/UserProfilePage.jsx'));
 
 function RouteFallback() {
@@ -59,6 +57,7 @@ function App() {
     <RealtimeProvider>
     <ConfirmProvider>
       <Router>
+        <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
@@ -119,6 +118,18 @@ function App() {
             } />
 
             <Route path="/tareas" element={<Navigate to="/dashboard" replace />} />
+            {/* Panel de control and Reportes were merged into the Dashboard; the empty modules were removed (PLAT-07). */}
+            <Route path="/reports" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/reports/admin" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/admin/management" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/activity-wall" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicle-control" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicle-control/:id" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicles" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/vehicles/:id" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/maintenance" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/marketing" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/campaigns" element={<Navigate to="/dashboard" replace />} />
 
             <Route path="/schedule" element={
               <ProtectedRoute allowedRoles={routeRoles.schedule}>
@@ -126,23 +137,8 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/activity-wall" element={
-              <ProtectedRoute allowedRoles={routeRoles.activity}>
-                <ActivityWallPage />
-              </ProtectedRoute>
-            } />
 
-            <Route path="/reports" element={
-              <ProtectedRoute allowedRoles={routeRoles.reports}>
-                <ReportsPage />
-              </ProtectedRoute>
-            } />
 
-            <Route path="/admin/management" element={
-              <ProtectedRoute allowedRoles={routeRoles.admin}>
-                <ManagementPanelPage />
-              </ProtectedRoute>
-            } />
 
             <Route path="/configuration" element={
               <ProtectedRoute allowedRoles={routeRoles.admin}>
@@ -166,43 +162,13 @@ function App() {
             <Route path="/pedidos-internos/:id" element={<OldOrderLink />} />
             <Route path="/orders" element={<Navigate to="/inventario?vista=pedidos" replace />} />
 
-            <Route path="/vehicle-control" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehicleControlPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/vehicle-control/:id" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehicleDetailPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/vehicles" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehiclesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/vehicles/:id" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <VehicleDetailPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/maintenance" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <MaintenancePage />
-              </ProtectedRoute>
-            } />
 
-            <Route path="/marketing" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <MarketingPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/campaigns" element={
-              <ProtectedRoute allowedRoles={routeRoles.frozen}>
-                <CampaignPage />
-              </ProtectedRoute>
-            } />
 
+            <Route path="/ventas-directas" element={
+              <ProtectedRoute allowedRoles={routeRoles.ventasDirectas}>
+                <DirectSalesPage />
+              </ProtectedRoute>
+            } />
             <Route path="/inventario" element={
               <ProtectedRoute allowedRoles={routeRoles.inventario}>
                 <InventoryPage />
@@ -219,18 +185,20 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/reports/admin" element={<Navigate to="/reports" replace />} />
 
             <Route path="*" element={
               <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center p-4">
                 <h1 className="text-4xl font-bold mb-4 text-primary">404</h1>
                 <p className="text-muted-foreground font-semibold mb-6">La página no existe o no tienes permiso.</p>
-                <a href="/dashboard" className="text-primary hover:underline font-bold min-h-11 inline-flex items-center">Volver al Dashboard</a>
+                <a href="/dashboard" className="text-primary hover:underline font-bold min-h-11 inline-flex items-center">Volver al panel</a>
               </div>
             } />
           </Routes>
         </Suspense>
-        <Toaster position="top-center" richColors closeButton />
+        </ErrorBoundary>
+        <Suspense fallback={null}>
+          <AppToaster />
+        </Suspense>
       </Router>
     </ConfirmProvider>
     </RealtimeProvider>

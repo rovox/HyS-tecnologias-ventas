@@ -15,6 +15,7 @@ const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const projects_rules_1 = require("../domain/projects.rules");
 const emptyToUndef = ({ value }) => (value === '' || value === null ? undefined : value);
+const clearable = ({ value }) => (value === null ? '' : value);
 class ListProjectsQuery {
     estado;
     clienteId;
@@ -58,7 +59,7 @@ __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_transformer_1.Transform)(emptyToUndef),
+    (0, class_transformer_1.Transform)(clearable),
     __metadata("design:type", String)
 ], UpdateProjectDto.prototype, "responsableId", void 0);
 class ProjectStatusDto {
@@ -141,6 +142,7 @@ class ProjectPaymentDto {
     metodo;
     nota;
     recibidoPorId;
+    cuentaDestino;
 }
 exports.ProjectPaymentDto = ProjectPaymentDto;
 __decorate([
@@ -173,4 +175,10 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], ProjectPaymentDto.prototype, "recibidoPorId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached (LAUNCH P1-1)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' }),
+    __metadata("design:type", String)
+], ProjectPaymentDto.prototype, "cuentaDestino", void 0);
 //# sourceMappingURL=project.dto.js.map

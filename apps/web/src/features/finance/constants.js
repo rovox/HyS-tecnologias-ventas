@@ -3,7 +3,9 @@ import { STATUS } from '@/shared/lib/status.js';
 export const TIPO_LABEL = { ingreso: 'Ingreso', egreso: 'Egreso', transferencia: 'Transferencia' };
 
 export const CONCEPTOS = {
-  ingreso: { venta_directa: 'Venta directa', otro: 'Otro ingreso' },
+  // A direct sale is registered from Ventas directas (VD-01), not by hand.
+  // "Saldo inicial": the money each box already had, registered by its operator on first use and validated into it.
+  ingreso: { devolucion_anticipo: 'Devolución de anticipo', saldo_inicial: 'Saldo inicial', otro: 'Otro ingreso' },
   egreso: {
     material: 'Material',
     combustible: 'Combustible',
@@ -14,6 +16,7 @@ export const CONCEPTOS = {
     alquiler: 'Alquiler',
     impuestos: 'Impuestos',
     marketing: 'Marketing',
+    anticipo_por_rendir: 'Anticipo por rendir',
     otro: 'Otro gasto',
   },
   transferencia: { deposito: 'Depósito', retiro: 'Retiro' },
@@ -24,6 +27,9 @@ export const CONCEPTO_LABEL = {
   adelanto: 'Adelanto',
   asistencia: 'Asistencia',
   cobro: 'Cobro',
+  venta_directa: 'Venta directa',
+  saldo_inicial: 'Saldo inicial',
+  diferencia_arqueo: 'Diferencia de arqueo',
   adicional: 'Adicional',
   ...CONCEPTOS.ingreso,
   ...CONCEPTOS.egreso,

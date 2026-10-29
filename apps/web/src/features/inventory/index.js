@@ -1,5 +1,3 @@
-// Public entry of the inventory feature. The page is lazy: `useProducts` is used by the internal order form.
-import { lazy } from 'react';
-
-export const InventoryPage = lazy(() => import('./pages/InventoryPage.jsx'));
-export { useProducts } from './api.js';
+// Public entry of the inventory feature: `useProducts` (internal order form) and `useRegisterStockMovement` (material a
+// técnico uses on a job, SCH-04). The page is loaded by app/App.jsx straight from its file (GATE-01).
+export { useProducts, useRegisterStockMovement } from './api.js';

@@ -117,11 +117,12 @@ export declare class PedidosInternosService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         items: {
@@ -302,11 +303,12 @@ export declare class PedidosInternosService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         items: {
@@ -415,11 +417,12 @@ export declare class PedidosInternosService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         items: {

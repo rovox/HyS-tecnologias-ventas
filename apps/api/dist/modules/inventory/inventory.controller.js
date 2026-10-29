@@ -33,8 +33,14 @@ let InventoryController = class InventoryController {
     update(id, dto, user, sessionId) {
         return this.inventory.updateProduct(id, dto, user, sessionId);
     }
-    movements(user, productoId) {
-        return this.inventory.movements(user, productoId);
+    kardex(id, sucursalId, user) {
+        return this.inventory.kardex(id, user, sucursalId);
+    }
+    movements(query, user) {
+        return this.inventory.movements(user, query);
+    }
+    batch(dto, user, sessionId) {
+        return this.inventory.registerBatch(dto, user, sessionId);
     }
     move(dto, user, sessionId) {
         return this.inventory.registerMovement(dto, user, sessionId);
@@ -71,17 +77,37 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], InventoryController.prototype, "update", null);
 __decorate([
-    (0, common_1.Get)('movements'),
-    (0, swagger_1.ApiOperation)({ summary: 'Stock movements (optionally of one product)' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Query)('productoId')),
+    (0, common_1.Get)('products/:id/kardex'),
+    (0, swagger_1.ApiOperation)({ summary: 'Kardex of a product in a branch (or the company) with its running balance' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('sucursalId')),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", void 0)
+], InventoryController.prototype, "kardex", null);
+__decorate([
+    (0, common_1.Get)('movements'),
+    (0, swagger_1.ApiOperation)({ summary: 'History: by branch, types, Bolivian days and product' }),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [inventory_dto_1.ListMovementsQuery, Object]),
     __metadata("design:returntype", void 0)
 ], InventoryController.prototype, "movements", null);
 __decorate([
+    (0, common_1.Post)('movements/lote'),
+    (0, swagger_1.ApiOperation)({ summary: 'Several products moved the same way (entrada, transferencia, baja…) in one transaction' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [inventory_dto_1.StockBatchDto, Object, String]),
+    __metadata("design:returntype", void 0)
+], InventoryController.prototype, "batch", null);
+__decorate([
     (0, common_1.Post)('movements'),
-    (0, swagger_1.ApiOperation)({ summary: 'Entrada, transferencia, salida a proyecto or ajuste (Gerencia)' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Entrada, transferencia, salida a proyecto, baja or ajuste (Gerencia)' }),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __param(2, (0, current_user_decorator_1.CurrentSessionId)()),

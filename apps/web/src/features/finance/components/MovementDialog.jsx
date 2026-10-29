@@ -7,21 +7,23 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useSucursales, useUserDirectory } from '@/features/catalogs';
 import { ROLES } from '@/constants/roles.js';
 import { useProjects } from '@/features/projects';
+import { businessDayOf } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { useCashBoxes, useCreateMovement, useUpdateMovement } from '../api.js';
 import { CONCEPTOS } from '../constants.js';
 import { SearchSelect } from '@/shared/views';
 
 const TITLES = { egreso: 'Registrar gasto', ingreso: 'Otro ingreso', transferencia: 'Transferencia entre cajas' };
-const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
+/** How the money moved: the daily cash close only counts `efectivo`. */
+const METHODS = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia' };
 
 function initial(tipo, movement, user, defaults = {}) {
   return {
     concepto: movement?.concepto || Object.keys(CONCEPTOS[tipo])[0],
     monto: movement ? String(Number(movement.monto)) : '',
-    fecha: movement ? String(movement.fecha).slice(0, 10) : today(),
-    metodo: movement?.metodo || 'efectivo',
+    fecha: businessDayOf(movement?.fecha),
+    metodo: (movement?.metodo || 'efectivo').toLowerCase(),
     nota: movement?.nota || '',
     pagadoPor: movement?.pagadoPor || 'empresa',
     projectId: movement?.project?.id || defaults.projectId || '',
@@ -29,6 +31,9 @@ function initial(tipo, movement, user, defaults = {}) {
     cajaId: movement?.caja?.id || 'caja_central',
     cajaDestinoId: '',
     recibidoPorId: movement?.recibidoPor?.id || '',
+    responsableId: '',
+    asunto: '',
+    fechaLimite: '',
   };
 }
 
@@ -61,6 +66,9 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
     const monto = Number(form.monto);
     if (!(monto > 0)) return notify.error('El monto debe ser mayor a 0');
     if (kind === 'transferencia' && (!form.cajaDestinoId || form.cajaDestinoId === form.cajaId)) return notify.error('Elige dos cajas distintas');
+    if (!movement && kind !== 'transferencia' && !form.sucursalId && !form.projectId) return notify.error('Elige la sucursal');
+    const advance = !movement && form.concepto === 'anticipo_por_rendir';
+    if (advance && (!form.responsableId || !form.asunto.trim() || !form.fechaLimite)) return notify.error('Un anticipo necesita a quién se entrega, el asunto y hasta cuándo se rinde');
     const data = {
       concepto: form.concepto,
       monto,
@@ -81,6 +89,7 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
           ...data,
           sucursalId: form.sucursalId || undefined,
           ...(kind === 'egreso' && form.projectId ? { projectId: form.projectId } : {}),
+          ...(advance ? { responsableId: form.responsableId, asunto: form.asunto.trim(), fechaLimite: form.fechaLimite, pagadoPor: 'empresa' } : {}),
           ...(kind === 'transferencia' ? { cajaId: form.cajaId, cajaDestinoId: form.cajaDestinoId } : {}),
         });
         notify.success(kind === 'transferencia' ? 'Transferencia registrada' : 'Registrado: queda por validar');
@@ -116,7 +125,26 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
               <Input id="mv-monto" type="number" min="0.01" step="0.01" autoFocus value={form.monto} onChange={(e) => set({ monto: e.target.value })} />
             </div>
           </div>
-          {kind === 'egreso' && (
+          {kind === 'egreso' && !movement && form.concepto === 'anticipo_por_rendir' && (
+            <div className="space-y-2 rounded-md border border-info-border bg-info-soft p-2">
+              <p className="text-xs text-info-fg">Dinero que se entrega para gastos que se rinden después (FIN-04). Queda en Anticipos hasta que se rinda.</p>
+              <div className="space-y-1.5">
+                <Label htmlFor="mv-resp">Se entrega a *</Label>
+                <SearchSelect id="mv-resp" aria-label="Se entrega a" value={form.responsableId} onChange={(responsableId) => set({ responsableId })} placeholder="Persona" searchPlaceholder="Buscar persona…" options={people.map((u) => ({ value: u.id, label: u.name }))} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="mv-asunto">Asunto *</Label>
+                  <Input id="mv-asunto" placeholder="Ej. insumos de limpieza" value={form.asunto} onChange={(e) => set({ asunto: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-limite">Rendir hasta *</Label>
+                  <Input id="mv-limite" type="date" value={form.fechaLimite} onChange={(e) => set({ fechaLimite: e.target.value })} />
+                </div>
+              </div>
+            </div>
+          )}
+          {kind === 'egreso' && form.concepto !== 'anticipo_por_rendir' && (
             <div className="space-y-1.5">
               <Label>¿Quién pagó?</Label>
               <div className="grid grid-cols-2 gap-2" role="radiogroup">
@@ -163,11 +191,21 @@ export function MovementDialog({ tipo, movement, open, onOpenChange, defaults })
               <div className="space-y-1.5">
                 <Label htmlFor="mv-suc">Sucursal</Label>
                 <select id="mv-suc" className={select} value={form.sucursalId} onChange={(e) => set({ sucursalId: e.target.value })}>
+                  {!form.sucursalId && <option value="">Elige sucursal</option>}
                   {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                 </select>
               </div>
             )}
           </div>
+          {kind !== 'transferencia' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="mv-metodo">Medio de pago</Label>
+              <select id="mv-metodo" className={select} value={form.metodo} onChange={(e) => set({ metodo: e.target.value })}>
+                {!METHODS[form.metodo] && <option value={form.metodo}>{form.metodo}</option>}
+                {Object.entries(METHODS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </div>
+          )}
           {movement && kind === 'ingreso' && (canManageMoney() || movement.estado !== 'validado') && (
             <div className="space-y-1.5">
               <Label htmlFor="mv-recibe">{movement.estado === 'por_validar' ? '¿Quién tiene el dinero?' : '¿Quién lo recibió?'}</Label>

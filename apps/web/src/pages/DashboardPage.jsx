@@ -1,54 +1,63 @@
-import React from 'react';
+import { lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeftRight, CalendarPlus, FilePlus2, Lock, PackagePlus, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import Layout from '@/components/Layout.jsx';
 import SalesMetricsRow from '@/components/SalesMetricsRow.jsx';
-import SalesActivityCharts from '@/components/SalesActivityCharts.jsx';
-import { Helmet } from 'react-helmet';
-import { FileStack, Building2, ClipboardCheck } from 'lucide-react';
+import { ActivityFeed } from '@/features/activity';
+import { MoneySummary } from '@/features/finance';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { Button } from '@/components/ui/button.jsx';
-import { ROLES } from '@/constants/roles.js';
-import { canWriteQuotations } from '@/config/nav.js';
+import { Skeleton } from '@/components/ui/skeleton.jsx';
 
+// Recharts is heavy: the charts load after the page (performance.md, route chunk <= 100 kB).
+const SalesActivityCharts = lazy(() => import('@/components/SalesActivityCharts.jsx'));
+
+/**
+ * Dashboard (DASH-01/02): quick actions of the day for each role, the real money of the month and today per branch,
+ * the commercial metrics and, for Gerencia, the latest activity (Panel de control and Reportes merged here).
+ */
 const DashboardPage = () => {
+  useDocumentTitle('Panel');
   const navigate = useNavigate();
-  const { currentUser, userRole } = useAuth();
-  const isVentas = userRole === ROLES.VENTAS;
-  const isTec = userRole === ROLES.TEC;
+  const { currentUser, isAdmin, isVentasLevel, isSeguridad } = useAuth();
+  const commercial = isVentasLevel();
+  const tec = isSeguridad();
 
-  const subtitle = isVentas
-    ? 'Tus cotizaciones, ventas y meta del mes.'
-    : isTec
-      ? 'Relevamientos y tareas asignadas.'
-      : 'Visión comercial de sucursales y vendedores.';
+  const actions = [
+    commercial && { label: 'Nueva venta', icon: ShoppingCart, to: '/ventas-directas?vender=1', variant: 'success' },
+    commercial && { label: 'Cierre del día', icon: Lock, to: '/finanzas?vista=cierre' },
+    commercial && { label: 'Nueva cotización', icon: FilePlus2, to: '/quotations' },
+    commercial && { label: 'Programar trabajo', icon: CalendarPlus, to: '/schedule?programar=1' },
+    commercial && { label: 'Agregar material', icon: PackagePlus, to: '/inventario?accion=entrada' },
+    commercial && { label: 'Mover material', icon: ArrowLeftRight, to: '/inventario?accion=transferencia' },
+    tec && { label: 'Mis trabajos', icon: CalendarPlus, to: '/schedule' },
+  ].filter(Boolean);
 
   return (
     <Layout>
-      <Helmet><title>Dashboard - H&S Tecnologías</title></Helmet>
       <div className="content-container space-y-6 py-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Hola, {currentUser?.name || 'equipo'}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Hola, {currentUser?.name || 'equipo'}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{tec ? 'Tus trabajos y visitas del día.' : 'Lo del día, el dinero del mes y cómo van las ventas.'}</p>
         </div>
 
-        {!isTec && <SalesMetricsRow />}
-        {!isTec && <SalesActivityCharts />}
-
-        <div className="flex flex-wrap gap-3">
-          {canWriteQuotations(userRole) && (
-            <Button className="min-h-11" onClick={() => navigate('/quotations')}>
-              <FileStack className="h-4 w-4" /> Cotizaciones
+        <div className="flex flex-wrap gap-2" aria-label="Acciones rápidas">
+          {actions.map((a) => (
+            <Button key={a.label} variant={a.variant || 'outline'} className="min-h-11" onClick={() => navigate(a.to)}>
+              <a.icon className="h-4 w-4" /> {a.label}
             </Button>
-          )}
-          <Button variant="outline" className="min-h-11" onClick={() => navigate('/clientes')}>
-            <Building2 className="h-4 w-4" /> Clientes
-          </Button>
-          <Button variant="outline" className="min-h-11" onClick={() => navigate('/surveys')}>
-            <ClipboardCheck className="h-4 w-4" /> Relevamientos
-          </Button>
+          ))}
         </div>
+
+        {commercial && <MoneySummary />}
+        {!tec && <SalesMetricsRow />}
+        {!tec && (
+          <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+            <SalesActivityCharts />
+          </Suspense>
+        )}
+        {isAdmin() && <ActivityFeed />}
       </div>
     </Layout>
   );

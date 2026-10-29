@@ -1,5 +1,5 @@
 import { apiClient, authToken } from '@/api/http.js';
-import { ROLES } from '@/constants/roles.js';
+import { COMMERCIAL_ROLES } from '@/constants/roles.js';
 
 const monthKey = () => new Date().toISOString().slice(0, 7);
 
@@ -11,7 +11,7 @@ export const goalsService = {
     ]);
     const byUser = new Map((goals || []).map((row) => [row.usuarioId, row]));
     return (users || [])
-      .filter((user) => user.role === ROLES.ADMIN || user.role === ROLES.VENTAS)
+      .filter((user) => COMMERCIAL_ROLES.includes(user.role))
       .map((user) => {
         const goal = byUser.get(user.id);
         return {
@@ -31,7 +31,6 @@ export const goalsService = {
       usuarioId: userId,
       month,
       metaMonto,
-      metaCotiz: 0,
     }, { token: authToken() });
   },
 };

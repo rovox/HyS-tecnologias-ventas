@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useConfirm } from '@/shared/views';
-import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { formatBs, formatBusinessDay } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { useCashBoxes, useMovementAction, useMovementImpact } from '../api.js';
 import { CONCEPTO_LABEL, TIPO_LABEL } from '../constants.js';
@@ -13,7 +13,7 @@ function movementDetails(m) {
   return [
     ['Movimiento', `${TIPO_LABEL[m.tipo]}: ${CONCEPTO_LABEL[m.concepto] || m.concepto}`],
     ['Monto', formatBs(m.monto)],
-    ['Fecha', formatDay(m.fecha)],
+    ['Fecha', formatBusinessDay(m.fecha)],
     ['Proyecto', m.project ? `${m.project.codigo} — ${m.project.titulo}` : null],
     ['Trabajo', !m.project ? m.schedule?.descripcionTrabajo : null],
     ['Cliente', m.cliente?.nombre],
@@ -46,7 +46,8 @@ export function useMovementActions({ onEdit, onChooseBox } = {}) {
   const { data: boxes = [] } = useCashBoxes();
   const manager = canManageMoney();
 
-  const suggestedBox = (m) => boxes.find((b) => b.sucursalId === m.sucursal?.id) || boxes[0];
+  // A movement that already names its box (a QR cobro into the primary or secondary QR) is validated there; otherwise the branch's.
+  const suggestedBox = (m) => boxes.find((b) => b.id === m.caja?.id) || boxes.find((b) => b.sucursalId === m.sucursal?.id) || boxes[0];
 
   const run = async (m, key, body, done) => {
     try {

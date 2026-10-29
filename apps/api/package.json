@@ -32,6 +32,8 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "exceljs": "4.4.0",
+    "pdfmake": "0.2.23",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -40,6 +42,7 @@
     "@nestjs/testing": "^11.2.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.19.43",
+    "@types/pdfmake": "0.2.11",
     "@types/supertest": "^7.2.1",
     "jest": "^30.4.2",
     "prisma": "6.19.3",

@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var TasksService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TasksService = void 0;
 const common_1 = require("@nestjs/common");
@@ -26,24 +27,38 @@ function titleFromDescription(text) {
     const line = String(text || '').trim().split(/\n/)[0] || '';
     return line.slice(0, 200);
 }
-let TasksService = class TasksService {
+const DAY_MS = 24 * 60 * 60 * 1000;
+let TasksService = TasksService_1 = class TasksService {
     prisma;
     audit;
+    logger = new common_1.Logger(TasksService_1.name);
+    purgeTimer;
     constructor(prisma, audit) {
         this.prisma = prisma;
         this.audit = audit;
     }
-    async list(user, tipo) {
-        const hace24 = new Date();
-        hace24.setHours(hace24.getHours() - 24);
+    startTimers() {
+        const run = () => this.purgeArchived().catch((err) => this.logger.error(`Purga de tareas archivadas: ${err}`));
+        run();
+        this.purgeTimer = setInterval(run, DAY_MS);
+        this.purgeTimer.unref();
+    }
+    onModuleDestroy() {
+        clearInterval(this.purgeTimer);
+    }
+    async purgeArchived(now = new Date()) {
+        const { count } = await this.prisma.task.deleteMany({ where: { archivadaAt: { lt: (0, tasks_rules_1.purgeBefore)(now) } } });
+        if (count)
+            this.logger.log(`${count} tareas archivadas hace más de 30 días eliminadas`);
+        return count;
+    }
+    async list(user, tipo, archivadas = false) {
         const rows = await this.prisma.task.findMany({
-            where: {
-                ...(0, roles_1.taskWhere)(user, tipo),
-                OR: [{ estado: 'pendiente' }, { estado: { not: 'pendiente' }, updatedAt: { gte: hace24 } }],
-            },
+            where: { ...(0, roles_1.taskWhere)(user, tipo), ...(archivadas ? { archivadaAt: { not: null } } : { estado: 'pendiente' }) },
             include: TASK_INCLUDE,
+            ...(archivadas ? { orderBy: { archivadaAt: 'desc' }, take: 200 } : {}),
         });
-        return rows.sort(tasks_rules_1.compareTasks);
+        return archivadas ? rows : rows.sort(tasks_rules_1.compareTasks);
     }
     async summary(user) {
         const rows = await this.prisma.task.findMany({
@@ -126,7 +141,7 @@ let TasksService = class TasksService {
                 ...(dto.cotizacionId !== undefined ? { cotizacionId: dto.cotizacionId || null } : {}),
                 ...(dto.scheduleId !== undefined ? { scheduleId: dto.scheduleId || null } : {}),
                 ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId || null } : {}),
-                ...(dto.estado ? { estado: dto.estado } : {}),
+                ...(dto.estado ? { estado: dto.estado, archivadaAt: (0, tasks_rules_1.archivedAtFor)(dto.estado, new Date()) } : {}),
                 ...(completing ? { completedAt: new Date() } : {}),
                 ...(dto.estado && dto.estado !== 'completada' ? { completedAt: null } : {}),
             },
@@ -169,7 +184,7 @@ let TasksService = class TasksService {
             throw new common_1.BadRequestException(error);
         const row = await this.prisma.task.update({
             where: { id },
-            data: { cotizacionId, estado: 'completada', completedAt: new Date() },
+            data: { cotizacionId, estado: 'completada', completedAt: new Date(), archivadaAt: new Date() },
         });
         await this.audit.record({ user, sessionId, action: 'task.convert', entity: 'task', id, before: current, after: row, affects: ['quotation'] });
     }
@@ -180,7 +195,7 @@ let TasksService = class TasksService {
     }
 };
 exports.TasksService = TasksService;
-exports.TasksService = TasksService = __decorate([
+exports.TasksService = TasksService = TasksService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         audit_service_1.AuditService])

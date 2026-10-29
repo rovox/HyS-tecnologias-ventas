@@ -5,6 +5,7 @@ export declare class SucursalesController {
     list(): import("@prisma/client").Prisma.PrismaPromise<{
         id: string;
         nombre: string;
+        direccion: string;
         createdAt: Date;
         updatedAt: Date;
     }[]>;

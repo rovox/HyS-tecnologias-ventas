@@ -17,7 +17,6 @@ const quotations_1 = require("./modules/quotations");
 const sucursales_1 = require("./modules/sucursales");
 const relevamientos_1 = require("./modules/relevamientos");
 const goals_1 = require("./modules/goals");
-const sales_1 = require("./modules/sales");
 const metrics_1 = require("./modules/metrics");
 const tasks_1 = require("./modules/tasks");
 const schedules_1 = require("./modules/schedules");
@@ -28,6 +27,8 @@ const projects_1 = require("./modules/projects");
 const finance_1 = require("./modules/finance");
 const reporting_1 = require("./modules/reporting");
 const inventory_1 = require("./modules/inventory");
+const direct_sales_1 = require("./modules/direct-sales");
+const digicorp_1 = require("./modules/digicorp");
 const health_controller_1 = require("./health.controller");
 let AppModule = class AppModule {
 };
@@ -57,7 +58,6 @@ exports.AppModule = AppModule = __decorate([
             sucursales_1.SucursalesModule,
             relevamientos_1.RelevamientosModule,
             goals_1.GoalsModule,
-            sales_1.SalesModule,
             metrics_1.MetricsModule,
             tasks_1.TasksModule,
             schedules_1.SchedulesModule,
@@ -68,6 +68,8 @@ exports.AppModule = AppModule = __decorate([
             finance_1.FinanceModule,
             reporting_1.ReportingModule,
             inventory_1.InventoryModule,
+            direct_sales_1.DirectSalesModule,
+            digicorp_1.DigicorpModule,
         ],
         controllers: [health_controller_1.HealthController],
     })

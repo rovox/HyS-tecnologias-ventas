@@ -4,6 +4,8 @@ import { IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, 
 import { PROJECT_ESTADOS } from '../domain/projects.rules';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
+// On updates an emptied field arrives as '' or null and must reach the service as '' (it saves null), not be dropped.
+const clearable = ({ value }: { value: unknown }) => (value === null ? '' : value);
 
 export class ListProjectsQuery {
   @ApiPropertyOptional({ enum: PROJECT_ESTADOS })
@@ -35,7 +37,7 @@ export class UpdateProjectDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   responsableId?: string;
 }
 
@@ -118,4 +120,9 @@ export class ProjectPaymentDto {
   @IsOptional()
   @IsString()
   recibidoPorId?: string;
+
+  @ApiPropertyOptional({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached (LAUNCH P1-1)' })
+  @IsOptional()
+  @IsIn(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' })
+  cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }

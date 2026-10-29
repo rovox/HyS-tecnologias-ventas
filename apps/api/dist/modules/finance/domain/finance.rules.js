@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MOVEMENT_ESTADOS = exports.MOVEMENT_TIPOS = void 0;
+exports.QR_DESTINOS = exports.MOVEMENT_ESTADOS = exports.MOVEMENT_TIPOS = void 0;
 exports.movementError = movementError;
 exports.nextMovementStates = nextMovementStates;
 exports.checkMovementTransition = checkMovementTransition;
@@ -8,16 +8,22 @@ exports.editMovementError = editMovementError;
 exports.incomeOf = incomeOf;
 exports.expensesOf = expensesOf;
 exports.balanceOf = balanceOf;
+exports.qrDestinationError = qrDestinationError;
 exports.incomeConceptError = incomeConceptError;
 exports.incomeError = incomeError;
 exports.cashBoxBalance = cashBoxBalance;
 exports.pendingRefund = pendingRefund;
 exports.custody = custody;
 exports.movementImpact = movementImpact;
+exports.movementDate = movementDate;
+exports.advanceError = advanceError;
+exports.daysLate = daysLate;
+exports.monthMoney = monthMoney;
+const calendar_1 = require("../../../common/domain/calendar");
 exports.MOVEMENT_TIPOS = ['ingreso', 'egreso', 'transferencia'];
 const CONCEPTOS = {
-    ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'otro'],
-    egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'otro'],
+    ingreso: ['adelanto', 'cobro', 'adicional', 'asistencia', 'venta_directa', 'diferencia_arqueo', 'devolucion_anticipo', 'saldo_inicial', 'otro'],
+    egreso: ['material', 'combustible', 'mantenimiento_vehicular', 'viaticos', 'servicios', 'sueldos', 'alquiler', 'impuestos', 'marketing', 'anticipo_por_rendir', 'diferencia_arqueo', 'otro'],
     transferencia: ['deposito', 'retiro'],
 };
 const MOVEMENT_FLOW = {
@@ -80,6 +86,15 @@ function expensesOf(movements) {
 }
 function balanceOf(monto, cobrado, cancelled) {
     return cancelled ? 0 : Math.max(0, cents(Number(monto) - cobrado));
+}
+exports.QR_DESTINOS = { qr_empresa: 'caja_qr', qr_socia: 'caja_qr_socia', qr_personal: null };
+function qrDestinationError(metodo, cuentaDestino) {
+    const qr = (metodo || '').toLowerCase() === 'qr';
+    if (qr && !cuentaDestino)
+        return 'Indica a qué QR entró el cobro: QR primario, QR secundario o tu QR personal';
+    if (!qr && cuentaDestino)
+        return 'La cuenta destino es solo para cobros por QR';
+    return null;
 }
 function incomeConceptError(target, concepto) {
     if (target === 'visita')
@@ -154,5 +169,36 @@ function movementImpact(m, accion, ctx) {
             out.push({ tipo: 'costo', antes: t.costo, despues: cents(t.costo - amount) });
     }
     return out;
+}
+function movementDate(fecha, now = new Date(), before) {
+    if (!fecha)
+        return before ?? now;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha))
+        return new Date(fecha);
+    if (before && (0, calendar_1.businessDay)(before) === fecha)
+        return before;
+    return (0, calendar_1.atBusinessTime)(fecha, now);
+}
+function advanceError(input) {
+    if (input.concepto !== 'anticipo_por_rendir')
+        return null;
+    if (!input.responsableId)
+        return 'Indica a quién se entrega el anticipo';
+    if (!input.asunto?.trim())
+        return 'Indica el asunto del anticipo';
+    if (!input.fechaLimite)
+        return 'Indica hasta cuándo se rinde';
+    return null;
+}
+function daysLate(fechaLimite, today) {
+    const limit = new Date(fechaLimite).toISOString().slice(0, 10);
+    return Math.max(0, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${limit}T00:00:00Z`)) / 86400e3));
+}
+function monthMoney(movements) {
+    const sum = (list) => cents(list.reduce((s, m) => s + Number(m.monto), 0));
+    const incomes = movements.filter((m) => m.tipo === 'ingreso' && COUNTED.includes(m.estado));
+    const enCaja = sum(incomes.filter((m) => m.estado === 'validado'));
+    const egresos = sum(movements.filter((m) => m.tipo === 'egreso' && m.estado === 'validado'));
+    return { cobrado: sum(incomes), enCaja, egresosValidados: egresos, neto: cents(enCaja - egresos), porValidar: sum(incomes.filter((m) => m.estado === 'por_validar')) };
 }
 //# sourceMappingURL=finance.rules.js.map

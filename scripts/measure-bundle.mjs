@@ -49,18 +49,16 @@ const closure = (roots) => {
 const roots = [...html.matchAll(/<script[^>]+src="([^"]+\.js)"/g)].map((m) => clean(m[1]));
 roots.push(...[...html.matchAll(/<link[^>]+rel="modulepreload"[^>]+href="([^"]+)"/g)].map((m) => clean(m[1])));
 const entryJs = closure(roots);
-// Route chunks = lazy chunks referenced from the entry chain. Shell = chunks that every route statically imports.
+// Route chunks = lazy chunks referenced from the entry chain.
 const routeChunks = [...new Set([...entryJs].flatMap(dynamicImports))];
 const totalKb = (files) => kb([...files].reduce((n, f) => n + size(f), 0));
-const routeClosures = routeChunks.map((chunk) => [chunk, closure([chunk])]);
-// Shell = chunk statically imported by at least half of the routes (the login page has no Layout, so "all" is too strict).
+// Shell = the Layout chunk and what it statically imports (docs/rules/performance.md: entry JS = `index` + `Layout`).
+// Chunks shared by many pages but not by Layout (dialogs, menus) are route weight, not shell: they load with the page
+// that uses them (GATE-01, 2026-10-27; it used to be "imported by half of the routes", which counted them as shell).
+const layoutChunks = readdirSync(path.join(DIST, 'assets')).filter((f) => /^Layout-[^/]+\.js$/.test(f)).map((f) => `assets/${f}`);
+if (!layoutChunks.length) throw new Error('No Layout chunk in the build: the shell cannot be measured');
 const shell = new Set();
-for (const [, c] of routeClosures) {
-  for (const f of c) {
-    if (entryJs.has(f) || routeChunks.includes(f)) continue;
-    if (routeClosures.filter(([, other]) => other.has(f)).length >= routeClosures.length / 2) shell.add(f);
-  }
-}
+for (const f of closure(layoutChunks)) if (!entryJs.has(f)) shell.add(f);
 const routes = routeChunks.filter((c) => !shell.has(c)).map((chunk) => ({ chunk, kb: kb(size(chunk)) })).sort((a, b) => b.kb - a.kb);
 
 const css = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((m) => clean(m[1]));

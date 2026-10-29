@@ -64,6 +64,29 @@ export class CreateMovementDto {
   @IsString()
   @Transform(emptyToUndef)
   sucursalId?: string;
+
+  @ApiPropertyOptional({ description: 'Anticipo por rendir: who receives the fund' })
+  @IsOptional()
+  @IsString()
+  @Transform(emptyToUndef)
+  responsableId?: string;
+
+  @ApiPropertyOptional({ description: 'Anticipo por rendir: what it is for' })
+  @IsOptional()
+  @IsString()
+  asunto?: string;
+
+  @ApiPropertyOptional({ description: 'Anticipo por rendir: day it must be accounted for' })
+  @IsOptional()
+  @IsDateString()
+  fechaLimite?: string;
+}
+
+export class SettleAdvanceDto {
+  @ApiPropertyOptional({ description: 'How it was accounted for (receipts, what was returned)' })
+  @IsOptional()
+  @IsString()
+  nota?: string;
 }
 
 export class UpdateMovementDto {
@@ -174,6 +197,18 @@ export class ListMovementsQuery {
   @IsOptional()
   @IsDateString()
   hasta?: string;
+
+  @ApiPropertyOptional({ description: 'Only this branch (without it: the whole company)' })
+  @IsOptional()
+  @IsString()
+  sucursalId?: string;
+}
+
+/** The ledger as a file (FIN-06): the same filters, csv or xlsx. */
+export class ExportMovementsQuery extends ListMovementsQuery {
+  @ApiProperty({ enum: ['csv', 'xlsx'] })
+  @IsIn(['csv', 'xlsx'], { message: 'Formato no válido: csv o xlsx' })
+  formato: 'csv' | 'xlsx';
 }
 
 /** A payment of a project or job: advance, payment against the balance, or an additional charge on top. */
@@ -203,4 +238,10 @@ export class IncomeDto {
   @IsString()
   @Transform(emptyToUndef)
   recibidoPorId?: string;
+
+  @ApiPropertyOptional({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached' })
+  @IsOptional()
+  @IsIn(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' })
+  @Transform(emptyToUndef)
+  cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }

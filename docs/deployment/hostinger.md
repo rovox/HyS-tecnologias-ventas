@@ -42,6 +42,7 @@ hPanel → Sitios web → (sitio) → **Despliegues / Configuración de Git**. E
 | `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` — con dominio propio, separados por coma: `https://white-goat-213580.hostingersite.com,https://erp.tudominio.com` |
 | `UPLOAD_DIR` | `/home/u656468476/hys-uploads/quotations` (fuera del repositorio: cada despliegue reemplaza la carpeta del sitio). Las fotos de visitas van en su subcarpeta `relevamientos/` |
 | `WEB_LEADS_KEY` | `openssl rand -hex 32`; el mismo valor en WordPress (`HS_ERP_LEADS_KEY`) para el formulario web |
+| `DIGICORP_AUTO_SYNC` | `1` para que la Tienda Digicorp se actualice sola cada mes (DIGI-01). Sin ella, solo con "Actualizar ahora" (Gerencia). La primera carga tarda unos 3 minutos (≈50 páginas, una cada 3 s); si Digicorp bloquea, se detiene y lo muestra en la pestaña |
 
 `PORT` lo pone Hostinger. Después de cambiar variables: **Reiniciar** el sitio (Guardar no basta).
 
@@ -53,21 +54,25 @@ hPanel → sitio → Dominios → conectar el dominio (por ejemplo `erp.hstecnol
 
 ## 2. Base de datos: un solo archivo SQL
 
-El esquema completo, los catálogos fijos (sucursales, las 3 divisiones, cajas) y el historial de migraciones están en **un archivo**, generado desde las migraciones:
+El esquema completo (`prisma migrate diff --from-empty` sobre `schema.prisma`), los catálogos fijos (sucursales con dirección, las 3 divisiones, las cajas: central, chicas, banco, QR primario (empresa), QR secundario (socia)), el historial de migraciones y, con `--users`, los usuarios están en **un archivo**:
 
 ```bash
 # 1. Contraseñas reales de los usuarios (archivo ignorado por git): { "julio@hscontrol.com": "…", … }
 #    en config/users.passwords.local.json
-# 2. Archivo para importar (incluye los usuarios con su contraseña cifrada; no se sube a git):
-node apps/api/scripts/build-hostinger-sql.mjs --users      # → config/hostinger-db.local.sql
+# 2. Archivo para importar (usuarios con su contraseña cifrada; no se sube a git).
+node apps/api/scripts/build-hostinger-sql.mjs --users           # → config/hostinger-db.local.sql
 ```
+
+Las cajas empiezan en Bs 0.00. En el primer uso, el encargado de cada caja registra lo que ya tenía (Finanzas › Registrar ingreso › concepto **Saldo inicial**, con la fecha del día anterior al primero de trabajo) y Contabilidad lo valida en esa caja; el primer cierre parte de ese saldo.
 
 [`hostinger-db.sql`](./hostinger-db.sql) es la misma base **sin usuarios** (la que queda en git para revisar).
 
-Crear la base (recomendado: una **nueva**; la actual queda intacta como respaldo):
+**Automático por SSH (lo usado el 2026-10-26):** `scripts/hostinger-recreate-db.sh --yes` respalda la base que usa la API (`~/backups/<base>-<fecha>.sql.gz` en el servidor), borra sus tablas, importa `config/hostinger-db.local.sql`, comprueba tablas, usuarios y migraciones, y reinicia la API. Lee `DATABASE_URL` del entorno del sitio en el servidor (no se muestra ni se copia). Misma base y mismo usuario: no hay que tocar hPanel.
+
+Manual, con una base **nueva** (la actual queda intacta como respaldo):
 
 1. hPanel → Bases de datos → **Crear base de datos**: nombre (Hostinger antepone `u656468476_`, p. ej. `u656468476_hs_erp`), usuario nuevo y contraseña **solo letras y números** (sin `$ @ # /`). Asignarla al sitio de la API (lime-chamois).
-2. phpMyAdmin de esa base → **Importar** → `config/hostinger-db.local.sql` → Continuar (crea 26 tablas, los catálogos y los usuarios).
+2. phpMyAdmin de esa base → **Importar** → `config/hostinger-db.local.sql` → Continuar (crea 28 tablas, los catálogos y los usuarios).
 3. Sitio de la API → Variables de entorno → cambiar **`DATABASE_URL`** a la base nueva: `mysql://u656468476_<usuario>:<contraseña>@localhost:3306/u656468476_<base>` → Guardar → **Reiniciar**. No hay que tocar código: NestJS solo lee esa variable.
 4. Comprobar: `https://lime-chamois-337700.hostingersite.com/api/health/db` → `"db":true`, y entrar con un usuario.
 

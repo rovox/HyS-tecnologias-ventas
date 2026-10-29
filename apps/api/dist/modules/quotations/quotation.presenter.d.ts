@@ -32,7 +32,6 @@ export declare const DETAIL: {
             readonly name: true;
         };
     };
-    sale: true;
     project: {
         select: {
             id: true;
@@ -59,13 +58,6 @@ export declare function present(row: QuotationRow): {
         id: string;
         nombre: string;
     };
-    sale: {
-        id: string;
-        createdAt: Date;
-        quotationId: string;
-        total: Prisma.Decimal;
-        status: string;
-    } | null;
     project: {
         id: string;
         estado: string;
@@ -75,12 +67,6 @@ export declare function present(row: QuotationRow): {
         relevamientos: number;
         tasks: number;
     };
-    sellers: {
-        nombre: string;
-        userId: string;
-        commissionPct: Prisma.Decimal;
-        quotationId: string;
-    }[];
     cliente: {
         id: string;
         nombre: string;
@@ -98,11 +84,16 @@ export declare function present(row: QuotationRow): {
         id: string;
         name: string;
     };
+    sellers: {
+        nombre: string;
+        userId: string;
+        commissionPct: Prisma.Decimal;
+        quotationId: string;
+    }[];
     id: string;
     sucursalId: string;
     createdAt: Date;
     updatedAt: Date;
-    vendedorId: string;
     titulo: string;
     clienteId: string | null;
     categoriaId: string;
@@ -118,6 +109,7 @@ export declare function present(row: QuotationRow): {
     fechaEnvio: Date | null;
     estado: string;
     motivoRechazo: string | null;
+    vendedorId: string;
     numero: string;
     eliminadaAt: Date | null;
     eliminadaPorId: string | null;

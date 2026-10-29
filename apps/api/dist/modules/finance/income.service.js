@@ -16,6 +16,8 @@ const audit_service_1 = require("../../common/audit/audit.service");
 const roles_1 = require("../../common/policy/roles");
 const finance_rules_1 = require("./domain/finance.rules");
 const movement_presenter_1 = require("./movement.presenter");
+const calendar_1 = require("../../common/domain/calendar");
+const DAY_MS = 24 * 60 * 60 * 1000;
 const COUNTED_SELECT = { tipo: true, concepto: true, monto: true, estado: true };
 let IncomeService = class IncomeService {
     prisma;
@@ -87,12 +89,13 @@ let IncomeService = class IncomeService {
     }
     async register(ref, dto, user, sessionId) {
         const target = await this.target(ref);
-        const allowed = (0, roles_1.isAdmin)(user) || (0, roles_1.isVentas)(user) || (0, roles_1.isConta)(user) || ((0, roles_1.isTec)(user) && target.technicians.includes(user.id));
+        const allowed = (0, roles_1.isAdmin)(user) || (0, roles_1.isVentas)(user) || ((0, roles_1.isTec)(user) && target.technicians.includes(user.id));
         if (!allowed)
             throw new common_1.ForbiddenException('Solo registras cobros de tus trabajos');
         const error = (0, finance_rules_1.movementError)({ tipo: 'ingreso', concepto: dto.concepto, monto: dto.monto }) ||
             (0, finance_rules_1.incomeConceptError)(target.relevamientoId ? 'visita' : 'trabajo', dto.concepto) ||
-            (0, finance_rules_1.incomeError)(target, dto.concepto, dto.monto);
+            (0, finance_rules_1.incomeError)(target, dto.concepto, dto.monto) ||
+            (0, finance_rules_1.qrDestinationError)(dto.metodo, dto.cuentaDestino);
         if (error)
             throw new common_1.BadRequestException(error);
         const recibidoPorId = dto.recibidoPorId || user.id;
@@ -103,12 +106,16 @@ let IncomeService = class IncomeService {
             if (!person?.active)
                 throw new common_1.BadRequestException('La persona que recibió el dinero no existe o está inactiva');
         }
+        const qrBox = dto.cuentaDestino ? finance_rules_1.QR_DESTINOS[dto.cuentaDestino] : undefined;
+        const personal = dto.cuentaDestino === 'qr_personal';
         const row = await this.prisma.cashMovement.create({
             data: {
                 tipo: 'ingreso',
                 concepto: dto.concepto,
                 monto: dto.monto,
-                metodo: dto.metodo || '',
+                metodo: (dto.metodo || '').toLowerCase(),
+                ...(qrBox ? { cajaId: qrBox } : {}),
+                ...(personal ? { asunto: 'Cobro por QR personal: entregar a la empresa', fechaLimite: new Date(Date.parse(`${(0, calendar_1.businessToday)(new Date())}T12:00:00Z`) + DAY_MS) } : {}),
                 nota: dto.nota || '',
                 projectId: target.projectId,
                 scheduleId: target.scheduleId,
@@ -116,7 +123,7 @@ let IncomeService = class IncomeService {
                 clienteId: target.clienteId,
                 sucursalId: target.sucursalId,
                 registradoPorId: user.id,
-                recibidoPorId,
+                recibidoPorId: qrBox ? null : recibidoPorId,
             },
             include: movement_presenter_1.MOVEMENT_DETAIL,
         });

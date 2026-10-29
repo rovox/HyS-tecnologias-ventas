@@ -22,6 +22,13 @@ New code goes in `features/` from day one. ESLint enforces the boundaries (`esli
 through `@/features/<x>` (its index), and `.jsx` files under `features/` and `shared/views/` never import `@/api/*`
 or `@/services/*`.
 
+## Language
+
+Everything a person sees or hears is Spanish: text, `placeholder`, `aria-label`, `title`, toasts, error messages and
+the page title. The app is not bilingual. Library defaults in English are overridden where they are wrapped
+(`components/ui/dialog.jsx`/`sheet.jsx` "Cerrar", `sonner.jsx` notifications); NestJS defaults are translated by the
+API's `exceptionFactory` (`common/domain/validation-messages.ts`) and by `api/client.js`. Code and comments stay in English.
+
 ## UI patterns (Odoo style)
 
 | Need | Use |

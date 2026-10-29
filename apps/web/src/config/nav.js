@@ -3,42 +3,35 @@ import {
   FileStack,
   Building2,
   ClipboardCheck,
-  FileText,
-  ClipboardList,
   Settings,
   CalendarDays,
-  CarFront,
-  Megaphone,
   Wallet,
   Boxes,
+  ShoppingCart,
   Inbox,
   Briefcase,
 } from 'lucide-react';
-import { ROLES } from '@/constants/roles.js';
-
-export { ROLES };
+import { COMMERCIAL_ROLES, MANAGER_ROLES, ROLES } from '@/constants/roles.js';
 
 const ALL_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.TEC, ROLES.CONTA];
 
-// Contabilidad (CONTA) reads every module; what it can change is decided by each page and the API.
-const QUOTE_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONTA];
+// Contabilidad (CONTA) has the same permissions as ADMINISTRADOR (ROLE-01).
+const QUOTE_ROLES = COMMERCIAL_ROLES;
 const CLIENT_ROLES = ALL_ROLES;
 const SURVEY_ROLES = ALL_ROLES;
 const TASK_ROLES = ALL_ROLES;
-const REPORT_ROLES = [ROLES.ADMIN];
-const ADMIN_ONLY = [ROLES.ADMIN];
-const PEDIDOS_ROLES = [ROLES.ADMIN, ROLES.VENTAS, ROLES.CONTA];
-const SOLICITUDES_WEB_ROLES = [ROLES.ADMIN, ROLES.VENTAS];
+const ADMIN_ONLY = MANAGER_ROLES;
+const PEDIDOS_ROLES = COMMERCIAL_ROLES;
+const SOLICITUDES_WEB_ROLES = COMMERCIAL_ROLES;
 
 /**
  * Menú unificado: OPERACIONES primero para todos los roles.
- * Admin añade extras al final.
  */
 const operationalMenuSections = [
   {
     title: 'PRINCIPAL',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', allowedRoles: ALL_ROLES },
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Panel', allowedRoles: ALL_ROLES },
     ],
   },
   {
@@ -51,35 +44,20 @@ const operationalMenuSections = [
       { to: '/surveys', icon: ClipboardCheck, label: 'Relevamientos y asistencias', allowedRoles: SURVEY_ROLES },
       { to: '/schedule', icon: CalendarDays, label: 'Cronograma', allowedRoles: TASK_ROLES },
       { to: '/finanzas', icon: Wallet, label: 'Finanzas', allowedRoles: ALL_ROLES },
+      { to: '/ventas-directas', icon: ShoppingCart, label: 'Ventas directas', allowedRoles: COMMERCIAL_ROLES },
       { to: '/inventario', icon: Boxes, label: 'Inventario', allowedRoles: ALL_ROLES },
     ],
   },
   {
     title: 'ADMINISTRACIÓN',
     items: [
-      { to: '/reports', icon: FileText, label: 'Reportes', allowedRoles: REPORT_ROLES },
-      { to: '/admin/management', icon: ClipboardList, label: 'Panel de Control', allowedRoles: ADMIN_ONLY },
       { to: '/configuration', icon: Settings, label: 'Configuración', allowedRoles: ADMIN_ONLY },
-    ],
-  },
-];
-
-/** Extras solo ADMINISTRADOR (después de OPERACIONES / ADMINISTRACIÓN base). */
-const adminExtraMenuSections = [
-  {
-    title: 'GESTIÓN ADMIN',
-    items: [
-      { to: '/vehicle-control', icon: CarFront, label: 'Control Vehicular', allowedRoles: ADMIN_ONLY },
-      { to: '/marketing', icon: Megaphone, label: 'Marketing', allowedRoles: ADMIN_ONLY },
     ],
   },
 ];
 
 export function getMenuSections(role) {
   if (role === ROLES.NONE) return [];
-  if (role === ROLES.ADMIN) {
-    return [...operationalMenuSections, ...adminExtraMenuSections];
-  }
   return operationalMenuSections;
 }
 
@@ -90,18 +68,11 @@ export const routeRoles = {
   surveys: SURVEY_ROLES,
   tareas: TASK_ROLES,
   schedule: TASK_ROLES,
-  reports: REPORT_ROLES,
-  activity: ALL_ROLES,
   admin: ADMIN_ONLY,
   pedidos: PEDIDOS_ROLES,
   solicitudesWeb: SOLICITUDES_WEB_ROLES,
-  frozen: ADMIN_ONLY,
   users: ALL_ROLES,
   finanzas: ALL_ROLES,
   inventario: ALL_ROLES,
+  ventasDirectas: COMMERCIAL_ROLES,
 };
-
-export function canWriteQuotations(role) {
-  return role === ROLES.ADMIN || role === ROLES.VENTAS;
-}
-

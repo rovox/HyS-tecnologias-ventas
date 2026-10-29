@@ -38,6 +38,12 @@ export declare function incomeOf(movements: Movement[]): {
 };
 export declare function expensesOf(movements: Movement[]): number;
 export declare function balanceOf(monto: number, cobrado: number, cancelled: boolean): number;
+export declare const QR_DESTINOS: {
+    readonly qr_empresa: "caja_qr";
+    readonly qr_socia: "caja_qr_socia";
+    readonly qr_personal: null;
+};
+export declare function qrDestinationError(metodo: string | undefined, cuentaDestino: string | undefined): string | null;
 export declare function incomeConceptError(target: 'visita' | 'trabajo', concepto: string): string | null;
 export declare function incomeError(target: {
     monto: number;
@@ -88,4 +94,26 @@ export declare function movementImpact(m: Movement & {
         cancelled: boolean;
     } | null;
 }): Impact[];
+export declare function movementDate(fecha: string | undefined, now?: Date, before?: Date): Date;
+export declare function advanceError(input: {
+    concepto: string;
+    responsableId?: string | null;
+    asunto?: string | null;
+    fechaLimite?: string | null;
+}): string | null;
+export declare function daysLate(fechaLimite: Date | string, today: string): number;
+type MonthMove = {
+    tipo: string;
+    monto: number | string | {
+        toString(): string;
+    };
+    estado: string;
+};
+export declare function monthMoney(movements: MonthMove[]): {
+    cobrado: number;
+    enCaja: number;
+    egresosValidados: number;
+    neto: number;
+    porValidar: number;
+};
 export {};

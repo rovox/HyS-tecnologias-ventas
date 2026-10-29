@@ -19,13 +19,45 @@ const auth_guard_1 = require("../../common/auth/auth.guard");
 const current_user_decorator_1 = require("../../common/auth/current-user.decorator");
 const finance_dto_1 = require("./dto/finance.dto");
 const ledger_service_1 = require("./ledger.service");
+const cash_close_service_1 = require("./cash-close.service");
+const cash_close_dto_1 = require("./dto/cash-close.dto");
 let FinanceController = class FinanceController {
     ledger;
-    constructor(ledger) {
+    cashClose;
+    constructor(ledger, cashClose) {
         this.ledger = ledger;
+        this.cashClose = cashClose;
+    }
+    closePreview(query, user) {
+        return this.cashClose.preview(query.sucursalId, query.dia, user);
+    }
+    closes(query, user) {
+        return this.cashClose.list(query, user);
+    }
+    close(dto, user, sessionId) {
+        return this.cashClose.close(dto, user, sessionId);
+    }
+    approveClose(id, user, sessionId) {
+        return this.cashClose.review(id, 'aprobar', undefined, user, sessionId);
+    }
+    observeClose(id, dto, user, sessionId) {
+        return this.cashClose.review(id, 'observar', dto.motivo, user, sessionId);
     }
     list(query, user) {
         return this.ledger.list(query, user);
+    }
+    async export(query, user) {
+        const { file, name, type } = await this.ledger.export(query, user);
+        return new common_1.StreamableFile(file, { type, disposition: `attachment; filename="${name}"` });
+    }
+    summary(mes, user) {
+        return this.ledger.summary(user, mes);
+    }
+    advances(user) {
+        return this.ledger.advances(user);
+    }
+    settle(id, dto, user, sessionId) {
+        return this.ledger.settleAdvance(id, dto.nota, user, sessionId);
     }
     custody(user) {
         return this.ledger.custody(user);
@@ -60,6 +92,55 @@ let FinanceController = class FinanceController {
 };
 exports.FinanceController = FinanceController;
 __decorate([
+    (0, common_1.Get)('cierres/preview'),
+    (0, swagger_1.ApiOperation)({ summary: 'The day of a branch before counting: opening cash, cash movements, expected cash' }),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [cash_close_dto_1.CashCloseQuery, Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "closePreview", null);
+__decorate([
+    (0, common_1.Get)('cierres'),
+    (0, swagger_1.ApiOperation)({ summary: 'Daily cash closes (branch, days)' }),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [cash_close_dto_1.ListCashClosesQuery, Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "closes", null);
+__decorate([
+    (0, common_1.Post)('cierres'),
+    (0, swagger_1.ApiOperation)({ summary: 'Close the cash of a branch for a day (count by denomination; a difference needs a reason)' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [cash_close_dto_1.CloseCashDto, Object, String]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "close", null);
+__decorate([
+    (0, common_1.Post)('cierres/:id/aprobar'),
+    (0, swagger_1.ApiOperation)({ summary: 'Approve a close; its difference is validated into the branch box (Administración, Contabilidad)' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, String]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "approveClose", null);
+__decorate([
+    (0, common_1.Post)('cierres/:id/observar'),
+    (0, swagger_1.ApiOperation)({ summary: 'Observe a close with a reason; its difference is observed too (Administración, Contabilidad)' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __param(3, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, finance_dto_1.ReasonDto, Object, String]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "observeClose", null);
+__decorate([
     (0, common_1.Get)('movements'),
     (0, swagger_1.ApiOperation)({ summary: 'Ledger (commercial roles see all, técnico his own)' }),
     __param(0, (0, common_1.Query)()),
@@ -68,6 +149,43 @@ __decorate([
     __metadata("design:paramtypes", [finance_dto_1.ListMovementsQuery, Object]),
     __metadata("design:returntype", void 0)
 ], FinanceController.prototype, "list", null);
+__decorate([
+    (0, common_1.Get)('movements/export'),
+    (0, swagger_1.ApiOperation)({ summary: 'The ledger (day, range, branch or company) as CSV or Excel' }),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [finance_dto_1.ExportMovementsQuery, Object]),
+    __metadata("design:returntype", Promise)
+], FinanceController.prototype, "export", null);
+__decorate([
+    (0, common_1.Get)('resumen'),
+    (0, swagger_1.ApiOperation)({ summary: 'Dashboard money: month cobrado / en caja / expenses, box balances, today per branch' }),
+    __param(0, (0, common_1.Query)('mes')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "summary", null);
+__decorate([
+    (0, common_1.Get)('anticipos'),
+    (0, swagger_1.ApiOperation)({ summary: 'Advances still to be accounted for, with days late' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "advances", null);
+__decorate([
+    (0, common_1.Post)('movements/:id/rendido'),
+    (0, swagger_1.ApiOperation)({ summary: 'Mark an advance as accounted for (Administración, Contabilidad)' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __param(3, (0, current_user_decorator_1.CurrentSessionId)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, finance_dto_1.SettleAdvanceDto, Object, String]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "settle", null);
 __decorate([
     (0, common_1.Get)('por-rendir'),
     (0, swagger_1.ApiOperation)({ summary: 'Money not yet validated, per person who holds it' }),
@@ -172,6 +290,7 @@ exports.FinanceController = FinanceController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('finance'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
-    __metadata("design:paramtypes", [ledger_service_1.LedgerService])
+    __metadata("design:paramtypes", [ledger_service_1.LedgerService,
+        cash_close_service_1.CashCloseService])
 ], FinanceController);
 //# sourceMappingURL=finance.controller.js.map

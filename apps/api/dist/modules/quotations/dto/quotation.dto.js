@@ -14,6 +14,7 @@ const swagger_1 = require("@nestjs/swagger");
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const emptyToUndef = ({ value }) => (value === '' || value === null ? undefined : value);
+const clearable = ({ value }) => (value === null ? '' : value);
 class VendorDto {
     userId;
     nombre;
@@ -233,21 +234,22 @@ __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_transformer_1.Transform)(emptyToUndef),
+    (0, class_transformer_1.Transform)(clearable),
     __metadata("design:type", String)
 ], UpdateQuotationDto.prototype, "licitacionNumero", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_transformer_1.Transform)(emptyToUndef),
+    (0, class_transformer_1.Transform)(clearable),
     __metadata("design:type", String)
 ], UpdateQuotationDto.prototype, "licitacionEntidad", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateIf)((_, v) => v !== ''),
     (0, class_validator_1.IsDateString)(),
-    (0, class_transformer_1.Transform)(emptyToUndef),
+    (0, class_transformer_1.Transform)(clearable),
     __metadata("design:type", String)
 ], UpdateQuotationDto.prototype, "plazoFinal", void 0);
 class StatusDto {

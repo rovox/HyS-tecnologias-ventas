@@ -13,6 +13,7 @@ exports.InventoryService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../common/prisma/prisma.service");
 const audit_service_1 = require("../../common/audit/audit.service");
+const calendar_1 = require("../../common/domain/calendar");
 const policy_1 = require("../../common/policy/policy");
 const categories_1 = require("../categories");
 const inventory_rules_1 = require("./domain/inventory.rules");
@@ -25,8 +26,10 @@ const MOVEMENT_INCLUDE = {
     sucursalDestino: { select: { id: true, nombre: true } },
     project: { select: { id: true, codigo: true } },
     pedidoInterno: { select: { id: true } },
+    ventaDirecta: { select: { id: true, numero: true } },
     registradoPor: { select: { id: true, name: true } },
 };
+const presentMovement = (m) => ({ ...m, pedidoInterno: m.pedidoInterno ? { id: m.pedidoInterno.id, codigo: (0, codes_1.orderCode)(m.pedidoInterno.id) } : null });
 function presentProduct(row) {
     const { movements, ...product } = row;
     const stock = (0, inventory_rules_1.stockBySede)(movements);
@@ -45,6 +48,13 @@ let InventoryService = class InventoryService {
     assertRead(user) {
         if (!(0, policy_1.canRegisterMovements)(user))
             throw new common_1.ForbiddenException('Sin acceso al inventario');
+    }
+    async assertOwnProjectJob(projectId, user) {
+        const job = projectId
+            ? await this.prisma.schedule.findFirst({ where: { projectId, tecnicoId: user.id, estado: { in: ['programado', 'en_proceso', 'terminado'] } }, select: { id: true } })
+            : null;
+        if (!job)
+            throw new common_1.ForbiddenException('Solo registras material en los proyectos donde tienes un trabajo');
     }
     assertManage(user) {
         if (!(0, policy_1.canManageInventory)(user))
@@ -67,11 +77,24 @@ let InventoryService = class InventoryService {
         const codigo = dto.codigo.trim().toUpperCase();
         if (await this.prisma.product.findUnique({ where: { codigo } }))
             throw new common_1.ConflictException(`Ya existe un producto con el código ${codigo}`);
-        const row = await this.prisma.product.create({
-            data: { ...dto, codigo, nombre: dto.nombre.trim(), marca: dto.marca?.trim() || '', unidad: dto.unidad || 'unidad' },
-            include: PRODUCT_INCLUDE,
+        const { stockInicial, ...product } = dto;
+        const error = (0, inventory_rules_1.newProductStockError)(dto.tipo, stockInicial);
+        if (error)
+            throw new common_1.BadRequestException(error);
+        const entry = stockInicial ? { tipo: 'entrada', sucursalDestinoId: stockInicial.sucursalId } : null;
+        if (entry)
+            await this.assertMove(entry, user);
+        const id = await this.prisma.$transaction(async (tx) => {
+            const created = await tx.product.create({
+                data: { ...product, codigo, nombre: dto.nombre.trim(), marca: dto.marca?.trim() || '', unidad: dto.unidad || 'unidad', ...(stockInicial ? { costo: stockInicial.costoUnitario } : {}) },
+            });
+            if (stockInicial) {
+                await this.moveIn(tx, { productoId: created.id, tipo: 'entrada', cantidad: stockInicial.cantidad, costoUnitario: stockInicial.costoUnitario, sucursalDestinoId: stockInicial.sucursalId, nota: stockInicial.nota?.trim() || 'Primera entrada (alta del producto)' }, user);
+            }
+            return created.id;
         });
-        await this.audit.record({ user, sessionId, action: 'product.create', entity: 'product', id: row.id });
+        const row = await this.product(id);
+        await this.audit.record({ user, sessionId, action: 'product.create', entity: 'product', id, affects: stockInicial ? ['stock'] : [] });
         return presentProduct(row);
     }
     async updateProduct(id, dto, user, sessionId) {
@@ -83,52 +106,99 @@ let InventoryService = class InventoryService {
         await this.audit.record({ user, sessionId, action: 'product.update', entity: 'product', id, before, after });
         return presentProduct(after);
     }
-    async movements(user, productoId) {
+    async movements(user, query = {}) {
         this.assertRead(user);
-        return this.prisma.stockMovement.findMany({
-            where: productoId ? { productoId } : {},
+        const tipos = query.tipos?.split(',').map((t) => t.trim()).filter(Boolean);
+        const rows = await this.prisma.stockMovement.findMany({
+            where: {
+                ...(query.productoId ? { productoId: query.productoId } : {}),
+                ...(tipos?.length ? { tipo: { in: tipos } } : {}),
+                ...(query.sucursalId ? { OR: [{ sucursalOrigenId: query.sucursalId }, { sucursalDestinoId: query.sucursalId }] } : {}),
+                ...(query.desde || query.hasta
+                    ? { fecha: { ...(query.desde ? { gte: (0, calendar_1.businessDayStart)(query.desde.slice(0, 10)) } : {}), ...(query.hasta ? { lte: (0, calendar_1.businessDayEnd)(query.hasta.slice(0, 10)) } : {}) } }
+                    : {}),
+            },
             include: MOVEMENT_INCLUDE,
-            orderBy: { fecha: 'desc' },
-            take: 1000,
-        }).then((rows) => rows.map((m) => ({ ...m, pedidoInterno: m.pedidoInterno ? { id: m.pedidoInterno.id, codigo: (0, codes_1.orderCode)(m.pedidoInterno.id) } : null })));
+            orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
+            take: 2000,
+        });
+        return rows.map(presentMovement);
+    }
+    async kardex(productoId, user, sucursalId) {
+        this.assertRead(user);
+        const product = await this.product(productoId);
+        const rows = await this.prisma.stockMovement.findMany({ where: { productoId }, include: MOVEMENT_INCLUDE, orderBy: [{ fecha: 'asc' }, { createdAt: 'asc' }] });
+        return { producto: { id: product.id, codigo: product.codigo, nombre: product.nombre, unidad: product.unidad }, movimientos: (0, inventory_rules_1.kardex)(rows.map(presentMovement), sucursalId || null) };
+    }
+    async assertMove(move, user) {
+        if (move.tipo === 'ajuste') {
+            if (!(0, policy_1.canAdjustInventory)(user))
+                throw new common_1.ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
+            return;
+        }
+        if (move.tipo === 'salida_proyecto' && (0, policy_1.usesMaterialOnOwnJobs)(user))
+            return this.assertOwnProjectJob(move.projectId, user);
+        this.assertManage(user);
+        const blocked = (0, inventory_rules_1.branchMoveError)(move, { manager: (0, policy_1.isAdmin)(user), sucursalId: user.sucursalId });
+        if (blocked)
+            throw new common_1.ForbiddenException(blocked);
+    }
+    async moveIn(tx, dto, user) {
+        const product = await this.product(dto.productoId, tx);
+        const available = dto.sucursalOrigenId ? ((0, inventory_rules_1.stockBySede)(product.movements)[dto.sucursalOrigenId] ?? 0) : 0;
+        const error = (0, inventory_rules_1.stockMovementError)(dto, { productTipo: product.tipo, available, canAdjust: (0, policy_1.canAdjustInventory)(user) });
+        if (error)
+            throw new common_1.BadRequestException(error);
+        if (dto.projectId) {
+            const project = await tx.project.findUnique({ where: { id: dto.projectId } });
+            if (!project || ['cerrado', 'anulado'].includes(project.estado))
+                throw new common_1.BadRequestException('El proyecto no existe o está cerrado');
+        }
+        const purchase = dto.tipo === 'entrada' && dto.costoUnitario !== undefined;
+        if (purchase)
+            await tx.product.update({ where: { id: product.id }, data: { costo: dto.costoUnitario } });
+        return tx.stockMovement.create({
+            data: {
+                productoId: product.id,
+                tipo: dto.tipo,
+                cantidad: dto.cantidad,
+                costoUnitario: purchase ? dto.costoUnitario : product.costo,
+                sucursalOrigenId: dto.sucursalOrigenId ?? null,
+                sucursalDestinoId: dto.sucursalDestinoId ?? null,
+                projectId: dto.projectId ?? null,
+                motivo: dto.motivo?.trim() || null,
+                nota: dto.nota || '',
+                registradoPorId: user.id,
+            },
+            include: MOVEMENT_INCLUDE,
+        });
     }
     async registerMovement(dto, user, sessionId) {
-        if (dto.tipo !== 'ajuste')
-            this.assertManage(user);
-        else if (!(0, policy_1.canAdjustInventory)(user))
-            throw new common_1.ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
-        const row = await this.prisma.$transaction(async (tx) => {
-            const product = await this.product(dto.productoId, tx);
-            const available = dto.sucursalOrigenId ? ((0, inventory_rules_1.stockBySede)(product.movements)[dto.sucursalOrigenId] ?? 0) : 0;
-            const error = (0, inventory_rules_1.stockMovementError)(dto, { productTipo: product.tipo, available, canAdjust: (0, policy_1.canAdjustInventory)(user) });
-            if (error)
-                throw new common_1.BadRequestException(error);
-            if (dto.projectId) {
-                const project = await tx.project.findUnique({ where: { id: dto.projectId } });
-                if (!project || ['cerrado', 'anulado'].includes(project.estado))
-                    throw new common_1.BadRequestException('El proyecto no existe o está cerrado');
-            }
-            const purchase = dto.tipo === 'entrada' && dto.costoUnitario !== undefined;
-            if (purchase)
-                await tx.product.update({ where: { id: product.id }, data: { costo: dto.costoUnitario } });
-            return tx.stockMovement.create({
-                data: {
-                    productoId: product.id,
-                    tipo: dto.tipo,
-                    cantidad: dto.cantidad,
-                    costoUnitario: purchase ? dto.costoUnitario : product.costo,
-                    sucursalOrigenId: dto.sucursalOrigenId ?? null,
-                    sucursalDestinoId: dto.sucursalDestinoId ?? null,
-                    projectId: dto.projectId ?? null,
-                    motivo: dto.motivo?.trim() || null,
-                    nota: dto.nota || '',
-                    registradoPorId: user.id,
-                },
-                include: MOVEMENT_INCLUDE,
-            });
-        });
+        await this.assertMove(dto, user);
+        const row = await this.prisma.$transaction((tx) => this.moveIn(tx, dto, user));
         await this.audit.record({ user, sessionId, action: `stock.${dto.tipo}`, entity: 'stock', id: row.id, affects: ['product', ...(dto.projectId ? ['project', 'client'] : [])] });
-        return row;
+        return presentMovement(row);
+    }
+    async registerBatch(dto, user, sessionId) {
+        const { items, ...shared } = dto;
+        await this.assertMove(shared, user);
+        const rows = await this.prisma.$transaction(async (tx) => {
+            const out = [];
+            for (const item of items) {
+                try {
+                    out.push(await this.moveIn(tx, { ...shared, ...item }, user));
+                }
+                catch (e) {
+                    const name = (await tx.product.findUnique({ where: { id: item.productoId }, select: { nombre: true } }))?.nombre;
+                    if (e instanceof common_1.BadRequestException && name)
+                        throw new common_1.BadRequestException(`${name}: ${e.message}`);
+                    throw e;
+                }
+            }
+            return out;
+        });
+        await this.audit.record({ user, sessionId, action: `stock.${dto.tipo}`, entity: 'stock', id: rows[0].id, affects: ['product', ...(dto.projectId ? ['project', 'client'] : [])], patch: { lineas: rows.length } });
+        return rows.map(presentMovement);
     }
     async deliverOrder(tx, pedido, userId) {
         const items = await tx.pedidoInternoItem.findMany({ where: { pedidoId: pedido.id } });

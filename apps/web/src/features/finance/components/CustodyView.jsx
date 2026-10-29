@@ -1,7 +1,7 @@
 import { HandCoins } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ListView, Money } from '@/shared/views';
-import { formatDay } from '@/shared/lib/format.js';
+import { formatDay, formatBusinessDay } from '@/shared/lib/format.js';
 import { useCustody } from '../api.js';
 import { CONCEPTO_LABEL } from '../constants.js';
 import { MovementActions } from './MovementActions.jsx';
@@ -18,7 +18,7 @@ export function CustodyView({ actions, onOpen }) {
   if (!data.length) return <p className="py-10 text-center text-sm text-muted-foreground">Nadie tiene dinero sin rendir.</p>;
 
   const columns = [
-    { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+    { key: 'fecha', header: 'Fecha', cell: (m) => formatBusinessDay(m.fecha) },
     { key: 'concepto', header: 'Concepto', cell: (m) => CONCEPTO_LABEL[m.concepto] || m.concepto },
     { key: 'origen', header: 'Proyecto o trabajo', cell: (m) => <span className="line-clamp-2">{origin(m)}</span> },
     { key: 'cliente', header: 'Cliente', cell: (m) => m.cliente?.nombre || '—' },

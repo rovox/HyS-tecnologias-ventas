@@ -15,17 +15,17 @@ export declare class GoalsController {
         createdAt: Date;
         updatedAt: Date;
         usuarioId: string;
+        mes: Date;
         metaMonto: import("@prisma/client/runtime/library").Decimal;
         metaCotiz: number;
-        mes: Date;
     })[]>;
     upsert(dto: UpsertGoalDto, user: User, sessionId?: string): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
         usuarioId: string;
+        mes: Date;
         metaMonto: import("@prisma/client/runtime/library").Decimal;
         metaCotiz: number;
-        mes: Date;
     }>;
 }

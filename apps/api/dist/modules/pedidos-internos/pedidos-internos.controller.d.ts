@@ -108,11 +108,12 @@ export declare class PedidosInternosController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         items: {
@@ -293,11 +294,12 @@ export declare class PedidosInternosController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         items: {
@@ -406,11 +408,12 @@ export declare class PedidosInternosController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         items: {

@@ -8,7 +8,6 @@ import { QuotationsModule } from './modules/quotations';
 import { SucursalesModule } from './modules/sucursales';
 import { RelevamientosModule } from './modules/relevamientos';
 import { GoalsModule } from './modules/goals';
-import { SalesModule } from './modules/sales';
 import { MetricsModule } from './modules/metrics';
 import { TasksModule } from './modules/tasks';
 import { SchedulesModule } from './modules/schedules';
@@ -19,6 +18,8 @@ import { ProjectsModule } from './modules/projects';
 import { FinanceModule } from './modules/finance';
 import { ReportingModule } from './modules/reporting';
 import { InventoryModule } from './modules/inventory';
+import { DirectSalesModule } from './modules/direct-sales';
+import { DigicorpModule } from './modules/digicorp';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -47,7 +48,6 @@ import { HealthController } from './health.controller';
     SucursalesModule,
     RelevamientosModule,
     GoalsModule,
-    SalesModule,
     MetricsModule,
     TasksModule,
     SchedulesModule,
@@ -58,6 +58,8 @@ import { HealthController } from './health.controller';
     FinanceModule,
     ReportingModule,
     InventoryModule,
+    DirectSalesModule,
+    DigicorpModule,
   ],
   controllers: [HealthController],
 })

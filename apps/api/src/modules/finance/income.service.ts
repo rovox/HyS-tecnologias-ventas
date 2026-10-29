@@ -4,8 +4,11 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { isAdmin, isConta, isTec, isVentas } from '../../common/policy/roles';
 import { IncomeDto } from './dto/finance.dto';
-import { incomeConceptError, incomeError, incomeOf, movementError } from './domain/finance.rules';
+import { QR_DESTINOS, incomeConceptError, incomeError, incomeOf, movementError, qrDestinationError } from './domain/finance.rules';
 import { MOVEMENT_DETAIL, presentMovement } from './movement.presenter';
+import { businessToday } from '../../common/domain/calendar';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type IncomeRef = { projectId?: string; scheduleId?: string; relevamientoId?: string };
 
@@ -100,12 +103,13 @@ export class IncomeService {
    */
   async register(ref: IncomeRef, dto: IncomeDto, user: User, sessionId?: string) {
     const target = await this.target(ref);
-    const allowed = isAdmin(user) || isVentas(user) || isConta(user) || (isTec(user) && target.technicians.includes(user.id));
+    const allowed = isAdmin(user) || isVentas(user) || (isTec(user) && target.technicians.includes(user.id));
     if (!allowed) throw new ForbiddenException('Solo registras cobros de tus trabajos');
     const error =
       movementError({ tipo: 'ingreso', concepto: dto.concepto, monto: dto.monto }) ||
       incomeConceptError(target.relevamientoId ? 'visita' : 'trabajo', dto.concepto) ||
-      incomeError(target, dto.concepto, dto.monto);
+      incomeError(target, dto.concepto, dto.monto) ||
+      qrDestinationError(dto.metodo, dto.cuentaDestino);
     if (error) throw new BadRequestException(error);
     const recibidoPorId = dto.recibidoPorId || user.id;
     if (recibidoPorId !== user.id) {
@@ -113,12 +117,18 @@ export class IncomeService {
       const person = await this.prisma.user.findUnique({ where: { id: recibidoPorId }, select: { active: true } });
       if (!person?.active) throw new BadRequestException('La persona que recibió el dinero no existe o está inactiva');
     }
+    // QR into a company account: it is already in that box (validation confirms it) and nobody holds it. QR into the
+    // collector's own account: he holds it until he hands it over (listed in Anticipos, due the next day).
+    const qrBox = dto.cuentaDestino ? QR_DESTINOS[dto.cuentaDestino] : undefined;
+    const personal = dto.cuentaDestino === 'qr_personal';
     const row = await this.prisma.cashMovement.create({
       data: {
         tipo: 'ingreso',
         concepto: dto.concepto,
         monto: dto.monto,
-        metodo: dto.metodo || '',
+        metodo: (dto.metodo || '').toLowerCase(),
+        ...(qrBox ? { cajaId: qrBox } : {}),
+        ...(personal ? { asunto: 'Cobro por QR personal: entregar a la empresa', fechaLimite: new Date(Date.parse(`${businessToday(new Date())}T12:00:00Z`) + DAY_MS) } : {}),
         nota: dto.nota || '',
         projectId: target.projectId,
         scheduleId: target.scheduleId,
@@ -126,7 +136,7 @@ export class IncomeService {
         clienteId: target.clienteId,
         sucursalId: target.sucursalId,
         registradoPorId: user.id,
-        recibidoPorId,
+        recibidoPorId: qrBox ? null : recibidoPorId,
       },
       include: MOVEMENT_DETAIL,
     });

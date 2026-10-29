@@ -198,7 +198,7 @@ let RelevamientosService = class RelevamientosService {
         if (dto.trabajoRelacionadoId !== undefined && dto.trabajoRelacionadoId !== (current.trabajoRelacionadoId ?? '')) {
             data.trabajoRelacionadoId = dto.trabajoRelacionadoId || null;
             const garantia = dto.trabajoRelacionadoId ? await this.relatedJob(dto.trabajoRelacionadoId, current.clienteId) : null;
-            if (dto.garantiaHasta === undefined)
+            if (!dto.garantiaHasta)
                 data.garantiaHasta = garantia;
         }
         const row = await this.prisma.relevamiento.update({ where: { id }, data, include: relevamiento_presenter_1.VISIT_INCLUDE });

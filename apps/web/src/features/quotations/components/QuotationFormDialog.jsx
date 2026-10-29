@@ -20,9 +20,9 @@ function initialForm(quote, user, prefill = {}) {
   return {
     titulo: quote?.titulo || prefill.titulo || '',
     clienteId: quote?.clienteId || prefill.clienteId || '',
-    categoriaId: quote?.categoriaId || '',
-    subcategoria: quote?.subcategoria || '',
-    monto: quote ? String(Number(quote.monto)) : '',
+    categoriaId: quote?.categoriaId || prefill.categoriaId || '',
+    subcategoria: quote?.subcategoria || prefill.subcategoria || '',
+    monto: quote ? String(Number(quote.monto)) : prefill.monto ? String(Number(prefill.monto)) : '',
     sucursalId: quote?.sucursalId || user?.sucursalId || '',
     vendedores: quote?.sellers?.length
       ? quote.sellers.map((s) => ({ userId: s.userId, nombre: s.nombre, commissionPct: Number(s.commissionPct) }))
@@ -52,7 +52,8 @@ function formError(form, send, hasPdf) {
 
 /**
  * Create or edit a quotation. Once approved, amount, client and division are the project's and stay fixed.
- * prefill: { titulo, clienteId, observacion, tareaId } when it comes from a task (the API links and completes it).
+ * prefill: { titulo, clienteId, observacion, tareaId } when it comes from a task (the API links and completes it);
+ * { titulo, clienteId, categoriaId, subcategoria, monto, observacion } to duplicate one (QUO-03).
  */
 export function QuotationFormDialog({ open, onOpenChange, quote, onSaved, prefill }) {
   const { currentUser } = useAuth();
@@ -85,10 +86,11 @@ export function QuotationFormDialog({ open, onOpenChange, quote, onSaved, prefil
       subcategoria: form.subcategoria.trim(),
       sucursalId: form.sucursalId,
       vendedores: form.vendedores.filter((v) => v.userId).map((v) => ({ ...v, commissionPct: Number(v.commissionPct) || 0 })),
-      plazoFinal: form.plazoFinal || undefined,
+      // '' clears on edit (the API keeps the old value only for a field that is not sent).
+      plazoFinal: form.plazoFinal || '',
       tieneLicitacion: form.tieneLicitacion,
-      licitacionNumero: form.tieneLicitacion ? form.licitacionNumero : undefined,
-      licitacionEntidad: form.tieneLicitacion ? form.licitacionEntidad : undefined,
+      licitacionNumero: form.tieneLicitacion ? form.licitacionNumero : '',
+      licitacionEntidad: form.tieneLicitacion ? form.licitacionEntidad : '',
       observacion: form.observacion,
       ...(locked ? {} : { clienteId: form.clienteId, categoriaId: form.categoriaId, monto: Number(form.monto) }),
       ...(!quote && prefill?.tareaId ? { tareaId: prefill.tareaId } : {}),

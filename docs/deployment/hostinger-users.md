@@ -7,6 +7,8 @@
 
 ## Creating users in production
 
+The first users (12, 2026-10-26) came with the database itself: `config/users.json` + `config/users.passwords.local.json` → `build-hostinger-sql.mjs --users` → `scripts/hostinger-recreate-db.sh` (see `hostinger.md`). Later additions:
+
 1. Add or update the user in [`config/users.json`](../../config/users.json) (the single roster) and put the real password in `config/users.passwords.local.json` (gitignored, `{ "email": "password" }`).
 2. Generate the SQL outside git, for example:
    `node apps/api/scripts/generate-users-sql.mjs --insert dennis@hscontrol.com --rename stephany@hscontrol.com=estefany@hscontrol.com > ~/users.sql`

@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsString, Min } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpsertGoalDto {
   @ApiProperty()
@@ -17,9 +17,11 @@ export class UpsertGoalDto {
   @Min(0)
   metaMonto: number;
 
-  @ApiProperty({ minimum: 0 })
+  /** Quotations per month; no screen edits it yet, so leaving it out keeps the stored value. */
+  @ApiPropertyOptional({ minimum: 0 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  metaCotiz: number;
+  metaCotiz?: number;
 }

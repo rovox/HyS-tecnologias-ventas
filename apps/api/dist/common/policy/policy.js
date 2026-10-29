@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.canViewUser = exports.canListUserDirectory = exports.canListUsers = exports.canSeePedidos = exports.canManagePedidos = exports.canMutateRelevamientos = exports.canMutateSchedules = exports.canCreateSchedules = exports.canSeeProjects = exports.canManageProjects = exports.canAdjustInventory = exports.canManageInventory = exports.canSeeLedger = exports.canRegisterMovements = exports.canValidateMovements = exports.canSeeQuotations = exports.canManageWebLeads = exports.canMutateClients = exports.canMutateQuotes = exports.isCommercial = exports.isConta = exports.isTec = exports.isVentas = exports.isAdmin = exports.ROLES = void 0;
+exports.canViewUser = exports.canListUserDirectory = exports.canListUsers = exports.canSeePedidos = exports.canManagePedidos = exports.canMutateRelevamientos = exports.canMutateSchedules = exports.canCreateSchedules = exports.canSeeProjects = exports.canManageProjects = exports.usesMaterialOnOwnJobs = exports.canAdjustInventory = exports.canManageInventory = exports.canSeeLedger = exports.canRegisterMovements = exports.canValidateMovements = exports.canSeeQuotations = exports.canManageWebLeads = exports.canMutateClients = exports.canMutateQuotes = exports.isCommercial = exports.isConta = exports.isTec = exports.isVentas = exports.isAdmin = exports.MANAGER_ROLES = exports.ROLES = void 0;
 exports.scheduleWhere = scheduleWhere;
 exports.quotationWhere = quotationWhere;
 exports.clientWhere = clientWhere;
-exports.saleWhere = saleWhere;
 exports.relevamientoWhere = relevamientoWhere;
 exports.taskWhere = taskWhere;
 exports.goalWhere = goalWhere;
@@ -17,7 +16,8 @@ exports.ROLES = {
     NONE: 'SIN ACCESO',
 };
 const NO_ROWS = { id: '__none__' };
-const isAdmin = (actor) => actor?.role === exports.ROLES.ADMIN;
+exports.MANAGER_ROLES = [exports.ROLES.ADMIN, exports.ROLES.CONTA];
+const isAdmin = (actor) => Boolean(actor && exports.MANAGER_ROLES.includes(actor.role));
 exports.isAdmin = isAdmin;
 const isVentas = (actor) => actor?.role === exports.ROLES.VENTAS;
 exports.isVentas = isVentas;
@@ -28,8 +28,8 @@ exports.isConta = isConta;
 const isNone = (actor) => actor?.role === exports.ROLES.NONE;
 const isCommercial = (actor) => (0, exports.isAdmin)(actor) || (0, exports.isVentas)(actor);
 exports.isCommercial = isCommercial;
-const readsAll = (actor) => (0, exports.isCommercial)(actor) || (0, exports.isConta)(actor);
-const isFinance = (actor) => (0, exports.isAdmin)(actor) || (0, exports.isConta)(actor);
+const readsAll = exports.isCommercial;
+const isFinance = exports.isAdmin;
 exports.canMutateQuotes = exports.isCommercial;
 exports.canMutateClients = exports.isCommercial;
 exports.canManageWebLeads = exports.isCommercial;
@@ -40,6 +40,7 @@ exports.canRegisterMovements = canRegisterMovements;
 exports.canSeeLedger = readsAll;
 exports.canManageInventory = exports.isCommercial;
 exports.canAdjustInventory = isFinance;
+exports.usesMaterialOnOwnJobs = exports.isTec;
 exports.canManageProjects = exports.isCommercial;
 exports.canSeeProjects = readsAll;
 exports.canCreateSchedules = exports.isCommercial;
@@ -66,14 +67,6 @@ function quotationWhere(actor) {
 }
 function clientWhere(actor) {
     return readsAll(actor) || (0, exports.isTec)(actor) ? {} : NO_ROWS;
-}
-function saleWhere(actor) {
-    if (isFinance(actor))
-        return {};
-    if ((0, exports.isVentas)(actor)) {
-        return { quotation: { OR: [{ vendedorId: actor.id }, { sellers: { some: { userId: actor.id } } }] } };
-    }
-    return NO_ROWS;
 }
 function relevamientoWhere(actor, cotizacionId) {
     const base = cotizacionId ? { cotizacionId } : {};

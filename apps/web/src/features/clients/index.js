@@ -1,7 +1,3 @@
-// Public entry of the clients feature. Pages are lazy: the picker is used from the header (tasks), so importing this
-// entry must not pull the client pages into the main bundle.
-import { lazy } from 'react';
-
-export const ClientsPage = lazy(() => import('./pages/ClientsPage.jsx'));
-export const ClientDetailPage = lazy(() => import('./pages/ClientDetailPage.jsx'));
+// Public entry of the clients feature: the picker (used from the header, tasks). The pages are loaded by app/App.jsx
+// straight from their files, so this entry never pulls them into the main bundle (GATE-01).
 export { ClientPicker } from './components/ClientPicker.jsx';

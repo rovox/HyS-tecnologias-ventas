@@ -1,8 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateIf, ValidateNested } from 'class-validator';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
+// On updates an emptied field arrives as '' or null and must reach the service as '' (it saves null), not be dropped.
+const clearable = ({ value }: { value: unknown }) => (value === null ? '' : value);
 
 export class VendorDto {
   @ApiProperty()
@@ -161,19 +163,20 @@ export class UpdateQuotationDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   licitacionNumero?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   licitacionEntidad?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((_, v) => v !== '')
   @IsDateString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   plazoFinal?: string;
 }
 

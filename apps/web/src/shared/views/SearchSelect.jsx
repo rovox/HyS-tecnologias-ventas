@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 /**
  * Combobox with search for any list that can grow (clients, products, projects, jobs, users).
  * options: [{ value, label, hint?, keywords? }] · value · onChange(value | '') · `emptyOption` adds a "none" choice
- * (e.g. "Sin asignar") that also clears. The popover is modal so it works inside dialogs.
+ * (e.g. "Sin asignar") that also clears; `emptyText` says why nothing matches. The popover is modal so it works inside
+ * dialogs.
  */
 export function SearchSelect({
   id,
@@ -18,10 +19,12 @@ export function SearchSelect({
   placeholder = 'Selecciona…',
   searchPlaceholder = 'Buscar…',
   emptyOption,
+  emptyText = 'Sin resultados',
   loading,
   disabled,
   className,
   invalid,
+  'aria-label': ariaLabel,
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
@@ -38,6 +41,7 @@ export function SearchSelect({
           type="button"
           variant="outline"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           disabled={disabled}
           className={cn('h-9 min-h-9 w-full justify-between px-3 font-normal', invalid && 'border-danger', className)}
@@ -66,7 +70,7 @@ export function SearchSelect({
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
-            <CommandEmpty>Sin resultados</CommandEmpty>
+            <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {emptyOption && (
                 <CommandItem value={`__none ${emptyOption}`} onSelect={() => pick('')}>

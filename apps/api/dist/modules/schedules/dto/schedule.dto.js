@@ -262,6 +262,7 @@ class CreateSchedulePaymentDto {
     relevamientoId;
     quotationId;
     recibidoPorId;
+    cuentaDestino;
 }
 exports.CreateSchedulePaymentDto = CreateSchedulePaymentDto;
 __decorate([
@@ -311,4 +312,10 @@ __decorate([
     (0, class_transformer_1.Transform)(emptyToUndef),
     __metadata("design:type", String)
 ], CreateSchedulePaymentDto.prototype, "recibidoPorId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached (LAUNCH P1-1)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' }),
+    __metadata("design:type", String)
+], CreateSchedulePaymentDto.prototype, "cuentaDestino", void 0);
 //# sourceMappingURL=schedule.dto.js.map

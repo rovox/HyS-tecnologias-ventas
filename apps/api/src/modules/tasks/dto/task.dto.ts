@@ -1,9 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { TASK_ESTADOS, TASK_PRIORIDADES } from '../domain/tasks.rules';
 
 const emptyToUndef = ({ value }: { value: unknown }) => (value === '' || value === null ? undefined : value);
+// On updates an emptied field arrives as '' or null and must reach the service as '' (it saves null), not be dropped.
+const clearable = ({ value }: { value: unknown }) => (value === null ? '' : value);
 
 export class CreateTaskDto {
   @ApiPropertyOptional()
@@ -101,7 +103,7 @@ export class UpdateTaskDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   asignadoId?: string;
 
   @ApiPropertyOptional({ enum: TASK_ESTADOS })
@@ -124,8 +126,9 @@ export class UpdateTaskDto {
 
   @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
   @IsOptional()
+  @ValidateIf((_, v) => v !== '')
   @IsDateString()
-  @Transform(emptyToUndef)
+  @Transform(clearable)
   plazo?: string;
 
   @ApiPropertyOptional()

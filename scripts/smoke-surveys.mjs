@@ -107,7 +107,7 @@ await step('he takes the payment (ledger, por validar)', async () => {
   const dlg = p.getByRole('dialog').filter({ hasText: 'Registrar cobro' }).last();
   await dlg.getByLabel('Monto (Bs) *').fill('150');
   await dlg.getByRole('button', { name: 'Registrar cobro' }).click(T);
-  await p.getByText('Cobro de la asistencia de Bs 150,00 registrado').waitFor(T);
+  await p.getByText('Cobro de la asistencia de Bs 150.00 registrado').waitFor(T);
   if (SHOTS) await p.screenshot({ path: `${SHOTS}/surveys-phone.png` });
 });
 

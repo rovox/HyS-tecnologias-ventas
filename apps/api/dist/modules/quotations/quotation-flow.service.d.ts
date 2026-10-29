@@ -1,10 +1,10 @@
-import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { OnModuleDestroy } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { AcceptQuotationDto } from './dto/quotation.dto';
 import { ProjectsService } from '../projects';
-export declare class QuotationFlowService implements OnModuleInit, OnModuleDestroy {
+export declare class QuotationFlowService implements OnModuleDestroy {
     private readonly prisma;
     private readonly audit;
     private readonly projects;
@@ -13,7 +13,7 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
     constructor(prisma: PrismaService, audit: AuditService, projects: ProjectsService);
     private row;
     private get;
-    onModuleInit(): void;
+    startTimers(): void;
     onModuleDestroy(): void;
     expireOverdue(now?: Date): Promise<number>;
     updateStatus(id: string, estado: string, user: User, sessionId?: string, motivoRechazo?: string, fechaEnvio?: string): Promise<{
@@ -25,13 +25,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -41,12 +34,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -64,11 +51,16 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -84,6 +76,7 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -100,13 +93,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -116,12 +102,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -139,11 +119,16 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -159,6 +144,7 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -175,13 +161,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -191,12 +170,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -214,11 +187,16 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -234,6 +212,7 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -251,13 +230,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
                 id: string;
                 nombre: string;
             };
-            sale: {
-                id: string;
-                createdAt: Date;
-                quotationId: string;
-                total: import("@prisma/client/runtime/library").Decimal;
-                status: string;
-            } | null;
             project: {
                 id: string;
                 estado: string;
@@ -267,12 +239,6 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
                 relevamientos: number;
                 tasks: number;
             };
-            sellers: {
-                nombre: string;
-                userId: string;
-                commissionPct: import("@prisma/client/runtime/library").Decimal;
-                quotationId: string;
-            }[];
             cliente: {
                 id: string;
                 nombre: string;
@@ -290,11 +256,16 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
                 id: string;
                 name: string;
             };
+            sellers: {
+                nombre: string;
+                userId: string;
+                commissionPct: import("@prisma/client/runtime/library").Decimal;
+                quotationId: string;
+            }[];
             id: string;
             sucursalId: string;
             createdAt: Date;
             updatedAt: Date;
-            vendedorId: string;
             titulo: string;
             clienteId: string | null;
             categoriaId: string;
@@ -310,6 +281,7 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             fechaEnvio: Date | null;
             estado: string;
             motivoRechazo: string | null;
+            vendedorId: string;
             numero: string;
             eliminadaAt: Date | null;
             eliminadaPorId: string | null;
@@ -343,19 +315,17 @@ export declare class QuotationFlowService implements OnModuleInit, OnModuleDestr
             createdAt: Date;
             updatedAt: Date;
             tecnicoId: string | null;
-            vendedorId: string | null;
             clienteId: string;
             categoriaId: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             estado: string;
+            vendedorId: string | null;
             fechaProgramada: Date;
             lugar: string;
             horario: string | null;
             quotationId: string | null;
             descripcionTrabajo: string;
-            adelanto: import("@prisma/client/runtime/library").Decimal;
             fechaFinalizacion: Date | null;
-            saldo: import("@prisma/client/runtime/library").Decimal;
             projectId: string | null;
             fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         };

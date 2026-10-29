@@ -1,1 +1,0 @@
-import{j as t}from"./index-U-qtEa-E.js";import{U as o}from"./UnderConstructionPage-u2gQ3Hys.js";import"./Helmet-CE39TftF.js";import"./Layout-oDypDFFR.js";const r=()=>t.jsx(o,{moduleName:"Mantenimiento"});export{r as default};

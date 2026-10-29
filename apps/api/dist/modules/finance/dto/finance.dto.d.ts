@@ -10,6 +10,12 @@ export declare class CreateMovementDto {
     cajaDestinoId?: string;
     pagadoPor?: string;
     sucursalId?: string;
+    responsableId?: string;
+    asunto?: string;
+    fechaLimite?: string;
+}
+export declare class SettleAdvanceDto {
+    nota?: string;
 }
 export declare class UpdateMovementDto {
     concepto?: string;
@@ -39,6 +45,10 @@ export declare class ListMovementsQuery {
     clienteId?: string;
     desde?: string;
     hasta?: string;
+    sucursalId?: string;
+}
+export declare class ExportMovementsQuery extends ListMovementsQuery {
+    formato: 'csv' | 'xlsx';
 }
 export declare class IncomeDto {
     concepto: string;
@@ -46,4 +56,5 @@ export declare class IncomeDto {
     metodo?: string;
     nota?: string;
     recibidoPorId?: string;
+    cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }

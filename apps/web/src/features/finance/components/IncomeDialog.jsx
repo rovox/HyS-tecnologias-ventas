@@ -17,7 +17,13 @@ const TYPES = [
   ['cobro', 'Cobro'],
   ['adicional', 'Adicional'],
 ];
-const METHODS = ['efectivo', 'transferencia', 'QR', 'tarjeta', 'otro'];
+const METHODS = { efectivo: 'Efectivo', transferencia: 'Transferencia', qr: 'QR', tarjeta: 'Tarjeta', otro: 'Otro' };
+/** A QR payment says which QR it reached (LAUNCH P1-1). */
+const QR_ACCOUNTS = [
+  ['qr_empresa', 'QR primario', 'El QR de la empresa: entra a su caja.'],
+  ['qr_socia', 'QR secundario', 'El QR de la socia: entra a su caja.'],
+  ['qr_personal', 'Mi QR personal', 'Lo tienes tú: queda en Anticipos hasta entregarlo a la empresa (mañana).'],
+];
 
 /**
  * One payment dialog for projects, stand-alone jobs and visits (a job of a project pays into the project; the API
@@ -31,7 +37,7 @@ export function IncomeDialog({ target, open, onOpenChange }) {
   const { data: people = [] } = useUserDirectory();
   const pay = useRegisterIncome();
   const visit = target.kind === 'visit';
-  const fresh = () => ({ concepto: visit ? 'asistencia' : target.cobrado > 0 ? 'cobro' : 'adelanto', monto: '', metodo: 'efectivo', nota: '', recibidoPorId: currentUser?.id || '' });
+  const fresh = () => ({ concepto: visit ? 'asistencia' : target.cobrado > 0 ? 'cobro' : 'adelanto', monto: '', metodo: 'efectivo', cuentaDestino: '', nota: '', recibidoPorId: currentUser?.id || '' });
   const [form, setForm] = useState(fresh);
   useEffect(() => {
     if (open) setForm(fresh());
@@ -41,14 +47,24 @@ export function IncomeDialog({ target, open, onOpenChange }) {
   const saldo = target.saldo;
   const monto = Number(form.monto);
   const reducesBalance = !['adicional', 'asistencia'].includes(form.concepto);
-  const error = !(monto > 0) ? 'Ingresa el monto' : reducesBalance && saldo !== undefined && monto > saldo ? `Supera el saldo (${formatBs(saldo)}): registra el excedente como adicional` : null;
+  // Whether it fits the balance is the API's call (it answers "registra el excedente como adicional").
+  const qr = form.metodo === 'qr';
+  const error = !(monto > 0) ? 'Ingresa el monto' : qr && !form.cuentaDestino ? 'Elige a qué QR entró' : null;
   const holder = people.find((p) => p.id === form.recibidoPorId);
 
   async function submit(e) {
     e.preventDefault();
     if (error) return notify.error(error);
     try {
-      await pay.mutateAsync({ target, concepto: form.concepto, monto, metodo: form.metodo, nota: form.nota || undefined, recibidoPorId: form.recibidoPorId || undefined });
+      await pay.mutateAsync({
+        target,
+        concepto: form.concepto,
+        monto,
+        metodo: form.metodo,
+        ...(qr ? { cuentaDestino: form.cuentaDestino } : {}),
+        nota: form.nota || undefined,
+        recibidoPorId: form.recibidoPorId || undefined,
+      });
       notify.success(`${form.concepto === 'adicional' ? 'Adicional' : visit ? 'Cobro de la asistencia' : 'Cobro'} de ${formatBs(monto)} registrado: queda por validar`, {
         description: holder ? `El dinero lo tiene ${holder.id === currentUser?.id ? 'usted' : holder.name} hasta entregarlo en caja.` : undefined,
         action: readsAll() ? { label: 'Ver por rendir', onClick: () => navigate('/finanzas?vista=por_rendir') } : undefined,
@@ -94,11 +110,25 @@ export function IncomeDialog({ target, open, onOpenChange }) {
             <div className="space-y-1.5">
               <Label htmlFor="inc-metodo">Método</Label>
               <select id="inc-metodo" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.metodo} onChange={(e) => set({ metodo: e.target.value })}>
-                {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                {Object.entries(METHODS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
               </select>
             </div>
           </div>
+          {qr && (
+            <div className="space-y-1.5" role="radiogroup" aria-label="Cuenta destino">
+              <Label>¿A qué QR entró? *</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {QR_ACCOUNTS.map(([key, label]) => (
+                  <Button key={key} type="button" role="radio" aria-checked={form.cuentaDestino === key} variant={form.cuentaDestino === key ? 'default' : 'outline'} onClick={() => set({ cuentaDestino: key })}>
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              {form.cuentaDestino && <p className="text-xs text-muted-foreground">{QR_ACCOUNTS.find(([k]) => k === form.cuentaDestino)[2]}</p>}
+            </div>
+          )}
           {form.monto && error && <p className="text-xs font-semibold text-danger-fg">{error}</p>}
+          {!(qr && form.cuentaDestino && form.cuentaDestino !== 'qr_personal') && (
           <div className="space-y-1.5">
             <Label htmlFor="inc-recibe">¿Quién recibió el dinero?</Label>
             {isSeguridad() ? (
@@ -113,6 +143,7 @@ export function IncomeDialog({ target, open, onOpenChange }) {
               />
             )}
           </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="inc-nota">Nota</Label>
             <Input id="inc-nota" value={form.nota} placeholder="Ej. recibo 123, pago por QR" onChange={(e) => set({ nota: e.target.value })} />

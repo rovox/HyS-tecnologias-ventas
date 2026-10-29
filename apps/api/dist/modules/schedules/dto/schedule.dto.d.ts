@@ -42,4 +42,5 @@ export declare class CreateSchedulePaymentDto {
     relevamientoId?: string;
     quotationId?: string;
     recibidoPorId?: string;
+    cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }

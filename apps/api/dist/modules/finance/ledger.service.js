@@ -14,9 +14,11 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../common/prisma/prisma.service");
 const audit_service_1 = require("../../common/audit/audit.service");
 const policy_1 = require("../../common/policy/policy");
+const calendar_1 = require("../../common/domain/calendar");
+const ledger_export_rules_1 = require("./domain/ledger-export.rules");
+const ledger_export_1 = require("./ledger-export");
 const finance_rules_1 = require("./domain/finance.rules");
 const movement_presenter_1 = require("./movement.presenter");
-const dayEnd = (iso) => new Date(`${iso.slice(0, 10)}T23:59:59.999Z`);
 let LedgerService = class LedgerService {
     prisma;
     audit;
@@ -42,28 +44,49 @@ let LedgerService = class LedgerService {
             throw new common_1.ForbiddenException('Sin acceso a este movimiento');
         return (0, movement_presenter_1.presentMovement)(row);
     }
+    listWhere(query, user) {
+        return {
+            AND: [
+                (0, policy_1.canSeeLedger)(user) ? {} : { OR: [{ registradoPorId: user.id }, { recibidoPorId: user.id }] },
+                query.cajaId ? { OR: [{ cajaId: query.cajaId }, { cajaDestinoId: query.cajaId }] } : {},
+            ],
+            ...(query.tipo ? { tipo: query.tipo } : {}),
+            ...(query.estado ? { estado: query.estado } : {}),
+            ...(query.projectId ? { projectId: query.projectId } : {}),
+            ...(query.clienteId ? { clienteId: query.clienteId } : {}),
+            ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
+            ...(query.desde || query.hasta
+                ? { fecha: { ...(query.desde ? { gte: (0, calendar_1.businessDayStart)(query.desde.slice(0, 10)) } : {}), ...(query.hasta ? { lte: (0, calendar_1.businessDayEnd)(query.hasta.slice(0, 10)) } : {}) } }
+                : {}),
+        };
+    }
     async list(query, user) {
         if (!(0, policy_1.canRegisterMovements)(user))
             throw new common_1.ForbiddenException('Sin acceso a finanzas');
         const rows = await this.prisma.cashMovement.findMany({
-            where: {
-                AND: [
-                    (0, policy_1.canSeeLedger)(user) ? {} : { OR: [{ registradoPorId: user.id }, { recibidoPorId: user.id }] },
-                    query.cajaId ? { OR: [{ cajaId: query.cajaId }, { cajaDestinoId: query.cajaId }] } : {},
-                ],
-                ...(query.tipo ? { tipo: query.tipo } : {}),
-                ...(query.estado ? { estado: query.estado } : {}),
-                ...(query.projectId ? { projectId: query.projectId } : {}),
-                ...(query.clienteId ? { clienteId: query.clienteId } : {}),
-                ...(query.desde || query.hasta
-                    ? { fecha: { ...(query.desde ? { gte: new Date(query.desde) } : {}), ...(query.hasta ? { lte: dayEnd(query.hasta) } : {}) } }
-                    : {}),
-            },
+            where: this.listWhere(query, user),
             include: movement_presenter_1.MOVEMENT_DETAIL,
-            orderBy: { fecha: 'desc' },
+            orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
             take: 1000,
         });
         return rows.map(movement_presenter_1.presentMovement);
+    }
+    async export(query, user) {
+        if (!(0, policy_1.canRegisterMovements)(user))
+            throw new common_1.ForbiddenException('Sin acceso a finanzas');
+        const movements = await this.prisma.cashMovement.findMany({
+            where: this.listWhere(query, user),
+            include: movement_presenter_1.MOVEMENT_DETAIL,
+            orderBy: [{ fecha: 'asc' }, { createdAt: 'asc' }],
+            take: 20000,
+        });
+        const sucursal = query.sucursalId ? await this.prisma.sucursal.findUnique({ where: { id: query.sucursalId } }) : null;
+        const scope = sucursal ? sucursal.nombre : 'Toda la empresa';
+        const period = query.desde && query.hasta && query.desde.slice(0, 10) === query.hasta.slice(0, 10) ? query.desde.slice(0, 10) : `${query.desde?.slice(0, 10) ?? 'inicio'} a ${query.hasta?.slice(0, 10) ?? 'hoy'}`;
+        const name = `libro-${scope.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${period.replace(/ a /, '_')}.${query.formato}`;
+        const rows = (0, ledger_export_rules_1.ledgerRows)(movements);
+        const file = query.formato === 'xlsx' ? await (0, ledger_export_1.ledgerXlsx)(rows, (0, ledger_export_rules_1.ledgerSummary)(movements), `Libro ${period} · ${scope}`) : (0, ledger_export_1.ledgerCsv)(rows);
+        return { file, name, type: query.formato === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv; charset=utf-8' };
     }
     async create(dto, user, sessionId) {
         if (!(0, policy_1.canRegisterMovements)(user))
@@ -75,9 +98,11 @@ let LedgerService = class LedgerService {
             throw new common_1.ForbiddenException('Solo ventas, Gerencia o Contabilidad registran otros ingresos');
         if (dto.tipo === 'transferencia')
             this.assertValidator(user);
-        const error = (0, finance_rules_1.movementError)(dto);
+        const error = (0, finance_rules_1.movementError)(dto) || (0, finance_rules_1.advanceError)(dto);
         if (error)
             throw new common_1.BadRequestException(error);
+        if (dto.concepto === 'anticipo_por_rendir')
+            await this.assertActiveUser(dto.responsableId);
         const project = dto.projectId ? await this.prisma.project.findUnique({ where: { id: dto.projectId } }) : null;
         if (dto.projectId && !project)
             throw new common_1.BadRequestException('Proyecto no encontrado');
@@ -90,7 +115,7 @@ let LedgerService = class LedgerService {
                 tipo: dto.tipo,
                 concepto: dto.concepto,
                 monto: dto.monto,
-                fecha: dto.fecha ? new Date(dto.fecha) : new Date(),
+                fecha: (0, finance_rules_1.movementDate)(dto.fecha),
                 metodo: dto.metodo || '',
                 nota: dto.nota || '',
                 projectId: project?.id ?? null,
@@ -101,6 +126,7 @@ let LedgerService = class LedgerService {
                 sucursalId,
                 registradoPorId: user.id,
                 ...(dto.tipo === 'ingreso' ? { recibidoPorId: user.id } : {}),
+                ...(dto.concepto === 'anticipo_por_rendir' ? { recibidoPorId: dto.responsableId, asunto: dto.asunto.trim(), fechaLimite: new Date(`${dto.fechaLimite.slice(0, 10)}T12:00:00Z`) } : {}),
                 ...(transfer ? { estado: 'validado', validadoPorId: user.id, validadoAt: new Date() } : {}),
             },
             include: movement_presenter_1.MOVEMENT_DETAIL,
@@ -110,6 +136,8 @@ let LedgerService = class LedgerService {
     }
     async update(id, dto, user, sessionId) {
         const before = await this.row(id);
+        if (before.ventaDirectaId)
+            throw new common_1.BadRequestException('Es el cobro de una venta directa: se corrige anulando la venta');
         const manager = (0, policy_1.canValidateMovements)(user);
         if (before.registradoPorId !== user.id && !manager)
             throw new common_1.ForbiddenException('Solo quien lo registró, Gerencia o Contabilidad lo corrigen');
@@ -138,7 +166,7 @@ let LedgerService = class LedgerService {
             data: {
                 ...(dto.concepto !== undefined ? { concepto: dto.concepto } : {}),
                 ...(dto.monto !== undefined ? { monto: dto.monto } : {}),
-                ...(dto.fecha !== undefined ? { fecha: new Date(dto.fecha) } : {}),
+                ...(dto.fecha !== undefined ? { fecha: (0, finance_rules_1.movementDate)(dto.fecha, new Date(), before.fecha) } : {}),
                 ...(dto.metodo !== undefined ? { metodo: dto.metodo } : {}),
                 ...(dto.nota !== undefined ? { nota: dto.nota } : {}),
                 ...(dto.pagadoPor !== undefined && before.tipo === 'egreso' ? { pagadoPor: dto.pagadoPor } : {}),
@@ -153,6 +181,8 @@ let LedgerService = class LedgerService {
     }
     async transition(id, to, input, user, sessionId) {
         const before = await this.row(id);
+        if (before.ventaDirectaId)
+            throw new common_1.BadRequestException('Es el cobro de una venta directa: se corrige anulando la venta');
         const ownWaiting = to === 'anulado' && before.registradoPorId === user.id && before.estado !== 'validado';
         if (!ownWaiting)
             this.assertValidator(user);
@@ -162,7 +192,14 @@ let LedgerService = class LedgerService {
         if (to === 'validado' && input.cajaId)
             await this.assertBox(input.cajaId);
         const data = to === 'validado'
-            ? { estado: 'validado', ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}), validadoPorId: user.id, validadoAt: new Date(), motivo: null }
+            ? {
+                estado: 'validado',
+                ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}),
+                ...(before.tipo === 'ingreso' && before.fechaLimite && !before.rendidoAt ? { rendidoAt: new Date() } : {}),
+                validadoPorId: user.id,
+                validadoAt: new Date(),
+                motivo: null,
+            }
             : { estado: to, motivo: input.motivo.trim() };
         const after = await this.prisma.cashMovement.update({ where: { id }, data, include: movement_presenter_1.MOVEMENT_DETAIL });
         await this.audit.record({ user, sessionId, action: `movement.${to}`, entity: 'movement', id, before, after, affects: this.affects(before) });
@@ -177,6 +214,31 @@ let LedgerService = class LedgerService {
         await this.audit.record({ user, sessionId, action: 'movement.refund', entity: 'movement', id, before, after });
         return (0, movement_presenter_1.presentMovement)(after);
     }
+    async summary(user, mes) {
+        if (!(0, policy_1.canSeeLedger)(user))
+            throw new common_1.ForbiddenException('Sin acceso al resumen de dinero');
+        const today = (0, calendar_1.businessToday)(new Date());
+        const month = /^\d{4}-\d{2}$/.test(mes ?? '') ? mes : today.slice(0, 7);
+        const [y, mo] = month.split('-').map(Number);
+        const lastDay = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+        const [movements, boxes, sucursales, sales, closes] = await Promise.all([
+            this.prisma.cashMovement.findMany({ where: { fecha: { gte: (0, calendar_1.businessDayStart)(`${month}-01`), lte: (0, calendar_1.businessDayEnd)(lastDay) } }, select: { tipo: true, monto: true, estado: true } }),
+            this.cashBoxes(user),
+            this.prisma.sucursal.findMany({ orderBy: { nombre: 'asc' } }),
+            this.prisma.directSale.groupBy({ by: ['sucursalId'], where: { estado: 'registrada', fecha: { gte: (0, calendar_1.businessDayStart)(today), lte: (0, calendar_1.businessDayEnd)(today) } }, _count: true, _sum: { total: true } }),
+            this.prisma.cierreCaja.findMany({ where: { dia: today }, select: { sucursalId: true, diferencia: true } }),
+        ]);
+        return {
+            mes: month,
+            ...(0, finance_rules_1.monthMoney)(movements),
+            cajas: boxes.map((b) => ({ id: b.id, nombre: b.nombre, sucursal: b.sucursal?.nombre, saldo: b.saldo })),
+            hoy: sucursales.map((s) => {
+                const sold = sales.find((x) => x.sucursalId === s.id);
+                const closed = closes.find((c) => c.sucursalId === s.id);
+                return { sucursal: { id: s.id, nombre: s.nombre }, ventas: sold?._count ?? 0, total: Number(sold?._sum.total ?? 0), cierre: closed ? { diferencia: Number(closed.diferencia) } : null };
+            }),
+        };
+    }
     async cashBoxes(user) {
         if (!(0, policy_1.canRegisterMovements)(user))
             throw new common_1.ForbiddenException('Sin acceso a finanzas');
@@ -185,6 +247,38 @@ let LedgerService = class LedgerService {
             this.prisma.cashMovement.findMany({ where: { estado: 'validado' }, select: { tipo: true, concepto: true, monto: true, estado: true, cajaId: true, cajaDestinoId: true } }),
         ]);
         return boxes.map((box) => ({ ...box, saldo: (0, finance_rules_1.cashBoxBalance)(box.id, movements) }));
+    }
+    async advances(user) {
+        if (!(0, policy_1.canRegisterMovements)(user))
+            throw new common_1.ForbiddenException('Sin acceso a finanzas');
+        const rows = await this.prisma.cashMovement.findMany({
+            where: {
+                rendidoAt: null,
+                OR: [{ concepto: 'anticipo_por_rendir', estado: { not: 'anulado' } }, { tipo: 'ingreso', fechaLimite: { not: null }, estado: { in: ['por_validar', 'observado'] } }],
+                ...((0, policy_1.canSeeLedger)(user) ? {} : { recibidoPorId: user.id }),
+            },
+            include: movement_presenter_1.MOVEMENT_DETAIL,
+            orderBy: { fechaLimite: 'asc' },
+        });
+        const today = (0, calendar_1.businessToday)(new Date());
+        return rows.map((m) => ({ ...(0, movement_presenter_1.presentMovement)(m), diasAtraso: m.fechaLimite ? (0, finance_rules_1.daysLate)(m.fechaLimite, today) : 0 }));
+    }
+    async settleAdvance(id, nota, user, sessionId) {
+        this.assertValidator(user);
+        const before = await this.row(id);
+        if (before.concepto !== 'anticipo_por_rendir')
+            throw new common_1.BadRequestException('Solo un anticipo por rendir se rinde');
+        if (before.rendidoAt)
+            throw new common_1.BadRequestException('Este anticipo ya está rendido');
+        if (before.estado === 'anulado')
+            throw new common_1.BadRequestException('El anticipo está anulado');
+        const after = await this.prisma.cashMovement.update({
+            where: { id },
+            data: { rendidoAt: new Date(), ...(nota?.trim() ? { nota: `${before.nota ? `${before.nota}\n` : ''}Rendido: ${nota.trim()}` } : {}) },
+            include: movement_presenter_1.MOVEMENT_DETAIL,
+        });
+        await this.audit.record({ user, sessionId, action: 'movement.rendido', entity: 'movement', id, before, after });
+        return (0, movement_presenter_1.presentMovement)(after);
     }
     async custody(user) {
         if (!(0, policy_1.canSeeLedger)(user))

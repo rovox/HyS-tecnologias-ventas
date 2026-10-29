@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@prisma/client';
 
@@ -20,19 +20,11 @@ function mariaAdapter(): PrismaMariaDb {
 }
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+// No $connect at boot: Prisma connects on the first query, so a slow or down MySQL never delays app.listen()
+// (Hostinger gives the process a few seconds). /api/health/db reports the state.
+export class PrismaService extends PrismaClient implements OnModuleDestroy {
   constructor() {
     super({ adapter: mariaAdapter() });
-  }
-
-  async onModuleInit() {
-    if (!process.env.DATABASE_URL?.trim()) return;
-    try {
-      await this.$connect();
-    } catch (err) {
-      // No tumbar Nest si MySQL falla; /api/health/db reportará el estado.
-      console.error('[Prisma] $connect falló al arrancar:', err);
-    }
   }
 
   async onModuleDestroy() {

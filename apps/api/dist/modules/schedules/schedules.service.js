@@ -24,17 +24,36 @@ const include = {
     tecnico: { select: { id: true, name: true } },
     quotation: { select: { id: true, numero: true, titulo: true, monto: true } },
     categoria: { select: { id: true, label: true } },
-    project: { select: { id: true, codigo: true, estado: true } },
+    project: {
+        select: {
+            id: true,
+            codigo: true,
+            estado: true,
+            montoOficial: true,
+            movements: { where: { tipo: 'ingreso', estado: { not: 'anulado' } }, select: { tipo: true, concepto: true, monto: true, estado: true } },
+        },
+    },
     movements: {
         where: { tipo: 'ingreso' },
         select: { id: true, concepto: true, monto: true, estado: true, metodo: true, nota: true, fecha: true, tipo: true },
         orderBy: { fecha: 'desc' },
     },
 };
+function projectMoney({ movements, montoOficial, ...project }) {
+    const monto = Number(montoOficial);
+    const { cobrado } = (0, finance_1.incomeOf)(movements);
+    return { ...project, monto, cobrado, saldo: (0, finance_1.balanceOf)(monto, cobrado, project.estado === 'anulado'), pctCobrado: monto > 0 ? Math.min(100, Math.round((cobrado / monto) * 100)) : 0 };
+}
 function present(row) {
-    const { movements, ...job } = row;
+    const { movements, project, ...job } = row;
     const cobrado = row.projectId ? 0 : (0, finance_1.incomeOf)(movements).cobrado;
-    return { ...job, adelanto: cobrado, saldo: row.projectId ? 0 : (0, finance_1.balanceOf)(Number(row.monto), cobrado, row.estado === 'cancelado'), movements };
+    return {
+        ...job,
+        project: project ? projectMoney(project) : null,
+        adelanto: cobrado,
+        saldo: row.projectId ? 0 : (0, finance_1.balanceOf)(Number(row.monto), cobrado, row.estado === 'cancelado'),
+        movements,
+    };
 }
 const affectsOf = (row, base = []) => (row.projectId ? [...base, 'project'] : base);
 let SchedulesService = class SchedulesService {
@@ -141,6 +160,8 @@ let SchedulesService = class SchedulesService {
             if (keys.some((k) => !['estado', 'observaciones', 'fechaFinalizacion', 'horario'].includes(k))) {
                 throw new common_1.ForbiddenException('Técnico solo actualiza estado u observaciones');
             }
+            if (dto.estado === 'cancelado' && current.estado !== 'cancelado')
+                throw new common_1.ForbiddenException('El técnico inicia y termina; la cancelación la hace ventas o Gerencia');
         }
         if (dto.estado && dto.estado !== current.estado) {
             const transition = (0, schedules_rules_1.checkScheduleTransition)(current.estado, dto.estado);
@@ -213,7 +234,7 @@ let SchedulesService = class SchedulesService {
         (0, roles_1.assertCanMutateSchedules)(user);
         await this.get(scheduleId, user);
         const concepto = dto.tipo === 'extra_asistencia' ? 'adicional' : dto.tipo;
-        await this.income.register({ scheduleId }, { concepto, monto: Number(dto.monto), metodo: dto.metodo, nota: dto.nota, recibidoPorId: dto.recibidoPorId }, user, sessionId);
+        await this.income.register({ scheduleId }, { concepto, monto: Number(dto.monto), metodo: dto.metodo, nota: dto.nota, recibidoPorId: dto.recibidoPorId, cuentaDestino: dto.cuentaDestino }, user, sessionId);
         return this.get(scheduleId, user);
     }
     createFirstJob(tx, data) {

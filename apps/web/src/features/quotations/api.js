@@ -1,8 +1,7 @@
 // Quotations: the only file of this feature that talks HTTP. Query keys start with the API entity ('quotation'),
 // so the realtime provider refreshes every open screen when any session changes a quotation.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/api/client.js';
-import { API_URL } from '@/api/config.js';
+import { apiClient, fetchFile } from '@/api/client.js';
 import { authToken } from '@/api/http.js';
 
 const opts = (extra) => ({ token: authToken(), ...extra });
@@ -103,7 +102,7 @@ export function useRestoreQuotation() {
 /** Opens a stored quotation file (PDF or licitación document) in a new tab; files need the session token. */
 export async function openQuotationFile(url) {
   const path = String(url).replace(/^\/api\//, '').replace(/^\//, '');
-  const response = await fetch(`${API_URL.replace(/\/$/, '')}/${path}`, { headers: { Authorization: `Bearer ${authToken()}` } });
+  const response = await fetchFile(path);
   if (!response.ok) throw new Error('No se pudo abrir el archivo');
   window.open(URL.createObjectURL(await response.blob()), '_blank', 'noopener');
 }

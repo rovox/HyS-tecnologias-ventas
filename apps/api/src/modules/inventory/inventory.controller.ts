@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import { CurrentSessionId, CurrentUser } from '../../common/auth/current-user.decorator';
-import { CreateProductDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
+import { CreateProductDto, ListMovementsQuery, StockBatchDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
 import { InventoryService } from './inventory.service';
 
 @ApiTags('inventory')
@@ -31,14 +31,26 @@ export class InventoryController {
     return this.inventory.updateProduct(id, dto, user, sessionId);
   }
 
+  @Get('products/:id/kardex')
+  @ApiOperation({ summary: 'Kardex of a product in a branch (or the company) with its running balance' })
+  kardex(@Param('id') id: string, @Query('sucursalId') sucursalId: string | undefined, @CurrentUser() user: User) {
+    return this.inventory.kardex(id, user, sucursalId);
+  }
+
   @Get('movements')
-  @ApiOperation({ summary: 'Stock movements (optionally of one product)' })
-  movements(@CurrentUser() user: User, @Query('productoId') productoId?: string) {
-    return this.inventory.movements(user, productoId);
+  @ApiOperation({ summary: 'History: by branch, types, Bolivian days and product' })
+  movements(@Query() query: ListMovementsQuery, @CurrentUser() user: User) {
+    return this.inventory.movements(user, query);
+  }
+
+  @Post('movements/lote')
+  @ApiOperation({ summary: 'Several products moved the same way (entrada, transferencia, baja…) in one transaction' })
+  batch(@Body() dto: StockBatchDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.inventory.registerBatch(dto, user, sessionId);
   }
 
   @Post('movements')
-  @ApiOperation({ summary: 'Entrada, transferencia, salida a proyecto or ajuste (Gerencia)' })
+  @ApiOperation({ summary: 'Entrada, transferencia, salida a proyecto, baja or ajuste (Gerencia)' })
   move(@Body() dto: StockMovementDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
     return this.inventory.registerMovement(dto, user, sessionId);
   }

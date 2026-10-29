@@ -68,8 +68,6 @@ describe('projects rules', () => {
       lugar: 'Av. Siempre Viva',
       descripcionTrabajo: 'CCTV (COT-1)',
       monto: 0,
-      adelanto: 0,
-      saldo: 0,
       fechaProgramada: now,
       estado: 'programado',
       quotationId: 'q1',

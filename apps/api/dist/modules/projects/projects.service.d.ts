@@ -79,12 +79,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -116,12 +121,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -140,11 +150,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -241,12 +252,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -278,12 +294,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -302,11 +323,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -375,19 +397,17 @@ export declare class ProjectsService {
             createdAt: Date;
             updatedAt: Date;
             tecnicoId: string | null;
-            vendedorId: string | null;
             clienteId: string;
             categoriaId: string;
             monto: Prisma.Decimal;
             estado: string;
+            vendedorId: string | null;
             fechaProgramada: Date;
             lugar: string;
             horario: string | null;
             quotationId: string | null;
             descripcionTrabajo: string;
-            adelanto: Prisma.Decimal;
             fechaFinalizacion: Date | null;
-            saldo: Prisma.Decimal;
             projectId: string | null;
             fotosUrl: Prisma.JsonValue | null;
         };
@@ -446,12 +466,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -483,12 +508,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -507,11 +537,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -607,12 +638,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -644,12 +680,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -668,11 +709,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -768,12 +810,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -805,12 +852,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -829,11 +881,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -929,12 +982,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -966,12 +1024,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -990,11 +1053,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -1090,12 +1154,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -1127,12 +1196,17 @@ export declare class ProjectsService {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -1151,11 +1225,12 @@ export declare class ProjectsService {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: Prisma.Decimal;
-            costoUnitario: Prisma.Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {

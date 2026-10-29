@@ -1,19 +1,109 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Columns3, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsPhone } from '@/shared/lib/useIsPhone.js';
 import { TONE } from '@/shared/lib/status.js';
+import { useColumnPrefs } from './useColumnPrefs.js';
 
 /**
  * Odoo-style list, striped and numbered like a spreadsheet.
- * columns: [{ key, header, cell?(row), align?: 'right', className?, total?(rows) }].
- * groups: optional [{ key, label, rows }] (from the control panel's "group by"); each group shows its subtotal and
- * numbers its rows from 1. tone(row): optional narrative tone ('danger', 'warning'…) shown as a left border.
+ * columns: [{ key, header, cell?(row), align?: 'right', className?, total?(rows), fixed?, menuLabel? }].
+ * groups: optional [{ key, label, rows }] (from the control panel's "group by"); each group folds (▸/▾), shows its
+ * subtotal and numbers its rows from 1. tone(row): optional narrative tone ('danger', 'warning'…) shown as a left border.
  * renderCard(row): optional card used instead of the table on phones.
+ * summary(rows): optional [{ label, value, tone? }] shown above the list; by default the columns with a total.
+ * id: names the list so its column choice (show, hide, order) is remembered in this browser; without it no menu.
  */
 export function ListView(props) {
   const phone = useIsPhone();
-  return phone && props.renderCard ? <CardList {...props} /> : <TableList {...props} />;
+  const { columns, menu } = useColumnPrefs(props.id, props.columns);
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const cards = phone && props.renderCard;
+  const groupKeys = props.groups?.map((g) => g.key) || [];
+  const folding = !cards && groupKeys.length > 1 && {
+    all: groupKeys.every((k) => collapsed.has(k)),
+    toggleAll: () => setCollapsed(groupKeys.every((k) => collapsed.has(k)) ? new Set() : new Set(groupKeys)),
+  };
+  const toggle = (key) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  return (
+    <div className="space-y-2">
+      <Summary {...props} columns={columns} menu={cards ? null : menu} folding={folding} />
+      {cards ? <CardList {...props} columns={columns} /> : <TableList {...props} columns={columns} collapsed={collapsed} onToggleGroup={toggle} />}
+    </div>
+  );
+}
+
+/** Totals first, so the amounts are read before scrolling to the end; plus the column menu and fold/unfold all. */
+function Summary({ columns, rows = [], loading, summary, menu, folding }) {
+  const items = loading || rows.length === 0 ? [] : summary ? summary(rows) : columns.filter((c) => c.total).map((c) => ({ label: c.menuLabel || c.header, value: c.total(rows) }));
+  if (items.length === 0 && !menu && !folding) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {items.map((item) => (
+        <div key={item.label} className="rounded-md border border-border bg-card px-3 py-1.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
+          <p className={cn('text-sm font-bold tabular-nums', item.tone && TONE[item.tone].text)}>{item.value}</p>
+        </div>
+      ))}
+      <div className="ml-auto flex gap-1">
+        {folding && (
+          <Button variant="ghost" size="sm" onClick={folding.toggleAll}>
+            {folding.all ? <ChevronsUpDown /> : <ChevronsDownUp />}
+            {folding.all ? 'Desplegar grupos' : 'Plegar grupos'}
+          </Button>
+        )}
+        {menu && <ColumnsMenu menu={menu} />}
+      </div>
+    </div>
+  );
+}
+
+function ColumnsMenu({ menu }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" aria-label="Elegir columnas">
+          <Columns3 /> Columnas
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel>Mostrar y ordenar columnas</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {menu.items.map((item, i) => (
+          <div key={item.key} className="flex items-center gap-1 px-2 py-1 text-sm">
+            <label className="flex flex-1 cursor-pointer items-center gap-2">
+              <input type="checkbox" className="h-4 w-4 accent-primary" checked={item.visible} onChange={() => menu.toggle(item.key)} />
+              <span className={cn(!item.visible && 'text-muted-foreground')}>{item.label}</span>
+            </label>
+            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === 0} aria-label={`Subir ${item.label}`} onClick={() => menu.move(item.key, -1)}>
+              <ArrowUp />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === menu.items.length - 1} aria-label={`Bajar ${item.label}`} onClick={() => menu.move(item.key, 1)}>
+              <ArrowDown />
+            </Button>
+          </div>
+        ))}
+        {menu.customized && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={menu.reset}>
+              <RotateCcw /> Volver a las columnas iniciales
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function CardList({ columns, rows = [], rowKey = (r) => r.id, onRowClick, loading, empty = 'Sin registros', renderCard, tone }) {
@@ -52,7 +142,7 @@ function CardList({ columns, rows = [], rowKey = (r) => r.id, onRowClick, loadin
   );
 }
 
-function TableList({ columns, rows = [], groups, rowKey = (r) => r.id, onRowClick, loading, empty = 'Sin registros', tone }) {
+function TableList({ columns, rows = [], groups, rowKey = (r) => r.id, onRowClick, loading, empty = 'Sin registros', tone, collapsed, onToggleGroup }) {
   const hasTotals = columns.some((c) => c.total);
   const span = columns.length + 1;
   const align = (c) => (c.align === 'right' ? 'whitespace-nowrap text-right tabular-nums' : 'text-left');
@@ -99,9 +189,11 @@ function TableList({ columns, rows = [], groups, rowKey = (r) => r.id, onRowClic
     });
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-card">
+    // On wide screens the header sticks under the app header while the page scrolls (LIST-01): `clip` does not make a
+    // scroll box of its own, so there is one scroll only. Narrow screens keep the sideways scroll of a wide table.
+    <div className="overflow-x-auto rounded-md border border-border bg-card lg:overflow-x-clip">
       <table className="w-full min-w-[40rem] border-collapse">
-        <thead className="bg-muted/60">
+        <thead className="bg-muted shadow-sm lg:sticky lg:top-16 lg:z-10">
           <tr>
             <th scope="col" className="w-10 border-r border-border/70 px-2 py-2 text-right text-xs font-semibold text-muted-foreground">
               #
@@ -131,17 +223,24 @@ function TableList({ columns, rows = [], groups, rowKey = (r) => r.id, onRowClic
           )}
           {!loading && !groups && bodyRows(rows)}
           {!loading &&
-            groups?.map((g) => (
-              <Fragment key={g.key}>
-                <tr className="border-b border-border bg-primary-fixed text-on-primary-fixed">
-                  <td colSpan={span} className="px-3 py-2 text-sm font-semibold">
-                    {g.label} <span className="font-normal text-muted-foreground">({g.rows.length})</span>
-                  </td>
-                </tr>
-                {bodyRows(g.rows)}
-                {hasTotals && totalsRow(g.rows, 'Subtotal')}
-              </Fragment>
-            ))}
+            groups?.map((g) => {
+              const open = !collapsed.has(g.key);
+              return (
+                <Fragment key={g.key}>
+                  <tr className="border-b border-border bg-primary-fixed text-on-primary-fixed">
+                    <td colSpan={span} className="p-0">
+                      <button type="button" aria-expanded={open} onClick={() => onToggleGroup(g.key)} className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-semibold">
+                        {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                        {g.label} <span className="font-normal text-muted-foreground">({g.rows.length})</span>
+                      </button>
+                    </td>
+                  </tr>
+                  {open && bodyRows(g.rows)}
+                  {/* Folded groups keep their subtotal visible. */}
+                  {hasTotals && totalsRow(g.rows, 'Subtotal')}
+                </Fragment>
+              );
+            })}
         </tbody>
         {!loading && hasTotals && rows.length > 0 && <tfoot>{totalsRow(rows, 'Total', true)}</tfoot>}
       </table>

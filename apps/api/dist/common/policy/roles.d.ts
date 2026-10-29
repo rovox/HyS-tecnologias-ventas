@@ -1,5 +1,5 @@
 import type { User } from '@prisma/client';
-export { ROLES, clientWhere, goalWhere, isAdmin, isCommercial, isConta, isTec, isVentas, metricsUserId, quotationWhere, relevamientoWhere, saleWhere, scheduleWhere, taskWhere, } from './policy';
+export { ROLES, clientWhere, goalWhere, isAdmin, isCommercial, isConta, isTec, isVentas, metricsUserId, quotationWhere, relevamientoWhere, scheduleWhere, taskWhere, } from './policy';
 export declare function assertAdmin(user: User): void;
 export declare function assertCanMutateQuotes(user: User): void;
 export declare function assertCanMutateClients(user: User): void;

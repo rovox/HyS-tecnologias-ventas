@@ -19,7 +19,7 @@ class LoginDto {
 }
 exports.LoginDto = LoginDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'dennis@hscontrol.com' }),
+    (0, swagger_1.ApiProperty)({ example: 'denis.palacios@hys.com' }),
     (0, class_validator_1.IsEmail)(emailOpts),
     __metadata("design:type", String)
 ], LoginDto.prototype, "email", void 0);
@@ -34,7 +34,7 @@ class ForgotPasswordDto {
 }
 exports.ForgotPasswordDto = ForgotPasswordDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'dennis@hscontrol.com' }),
+    (0, swagger_1.ApiProperty)({ example: 'denis.palacios@hys.com' }),
     (0, class_validator_1.IsEmail)(emailOpts),
     __metadata("design:type", String)
 ], ForgotPasswordDto.prototype, "email", void 0);

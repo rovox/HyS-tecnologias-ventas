@@ -1,8 +1,12 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { validationMessages } from './common/domain/validation-messages';
+import { DigicorpService } from './modules/digicorp/digicorp.service';
+import { QuotationFlowService } from './modules/quotations/quotation-flow.service';
+import { TasksService } from './modules/tasks/tasks.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,6 +28,8 @@ async function bootstrap() {
       forbidNonWhitelisted: process.env.API_STRICT_DTO === '1',
       transform: true,
       transformOptions: { enableImplicitConversion: true },
+      // Only Spanish on screen: class-validator's English defaults are translated (the DTO's own messages are kept).
+      exceptionFactory: (errors) => new BadRequestException(validationMessages(errors)),
     }),
   );
 
@@ -40,6 +46,9 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT) || 3001;
   await app.listen(port, '0.0.0.0');
+  console.log(`[Nest] escuchando en el puerto ${port}`);
+  // Background work only once the port is open: Hostinger kills a process that does not listen within seconds.
+  for (const service of [QuotationFlowService, TasksService, DigicorpService]) app.get(service).startTimers();
 }
 
 bootstrap().catch((err) => {

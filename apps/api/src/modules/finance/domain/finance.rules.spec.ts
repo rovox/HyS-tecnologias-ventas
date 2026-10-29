@@ -1,4 +1,5 @@
 import {
+  qrDestinationError,
   balanceOf,
   cashBoxBalance,
   checkMovementTransition,
@@ -7,6 +8,10 @@ import {
   incomeConceptError,
   incomeError,
   incomeOf,
+  advanceError,
+  monthMoney,
+  daysLate,
+  movementDate,
   movementError,
   custody,
   movementImpact,
@@ -16,6 +21,13 @@ import {
 const m = (tipo: string, concepto: string, monto: number, estado = 'validado', extra = {}) => ({ tipo, concepto, monto, estado, ...extra });
 
 describe('finance rules', () => {
+  it('a QR payment names its QR; other methods do not (LAUNCH P1-1)', () => {
+    expect(qrDestinationError('qr', undefined)).toMatch(/a qué QR/);
+    expect(qrDestinationError('QR', 'qr_personal')).toBeNull();
+    expect(qrDestinationError('efectivo', undefined)).toBeNull();
+    expect(qrDestinationError('efectivo', 'qr_empresa')).toMatch(/solo para cobros por QR/);
+  });
+
   it('validates type, concept, amount, transfers and who paid an expense', () => {
     expect(movementError({ tipo: 'ingreso', concepto: 'cobro', monto: 10 })).toBeNull();
     expect(movementError({ tipo: 'ingreso', concepto: 'combustible', monto: 10 })).toMatch(/Concepto no válido/);
@@ -110,5 +122,33 @@ describe('finance rules', () => {
       { tipo: 'caja', cajaId: 'c1', antes: 5200, despues: 5250 },
       { tipo: 'caja', cajaId: 'c2', antes: 100, despues: 50 },
     ]);
+  });
+
+  it('keeps the Bolivian time of day when a form sends only the day (FIX-01)', () => {
+    const now = new Date('2026-10-27T15:42:10.000Z'); // 11:42 in Bolivia
+    expect(movementDate(undefined, now)).toEqual(now);
+    expect(movementDate('2026-10-25', now).toISOString()).toBe('2026-10-25T15:42:10.000Z');
+    expect(movementDate('2026-10-25T08:00:00.000Z', now).toISOString()).toBe('2026-10-25T08:00:00.000Z');
+    // 22:30 in Bolivia is already the next day in UTC: the movement still belongs to the Bolivian day picked.
+    const night = new Date('2026-10-28T02:30:00.000Z');
+    expect(movementDate('2026-10-27', night).toISOString()).toBe('2026-10-28T02:30:00.000Z');
+    const before = new Date('2026-10-26T01:00:00.000Z'); // 25 Oct, 21:00 in Bolivia
+    expect(movementDate('2026-10-25', now, before)).toBe(before);
+    expect(movementDate('2026-10-26', now, before).toISOString()).toBe('2026-10-26T15:42:10.000Z');
+  });
+
+  it('an advance to account for needs who, what for and until when; lateness in days (FIN-04)', () => {
+    expect(advanceError({ concepto: 'material' })).toBeNull();
+    expect(advanceError({ concepto: 'anticipo_por_rendir', asunto: 'x', fechaLimite: '2026-10-30' })).toMatch(/a quién/);
+    expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', fechaLimite: '2026-10-30' })).toMatch(/asunto/);
+    expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', asunto: 'Insumos' })).toMatch(/hasta cuándo/);
+    expect(advanceError({ concepto: 'anticipo_por_rendir', responsableId: 'u', asunto: 'Insumos', fechaLimite: '2026-10-30' })).toBeNull();
+    expect(daysLate('2026-10-30', '2026-10-27')).toBe(0);
+    expect(daysLate('2026-10-20T00:00:00Z', '2026-10-27')).toBe(7);
+  });
+
+  it('the money of a month: cobrado (waiting + validated), en caja (validated), expenses and net (DASH-01)', () => {
+    expect(monthMoney([m('ingreso', 'cobro', 100), m('ingreso', 'cobro', 50, 'por_validar'), m('ingreso', 'cobro', 999, 'anulado'), m('egreso', 'material', 30), m('egreso', 'material', 7, 'por_validar'), m('transferencia', 'deposito', 500)]))
+      .toEqual({ cobrado: 150, enCaja: 100, egresosValidados: 30, neto: 70, porValidar: 50 });
   });
 });

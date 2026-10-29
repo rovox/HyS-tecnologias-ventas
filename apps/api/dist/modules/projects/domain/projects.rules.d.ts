@@ -45,8 +45,6 @@ export declare function firstJobFromQuotation(quote: QuoteForProject, clientAddr
     lugar: string;
     descripcionTrabajo: string;
     monto: number;
-    adelanto: number;
-    saldo: number;
     fechaProgramada: Date;
     horario: string | null;
     estado: string;

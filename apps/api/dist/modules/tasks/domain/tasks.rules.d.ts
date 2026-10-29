@@ -17,4 +17,6 @@ export declare function pendingSummary(tasks: TaskLike[], userId: string, now: D
 export declare function convertError(task: Pick<TaskLike, 'estado'> & {
     cotizacionId?: string | null;
 }): string | null;
+export declare const purgeBefore: (now: Date) => Date;
+export declare const archivedAtFor: (estado: string, now: Date) => Date | null;
 export {};

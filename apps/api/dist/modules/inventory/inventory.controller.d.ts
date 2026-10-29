@@ -1,5 +1,5 @@
 import type { User } from '@prisma/client';
-import { CreateProductDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
+import { CreateProductDto, ListMovementsQuery, StockBatchDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
 import { InventoryService } from './inventory.service';
 export declare class InventoryController {
     private readonly inventory;
@@ -70,7 +70,66 @@ export declare class InventoryController {
         precio: import("@prisma/client/runtime/library").Decimal;
         stockMinimo: import("@prisma/client/runtime/library").Decimal;
     }>;
-    movements(user: User, productoId?: string): Promise<{
+    kardex(id: string, sucursalId: string | undefined, user: User): Promise<{
+        producto: {
+            id: string;
+            codigo: string;
+            nombre: string;
+            unidad: string;
+        };
+        movimientos: ({
+            pedidoInterno: {
+                id: string;
+                codigo: string;
+            } | null;
+            project: {
+                id: string;
+                codigo: string;
+            } | null;
+            registradoPor: {
+                id: string;
+                name: string;
+            };
+            ventaDirecta: {
+                id: string;
+                numero: number;
+            } | null;
+            producto: {
+                id: string;
+                nombre: string;
+                codigo: string;
+                unidad: string;
+            };
+            sucursalOrigen: {
+                id: string;
+                nombre: string;
+            } | null;
+            sucursalDestino: {
+                id: string;
+                nombre: string;
+            } | null;
+            id: string;
+            tipo: string;
+            createdAt: Date;
+            motivo: string | null;
+            nota: string;
+            fecha: Date;
+            projectId: string | null;
+            registradoPorId: string;
+            ventaDirectaId: string | null;
+            sucursalOrigenId: string | null;
+            sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
+            pedidoInternoId: string | null;
+        } & {
+            entra: number;
+            sale: number;
+            saldo: number;
+        })[];
+    }>;
+    movements(query: ListMovementsQuery, user: User): Promise<{
         pedidoInterno: {
             id: string;
             codigo: string;
@@ -83,6 +142,10 @@ export declare class InventoryController {
             id: string;
             name: string;
         };
+        ventaDirecta: {
+            id: string;
+            numero: number;
+        } | null;
         producto: {
             id: string;
             nombre: string;
@@ -105,16 +168,65 @@ export declare class InventoryController {
         fecha: Date;
         projectId: string | null;
         registradoPorId: string;
-        productoId: string;
-        cantidad: import("@prisma/client/runtime/library").Decimal;
-        costoUnitario: import("@prisma/client/runtime/library").Decimal;
+        ventaDirectaId: string | null;
         sucursalOrigenId: string | null;
         sucursalDestinoId: string | null;
+        cantidad: import("@prisma/client/runtime/library").Decimal;
+        costoUnitario: import("@prisma/client/runtime/library").Decimal;
+        productoId: string;
+        pedidoInternoId: string | null;
+    }[]>;
+    batch(dto: StockBatchDto, user: User, sessionId?: string): Promise<{
+        pedidoInterno: {
+            id: string;
+            codigo: string;
+        } | null;
+        project: {
+            id: string;
+            codigo: string;
+        } | null;
+        registradoPor: {
+            id: string;
+            name: string;
+        };
+        ventaDirecta: {
+            id: string;
+            numero: number;
+        } | null;
+        producto: {
+            id: string;
+            nombre: string;
+            codigo: string;
+            unidad: string;
+        };
+        sucursalOrigen: {
+            id: string;
+            nombre: string;
+        } | null;
+        sucursalDestino: {
+            id: string;
+            nombre: string;
+        } | null;
+        id: string;
+        tipo: string;
+        createdAt: Date;
+        motivo: string | null;
+        nota: string;
+        fecha: Date;
+        projectId: string | null;
+        registradoPorId: string;
+        ventaDirectaId: string | null;
+        sucursalOrigenId: string | null;
+        sucursalDestinoId: string | null;
+        cantidad: import("@prisma/client/runtime/library").Decimal;
+        costoUnitario: import("@prisma/client/runtime/library").Decimal;
+        productoId: string;
         pedidoInternoId: string | null;
     }[]>;
     move(dto: StockMovementDto, user: User, sessionId?: string): Promise<{
         pedidoInterno: {
             id: string;
+            codigo: string;
         } | null;
         project: {
             id: string;
@@ -124,6 +236,10 @@ export declare class InventoryController {
             id: string;
             name: string;
         };
+        ventaDirecta: {
+            id: string;
+            numero: number;
+        } | null;
         producto: {
             id: string;
             nombre: string;
@@ -138,7 +254,6 @@ export declare class InventoryController {
             id: string;
             nombre: string;
         } | null;
-    } & {
         id: string;
         tipo: string;
         createdAt: Date;
@@ -147,11 +262,12 @@ export declare class InventoryController {
         fecha: Date;
         projectId: string | null;
         registradoPorId: string;
-        productoId: string;
-        cantidad: import("@prisma/client/runtime/library").Decimal;
-        costoUnitario: import("@prisma/client/runtime/library").Decimal;
+        ventaDirectaId: string | null;
         sucursalOrigenId: string | null;
         sucursalDestinoId: string | null;
+        cantidad: import("@prisma/client/runtime/library").Decimal;
+        costoUnitario: import("@prisma/client/runtime/library").Decimal;
+        productoId: string;
         pedidoInternoId: string | null;
     }>;
 }

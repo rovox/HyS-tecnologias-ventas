@@ -12,6 +12,7 @@ import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { useQuotations } from '../api.js';
 import { QUOTATION_STATE, displayState } from '../constants.js';
 import { QuotationFormDialog } from '../components/QuotationFormDialog.jsx';
+import { QuotationRowActions } from '../components/QuotationRowActions.jsx';
 import { QuotationTabs } from '../components/QuotationTabs.jsx';
 import { QuotationCard, daysLeft, quotationColumns, quotationCsv } from '../components/quotationColumns.jsx';
 
@@ -47,14 +48,17 @@ export default function QuotationsPage() {
   const { currentUser, isVentasLevel } = useAuth();
   const { data: categories } = useCategories();
   const { data: quotes = [], isLoading } = useQuotations(vista);
+  // false, true (new) or { prefill } (Duplicar, QUO-03).
   const [creating, setCreating] = useState(false);
+  const duplicate = (q) => setCreating({ prefill: { titulo: `${q.titulo} (copia)`, clienteId: q.clienteId, categoriaId: q.categoriaId, subcategoria: q.subcategoria, monto: q.monto, observacion: q.observacion } });
   useDocumentTitle(vista === 'abiertas' ? 'Cotizaciones' : 'Cotizaciones cerradas');
 
   const filters = useMemo(() => buildFilters(vista, categories?.divisions || [], currentUser?.id), [vista, categories, currentUser]);
   const { rows, groups, panel } = useListControls(quotes, {
     filters,
     groupOptions: GROUPS,
-    searchText: (q) => `${q.numero} ${q.titulo} ${q.cliente?.nombre || ''} ${q.subcategoria}`,
+    // Seller and branch too: the dashboard opens this list searched by them.
+    searchText: (q) => `${q.numero} ${q.titulo} ${q.cliente?.nombre || ''} ${q.subcategoria} ${q.vendedor?.name || ''} ${q.sucursal?.nombre || q.sucursalNombre || ''}`,
   });
   const open = (q) => navigate(`/quotations/${q.id}`);
   const total = rows.reduce((sum, q) => sum + Number(q.monto), 0);
@@ -71,7 +75,7 @@ export default function QuotationsPage() {
             </Button>
           )
         }
-        searchPlaceholder="Buscar por número, título, cliente…"
+        searchPlaceholder="Buscar por número, título, cliente, vendedor…"
         {...panel}
         views={vista === 'abiertas' ? VIEWS : []}
         view={view}
@@ -82,7 +86,8 @@ export default function QuotationsPage() {
       <div className="px-4 py-4 sm:px-6">
         {view === 'list' ? (
           <ListView
-            columns={quotationColumns}
+            id="cotizaciones"
+            columns={isVentasLevel() ? [...quotationColumns, { key: 'acciones', header: '', cell: (q) => <QuotationRowActions quote={q} onDuplicate={duplicate} /> }] : quotationColumns}
             rows={rows}
             groups={groups}
             loading={isLoading}
@@ -101,7 +106,7 @@ export default function QuotationsPage() {
           />
         )}
       </div>
-      <QuotationFormDialog open={creating} onOpenChange={setCreating} onSaved={(q) => q?.id && navigate(`/quotations/${q.id}`)} />
+      <QuotationFormDialog open={Boolean(creating)} onOpenChange={(o) => !o && setCreating(false)} prefill={creating?.prefill} onSaved={(q) => q?.id && navigate(`/quotations/${q.id}`)} />
     </Layout>
   );
 }

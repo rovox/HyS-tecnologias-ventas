@@ -146,12 +146,17 @@ export declare function presentProject(row: ProjectRow, now?: Date): {
         projectId: string | null;
         cajaDestinoId: string | null;
         pagadoPor: string | null;
+        asunto: string | null;
+        fechaLimite: Date | null;
         reembolsadoAt: Date | null;
         comprobanteUrl: string | null;
         reversaDeId: string | null;
         registradoPorId: string;
         validadoPorId: string | null;
         validadoAt: Date | null;
+        medioPago: string | null;
+        ventaDirectaId: string | null;
+        rendidoAt: Date | null;
     })[];
     gastos: ({
         schedule: {
@@ -183,12 +188,17 @@ export declare function presentProject(row: ProjectRow, now?: Date): {
         projectId: string | null;
         cajaDestinoId: string | null;
         pagadoPor: string | null;
+        asunto: string | null;
+        fechaLimite: Date | null;
         reembolsadoAt: Date | null;
         comprobanteUrl: string | null;
         reversaDeId: string | null;
         registradoPorId: string;
         validadoPorId: string | null;
         validadoAt: Date | null;
+        medioPago: string | null;
+        ventaDirectaId: string | null;
+        rendidoAt: Date | null;
     })[];
     material: ({
         producto: {
@@ -207,11 +217,12 @@ export declare function presentProject(row: ProjectRow, now?: Date): {
         fecha: Date;
         projectId: string | null;
         registradoPorId: string;
-        productoId: string;
-        cantidad: Prisma.Decimal;
-        costoUnitario: Prisma.Decimal;
+        ventaDirectaId: string | null;
         sucursalOrigenId: string | null;
         sucursalDestinoId: string | null;
+        cantidad: Prisma.Decimal;
+        costoUnitario: Prisma.Decimal;
+        productoId: string;
         pedidoInternoId: string | null;
     })[];
     sucursal: {

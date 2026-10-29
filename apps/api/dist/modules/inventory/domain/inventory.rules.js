@@ -6,8 +6,12 @@ exports.isLowStock = isLowStock;
 exports.stockMovementError = stockMovementError;
 exports.movementsForDelivery = movementsForDelivery;
 exports.materialCost = materialCost;
+exports.newProductStockError = newProductStockError;
+exports.branchMoveError = branchMoveError;
+exports.kardex = kardex;
 exports.PRODUCT_TIPOS = ['equipo', 'material', 'servicio'];
-exports.STOCK_TIPOS = ['entrada', 'salida_proyecto', 'transferencia', 'ajuste'];
+exports.STOCK_TIPOS = ['entrada', 'salida_proyecto', 'transferencia', 'ajuste', 'baja'];
+const CENTRAL = 'suc_central';
 const round = (value) => Math.round(value * 100) / 100;
 function stockBySede(movements) {
     const stock = {};
@@ -42,6 +46,10 @@ function stockMovementError(input, ctx) {
         return 'Una transferencia necesita sucursal de origen y de destino';
     if (input.tipo === 'transferencia' && from === to)
         return 'La sucursal de origen y destino deben ser distintas';
+    if (input.tipo === 'baja' && (!from || to))
+        return 'Quitar material necesita la sucursal de la que sale';
+    if (input.tipo === 'baja' && !input.motivo?.trim())
+        return 'Indica por qué se quita el material (dañado, perdido, uso interno…)';
     if (input.tipo === 'ajuste') {
         if (!ctx.canAdjust)
             return 'Solo Gerencia o Contabilidad ajustan el inventario';
@@ -77,5 +85,44 @@ function movementsForDelivery(pedido, items) {
 }
 function materialCost(movements) {
     return round(movements.filter((m) => m.tipo === 'salida_proyecto').reduce((s, m) => s + Number(m.cantidad) * Number(m.costoUnitario), 0));
+}
+function newProductStockError(tipo, stockInicial) {
+    if (tipo === 'servicio')
+        return stockInicial ? 'Un servicio no tiene stock' : null;
+    if (!stockInicial)
+        return 'Un producto se da de alta con su primera entrada: cantidad, costo y sucursal';
+    if (!(stockInicial.cantidad > 0))
+        return 'La cantidad de la primera entrada debe ser mayor a 0';
+    if (!(stockInicial.costoUnitario > 0))
+        return 'Indica el costo unitario de la primera entrada';
+    return null;
+}
+function branchMoveError(input, actor) {
+    if (actor.manager)
+        return null;
+    const own = actor.sucursalId;
+    if (input.tipo === 'entrada' && input.sucursalDestinoId !== CENTRAL)
+        return 'Las compras entran a Central: desde ahí se abastece a las sucursales';
+    if (['transferencia', 'salida_proyecto'].includes(input.tipo) && input.sucursalOrigenId !== own && input.sucursalOrigenId !== CENTRAL)
+        return 'Mueves material desde tu sucursal o desde Central';
+    if (input.tipo === 'baja' && input.sucursalOrigenId !== own)
+        return 'Quitas material solo de tu sucursal';
+    return null;
+}
+function kardex(movements, sucursalId) {
+    let saldo = 0;
+    return [...movements]
+        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+        .map((m) => {
+        const qty = Number(m.cantidad);
+        const entra = sucursalId ? (m.sucursalDestinoId === sucursalId ? qty : 0) : m.sucursalDestinoId && !m.sucursalOrigenId ? qty : 0;
+        const sale = sucursalId ? (m.sucursalOrigenId === sucursalId ? qty : 0) : m.sucursalOrigenId && !m.sucursalDestinoId ? qty : 0;
+        return { movement: m, entra, sale, delta: round(entra - sale) };
+    })
+        .filter((row) => row.entra || row.sale)
+        .map((row) => {
+        saldo = round(saldo + row.delta);
+        return { ...row.movement, entra: row.entra, sale: row.sale, saldo };
+    });
 }
 //# sourceMappingURL=inventory.rules.js.map

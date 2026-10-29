@@ -1,4 +1,4 @@
-import { formatBs, formatDay } from '@/shared/lib/format.js';
+import { businessDayOf, formatBs, formatBusinessDay, formatDay } from '@/shared/lib/format.js';
 import { cn } from '@/lib/utils';
 import { StatusBadge, ToneTag } from '@/shared/views';
 import { CONCEPTO_LABEL, TIPO_LABEL, sign } from '../constants.js';
@@ -52,9 +52,27 @@ const boxes = (m) => (m.tipo === 'transferencia' ? `${m.caja?.nombre || '—'} �
 /** Net effect on cash (incomes minus expenses; transfers net to zero). */
 const net = (rows) => formatBs(rows.filter((m) => m.estado !== 'anulado').reduce((sum, m) => sum + sign(m) * Number(m.monto), 0));
 
+/**
+ * The figures read before the rows (LIST-01): incomes, expenses and their net (annulled ones do not count; transfers
+ * only move money between boxes), plus what still waits for validation.
+ */
+export function movementSummary(rows) {
+  const live = rows.filter((m) => m.estado !== 'anulado');
+  const sum = (list) => list.reduce((total, m) => total + Number(m.monto), 0);
+  const ingresos = sum(live.filter((m) => m.tipo === 'ingreso'));
+  const egresos = sum(live.filter((m) => m.tipo === 'egreso'));
+  const pending = live.filter((m) => m.estado === 'por_validar' && m.tipo !== 'transferencia');
+  return [
+    { label: 'Ingresos', value: `+${formatBs(ingresos)}`, tone: 'success' },
+    { label: 'Egresos', value: `−${formatBs(egresos)}`, tone: 'danger' },
+    { label: 'Neto', value: formatBs(ingresos - egresos), tone: ingresos - egresos < 0 ? 'danger' : undefined },
+    { label: `Por validar (${pending.length})`, value: formatBs(pending.reduce((t, m) => t + sign(m) * Number(m.monto), 0)), tone: pending.length ? 'warning' : undefined },
+  ];
+}
+
 export function movementColumns(renderActions) {
   return [
-    { key: 'fecha', header: 'Fecha', cell: (m) => formatDay(m.fecha) },
+    { key: 'fecha', header: 'Fecha', cell: (m) => formatBusinessDay(m.fecha) },
     {
       key: 'concepto',
       header: 'Concepto',
@@ -84,7 +102,7 @@ export function MovementCard({ movement: m, actions }) {
       </div>
       <Detail movement={m} />
       <div className="flex items-center justify-between">
-        <span className="text-xs">{formatDay(m.fecha)}, {m.registradoPor?.name}</span>
+        <span className="text-xs">{formatBusinessDay(m.fecha)}, {m.registradoPor?.name}</span>
         <div className="flex items-center gap-1">
           <MovementStateBadge movement={m} />
           {actions}
@@ -95,7 +113,7 @@ export function MovementCard({ movement: m, actions }) {
 }
 
 export const movementCsv = [
-  { header: 'Fecha', value: (m) => String(m.fecha).slice(0, 10) },
+  { header: 'Fecha', value: (m) => businessDayOf(m.fecha) },
   { header: 'Tipo', value: (m) => m.tipo },
   { header: 'Concepto', value: (m) => CONCEPTO_LABEL[m.concepto] || m.concepto },
   { header: 'Proyecto', value: (m) => m.project?.codigo },

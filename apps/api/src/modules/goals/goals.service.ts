@@ -32,8 +32,8 @@ export class GoalsService {
     const { start } = monthStart(dto.month);
     const row = await this.prisma.sellerGoal.upsert({
       where: { usuarioId_mes: { usuarioId: dto.usuarioId, mes: start } },
-      update: { metaMonto: dto.metaMonto, metaCotiz: dto.metaCotiz },
-      create: { usuarioId: dto.usuarioId, mes: start, metaMonto: dto.metaMonto, metaCotiz: dto.metaCotiz },
+      update: { metaMonto: dto.metaMonto, ...(dto.metaCotiz !== undefined ? { metaCotiz: dto.metaCotiz } : {}) },
+      create: { usuarioId: dto.usuarioId, mes: start, metaMonto: dto.metaMonto, metaCotiz: dto.metaCotiz ?? 0 },
     });
     await this.audit.record({ user, sessionId, action: 'goal.upsert', entity: 'goal', id: row.id });
     return row;

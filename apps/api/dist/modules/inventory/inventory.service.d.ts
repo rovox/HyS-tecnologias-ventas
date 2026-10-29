@@ -2,7 +2,7 @@ import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { CategoriesService } from '../categories';
-import { CreateProductDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
+import { CreateProductDto, ListMovementsQuery, StockBatchDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
 type Tx = Prisma.TransactionClient;
 export declare class InventoryService {
     private readonly prisma;
@@ -10,6 +10,7 @@ export declare class InventoryService {
     private readonly categories;
     constructor(prisma: PrismaService, audit: AuditService, categories: CategoriesService);
     private assertRead;
+    private assertOwnProjectJob;
     private assertManage;
     products(user: User): Promise<{
         stock: Record<string, number>;
@@ -78,7 +79,7 @@ export declare class InventoryService {
         precio: Prisma.Decimal;
         stockMinimo: Prisma.Decimal;
     }>;
-    movements(user: User, productoId?: string): Promise<{
+    movements(user: User, query?: ListMovementsQuery): Promise<{
         pedidoInterno: {
             id: string;
             codigo: string;
@@ -91,6 +92,10 @@ export declare class InventoryService {
             id: string;
             name: string;
         };
+        ventaDirecta: {
+            id: string;
+            numero: number;
+        } | null;
         producto: {
             id: string;
             nombre: string;
@@ -113,16 +118,79 @@ export declare class InventoryService {
         fecha: Date;
         projectId: string | null;
         registradoPorId: string;
-        productoId: string;
-        cantidad: Prisma.Decimal;
-        costoUnitario: Prisma.Decimal;
+        ventaDirectaId: string | null;
         sucursalOrigenId: string | null;
         sucursalDestinoId: string | null;
+        cantidad: Prisma.Decimal;
+        costoUnitario: Prisma.Decimal;
+        productoId: string;
         pedidoInternoId: string | null;
     }[]>;
+    kardex(productoId: string, user: User, sucursalId?: string): Promise<{
+        producto: {
+            id: string;
+            codigo: string;
+            nombre: string;
+            unidad: string;
+        };
+        movimientos: ({
+            pedidoInterno: {
+                id: string;
+                codigo: string;
+            } | null;
+            project: {
+                id: string;
+                codigo: string;
+            } | null;
+            registradoPor: {
+                id: string;
+                name: string;
+            };
+            ventaDirecta: {
+                id: string;
+                numero: number;
+            } | null;
+            producto: {
+                id: string;
+                nombre: string;
+                codigo: string;
+                unidad: string;
+            };
+            sucursalOrigen: {
+                id: string;
+                nombre: string;
+            } | null;
+            sucursalDestino: {
+                id: string;
+                nombre: string;
+            } | null;
+            id: string;
+            tipo: string;
+            createdAt: Date;
+            motivo: string | null;
+            nota: string;
+            fecha: Date;
+            projectId: string | null;
+            registradoPorId: string;
+            ventaDirectaId: string | null;
+            sucursalOrigenId: string | null;
+            sucursalDestinoId: string | null;
+            cantidad: Prisma.Decimal;
+            costoUnitario: Prisma.Decimal;
+            productoId: string;
+            pedidoInternoId: string | null;
+        } & {
+            entra: number;
+            sale: number;
+            saldo: number;
+        })[];
+    }>;
+    private assertMove;
+    private moveIn;
     registerMovement(dto: StockMovementDto, user: User, sessionId?: string): Promise<{
         pedidoInterno: {
             id: string;
+            codigo: string;
         } | null;
         project: {
             id: string;
@@ -132,6 +200,10 @@ export declare class InventoryService {
             id: string;
             name: string;
         };
+        ventaDirecta: {
+            id: string;
+            numero: number;
+        } | null;
         producto: {
             id: string;
             nombre: string;
@@ -146,7 +218,6 @@ export declare class InventoryService {
             id: string;
             nombre: string;
         } | null;
-    } & {
         id: string;
         tipo: string;
         createdAt: Date;
@@ -155,13 +226,61 @@ export declare class InventoryService {
         fecha: Date;
         projectId: string | null;
         registradoPorId: string;
-        productoId: string;
-        cantidad: Prisma.Decimal;
-        costoUnitario: Prisma.Decimal;
+        ventaDirectaId: string | null;
         sucursalOrigenId: string | null;
         sucursalDestinoId: string | null;
+        cantidad: Prisma.Decimal;
+        costoUnitario: Prisma.Decimal;
+        productoId: string;
         pedidoInternoId: string | null;
     }>;
+    registerBatch(dto: StockBatchDto, user: User, sessionId?: string): Promise<{
+        pedidoInterno: {
+            id: string;
+            codigo: string;
+        } | null;
+        project: {
+            id: string;
+            codigo: string;
+        } | null;
+        registradoPor: {
+            id: string;
+            name: string;
+        };
+        ventaDirecta: {
+            id: string;
+            numero: number;
+        } | null;
+        producto: {
+            id: string;
+            nombre: string;
+            codigo: string;
+            unidad: string;
+        };
+        sucursalOrigen: {
+            id: string;
+            nombre: string;
+        } | null;
+        sucursalDestino: {
+            id: string;
+            nombre: string;
+        } | null;
+        id: string;
+        tipo: string;
+        createdAt: Date;
+        motivo: string | null;
+        nota: string;
+        fecha: Date;
+        projectId: string | null;
+        registradoPorId: string;
+        ventaDirectaId: string | null;
+        sucursalOrigenId: string | null;
+        sucursalDestinoId: string | null;
+        cantidad: Prisma.Decimal;
+        costoUnitario: Prisma.Decimal;
+        productoId: string;
+        pedidoInternoId: string | null;
+    }[]>;
     deliverOrder(tx: Tx, pedido: {
         id: string;
         sucursalOrigenId: string | null;

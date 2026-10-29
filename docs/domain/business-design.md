@@ -41,18 +41,18 @@ El equipo trabaja de forma dinámica: **todos ven todo y editan casi todo**. La 
 | Perfil | Rol guardado | Pantalla principal |
 |---|---|---|
 | Dueño / Gerencia | ADMINISTRADOR | Dashboard general |
-| Contabilidad | CONTABILIDAD (existe desde AUTH-01, 2026-10-25: lee todo; valida, edita y anula dinero; ajusta stock) | Bandeja de rendición, cuentas por cobrar |
+| Contabilidad | CONTABILIDAD: **los mismos permisos que Gerencia** (ROLE-01, dueño 2026-10-27); solo cambia el nombre para separar a sus usuarios | Bandeja de rendición, cuentas por cobrar |
 | Comercial | VENTAS | Cotizaciones y proyectos |
 | Técnico | SEGURIDAD ELECTRÓNICA (renombrable a TÉCNICO) | Mis actividades y asistencias |
 
-**Acciones restringidas** (lo único que se controla por perfil):
+**Acciones restringidas** (lo único que se controla por perfil; "Gerencia" = ADMINISTRADOR o CONTABILIDAD):
 
 | Acción | Quién |
 |---|---|
-| Validar u observar movimientos, gestionar cajas | Contabilidad, Gerencia |
+| Validar u observar movimientos, gestionar cajas | Gerencia |
 | Cambiar el monto oficial de un proyecto o anular un proyecto | Gerencia |
 | Aplicar descuento en una cotización | Comercial, Gerencia |
-| Ajustes de inventario | Gerencia, Contabilidad |
+| Ajustes de inventario | Gerencia |
 | Usuarios y roles | Gerencia |
 | Borrar cualquier registro | Nadie: se anula con un motivo |
 
@@ -87,12 +87,18 @@ En cada proyecto: **% cobrado**, **saldo adeudado**, **costo acumulado** y **mar
 
 ### 4.3 Venta directa
 
-Productos del inventario → cobro inmediato → salida de stock. No crea proyecto ni actividades. Una cotización que solo tiene productos puede convertirse en venta directa.
+Productos del inventario → cobro inmediato → salida de stock. No crea proyecto ni actividades. Una cotización que solo tiene productos puede convertirse en venta directa (pendiente, COT-01).
+
+Decisiones del dueño (2026-10-27, `docs/modules/direct-sales.md`):
+- Central abastece a todas las sucursales: un vendedor vende desde el stock de su sucursal o desde Central; Gerencia desde cualquiera.
+- **Excepción a §4.4:** los cobros de una venta directa nacen `validado`, cada uno en la caja de su medio (efectivo → caja de la sucursal, QR → caja QR, transferencia → banco).
+- Cada venta tiene su **nota de venta** (hoja carta, correlativo global NV-0001…, NIT único de la empresa y dirección de la sucursal), que se guarda como respaldo y no se vuelve a generar.
+- Un error se corrige **anulando** (Gerencia, con motivo: el stock vuelve, los cobros se anulan, la nota queda marcada ANULADA) y, si hace falta, emitiendo una venta nueva vinculada a la anulada.
 
 ### 4.4 Dinero (un solo libro de movimientos)
 
 Todo peso que entra o sale es un **Movimiento**:
-- Se crea `por_validar`.
+- Se crea `por_validar` (salvo el cobro de una venta directa, §4.3).
 - Contabilidad lo pasa a `validado` (asignando caja) o a `observado` (con motivo; se corrige y vuelve a la bandeja).
 - Un movimiento validado lo corrigen Contabilidad o Gerencia **editándolo**: cada cambio queda en su historial (quién, cuándo, campo, valor anterior). También se puede anular con motivo y sale de su caja. (Decisión del dueño, 2026-10-24: el contraasiento "revertir" no se entendía.)
 - Cada cobro dice **quién recibió el dinero** (un técnico puede cobrar en sitio): hasta que se valida, ese dinero está "por rendir" a su nombre.

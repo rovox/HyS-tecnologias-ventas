@@ -24,13 +24,6 @@ export declare class QuotationsService {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -40,12 +33,6 @@ export declare class QuotationsService {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -63,11 +50,16 @@ export declare class QuotationsService {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -83,6 +75,7 @@ export declare class QuotationsService {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -95,13 +88,6 @@ export declare class QuotationsService {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -111,12 +97,6 @@ export declare class QuotationsService {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -134,12 +114,17 @@ export declare class QuotationsService {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
     } & {
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -155,6 +140,7 @@ export declare class QuotationsService {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -171,13 +157,6 @@ export declare class QuotationsService {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -187,12 +166,6 @@ export declare class QuotationsService {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -210,11 +183,16 @@ export declare class QuotationsService {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -230,6 +208,7 @@ export declare class QuotationsService {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -246,13 +225,6 @@ export declare class QuotationsService {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -262,12 +234,6 @@ export declare class QuotationsService {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -285,11 +251,16 @@ export declare class QuotationsService {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -305,6 +276,7 @@ export declare class QuotationsService {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -321,13 +293,6 @@ export declare class QuotationsService {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -337,12 +302,6 @@ export declare class QuotationsService {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -360,11 +319,16 @@ export declare class QuotationsService {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -380,6 +344,7 @@ export declare class QuotationsService {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;

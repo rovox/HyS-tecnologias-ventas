@@ -1,15 +1,16 @@
 # Inventario
 
-> Productos básicos con su stock por sucursal, calculado siempre desde los movimientos; los pedidos internos mueven stock al entregarse · Ruta: `/inventario` (Productos, Pedidos internos, Movimientos) y `/inventario/pedidos/:id` · Estado: 🟢 INV-02 (2026-10-25)
+> Productos básicos con su stock por sucursal, calculado siempre desde los movimientos; los pedidos internos mueven stock al entregarse · Ruta: `/inventario` (Productos, Pedidos internos, Historial, Tienda Digicorp) y `/inventario/pedidos/:id` · Estado: 🟢 INV-03 (2026-10-27)
 
 ## Roles
 
 | Rol | Ve | Hace |
 |---|---|---|
-| Administrador | todo | lo de Ventas + **ajustes** (con motivo) |
-| Ventas | todo | crear y editar productos, archivar, entrada (compra), transferir, salida a proyecto; pedidos internos con productos |
-| Contabilidad | todo | **ajustes** (con motivo); pedidos internos en lectura |
-| Técnico | productos y movimientos (lectura); **no** ve pedidos internos | — |
+| Administración y Contabilidad (Gerencia) | todo | lo de Ventas en **cualquier sucursal** + **ajustes** (con motivo) |
+| Ventas | todo (empieza en su sucursal: solo su columna y lo que hay en ella) | crear y editar productos, archivar; **comprar a Central**; mover y sacar a proyecto **desde su sucursal o Central**; **quitar material solo de su sucursal**; vender; pedidos internos con productos |
+| Técnico | productos e historial (lectura); **no** ve pedidos internos | registrar el material usado en sus trabajos de proyecto (SCH-04) |
+
+Central abastece a todas las sucursales (dueño, 2026-10-27): las compras entran a Central y las sucursales reciben por transferencia o pedido interno.
 
 Los productos no se borran: se **archivan** (dejan de ofrecerse en pedidos, su historial queda). El chip "Archivados (N)" los muestra; en la lista van atenuados con la etiqueta "Archivado", y no cuentan para el stock bajo.
 
@@ -22,7 +23,9 @@ Producto: activo ↔ archivado. Movimientos: no tienen estados; un error se corr
 | `entrada` | — → sucursal | comercial | cantidad > 0; costo unitario (actualiza el costo del producto) |
 | `transferencia` | sucursal → otra sucursal | comercial | hay stock en el origen |
 | `salida_proyecto` | sucursal → proyecto | comercial | hay stock; proyecto abierto; suma al **costo del proyecto** |
-| `ajuste` | sucursal ± | administrador | motivo obligatorio; faltante no deja stock negativo |
+| `ajuste` | sucursal ± | Gerencia | motivo obligatorio; faltante no deja stock negativo |
+| `baja` ("Quitar material") | sucursal → fuera | comercial (el vendedor, de su sucursal) | motivo obligatorio (dañado, perdido, uso interno…); hay stock |
+| `salida_venta_directa` / `devolucion_venta` | sucursal → cliente / de vuelta | los hace la venta directa y su anulación | ver `direct-sales.md` |
 
 Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 
@@ -30,10 +33,13 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 
 | Vista | Tipo | Filtros y agrupaciones | Acciones |
 |---|---|---|---|
-| Productos | lista (tarjetas en teléfono): una columna por sucursal + total, en rojo si está bajo el mínimo; la pestaña muestra cuántos están bajos | stock bajo (N, rojo), archivados (N), tipo, categoría · agrupar por categoría, tipo, marca · CSV | Nuevo producto · menú por fila: Entrada, Transferir, Salida a proyecto, Ajustar (Gerencia y Contabilidad), Editar, Archivar |
+| Acciones rápidas (arriba) | botones | — | **Vender** · **Agregar material** (compra a Central) · **Mover a otra sucursal** · **Quitar material**: varios productos en un diálogo, todos o ninguno |
+| Productos | lista (tarjetas en teléfono): con una sucursal elegida, su columna "En X" + toda la empresa y "Solo lo que hay en esta sucursal" (los recién creados, sin stock en ninguna, se siguen viendo); con "Toda la empresa", una columna por sucursal + total; rojo si está bajo el mínimo | sucursal; stock bajo (N, rojo), archivados (N), tipo, categoría · agrupar por categoría, tipo, marca · CSV | Nuevo producto · 🕘 **Kardex** · menú por fila: Entrada, Transferir, Salida a proyecto, Quitar material, Ajustar (Gerencia), Editar, Archivar |
+| Tienda Digicorp | cuadrícula con foto, nombre, marca y código (5055 productos en la carga inicial) y la fecha de la última actualización | búsqueda (código, nombre, marca), marca · "Ver más" | ficha: foto grande, stock en Digicorp, sección, descripción, **Ver en Digicorp**; Gerencia: Actualizar ahora |
+| Kardex | diálogo | sucursal o toda la empresa | entradas, salidas y saldo corrido, del más antiguo al más reciente, con el detalle (venta NV-…, proyecto, pedido, motivo) |
 | Pedidos internos | lista: código `PED-…`, estado, destino en palabras (cliente, trabajo y proyecto, o la sucursal), lo pide / lo recibe, ítems y costo, prioridad, fecha; fila roja si está atrasado, ámbar si espera aprobación | abiertos, cada estado, atrasados, para trabajo / sucursal (con contadores) · agrupar por estado, quien recibe, origen · CSV | Nuevo pedido · el siguiente paso en la fila (Aprobar, Rechazar, Preparar, Listo para entregar, Entregar) |
 | Pedido interno (ficha) | `FormView` con barra de estado | — | transiciones con confirmación (rechazar y cancelar piden motivo, entregar muestra qué stock sale y a dónde), Editar mientras está abierto, comentarios, botones a Proyecto y Trabajo, **historial** (quién cambió qué, con nombres) |
-| Movimientos | lista; "Origen" enlaza al pedido `PED-…` o al proyecto | búsqueda por producto, nota, motivo, proyecto | — |
+| Historial | lista; "Origen" enlaza al pedido `PED-…`, la venta `NV-…` o el proyecto | sucursal (entra o sale de ella), desde/hasta (30 días por defecto), tipo en palabras (Entradas, Ventas, Ventas anuladas, Movidos entre sucursales, Salidas a proyecto, Quitados, Ajustes) · agrupar por producto, tipo, quien registró · CSV | — |
 | Proyecto › Material | pestaña de la ficha del proyecto | — | costo = Σ cantidad × costo unitario |
 | Cliente › Equipos | pestaña de la ficha del cliente | — | equipos entregados a sus proyectos, con la garantía del proyecto |
 | Pedido interno (formulario) | diálogo | — | "Destino del pedido" (trabajo o sucursal), "Lo recibe" (quien lo pide queda automático), "Se necesita el"; cada ítem: producto del inventario (muestra el stock del origen) o texto libre (no mueve stock) |
@@ -64,9 +70,14 @@ Los servicios (p. ej. "Instalación por punto de red") no llevan stock.
 | Un pedido entregado no se borra | `pedidos-internos.rules.ts` `deleteError` | 400 |
 | Rechazar o cancelar un pedido pide motivo (queda como comentario) | `transitionNeedsReason` | 400 |
 | Quien pide = quien crea (`solicitanteId`, automático); `responsableId` = quien lo recibe | `PedidosInternosService.create` | — |
-| Gestionar: comerciales; ajustar: Gerencia y Contabilidad (403 para los demás) | `common/policy` `canManageInventory`, `canAdjustInventory` | 403 |
+| Gestionar: comerciales; ajustar: Gerencia (403 para los demás) | `common/policy` `canManageInventory`, `canAdjustInventory` | 403 |
+| Vendedor: compra a Central; mueve y saca a proyecto desde su sucursal o Central; quita solo de la suya. Gerencia: cualquier sucursal | `branchMoveError` | 403 |
+| Quitar material: origen y motivo | `stockMovementError` | 400 |
+| Lote: todas las líneas en una transacción; el error nombra el producto | `InventoryService.registerBatch` | 400 "DVR…: Stock insuficiente" |
+| Kardex con saldo corrido por sucursal o empresa (en la empresa las transferencias no cuentan) | `kardex` | — |
+| Tienda Digicorp: catálogo público de Digicorp como referencia interna; carga inicial y actualización mensual (`DIGICORP_AUTO_SYNC=1`), una página cada 3 s con un cliente HTTP común, sin datos de H&S y sin disfrazarse; ante 403, 429 o una página anti-bots se detiene y lo registra (nunca reintenta ni evade); el detalle se pide al abrir un producto si tiene más de 30 días; sin precios (requieren cuenta) | `modules/digicorp` (`digicorp.rules.ts`, `DigicorpService`) | 403 (actualizar: Gerencia), 404, 409 (ya se actualiza) |
 
-API: `GET/POST /inventory/products`, `PATCH /inventory/products/:id`, `GET/POST /inventory/movements`; `GET/POST /pedidos-internos`, `GET/PATCH/DELETE /pedidos-internos/:id`, `PATCH /pedidos-internos/:id/status`, `POST /pedidos-internos/:id/comments`. El pedido sale con `codigo`, `destino`, `solicitante`, `entregadoPor`, `costoTotal` y `transicionesValidas` (`pedido.presenter.ts`); la ficha suma `comentarios` y `movimientos`. Cada cambio se guarda en el historial (`/activity`, entidad `pedido_interno`).
+API: `GET/POST /inventory/products`, `PATCH /inventory/products/:id`, `GET /inventory/products/:id/kardex?sucursalId=`, `GET /inventory/movements?sucursalId&tipos&desde&hasta&productoId`, `POST /inventory/movements`, `POST /inventory/movements/lote`; `GET/POST /pedidos-internos`, `GET/PATCH/DELETE /pedidos-internos/:id`, `PATCH /pedidos-internos/:id/status`, `POST /pedidos-internos/:id/comments`. El pedido sale con `codigo`, `destino`, `solicitante`, `entregadoPor`, `costoTotal` y `transicionesValidas` (`pedido.presenter.ts`); la ficha suma `comentarios` y `movimientos`. Cada cambio se guarda en el historial (`/activity`, entidad `pedido_interno`).
 
 ## Eventos en tiempo real
 

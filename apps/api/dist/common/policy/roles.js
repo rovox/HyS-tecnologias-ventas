@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.taskWhere = exports.scheduleWhere = exports.saleWhere = exports.relevamientoWhere = exports.quotationWhere = exports.metricsUserId = exports.isVentas = exports.isTec = exports.isConta = exports.isCommercial = exports.isAdmin = exports.goalWhere = exports.clientWhere = exports.ROLES = void 0;
+exports.taskWhere = exports.scheduleWhere = exports.relevamientoWhere = exports.quotationWhere = exports.metricsUserId = exports.isVentas = exports.isTec = exports.isConta = exports.isCommercial = exports.isAdmin = exports.goalWhere = exports.clientWhere = exports.ROLES = void 0;
 exports.assertAdmin = assertAdmin;
 exports.assertCanMutateQuotes = assertCanMutateQuotes;
 exports.assertCanMutateClients = assertCanMutateClients;
@@ -24,7 +24,6 @@ Object.defineProperty(exports, "isVentas", { enumerable: true, get: function () 
 Object.defineProperty(exports, "metricsUserId", { enumerable: true, get: function () { return policy_2.metricsUserId; } });
 Object.defineProperty(exports, "quotationWhere", { enumerable: true, get: function () { return policy_2.quotationWhere; } });
 Object.defineProperty(exports, "relevamientoWhere", { enumerable: true, get: function () { return policy_2.relevamientoWhere; } });
-Object.defineProperty(exports, "saleWhere", { enumerable: true, get: function () { return policy_2.saleWhere; } });
 Object.defineProperty(exports, "scheduleWhere", { enumerable: true, get: function () { return policy_2.scheduleWhere; } });
 Object.defineProperty(exports, "taskWhere", { enumerable: true, get: function () { return policy_2.taskWhere; } });
 function assertAdmin(user) {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_PRIORIDADES = exports.TASK_ESTADOS = void 0;
+exports.archivedAtFor = exports.purgeBefore = exports.TASK_PRIORIDADES = exports.TASK_ESTADOS = void 0;
 exports.isOverdue = isOverdue;
 exports.compareTasks = compareTasks;
 exports.pendingSummary = pendingSummary;
@@ -23,7 +23,7 @@ function compareTasks(a, b) {
 }
 function pendingSummary(tasks, userId, now) {
     const pending = tasks.filter((t) => t.estado === 'pendiente');
-    const mine = pending.filter((t) => t.asignadoId === userId || (!t.asignadoId && t.creadorId === userId));
+    const mine = pending.filter((t) => t.asignadoId === userId);
     return {
         mias: mine.length,
         sinAsignar: pending.filter((t) => !t.asignadoId).length,
@@ -37,4 +37,9 @@ function convertError(task) {
         return 'Solo una tarea pendiente se convierte en cotización';
     return null;
 }
+const ARCHIVE_DAYS = 30;
+const purgeBefore = (now) => new Date(now.getTime() - ARCHIVE_DAYS * 24 * 60 * 60 * 1000);
+exports.purgeBefore = purgeBefore;
+const archivedAtFor = (estado, now) => (estado === 'pendiente' ? null : now);
+exports.archivedAtFor = archivedAtFor;
 //# sourceMappingURL=tasks.rules.js.map

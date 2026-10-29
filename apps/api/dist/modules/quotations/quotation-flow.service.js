@@ -39,7 +39,7 @@ let QuotationFlowService = QuotationFlowService_1 = class QuotationFlowService {
     async get(id, user) {
         return (0, quotation_presenter_1.present)(await this.row(id, user));
     }
-    onModuleInit() {
+    startTimers() {
         const run = () => this.expireOverdue().catch((err) => this.logger.error(`Vencimiento de cotizaciones: ${err}`));
         run();
         this.expiryTimer = setInterval(run, HOUR_MS);

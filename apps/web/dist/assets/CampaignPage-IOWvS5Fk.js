@@ -1,1 +1,0 @@
-import{j as a}from"./index-U-qtEa-E.js";import{U as o}from"./UnderConstructionPage-u2gQ3Hys.js";import"./Helmet-CE39TftF.js";import"./Layout-oDypDFFR.js";const e=()=>a.jsx(o,{moduleName:"Campañas"});export{e as default};

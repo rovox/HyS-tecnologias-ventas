@@ -44,5 +44,6 @@ export declare class VisitPaymentDto {
     metodo?: string;
     nota?: string;
     recibidoPorId?: string;
+    cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }
 export {};

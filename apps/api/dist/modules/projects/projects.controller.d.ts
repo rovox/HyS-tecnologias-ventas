@@ -58,12 +58,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -95,12 +100,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -119,11 +129,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -219,12 +230,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -256,12 +272,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -280,11 +301,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -380,12 +402,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -417,12 +444,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -441,11 +473,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -541,12 +574,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -578,12 +616,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -602,11 +645,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -702,12 +746,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -739,12 +788,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -763,11 +817,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -863,12 +918,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -900,12 +960,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -924,11 +989,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {
@@ -1024,12 +1090,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         gastos: ({
             schedule: {
@@ -1061,12 +1132,17 @@ export declare class ProjectsController {
             projectId: string | null;
             cajaDestinoId: string | null;
             pagadoPor: string | null;
+            asunto: string | null;
+            fechaLimite: Date | null;
             reembolsadoAt: Date | null;
             comprobanteUrl: string | null;
             reversaDeId: string | null;
             registradoPorId: string;
             validadoPorId: string | null;
             validadoAt: Date | null;
+            medioPago: string | null;
+            ventaDirectaId: string | null;
+            rendidoAt: Date | null;
         })[];
         material: ({
             producto: {
@@ -1085,11 +1161,12 @@ export declare class ProjectsController {
             fecha: Date;
             projectId: string | null;
             registradoPorId: string;
-            productoId: string;
-            cantidad: import("@prisma/client/runtime/library").Decimal;
-            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            ventaDirectaId: string | null;
             sucursalOrigenId: string | null;
             sucursalDestinoId: string | null;
+            cantidad: import("@prisma/client/runtime/library").Decimal;
+            costoUnitario: import("@prisma/client/runtime/library").Decimal;
+            productoId: string;
             pedidoInternoId: string | null;
         })[];
         sucursal: {

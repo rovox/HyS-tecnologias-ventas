@@ -131,11 +131,16 @@ export declare function presentMovement(row: MovementRow): {
     projectId: string | null;
     cajaDestinoId: string | null;
     pagadoPor: string | null;
+    asunto: string | null;
+    fechaLimite: Date | null;
     reembolsadoAt: Date | null;
     comprobanteUrl: string | null;
     reversaDeId: string | null;
     registradoPorId: string;
     validadoPorId: string | null;
     validadoAt: Date | null;
+    medioPago: string | null;
+    ventaDirectaId: string | null;
+    rendidoAt: Date | null;
 };
 export {};

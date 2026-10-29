@@ -12,3 +12,8 @@ export function useRecordHistory(entity, id) {
     enabled: Boolean(entity && id),
   });
 }
+
+/** The latest changes of the whole app (Gerencia): who did what, newest first. */
+export function useActivityFeed(limit = 15, enabled = true) {
+  return useQuery({ queryKey: ['history', 'feed', limit], queryFn: () => apiClient.get('activity', { token: authToken(), query: { limit } }), enabled, refetchInterval: 60000 });
+}

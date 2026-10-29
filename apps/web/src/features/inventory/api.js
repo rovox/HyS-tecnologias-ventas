@@ -11,8 +11,18 @@ export function useProducts(enabled = true) {
   return useQuery({ queryKey: ['product', 'list'], queryFn: () => apiClient.get('inventory/products', opts()), enabled });
 }
 
-export function useStockMovements() {
-  return useQuery({ queryKey: ['stock', 'list'], queryFn: () => apiClient.get('inventory/movements', opts()) });
+/** The history (INV-03): { sucursalId, desde, hasta } (Bolivian days); types are filtered on the page. */
+export function useStockMovements(params = {}, enabled = true) {
+  return useQuery({ queryKey: ['stock', 'list', params], queryFn: () => apiClient.get('inventory/movements', opts({ query: params })), enabled });
+}
+
+/** Kardex of one product in a branch ('' = the company) with its running balance. */
+export function useKardex(productoId, sucursalId) {
+  return useQuery({
+    queryKey: ['stock', 'kardex', productoId, sucursalId],
+    queryFn: () => apiClient.get(`inventory/products/${productoId}/kardex`, opts(sucursalId ? { query: { sucursalId } } : undefined)),
+    enabled: Boolean(productoId),
+  });
 }
 
 function useInventoryMutation(fn) {
@@ -33,4 +43,25 @@ export function useSaveProduct() {
 /** tipo: entrada | transferencia | salida_proyecto | ajuste (Gerencia). */
 export function useRegisterStockMovement() {
   return useInventoryMutation((data) => apiClient.post('inventory/movements', data, opts()));
+}
+
+/** Several products moved the same way (INV-03): { tipo, sucursalOrigenId?, sucursalDestinoId?, motivo?, items }. */
+export function useRegisterStockBatch() {
+  return useInventoryMutation((data) => apiClient.post('inventory/movements/lote', data, opts()));
+}
+
+/** Digicorp's public catalog (DIGI-01): { q, marca, offset, limit } → { total, items, marcas, ultimaSync, actualizando }. */
+export function useDigicorp(params, enabled = true) {
+  return useQuery({ queryKey: ['digicorp', 'list', params], queryFn: () => apiClient.get('digicorp/productos', opts({ query: params })), enabled, placeholderData: (previous) => previous });
+}
+
+/** One product; its detail is refreshed on demand (the API fetches it when older than 30 days). */
+export function useDigicorpProduct(sku) {
+  return useQuery({ queryKey: ['digicorp', 'detail', sku], queryFn: () => apiClient.get(`digicorp/productos/${encodeURIComponent(sku)}`, opts()), enabled: Boolean(sku) });
+}
+
+/** Gerencia: refresh the catalog now (it runs in the background). */
+export function useSyncDigicorp() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: () => apiClient.post('digicorp/sync', {}, opts()), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['digicorp'] }) });
 }

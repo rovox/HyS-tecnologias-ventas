@@ -94,8 +94,6 @@ export function firstJobFromQuotation(quote: QuoteForProject, clientAddress: str
     lugar: options.lugar?.trim() || clientAddress || 'Por definir',
     descripcionTrabajo: `${quote.titulo} (${quote.numero})`,
     monto: 0,
-    adelanto: 0,
-    saldo: 0,
     fechaProgramada: options.fechaProgramada ? new Date(options.fechaProgramada) : now,
     horario: options.horario || null,
     estado: 'programado',

@@ -3,14 +3,16 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { isAdmin, isVentas, taskWhere } from '../../common/policy/roles';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import { AuditService } from '../../common/audit/audit.service';
-import { compareTasks, convertError, pendingSummary } from './domain/tasks.rules';
+import { archivedAtFor, compareTasks, convertError, pendingSummary, purgeBefore } from './domain/tasks.rules';
 
 const TASK_INCLUDE = {
   creador: { select: { id: true, name: true } },
@@ -25,25 +27,48 @@ function titleFromDescription(text?: string | null) {
   return line.slice(0, 200);
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 @Injectable()
-export class TasksService {
+export class TasksService implements OnModuleDestroy {
+  private readonly logger = new Logger(TasksService.name);
+  private purgeTimer?: NodeJS.Timeout;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
 
-  /** Pending tasks plus the ones closed in the last 24 h (so a just-completed task does not vanish at once). */
-  async list(user: User, tipo?: string) {
-    const hace24 = new Date();
-    hace24.setHours(hace24.getHours() - 24);
+  /** Called by main.ts after app.listen(): nothing runs before the port is open. */
+  startTimers() {
+    const run = () => this.purgeArchived().catch((err) => this.logger.error(`Purga de tareas archivadas: ${err}`));
+    run();
+    this.purgeTimer = setInterval(run, DAY_MS);
+    this.purgeTimer.unref();
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.purgeTimer);
+  }
+
+  /** Tasks are transient (TSK-03, owner 2026-10-27): archived ones are deleted after 30 days. */
+  async purgeArchived(now = new Date()) {
+    const { count } = await this.prisma.task.deleteMany({ where: { archivadaAt: { lt: purgeBefore(now) } } });
+    if (count) this.logger.log(`${count} tareas archivadas hace más de 30 días eliminadas`);
+    return count;
+  }
+
+  /**
+   * Pending tasks (the working list), or the archived ones (completed or discarded, kept 30 days) with `archivadas`,
+   * the most recently closed first.
+   */
+  async list(user: User, tipo?: string, archivadas = false) {
     const rows = await this.prisma.task.findMany({
-      where: {
-        ...taskWhere(user, tipo),
-        OR: [{ estado: 'pendiente' }, { estado: { not: 'pendiente' }, updatedAt: { gte: hace24 } }],
-      },
+      where: { ...taskWhere(user, tipo), ...(archivadas ? { archivadaAt: { not: null } } : { estado: 'pendiente' }) },
       include: TASK_INCLUDE,
+      ...(archivadas ? { orderBy: { archivadaAt: 'desc' as const }, take: 200 } : {}),
     });
-    return rows.sort(compareTasks);
+    return archivadas ? rows : rows.sort(compareTasks);
   }
 
   /** Counters for the always-visible tasks badge. */
@@ -125,7 +150,7 @@ export class TasksService {
         ...(dto.cotizacionId !== undefined ? { cotizacionId: dto.cotizacionId || null } : {}),
         ...(dto.scheduleId !== undefined ? { scheduleId: dto.scheduleId || null } : {}),
         ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId || null } : {}),
-        ...(dto.estado ? { estado: dto.estado } : {}),
+        ...(dto.estado ? { estado: dto.estado, archivadaAt: archivedAtFor(dto.estado, new Date()) } : {}),
         ...(completing ? { completedAt: new Date() } : {}),
         ...(dto.estado && dto.estado !== 'completada' ? { completedAt: null } : {}),
       },
@@ -170,7 +195,7 @@ export class TasksService {
     if (error) throw new BadRequestException(error);
     const row = await this.prisma.task.update({
       where: { id },
-      data: { cotizacionId, estado: 'completada', completedAt: new Date() },
+      data: { cotizacionId, estado: 'completada', completedAt: new Date(), archivadaAt: new Date() },
     });
     await this.audit.record({ user, sessionId, action: 'task.convert', entity: 'task', id, before: current, after: row, affects: ['quotation'] });
   }

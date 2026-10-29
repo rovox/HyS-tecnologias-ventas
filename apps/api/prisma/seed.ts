@@ -35,12 +35,15 @@ async function main() {
   for (const row of USERS) {
     const passwordHash = await bcrypt.hash(passwordFor(row.email), 10);
     const { id, localOnly: _localOnly, ...rest } = row;
+    // By id: the roster id is the identity, an email may change (USERS-03).
     await prisma.user.upsert({
-      where: { email: row.email },
+      where: { id },
       update: { ...rest, passwordHash, active: true },
       create: { id, ...rest, passwordHash, active: true },
     });
   }
+  // Someone taken off the roster can no longer log in; the row stays for the history (who registered what).
+  await prisma.user.updateMany({ where: { id: { notIn: USERS.map((u) => u.id) } }, data: { active: false } });
 
   // The 3 divisions (CAT-01): every quotation, job, project and product has one.
   for (const row of DIVISIONS) {
@@ -80,13 +83,6 @@ async function main() {
       monto: 18500,
       vendedorId: 'usr_ventas',
       sellers: { create: [{ userId: 'usr_ventas', nombre: 'Dennis', commissionPct: 100 }] },
-      sale: {
-        create: {
-          id: 'sale_andina',
-          total: 18500,
-          jobs: { create: [{ titulo: 'CCTV 16 canales — Comercial Andina', estado: 'programado', monto: 18500 }] },
-        },
-      },
     },
   });
 
@@ -96,8 +92,6 @@ async function main() {
       tecnicoId: 'usr_tecnico',
       estado: 'en_proceso',
       monto: 18500,
-      adelanto: 5000,
-      saldo: 13500,
       horario: '09:00–12:00',
     },
     create: {
@@ -107,8 +101,6 @@ async function main() {
       lugar: 'Av. Arce 2450, La Paz',
       descripcionTrabajo: 'Instalación CCTV 16 canales según COT-080426',
       monto: 18500,
-      adelanto: 5000,
-      saldo: 13500,
       fechaProgramada: new Date('2026-08-20T09:00:00'),
       horario: '09:00–12:00',
       estado: 'en_proceso',
@@ -130,8 +122,6 @@ async function main() {
       lugar: 'Av. Juan Pablo II, El Alto',
       descripcionTrabajo: 'Mantenimiento DVR y recambio de 4 cámaras',
       monto: 4200,
-      adelanto: 0,
-      saldo: 4200,
       fechaProgramada: new Date('2026-08-21T14:00:00'),
       horario: '14:00–17:00',
       estado: 'programado',
@@ -205,7 +195,7 @@ async function main() {
     });
   }
 
-  // Trabajos en todos los estados + cobros de cada tipo. adelanto/saldo coinciden con la suma de sus pagos.
+  // Trabajos en todos los estados + cobros de cada tipo (van al libro: lo cobrado y el saldo se calculan de ahí).
   type SeedJob = {
     id: string;
     categoriaId: 'computo_comunicacion' | 'seguridad_electronica' | 'cableado_estructurado';
@@ -372,7 +362,7 @@ async function main() {
         responsableId: q.vendedorId,
       },
     });
-    await prisma.schedule.updateMany({ where: { quotationId: q.id }, data: { projectId: project.id, monto: 0, adelanto: 0, saldo: 0 } });
+    await prisma.schedule.updateMany({ where: { quotationId: q.id }, data: { projectId: project.id, monto: 0 } });
     const jobs = await prisma.schedule.findMany({ where: { projectId: project.id }, select: { id: true } });
     await prisma.cashMovement.updateMany({ where: { scheduleId: { in: jobs.map((j) => j.id) } }, data: { projectId: project.id } });
   }

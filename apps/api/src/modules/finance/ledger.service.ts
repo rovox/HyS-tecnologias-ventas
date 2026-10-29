@@ -3,7 +3,10 @@ import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { canRegisterMovements, canSeeLedger, canValidateMovements } from '../../common/policy/policy';
-import { CreateMovementDto, ImpactQuery, ListMovementsQuery, UpdateMovementDto } from './dto/finance.dto';
+import { businessDayEnd, businessDayStart, businessToday } from '../../common/domain/calendar';
+import { CreateMovementDto, ExportMovementsQuery, ImpactQuery, ListMovementsQuery, UpdateMovementDto } from './dto/finance.dto';
+import { ledgerRows, ledgerSummary } from './domain/ledger-export.rules';
+import { ledgerCsv, ledgerXlsx } from './ledger-export';
 import {
   cashBoxBalance,
   checkMovementTransition,
@@ -13,12 +16,14 @@ import {
   incomeError,
   incomeOf,
   movementError,
+  advanceError,
+  daysLate,
+  monthMoney,
+  movementDate,
   movementImpact,
   pendingRefund,
 } from './domain/finance.rules';
 import { MOVEMENT_DETAIL, presentMovement } from './movement.presenter';
-
-const dayEnd = (iso: string) => new Date(`${iso.slice(0, 10)}T23:59:59.999Z`);
 
 /** The ledger: expenses, other incomes and transfers; validation into cash boxes (rendición); corrections and refunds. */
 @Injectable()
@@ -46,27 +51,52 @@ export class LedgerService {
     return presentMovement(row);
   }
 
+  /** What a user may see of the ledger, with the list filters. Dates are Bolivian days (the daily ledger). */
+  private listWhere(query: ListMovementsQuery, user: User): Prisma.CashMovementWhereInput {
+    return {
+      AND: [
+        canSeeLedger(user) ? {} : { OR: [{ registradoPorId: user.id }, { recibidoPorId: user.id }] },
+        query.cajaId ? { OR: [{ cajaId: query.cajaId }, { cajaDestinoId: query.cajaId }] } : {},
+      ],
+      ...(query.tipo ? { tipo: query.tipo } : {}),
+      ...(query.estado ? { estado: query.estado } : {}),
+      ...(query.projectId ? { projectId: query.projectId } : {}),
+      ...(query.clienteId ? { clienteId: query.clienteId } : {}),
+      ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
+      ...(query.desde || query.hasta
+        ? { fecha: { ...(query.desde ? { gte: businessDayStart(query.desde.slice(0, 10)) } : {}), ...(query.hasta ? { lte: businessDayEnd(query.hasta.slice(0, 10)) } : {}) } }
+        : {}),
+    };
+  }
+
   async list(query: ListMovementsQuery, user: User) {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
     const rows = await this.prisma.cashMovement.findMany({
-      where: {
-        AND: [
-          canSeeLedger(user) ? {} : { OR: [{ registradoPorId: user.id }, { recibidoPorId: user.id }] },
-          query.cajaId ? { OR: [{ cajaId: query.cajaId }, { cajaDestinoId: query.cajaId }] } : {},
-        ],
-        ...(query.tipo ? { tipo: query.tipo } : {}),
-        ...(query.estado ? { estado: query.estado } : {}),
-        ...(query.projectId ? { projectId: query.projectId } : {}),
-        ...(query.clienteId ? { clienteId: query.clienteId } : {}),
-        ...(query.desde || query.hasta
-          ? { fecha: { ...(query.desde ? { gte: new Date(query.desde) } : {}), ...(query.hasta ? { lte: dayEnd(query.hasta) } : {}) } }
-          : {}),
-      },
+      where: this.listWhere(query, user),
       include: MOVEMENT_DETAIL,
-      orderBy: { fecha: 'desc' },
+      // Same instant (or a day without time from before FIX-01): the last registered first.
+      orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
       take: 1000,
     });
     return rows.map(presentMovement);
+  }
+
+  /** The ledger of a day, a range, a branch or the whole company as CSV or Excel (oldest first, like a book). */
+  async export(query: ExportMovementsQuery, user: User) {
+    if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
+    const movements = await this.prisma.cashMovement.findMany({
+      where: this.listWhere(query, user),
+      include: MOVEMENT_DETAIL,
+      orderBy: [{ fecha: 'asc' }, { createdAt: 'asc' }],
+      take: 20000,
+    });
+    const sucursal = query.sucursalId ? await this.prisma.sucursal.findUnique({ where: { id: query.sucursalId } }) : null;
+    const scope = sucursal ? sucursal.nombre : 'Toda la empresa';
+    const period = query.desde && query.hasta && query.desde.slice(0, 10) === query.hasta.slice(0, 10) ? query.desde.slice(0, 10) : `${query.desde?.slice(0, 10) ?? 'inicio'} a ${query.hasta?.slice(0, 10) ?? 'hoy'}`;
+    const name = `libro-${scope.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${period.replace(/ a /, '_')}.${query.formato}`;
+    const rows = ledgerRows(movements);
+    const file = query.formato === 'xlsx' ? await ledgerXlsx(rows, ledgerSummary(movements), `Libro ${period} · ${scope}`) : ledgerCsv(rows);
+    return { file, name, type: query.formato === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv; charset=utf-8' };
   }
 
   /** Expenses (anyone), other incomes (commercial) and transfers (Gerencia). Payments of projects and jobs go through them. */
@@ -77,8 +107,9 @@ export class LedgerService {
     }
     if (dto.tipo === 'ingreso' && !canSeeLedger(user)) throw new ForbiddenException('Solo ventas, Gerencia o Contabilidad registran otros ingresos');
     if (dto.tipo === 'transferencia') this.assertValidator(user);
-    const error = movementError(dto);
+    const error = movementError(dto) || advanceError(dto);
     if (error) throw new BadRequestException(error);
+    if (dto.concepto === 'anticipo_por_rendir') await this.assertActiveUser(dto.responsableId!);
     const project = dto.projectId ? await this.prisma.project.findUnique({ where: { id: dto.projectId } }) : null;
     if (dto.projectId && !project) throw new BadRequestException('Proyecto no encontrado');
     const sucursalId = dto.sucursalId || project?.sucursalId || user.sucursalId;
@@ -89,7 +120,7 @@ export class LedgerService {
         tipo: dto.tipo,
         concepto: dto.concepto,
         monto: dto.monto,
-        fecha: dto.fecha ? new Date(dto.fecha) : new Date(),
+        fecha: movementDate(dto.fecha),
         metodo: dto.metodo || '',
         nota: dto.nota || '',
         projectId: project?.id ?? null,
@@ -100,6 +131,8 @@ export class LedgerService {
         sucursalId,
         registradoPorId: user.id,
         ...(dto.tipo === 'ingreso' ? { recibidoPorId: user.id } : {}),
+        // An advance: who holds the fund until it is accounted for, what for and until when (FIN-04).
+        ...(dto.concepto === 'anticipo_por_rendir' ? { recibidoPorId: dto.responsableId, asunto: dto.asunto!.trim(), fechaLimite: new Date(`${dto.fechaLimite!.slice(0, 10)}T12:00:00Z`) } : {}),
         // A transfer is done by Gerencia between its own boxes: it is valid as soon as it is registered.
         ...(transfer ? { estado: 'validado', validadoPorId: user.id, validadoAt: new Date() } : {}),
       },
@@ -116,6 +149,7 @@ export class LedgerService {
    */
   async update(id: string, dto: UpdateMovementDto, user: User, sessionId?: string) {
     const before = await this.row(id);
+    if (before.ventaDirectaId) throw new BadRequestException('Es el cobro de una venta directa: se corrige anulando la venta');
     const manager = canValidateMovements(user);
     if (before.registradoPorId !== user.id && !manager) throw new ForbiddenException('Solo quien lo registró, Gerencia o Contabilidad lo corrigen');
     const blocked = editMovementError(before, manager);
@@ -140,7 +174,7 @@ export class LedgerService {
       data: {
         ...(dto.concepto !== undefined ? { concepto: dto.concepto } : {}),
         ...(dto.monto !== undefined ? { monto: dto.monto } : {}),
-        ...(dto.fecha !== undefined ? { fecha: new Date(dto.fecha) } : {}),
+        ...(dto.fecha !== undefined ? { fecha: movementDate(dto.fecha, new Date(), before.fecha) } : {}),
         ...(dto.metodo !== undefined ? { metodo: dto.metodo } : {}),
         ...(dto.nota !== undefined ? { nota: dto.nota } : {}),
         ...(dto.pagadoPor !== undefined && before.tipo === 'egreso' ? { pagadoPor: dto.pagadoPor } : {}),
@@ -160,6 +194,7 @@ export class LedgerService {
    */
   async transition(id: string, to: 'validado' | 'observado' | 'anulado', input: { cajaId?: string; motivo?: string }, user: User, sessionId?: string) {
     const before = await this.row(id);
+    if (before.ventaDirectaId) throw new BadRequestException('Es el cobro de una venta directa: se corrige anulando la venta');
     const ownWaiting = to === 'anulado' && before.registradoPorId === user.id && before.estado !== 'validado';
     if (!ownWaiting) this.assertValidator(user);
     const check = checkMovementTransition(before, to, input);
@@ -167,7 +202,15 @@ export class LedgerService {
     if (to === 'validado' && input.cajaId) await this.assertBox(input.cajaId);
     const data: Prisma.CashMovementUncheckedUpdateInput =
       to === 'validado'
-        ? { estado: 'validado', ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}), validadoPorId: user.id, validadoAt: new Date(), motivo: null }
+        ? {
+            estado: 'validado',
+            ...(before.tipo !== 'transferencia' ? { cajaId: input.cajaId } : {}),
+            // A cobro held in a personal QR is handed over when it is validated into a box.
+            ...(before.tipo === 'ingreso' && before.fechaLimite && !before.rendidoAt ? { rendidoAt: new Date() } : {}),
+            validadoPorId: user.id,
+            validadoAt: new Date(),
+            motivo: null,
+          }
         : { estado: to, motivo: input.motivo!.trim() };
     const after = await this.prisma.cashMovement.update({ where: { id }, data, include: MOVEMENT_DETAIL });
     await this.audit.record({ user, sessionId, action: `movement.${to}`, entity: 'movement', id, before, after, affects: this.affects(before) });
@@ -185,6 +228,35 @@ export class LedgerService {
   }
 
   /** Active boxes with their validated balance. */
+  /**
+   * The dashboard's money (DASH-01): the month (Bolivian days) — cobrado, en caja, expenses, net —, every box balance
+   * and, per branch, today's direct sales and whether its cash was closed. Commercial roles and Gerencia.
+   */
+  async summary(user: User, mes?: string) {
+    if (!canSeeLedger(user)) throw new ForbiddenException('Sin acceso al resumen de dinero');
+    const today = businessToday(new Date());
+    const month = /^\d{4}-\d{2}$/.test(mes ?? '') ? mes! : today.slice(0, 7);
+    const [y, mo] = month.split('-').map(Number);
+    const lastDay = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+    const [movements, boxes, sucursales, sales, closes] = await Promise.all([
+      this.prisma.cashMovement.findMany({ where: { fecha: { gte: businessDayStart(`${month}-01`), lte: businessDayEnd(lastDay) } }, select: { tipo: true, monto: true, estado: true } }),
+      this.cashBoxes(user),
+      this.prisma.sucursal.findMany({ orderBy: { nombre: 'asc' } }),
+      this.prisma.directSale.groupBy({ by: ['sucursalId'], where: { estado: 'registrada', fecha: { gte: businessDayStart(today), lte: businessDayEnd(today) } }, _count: true, _sum: { total: true } }),
+      this.prisma.cierreCaja.findMany({ where: { dia: today }, select: { sucursalId: true, diferencia: true } }),
+    ]);
+    return {
+      mes: month,
+      ...monthMoney(movements),
+      cajas: boxes.map((b) => ({ id: b.id, nombre: b.nombre, sucursal: b.sucursal?.nombre, saldo: b.saldo })),
+      hoy: sucursales.map((s) => {
+        const sold = sales.find((x) => x.sucursalId === s.id);
+        const closed = closes.find((c) => c.sucursalId === s.id);
+        return { sucursal: { id: s.id, nombre: s.nombre }, ventas: sold?._count ?? 0, total: Number(sold?._sum.total ?? 0), cierre: closed ? { diferencia: Number(closed.diferencia) } : null };
+      }),
+    };
+  }
+
   async cashBoxes(user: User) {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
     const [boxes, movements] = await Promise.all([
@@ -195,6 +267,39 @@ export class LedgerService {
   }
 
   /** Who holds money not yet validated (incomes por_validar), per person, largest first. */
+  /** Advances still to be accounted for (FIN-04): who, what for, how much, deadline and days late (most late first). */
+  async advances(user: User) {
+    if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso a finanzas');
+    const rows = await this.prisma.cashMovement.findMany({
+      where: {
+        rendidoAt: null,
+        // Advances handed out, and cobros a collector took into his personal QR (LAUNCH P1-1) until validated.
+        OR: [{ concepto: 'anticipo_por_rendir', estado: { not: 'anulado' } }, { tipo: 'ingreso', fechaLimite: { not: null }, estado: { in: ['por_validar', 'observado'] } }],
+        ...(canSeeLedger(user) ? {} : { recibidoPorId: user.id }),
+      },
+      include: MOVEMENT_DETAIL,
+      orderBy: { fechaLimite: 'asc' },
+    });
+    const today = businessToday(new Date());
+    return rows.map((m) => ({ ...presentMovement(m), diasAtraso: m.fechaLimite ? daysLate(m.fechaLimite, today) : 0 }));
+  }
+
+  /** Gerencia marks an advance as accounted for (its receipts are registered as expenses; what was left is returned). */
+  async settleAdvance(id: string, nota: string | undefined, user: User, sessionId?: string) {
+    this.assertValidator(user);
+    const before = await this.row(id);
+    if (before.concepto !== 'anticipo_por_rendir') throw new BadRequestException('Solo un anticipo por rendir se rinde');
+    if (before.rendidoAt) throw new BadRequestException('Este anticipo ya está rendido');
+    if (before.estado === 'anulado') throw new BadRequestException('El anticipo está anulado');
+    const after = await this.prisma.cashMovement.update({
+      where: { id },
+      data: { rendidoAt: new Date(), ...(nota?.trim() ? { nota: `${before.nota ? `${before.nota}\n` : ''}Rendido: ${nota.trim()}` } : {}) },
+      include: MOVEMENT_DETAIL,
+    });
+    await this.audit.record({ user, sessionId, action: 'movement.rendido', entity: 'movement', id, before, after });
+    return presentMovement(after);
+  }
+
   async custody(user: User) {
     if (!canSeeLedger(user)) throw new ForbiddenException('Sin acceso a finanzas');
     const rows = await this.prisma.cashMovement.findMany({

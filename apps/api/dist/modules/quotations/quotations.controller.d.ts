@@ -17,13 +17,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -33,12 +26,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -56,11 +43,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -76,6 +68,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -92,13 +85,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -108,12 +94,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -131,11 +111,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -151,6 +136,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -167,13 +153,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -183,12 +162,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -206,11 +179,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -226,6 +204,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -242,13 +221,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -258,12 +230,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -281,11 +247,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -301,6 +272,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -317,13 +289,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -333,12 +298,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -356,11 +315,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -376,6 +340,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -392,13 +357,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -408,12 +366,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -431,11 +383,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -451,6 +408,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -467,13 +425,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -483,12 +434,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -506,11 +451,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -526,6 +476,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;
@@ -543,13 +494,6 @@ export declare class QuotationsController {
                 id: string;
                 nombre: string;
             };
-            sale: {
-                id: string;
-                createdAt: Date;
-                quotationId: string;
-                total: import("@prisma/client/runtime/library").Decimal;
-                status: string;
-            } | null;
             project: {
                 id: string;
                 estado: string;
@@ -559,12 +503,6 @@ export declare class QuotationsController {
                 relevamientos: number;
                 tasks: number;
             };
-            sellers: {
-                nombre: string;
-                userId: string;
-                commissionPct: import("@prisma/client/runtime/library").Decimal;
-                quotationId: string;
-            }[];
             cliente: {
                 id: string;
                 nombre: string;
@@ -582,11 +520,16 @@ export declare class QuotationsController {
                 id: string;
                 name: string;
             };
+            sellers: {
+                nombre: string;
+                userId: string;
+                commissionPct: import("@prisma/client/runtime/library").Decimal;
+                quotationId: string;
+            }[];
             id: string;
             sucursalId: string;
             createdAt: Date;
             updatedAt: Date;
-            vendedorId: string;
             titulo: string;
             clienteId: string | null;
             categoriaId: string;
@@ -602,6 +545,7 @@ export declare class QuotationsController {
             fechaEnvio: Date | null;
             estado: string;
             motivoRechazo: string | null;
+            vendedorId: string;
             numero: string;
             eliminadaAt: Date | null;
             eliminadaPorId: string | null;
@@ -635,19 +579,17 @@ export declare class QuotationsController {
             createdAt: Date;
             updatedAt: Date;
             tecnicoId: string | null;
-            vendedorId: string | null;
             clienteId: string;
             categoriaId: string;
             monto: import("@prisma/client/runtime/library").Decimal;
             estado: string;
+            vendedorId: string | null;
             fechaProgramada: Date;
             lugar: string;
             horario: string | null;
             quotationId: string | null;
             descripcionTrabajo: string;
-            adelanto: import("@prisma/client/runtime/library").Decimal;
             fechaFinalizacion: Date | null;
-            saldo: import("@prisma/client/runtime/library").Decimal;
             projectId: string | null;
             fotosUrl: import("@prisma/client/runtime/library").JsonValue | null;
         };
@@ -666,13 +608,6 @@ export declare class QuotationsController {
             id: string;
             nombre: string;
         };
-        sale: {
-            id: string;
-            createdAt: Date;
-            quotationId: string;
-            total: import("@prisma/client/runtime/library").Decimal;
-            status: string;
-        } | null;
         project: {
             id: string;
             estado: string;
@@ -682,12 +617,6 @@ export declare class QuotationsController {
             relevamientos: number;
             tasks: number;
         };
-        sellers: {
-            nombre: string;
-            userId: string;
-            commissionPct: import("@prisma/client/runtime/library").Decimal;
-            quotationId: string;
-        }[];
         cliente: {
             id: string;
             nombre: string;
@@ -705,11 +634,16 @@ export declare class QuotationsController {
             id: string;
             name: string;
         };
+        sellers: {
+            nombre: string;
+            userId: string;
+            commissionPct: import("@prisma/client/runtime/library").Decimal;
+            quotationId: string;
+        }[];
         id: string;
         sucursalId: string;
         createdAt: Date;
         updatedAt: Date;
-        vendedorId: string;
         titulo: string;
         clienteId: string | null;
         categoriaId: string;
@@ -725,6 +659,7 @@ export declare class QuotationsController {
         fechaEnvio: Date | null;
         estado: string;
         motivoRechazo: string | null;
+        vendedorId: string;
         numero: string;
         eliminadaAt: Date | null;
         eliminadaPorId: string | null;

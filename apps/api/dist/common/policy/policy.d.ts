@@ -9,6 +9,7 @@ export type Actor = {
     id: string;
     role: string;
 };
+export declare const MANAGER_ROLES: readonly string[];
 export declare const isAdmin: (actor?: Actor | null) => boolean;
 export declare const isVentas: (actor?: Actor | null) => boolean;
 export declare const isTec: (actor?: Actor | null) => boolean;
@@ -23,6 +24,7 @@ export declare const canRegisterMovements: (actor: Actor) => boolean;
 export declare const canSeeLedger: (actor?: Actor | null) => boolean;
 export declare const canManageInventory: (actor?: Actor | null) => boolean;
 export declare const canAdjustInventory: (actor?: Actor | null) => boolean;
+export declare const usesMaterialOnOwnJobs: (actor?: Actor | null) => boolean;
 export declare const canManageProjects: (actor?: Actor | null) => boolean;
 export declare const canSeeProjects: (actor?: Actor | null) => boolean;
 export declare const canCreateSchedules: (actor?: Actor | null) => boolean;
@@ -44,25 +46,6 @@ export declare function quotationWhere(actor: Actor): {
     id?: string;
 };
 export declare function clientWhere(actor: Actor): {};
-export declare function saleWhere(actor: Actor): {
-    id: string;
-} | {
-    quotation?: undefined;
-} | {
-    quotation: {
-        OR: ({
-            vendedorId: string;
-            sellers?: undefined;
-        } | {
-            sellers: {
-                some: {
-                    userId: string;
-                };
-            };
-            vendedorId?: undefined;
-        })[];
-    };
-};
 export declare function relevamientoWhere(actor: Actor, cotizacionId?: string): {
     id: string;
 } | {

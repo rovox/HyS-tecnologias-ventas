@@ -2,10 +2,11 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
-import { canAdjustInventory, canManageInventory, canRegisterMovements } from '../../common/policy/policy';
+import { businessDayEnd, businessDayStart } from '../../common/domain/calendar';
+import { canAdjustInventory, canManageInventory, canRegisterMovements, isAdmin, usesMaterialOnOwnJobs } from '../../common/policy/policy';
 import { CategoriesService } from '../categories';
-import { CreateProductDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
-import { isLowStock, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './domain/inventory.rules';
+import { CreateProductDto, ListMovementsQuery, StockBatchDto, StockMovementDto, UpdateProductDto } from './dto/inventory.dto';
+import { branchMoveError, isLowStock, newProductStockError, kardex, movementsForDelivery, stockBySede, stockMovementError, totalStock } from './domain/inventory.rules';
 import { orderCode } from '../../common/domain/codes';
 
 type Tx = Prisma.TransactionClient;
@@ -17,8 +18,11 @@ const MOVEMENT_INCLUDE = {
   sucursalDestino: { select: { id: true, nombre: true } },
   project: { select: { id: true, codigo: true } },
   pedidoInterno: { select: { id: true } },
+  ventaDirecta: { select: { id: true, numero: true } },
   registradoPor: { select: { id: true, name: true } },
 } satisfies Prisma.StockMovementInclude;
+type MovementRow = Prisma.StockMovementGetPayload<{ include: typeof MOVEMENT_INCLUDE }>;
+const presentMovement = (m: MovementRow) => ({ ...m, pedidoInterno: m.pedidoInterno ? { id: m.pedidoInterno.id, codigo: orderCode(m.pedidoInterno.id) } : null });
 
 type ProductRow = Prisma.ProductGetPayload<{ include: typeof PRODUCT_INCLUDE }>;
 
@@ -43,6 +47,14 @@ export class InventoryService {
     if (!canRegisterMovements(user)) throw new ForbiddenException('Sin acceso al inventario');
   }
 
+  /** The técnico's material goes only to a project where he has an open job (SCH-04). */
+  private async assertOwnProjectJob(projectId: string | undefined, user: User) {
+    const job = projectId
+      ? await this.prisma.schedule.findFirst({ where: { projectId, tecnicoId: user.id, estado: { in: ['programado', 'en_proceso', 'terminado'] } }, select: { id: true } })
+      : null;
+    if (!job) throw new ForbiddenException('Solo registras material en los proyectos donde tienes un trabajo');
+  }
+
   private assertManage(user: User) {
     if (!canManageInventory(user)) throw new ForbiddenException('Solo ventas o Gerencia gestionan el inventario');
   }
@@ -64,11 +76,23 @@ export class InventoryService {
     await this.categories.assertDivision(dto.categoriaId);
     const codigo = dto.codigo.trim().toUpperCase();
     if (await this.prisma.product.findUnique({ where: { codigo } })) throw new ConflictException(`Ya existe un producto con el código ${codigo}`);
-    const row = await this.prisma.product.create({
-      data: { ...dto, codigo, nombre: dto.nombre.trim(), marca: dto.marca?.trim() || '', unidad: dto.unidad || 'unidad' },
-      include: PRODUCT_INCLUDE,
+    const { stockInicial, ...product } = dto;
+    const error = newProductStockError(dto.tipo, stockInicial);
+    if (error) throw new BadRequestException(error);
+    const entry = stockInicial ? { tipo: 'entrada', sucursalDestinoId: stockInicial.sucursalId } : null;
+    if (entry) await this.assertMove(entry, user);
+    // The product and its first purchase in one step: never a product in the catalog without stock (LAUNCH P1-4).
+    const id = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: { ...product, codigo, nombre: dto.nombre.trim(), marca: dto.marca?.trim() || '', unidad: dto.unidad || 'unidad', ...(stockInicial ? { costo: stockInicial.costoUnitario } : {}) },
+      });
+      if (stockInicial) {
+        await this.moveIn(tx, { productoId: created.id, tipo: 'entrada', cantidad: stockInicial.cantidad, costoUnitario: stockInicial.costoUnitario, sucursalDestinoId: stockInicial.sucursalId, nota: stockInicial.nota?.trim() || 'Primera entrada (alta del producto)' }, user);
+      }
+      return created.id;
     });
-    await this.audit.record({ user, sessionId, action: 'product.create', entity: 'product', id: row.id });
+    const row = await this.product(id);
+    await this.audit.record({ user, sessionId, action: 'product.create', entity: 'product', id, affects: stockInicial ? ['stock'] : [] });
     return presentProduct(row);
   }
 
@@ -81,49 +105,105 @@ export class InventoryService {
     return presentProduct(after);
   }
 
-  async movements(user: User, productoId?: string) {
+  /** The history (INV-03): one branch (in or out) or all, by type, Bolivian days and product; newest first. */
+  async movements(user: User, query: ListMovementsQuery = {}) {
     this.assertRead(user);
-    return this.prisma.stockMovement.findMany({
-      where: productoId ? { productoId } : {},
+    const tipos = query.tipos?.split(',').map((t) => t.trim()).filter(Boolean);
+    const rows = await this.prisma.stockMovement.findMany({
+      where: {
+        ...(query.productoId ? { productoId: query.productoId } : {}),
+        ...(tipos?.length ? { tipo: { in: tipos } } : {}),
+        ...(query.sucursalId ? { OR: [{ sucursalOrigenId: query.sucursalId }, { sucursalDestinoId: query.sucursalId }] } : {}),
+        ...(query.desde || query.hasta
+          ? { fecha: { ...(query.desde ? { gte: businessDayStart(query.desde.slice(0, 10)) } : {}), ...(query.hasta ? { lte: businessDayEnd(query.hasta.slice(0, 10)) } : {}) } }
+          : {}),
+      },
       include: MOVEMENT_INCLUDE,
-      orderBy: { fecha: 'desc' },
-      take: 1000,
-    }).then((rows) => rows.map((m) => ({ ...m, pedidoInterno: m.pedidoInterno ? { id: m.pedidoInterno.id, codigo: orderCode(m.pedidoInterno.id) } : null })));
+      orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
+      take: 2000,
+    });
+    return rows.map(presentMovement);
   }
 
-  /** Entradas, transfers and outputs to a project (commercial); adjustments (Gerencia, Contabilidad). Never below zero. */
-  async registerMovement(dto: StockMovementDto, user: User, sessionId?: string) {
-    if (dto.tipo !== 'ajuste') this.assertManage(user);
-    else if (!canAdjustInventory(user)) throw new ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
-    const row = await this.prisma.$transaction(async (tx) => {
-      const product = await this.product(dto.productoId, tx);
-      const available = dto.sucursalOrigenId ? (stockBySede(product.movements)[dto.sucursalOrigenId] ?? 0) : 0;
-      const error = stockMovementError(dto, { productTipo: product.tipo, available, canAdjust: canAdjustInventory(user) });
-      if (error) throw new BadRequestException(error);
-      if (dto.projectId) {
-        const project = await tx.project.findUnique({ where: { id: dto.projectId } });
-        if (!project || ['cerrado', 'anulado'].includes(project.estado)) throw new BadRequestException('El proyecto no existe o está cerrado');
-      }
-      const purchase = dto.tipo === 'entrada' && dto.costoUnitario !== undefined;
-      if (purchase) await tx.product.update({ where: { id: product.id }, data: { costo: dto.costoUnitario } });
-      return tx.stockMovement.create({
-        data: {
-          productoId: product.id,
-          tipo: dto.tipo,
-          cantidad: dto.cantidad,
-          costoUnitario: purchase ? dto.costoUnitario! : product.costo,
-          sucursalOrigenId: dto.sucursalOrigenId ?? null,
-          sucursalDestinoId: dto.sucursalDestinoId ?? null,
-          projectId: dto.projectId ?? null,
-          motivo: dto.motivo?.trim() || null,
-          nota: dto.nota || '',
-          registradoPorId: user.id,
-        },
-        include: MOVEMENT_INCLUDE,
-      });
+  /** Kardex of one product in a branch (or the company): what came in and out and the running balance, oldest first. */
+  async kardex(productoId: string, user: User, sucursalId?: string) {
+    this.assertRead(user);
+    const product = await this.product(productoId);
+    const rows = await this.prisma.stockMovement.findMany({ where: { productoId }, include: MOVEMENT_INCLUDE, orderBy: [{ fecha: 'asc' }, { createdAt: 'asc' }] });
+    return { producto: { id: product.id, codigo: product.codigo, nombre: product.nombre, unidad: product.unidad }, movimientos: kardex(rows.map(presentMovement), sucursalId || null) };
+  }
+
+  /**
+   * Who may register this movement: adjustments are Gerencia's; a técnico registers the material of his project jobs;
+   * the rest is commercial, and a seller only in his branch or Central (INV-03, branchMoveError).
+   */
+  private async assertMove(move: { tipo: string; projectId?: string; sucursalOrigenId?: string; sucursalDestinoId?: string }, user: User) {
+    if (move.tipo === 'ajuste') {
+      if (!canAdjustInventory(user)) throw new ForbiddenException('Solo Gerencia o Contabilidad ajustan el inventario');
+      return;
+    }
+    if (move.tipo === 'salida_proyecto' && usesMaterialOnOwnJobs(user)) return this.assertOwnProjectJob(move.projectId, user);
+    this.assertManage(user);
+    const blocked = branchMoveError(move, { manager: isAdmin(user), sucursalId: user.sucursalId });
+    if (blocked) throw new ForbiddenException(blocked);
+  }
+
+  /** One movement inside a transaction: the stock is read there, so several lines of one product add up. */
+  private async moveIn(tx: Tx, dto: StockMovementDto, user: User) {
+    const product = await this.product(dto.productoId, tx);
+    const available = dto.sucursalOrigenId ? (stockBySede(product.movements)[dto.sucursalOrigenId] ?? 0) : 0;
+    const error = stockMovementError(dto, { productTipo: product.tipo, available, canAdjust: canAdjustInventory(user) });
+    if (error) throw new BadRequestException(error);
+    if (dto.projectId) {
+      const project = await tx.project.findUnique({ where: { id: dto.projectId } });
+      if (!project || ['cerrado', 'anulado'].includes(project.estado)) throw new BadRequestException('El proyecto no existe o está cerrado');
+    }
+    const purchase = dto.tipo === 'entrada' && dto.costoUnitario !== undefined;
+    if (purchase) await tx.product.update({ where: { id: product.id }, data: { costo: dto.costoUnitario } });
+    return tx.stockMovement.create({
+      data: {
+        productoId: product.id,
+        tipo: dto.tipo,
+        cantidad: dto.cantidad,
+        costoUnitario: purchase ? dto.costoUnitario! : product.costo,
+        sucursalOrigenId: dto.sucursalOrigenId ?? null,
+        sucursalDestinoId: dto.sucursalDestinoId ?? null,
+        projectId: dto.projectId ?? null,
+        motivo: dto.motivo?.trim() || null,
+        nota: dto.nota || '',
+        registradoPorId: user.id,
+      },
+      include: MOVEMENT_INCLUDE,
     });
+  }
+
+  /** Entradas, transfers, outputs to a project and bajas (commercial); adjustments (Gerencia). Never below zero. */
+  async registerMovement(dto: StockMovementDto, user: User, sessionId?: string) {
+    await this.assertMove(dto, user);
+    const row = await this.prisma.$transaction((tx) => this.moveIn(tx, dto, user));
     await this.audit.record({ user, sessionId, action: `stock.${dto.tipo}`, entity: 'stock', id: row.id, affects: ['product', ...(dto.projectId ? ['project', 'client'] : [])] });
-    return row;
+    return presentMovement(row);
+  }
+
+  /** Several products in one go (INV-03 quick actions): all lines or none; each error names its product. */
+  async registerBatch(dto: StockBatchDto, user: User, sessionId?: string) {
+    const { items, ...shared } = dto;
+    await this.assertMove(shared, user);
+    const rows = await this.prisma.$transaction(async (tx) => {
+      const out: MovementRow[] = [];
+      for (const item of items) {
+        try {
+          out.push(await this.moveIn(tx, { ...shared, ...item }, user));
+        } catch (e) {
+          const name = (await tx.product.findUnique({ where: { id: item.productoId }, select: { nombre: true } }))?.nombre;
+          if (e instanceof BadRequestException && name) throw new BadRequestException(`${name}: ${e.message}`);
+          throw e;
+        }
+      }
+      return out;
+    });
+    await this.audit.record({ user, sessionId, action: `stock.${dto.tipo}`, entity: 'stock', id: rows[0].id, affects: ['product', ...(dto.projectId ? ['project', 'client'] : [])], patch: { lineas: rows.length } });
+    return rows.map(presentMovement);
   }
 
   /**

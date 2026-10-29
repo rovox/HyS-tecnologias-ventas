@@ -1,5 +1,5 @@
 export declare const PRODUCT_TIPOS: readonly ["equipo", "material", "servicio"];
-export declare const STOCK_TIPOS: readonly ["entrada", "salida_proyecto", "transferencia", "ajuste"];
+export declare const STOCK_TIPOS: readonly ["entrada", "salida_proyecto", "transferencia", "ajuste", "baja"];
 type Qty = number | string | {
     toString(): string;
 };
@@ -51,4 +51,23 @@ export declare function materialCost(movements: {
     cantidad: Qty;
     costoUnitario: Qty;
 }[]): number;
+export declare function newProductStockError(tipo: string, stockInicial?: {
+    cantidad: number;
+    costoUnitario: number;
+    sucursalId: string;
+}): string | null;
+export declare function branchMoveError(input: Pick<StockInput, 'tipo' | 'sucursalOrigenId' | 'sucursalDestinoId'>, actor: {
+    manager: boolean;
+    sucursalId?: string | null;
+}): string | null;
+type KardexMove = StockMove & {
+    id: string;
+    fecha: Date | string;
+    tipo: string;
+};
+export declare function kardex<T extends KardexMove>(movements: T[], sucursalId?: string | null): (T & {
+    entra: number;
+    sale: number;
+    saldo: number;
+})[];
 export {};

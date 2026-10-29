@@ -28,18 +28,18 @@ const roleNames = (args.roles ?? 'admin,ventas,tecnico,contabilidad').split(',')
 
 // Mirrors routeRoles in apps/web/src/config/nav.js (A = admin, V = ventas, T = técnico, C = contabilidad).
 // Replaced by generated constants in FE-03; `checkRouteTable` fails if App.jsx and this table drift.
-const ALL = 'AVTC', AV = 'AV', AVC = 'AVC', A = 'A';
+// Contabilidad has the same permissions as Administración (ROLE-01): "admin only" routes are A + C.
+const ALL = 'AVTC', AVC = 'AVC', A = 'AC';
 const ROUTES = [
   ['/dashboard', ALL], ['/quotations', AVC], ['/quotations/:quotationId', AVC], ['/projects', AVC], ['/projects/:projectId', AVC], ['/clientes', ALL], ['/clientes/:clientId', ALL],
-  ['/surveys', ALL], ['/schedule', ALL], ['/activity-wall', ALL], ['/reports', A],
-  ['/admin/management', A], ['/configuration', A], ['/solicitudes-web', AV],
+  ['/surveys', ALL], ['/schedule', ALL],
+  ['/configuration', A], ['/solicitudes-web', AVC],
   ['/inventario/pedidos/:pedidoId', AVC],
-  ['/vehicle-control', A], ['/vehicle-control/:id', A], ['/vehicles', A], ['/vehicles/:id', A],
-  ['/maintenance', A], ['/marketing', A], ['/campaigns', A], ['/finanzas', ALL], ['/inventario', ALL], ['/usuarios/:userId', ALL],
+  ['/finanzas', ALL], ['/inventario', ALL], ['/ventas-directas', AVC], ['/usuarios/:userId', ALL],
 ];
 const ROLE_LETTER = { admin: 'A', ventas: 'V', tecnico: 'T', contabilidad: 'C' };
-// Routes that intentionally redirect (ActivityWallPage is `<Navigate to="/dashboard">`); classified `redirect-ok`, not failing.
-const EXPECTED_REDIRECT = new Set(['/activity-wall']);
+// Routes that intentionally redirect (classified `redirect-ok`, not failing). None since PLAT-07 removed the stubs.
+const EXPECTED_REDIRECT = new Set([]);
 
 function checkRouteTable() {
   const app = readFileSync(path.join(ROOT, 'apps/web/src/app/App.jsx'), 'utf8');

@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
+import { useDocumentTitle } from '@/shared/lib/useDocumentTitle.js';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Layout from '@/components/Layout.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import authService from '@/services/auth/index.js';
 import goalsService from '@/services/goals/index.js';
-import { ROLES } from '@/config/nav.js';
+import { COMMERCIAL_ROLES } from '@/constants/roles.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { toast } from 'sonner';
+import { formatBs } from '@/shared/lib/format.js';
 
 const UserProfilePage = () => {
+  useDocumentTitle('Perfil');
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, isAdmin } = useAuth();
@@ -33,7 +35,7 @@ const UserProfilePage = () => {
       try {
         const found = await authService.getUser(id);
         if (!cancelled) setUser(found);
-        if (found && (found.role === ROLES.VENTAS || found.role === ROLES.ADMIN)) {
+        if (found && COMMERCIAL_ROLES.includes(found.role)) {
           try {
             const goals = await goalsService.listSellerGoals();
             const g = (goals || []).find((row) => row.userId === id || row.usuarioId === id || row.user_id === id);
@@ -55,7 +57,6 @@ const UserProfilePage = () => {
 
   return (
     <Layout>
-      <Helmet><title>Perfil · H&S</title></Helmet>
       <div className="content-container py-6 space-y-4 max-w-2xl">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-extrabold tracking-tight">Perfil de usuario</h1>
@@ -91,7 +92,7 @@ const UserProfilePage = () => {
                 <div>
                   <dt className="text-muted-foreground font-semibold">Meta mensual</dt>
                   <dd className="font-bold tabular-nums">
-                    Bs {Number(goal.metaMonto ?? goal.monthly_goal ?? goal.monto ?? 0).toFixed(0)}
+                    {formatBs(goal.metaMonto ?? goal.monthly_goal ?? goal.monto)}
                   </dd>
                 </div>
               ) : null}

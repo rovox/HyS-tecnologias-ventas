@@ -30,7 +30,7 @@ Aprobado es final: se deshace cancelando el proyecto. En una aprobada el monto, 
 
 | Vista | Tipo | Filtros y agrupaciones | Smart buttons / enlaces |
 |---|---|---|---|
-| Cotizaciones (`?vista=abiertas`) | lista + kanban (Borrador · Enviada) | estado, categoría, mis cotizaciones, vencen en ≤ 3 días · agrupar por estado, categoría, vendedor, cliente · total en Bs al pie · exportar CSV | clic → ficha |
+| Cotizaciones (`?vista=abiertas`) | lista + kanban (Borrador · Enviada) | estado, categoría, mis cotizaciones, vencen en ≤ 3 días · agrupar por estado, categoría, vendedor, cliente · total en Bs al pie · exportar CSV | clic → ficha · **acciones rápidas por fila** (QUO-03): Enviar, Aprobar → Proyecto (verde), Rechazar con motivos rápidos (rojo), Duplicar (formulario prellenado), Tarea (ligada a la cotización) |
 | Cerradas (`?vista=cerradas`) | lista | aprobada, rechazada, vencida, eliminada, categoría, mis cotizaciones | clic → ficha |
 | Ficha (`/quotations/:id`) | formulario Odoo | barra de estado con las transiciones de la API | Cliente, Relevamientos, Tareas, Proyecto · historial (chatter) |
 

@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.IncomeDto = exports.ListMovementsQuery = exports.ReasonDto = exports.ValidateMovementDto = exports.ImpactQuery = exports.UpdateMovementDto = exports.CreateMovementDto = void 0;
+exports.IncomeDto = exports.ExportMovementsQuery = exports.ListMovementsQuery = exports.ReasonDto = exports.ValidateMovementDto = exports.ImpactQuery = exports.UpdateMovementDto = exports.SettleAdvanceDto = exports.CreateMovementDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
@@ -27,6 +27,9 @@ class CreateMovementDto {
     cajaDestinoId;
     pagadoPor;
     sucursalId;
+    responsableId;
+    asunto;
+    fechaLimite;
 }
 exports.CreateMovementDto = CreateMovementDto;
 __decorate([
@@ -99,6 +102,35 @@ __decorate([
     (0, class_transformer_1.Transform)(emptyToUndef),
     __metadata("design:type", String)
 ], CreateMovementDto.prototype, "sucursalId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Anticipo por rendir: who receives the fund' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_transformer_1.Transform)(emptyToUndef),
+    __metadata("design:type", String)
+], CreateMovementDto.prototype, "responsableId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Anticipo por rendir: what it is for' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateMovementDto.prototype, "asunto", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Anticipo por rendir: day it must be accounted for' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreateMovementDto.prototype, "fechaLimite", void 0);
+class SettleAdvanceDto {
+    nota;
+}
+exports.SettleAdvanceDto = SettleAdvanceDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'How it was accounted for (receipts, what was returned)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], SettleAdvanceDto.prototype, "nota", void 0);
 class UpdateMovementDto {
     concepto;
     monto;
@@ -208,6 +240,7 @@ class ListMovementsQuery {
     clienteId;
     desde;
     hasta;
+    sucursalId;
 }
 exports.ListMovementsQuery = ListMovementsQuery;
 __decorate([
@@ -252,12 +285,28 @@ __decorate([
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
 ], ListMovementsQuery.prototype, "hasta", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Only this branch (without it: the whole company)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListMovementsQuery.prototype, "sucursalId", void 0);
+class ExportMovementsQuery extends ListMovementsQuery {
+    formato;
+}
+exports.ExportMovementsQuery = ExportMovementsQuery;
+__decorate([
+    (0, swagger_1.ApiProperty)({ enum: ['csv', 'xlsx'] }),
+    (0, class_validator_1.IsIn)(['csv', 'xlsx'], { message: 'Formato no válido: csv o xlsx' }),
+    __metadata("design:type", String)
+], ExportMovementsQuery.prototype, "formato", void 0);
 class IncomeDto {
     concepto;
     monto;
     metodo;
     nota;
     recibidoPorId;
+    cuentaDestino;
 }
 exports.IncomeDto = IncomeDto;
 __decorate([
@@ -291,4 +340,11 @@ __decorate([
     (0, class_transformer_1.Transform)(emptyToUndef),
     __metadata("design:type", String)
 ], IncomeDto.prototype, "recibidoPorId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' }),
+    (0, class_transformer_1.Transform)(emptyToUndef),
+    __metadata("design:type", String)
+], IncomeDto.prototype, "cuentaDestino", void 0);
 //# sourceMappingURL=finance.dto.js.map
