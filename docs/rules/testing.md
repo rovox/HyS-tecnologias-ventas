@@ -17,7 +17,9 @@ Root scripts `db:up`, `db:reset`, `dev` (api + web) and `check` exist (item `ENV
 
 Seed accounts come from `config/users.json` (`ROLE_ACCOUNTS` in `config/users.js`): admin `julio@hscontrol.com`, ventas `denis.palacios@hys.com`, contabilidad `estefany.gonzales@hscontrol.com`, técnico `marcos.tec@demo.hs.local`. Password: `config/users.passwords.local.json` if present, else the lowercase first name (`julio`, `denis`, `marcos`). Uploads go to `apps/api/uploads/` (git-ignored).
 
-With the Docker stack (`pnpm local:up`) the api container runs `nest start --watch`. When many files change at once the watcher can restart while the old process still holds port 3001 (`EADDRINUSE` in `docker compose logs api`) and the old code keeps serving: run `docker compose restart api`. Every api container start also re-runs the seed (upserts).
+With the Docker stack (`pnpm local:up`) the api container runs `nest start --watch`; the dev image includes `procps`, which the watcher needs to stop the old process (without it every reload failed with `EADDRINUSE` and the old code kept serving). If it still happens, run `docker compose restart api`. Every api container start also re-runs the seed (upserts).
+
+If building the dev image hangs on `apt-get` (exit 100 after minutes), Docker resolves the Debian mirror to IPv6 without an IPv6 route: build it with the host network, `docker build --network=host -f docker/Dockerfile.dev -t hs-erp-dev:local .`, then `docker compose up -d --wait` (volumes are kept).
 
 ## Checks
 
