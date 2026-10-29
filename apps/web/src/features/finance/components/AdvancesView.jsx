@@ -40,14 +40,28 @@ export function AdvancesView({ onOpen }) {
       { key: 'limite', header: 'Rendir hasta', cell: (a) => formatDay(a.fechaLimite) },
       { key: 'atraso', header: 'Atraso', align: 'right', cell: (a) => <span className={cn('font-semibold', a.diasAtraso ? 'text-danger-fg' : 'text-success-fg')}>{a.diasAtraso ? `${a.diasAtraso} días` : 'A tiempo'}</span> },
       { key: 'monto', header: 'Monto', align: 'right', cell: (a) => formatBs(a.monto), total: (rows) => formatBs(rows.reduce((s, a) => s + Number(a.monto), 0)), menuLabel: 'Monto' },
-      { key: 'acciones', header: '', cell: (a) => isAdmin() && <RowQuickActions actions={[{ key: 'ok', icon: CheckCheck, label: 'Marcar rendido', tone: 'success', disabled: settle.isPending, onClick: () => markSettled(a) }]} /> },
+      {
+        key: 'acciones',
+        header: '',
+        // A cobro held in a personal QR is handed over by validating it into a box (its detail), not marked by hand.
+        cell: (a) =>
+          isAdmin() &&
+          (a.tipo === 'ingreso' ? (
+            <RowQuickActions actions={[{ key: 'open', icon: CheckCheck, label: 'Validar en caja', tone: 'success', onClick: () => onOpen?.(a.id) }]} />
+          ) : (
+            <RowQuickActions actions={[{ key: 'ok', icon: CheckCheck, label: 'Marcar rendido', tone: 'success', disabled: settle.isPending, onClick: () => markSettled(a) }]} />
+          )),
+      },
     ],
     [settle.isPending], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Un anticipo se registra con <strong>Registrar gasto</strong> › concepto “Anticipo por rendir” (a quién, asunto y hasta cuándo).</p>
+      <p className="text-sm text-muted-foreground">
+        Un anticipo se registra con <strong>Registrar gasto</strong> › concepto “Anticipo por rendir” (a quién, asunto y hasta cuándo). Un cobro que entró al QR personal de quien cobró
+        también queda aquí hasta que se valida en una caja.
+      </p>
       {isError && <p className="text-sm text-danger-fg">No se pudieron cargar los anticipos: {error?.message}</p>}
       <ListView id="anticipos" columns={columns} rows={advances} loading={isLoading} tone={(a) => (a.diasAtraso ? 'danger' : undefined)} onRowClick={(a) => onOpen?.(a.id)} empty="No hay anticipos pendientes de rendir" />
     </div>

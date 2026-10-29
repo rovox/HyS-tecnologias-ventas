@@ -238,4 +238,10 @@ export class IncomeDto {
   @IsString()
   @Transform(emptyToUndef)
   recibidoPorId?: string;
+
+  @ApiPropertyOptional({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached' })
+  @IsOptional()
+  @IsIn(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' })
+  @Transform(emptyToUndef)
+  cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }

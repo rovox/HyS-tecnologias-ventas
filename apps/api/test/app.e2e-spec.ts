@@ -868,6 +868,32 @@ describe('hs-erp API (e2e)', () => {
       expect(cancelled).toMatchObject({ estado: 'cancelado', motivoCancelacion: 'El cliente reprogramó' });
       await http().post(`/api/relevamientos/${other.id}/cobros`).set(ventas()).send({ monto: 50 }).expect(400);
     });
+
+    it('a QR cobro says which QR it reached: company boxes, or the collector holds it like an advance (LAUNCH P1-1)', async () => {
+      const admin = () => ({ Authorization: `Bearer ${adminToken}` });
+      const visit = (await http().post('/api/relevamientos').set(ventas())
+        .send({ clienteId: 'cli_andina', tipoVisita: 'asistencia', fecha: '2026-10-21', lugar: 'Oficina central', tecnicoId: tecId }).expect(201)).body;
+      const pay = (who: () => { Authorization: string }, body: object) => http().post(`/api/relevamientos/${visit.id}/cobros`).set(who()).send({ monto: 40, ...body });
+      const none = await pay(ventas, { metodo: 'QR' }).expect(400);
+      expect(none.body.message).toMatch(/a qué QR/);
+      await pay(ventas, { metodo: 'efectivo', cuentaDestino: 'qr_socia' }).expect(400);
+      await pay(ventas, { metodo: 'qr', cuentaDestino: 'qr_vecino' }).expect(400);
+      const byVisit = async () => (await http().get('/api/finance/movements').set(admin()).expect(200)).body.filter((m: { relevamiento?: { id: string } }) => m.relevamiento?.id === visit.id);
+
+      await pay(ventas, { metodo: 'QR', cuentaDestino: 'qr_socia' }).expect(201);
+      const socia = (await byVisit())[0];
+      expect(socia).toMatchObject({ metodo: 'qr', estado: 'por_validar', caja: { id: 'caja_qr_socia' }, recibidoPor: null });
+
+      await pay(tec, { metodo: 'qr', cuentaDestino: 'qr_personal' }).expect(201);
+      const personal = (await byVisit()).find((m: { caja: unknown }) => !m.caja);
+      expect(personal).toMatchObject({ recibidoPor: { id: tecId }, asunto: expect.stringMatching(/QR personal/) });
+      const held = (await http().get('/api/finance/anticipos').set(tec()).expect(200)).body;
+      expect(held.map((a: { id: string }) => a.id)).toContain(personal.id);
+      const handed = (await http().post(`/api/finance/movements/${personal.id}/validar`).set(admin()).send({ cajaId: 'caja_qr' }).expect(201)).body;
+      expect(handed.rendidoAt).toBeTruthy();
+      const after = (await http().get('/api/finance/anticipos').set(admin()).expect(200)).body;
+      expect(after.map((a: { id: string }) => a.id)).not.toContain(personal.id);
+    });
   });
 
   describe('client read model (CLI-01)', () => {

@@ -120,4 +120,9 @@ export class ProjectPaymentDto {
   @IsOptional()
   @IsString()
   recibidoPorId?: string;
+
+  @ApiPropertyOptional({ enum: ['qr_empresa', 'qr_socia', 'qr_personal'], description: 'QR payments only: which QR it reached (LAUNCH P1-1)' })
+  @IsOptional()
+  @IsIn(['qr_empresa', 'qr_socia', 'qr_personal'], { message: 'Cuenta destino no válida' })
+  cuentaDestino?: 'qr_empresa' | 'qr_socia' | 'qr_personal';
 }
