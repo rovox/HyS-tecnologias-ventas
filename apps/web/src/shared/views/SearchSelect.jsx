@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 /**
  * Combobox with search for any list that can grow (clients, products, projects, jobs, users).
  * options: [{ value, label, hint?, keywords? }] · value · onChange(value | '') · `emptyOption` adds a "none" choice
- * (e.g. "Sin asignar") that also clears. The popover is modal so it works inside dialogs.
+ * (e.g. "Sin asignar") that also clears; `emptyText` says why nothing matches. The popover is modal so it works inside
+ * dialogs.
  */
 export function SearchSelect({
   id,
@@ -18,6 +19,7 @@ export function SearchSelect({
   placeholder = 'Selecciona…',
   searchPlaceholder = 'Buscar…',
   emptyOption,
+  emptyText = 'Sin resultados',
   loading,
   disabled,
   className,
@@ -68,7 +70,7 @@ export function SearchSelect({
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
-            <CommandEmpty>Sin resultados</CommandEmpty>
+            <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {emptyOption && (
                 <CommandItem value={`__none ${emptyOption}`} onSelect={() => pick('')}>

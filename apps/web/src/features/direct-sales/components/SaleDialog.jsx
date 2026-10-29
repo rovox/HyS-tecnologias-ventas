@@ -60,10 +60,16 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
   }, [open, replaces, currentUser]);
 
   const stockOf = (p) => Number(p?.stock?.[form?.sucursalId] || 0);
+  // Only what can be sold from the chosen branch now (plus what a line already has, e.g. a correction), searchable by
+  // code, name and brand; the stock shown is the branch's.
   const options = useMemo(
-    () => products.filter((p) => p.active !== false && p.tipo !== 'servicio').map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nombre}`, hint: `${stockOf(p)} ${p.unidad} · ${formatBs(p.precio)}`, keywords: p.marca })),
-    [products, form?.sucursalId], // eslint-disable-line react-hooks/exhaustive-deps
+    () =>
+      products
+        .filter((p) => p.active !== false && p.tipo !== 'servicio' && (stockOf(p) > 0 || form?.lines.some((l) => l.productoId === p.id)))
+        .map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nombre}`, hint: `Stock ${stockOf(p)} ${p.unidad} · ${formatBs(p.precio)}`, keywords: p.marca })),
+    [products, form?.sucursalId, form?.lines], // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const branchName = sucursales.find((s) => s.id === form?.sucursalId)?.nombre || 'esta sucursal';
   if (!form) return null;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -158,7 +164,7 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
               return (
                 <div key={l.key} className="grid grid-cols-12 items-start gap-2">
                   <div className="col-span-5">
-                    <SearchSelect aria-label={`Producto ${i + 1}`} value={l.productoId} onChange={(v) => pickProduct(l.key, v)} placeholder="Buscar producto…" searchPlaceholder="Código, nombre o marca…" options={options} />
+                    <SearchSelect aria-label={`Producto ${i + 1}`} value={l.productoId} onChange={(v) => pickProduct(l.key, v)} placeholder="Buscar producto…" searchPlaceholder="Código, nombre o marca…" emptyText={`Sin productos con stock en ${branchName}`} options={options} />
                     {p && <p className={cn('mt-0.5 text-xs', over ? 'font-semibold text-danger-fg' : 'text-muted-foreground')}>Stock en esta sucursal: {stockOf(p)} {p.unidad}</p>}
                   </div>
                   <Input className="col-span-2" aria-label={`Cantidad ${i + 1}`} type="number" min="0" step="0.01" value={l.cantidad} onChange={(e) => setLine(l.key, { cantidad: e.target.value })} />
