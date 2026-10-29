@@ -57,7 +57,8 @@ export default function QuotationsPage() {
   const { rows, groups, panel } = useListControls(quotes, {
     filters,
     groupOptions: GROUPS,
-    searchText: (q) => `${q.numero} ${q.titulo} ${q.cliente?.nombre || ''} ${q.subcategoria}`,
+    // Seller and branch too: the dashboard opens this list searched by them.
+    searchText: (q) => `${q.numero} ${q.titulo} ${q.cliente?.nombre || ''} ${q.subcategoria} ${q.vendedor?.name || ''} ${q.sucursal?.nombre || q.sucursalNombre || ''}`,
   });
   const open = (q) => navigate(`/quotations/${q.id}`);
   const total = rows.reduce((sum, q) => sum + Number(q.monto), 0);
@@ -74,7 +75,7 @@ export default function QuotationsPage() {
             </Button>
           )
         }
-        searchPlaceholder="Buscar por número, título, cliente…"
+        searchPlaceholder="Buscar por número, título, cliente, vendedor…"
         {...panel}
         views={vista === 'abiertas' ? VIEWS : []}
         view={view}
