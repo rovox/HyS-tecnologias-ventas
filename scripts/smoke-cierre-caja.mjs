@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Browser smoke for the daily cash close and advances (FIN-04), two sessions: the Punata seller opens Finanzas on
 // "Cierre del día" (his branch only), counts notes and coins of a past day; a difference turns the light red until he
-// gives a reason; he closes it (read-only after) → Contabilidad reviews it in "Cierres" → Contabilidad hands him an
-// advance (Registrar gasto › Anticipo por rendir), it shows as late in "Anticipos" and is marked rendido.
+// gives a reason; he closes it (read-only after) → Contabilidad opens it in "Cierres", observes it, then approves it
+// → Contabilidad hands him an advance (Registrar gasto › Anticipo por rendir), it shows as late in "Anticipos" and is
+// marked rendido.
 // A different past day each run, so runs do not collide with earlier closes.
 //
 //   node scripts/smoke-cierre-caja.mjs [--web http://localhost:3000] [--api http://localhost:3001/api] [--shots dir]
@@ -90,15 +91,31 @@ await step('counting with a difference turns red until there is a reason; then i
   if ((await p.getByLabel('Día del cierre').inputValue()) !== other) throw new Error('history does not open the day');
   await p.getByText(/Cerrado por/).waitFor(T);
 });
-await step('Contabilidad sees it in "Cierres" and reviews it', async () => {
+await step('Contabilidad opens it from "Cierres", observes it with a reason, then approves it', async () => {
   const p = conta.page;
   await p.goto(`${WEB}/finanzas?vista=cierres`, { waitUntil: 'networkidle' });
   await p.getByLabel('Desde').fill(day);
   const row = p.locator('tr', { hasText: day }).filter({ hasText: 'Punata' });
   await row.waitFor(T);
+  // The difference is coloured by its sign: red shortage, amber surplus, green balanced.
+  const diffClass = await row.getByText(/^(Faltante|Sobrante|Cuadra)/).first().getAttribute('class');
+  const diffText = await row.getByText(/^(Faltante|Sobrante|Cuadra)/).first().innerText();
+  const expected = diffText.startsWith('Faltante') ? 'danger' : diffText.startsWith('Sobrante') ? 'warning' : 'success';
+  if (!diffClass.includes(`text-${expected}-fg`)) throw new Error(`difference "${diffText}" coloured ${diffClass}`);
   await row.getByRole('button', { name: 'Revisar' }).click(T);
-  await p.getByText(`Cierre del ${day} revisado`).waitFor(T);
-  await row.getByText('Estefany Gonzales').waitFor(T);
+  const dlg = p.getByRole('dialog').filter({ hasText: `Cierre del ${day}` });
+  await dlg.getByRole('list', { name: 'Conteo por billete y moneda' }).getByText('2 × Bs 20').waitFor(T);
+  await dlg.getByRole('button', { name: 'Observar', exact: true }).click(T);
+  if (await dlg.getByRole('button', { name: 'Observar cierre' }).isEnabled()) throw new Error('observing without a reason');
+  await dlg.getByRole('button', { name: 'Falta el comprobante' }).click(T);
+  await dlg.getByRole('button', { name: 'Observar cierre' }).click(T);
+  await p.getByText(`Cierre del ${day} observado`).waitFor(T);
+  await row.getByText('Observado').waitFor(T);
+  await row.getByRole('button', { name: 'Revisar' }).click(T);
+  await dlg.getByText(/Observado por Estefany Gonzales: Falta el comprobante/).waitFor(T);
+  await dlg.getByRole('button', { name: 'Aprobar' }).click(T);
+  await p.getByText(`Cierre del ${day} aprobado`).waitFor(T);
+  await row.getByText(/Aprobado · Estefany Gonzales/).waitFor(T);
   if (SHOTS) await p.screenshot({ path: `${SHOTS}/cierres.png` });
 });
 await step('an advance to account for: registered, late in "Anticipos", marked rendido', async () => {

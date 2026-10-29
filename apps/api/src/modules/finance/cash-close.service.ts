@@ -5,7 +5,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { businessDay, businessDayEnd, businessDayStart, businessToday } from '../../common/domain/calendar';
 import { isAdmin, isVentas, ROLES } from '../../common/policy/policy';
 import { CloseCashDto, ListCashClosesQuery } from './dto/cash-close.dto';
-import { closeError, closeRequirements, countError, countTotal, differenceMovement, expectedCash, otherMethods } from './domain/cash-close.rules';
+import { closeError, closeRequirements, countError, countTotal, differenceMovement, expectedCash, otherMethods, reviewError } from './domain/cash-close.rules';
 import { cashBoxBalance } from './domain/finance.rules';
 import { MOVEMENT_DETAIL, presentMovement } from './movement.presenter';
 
@@ -178,14 +178,45 @@ export class CashCloseService {
     });
   }
 
-  /** Gerencia marks a close as reviewed (its difference is decided in the validation inbox). */
-  async review(id: string, user: User, sessionId?: string) {
+  /**
+   * Gerencia approves a close (its difference, if any, is validated into the branch box in the same step) or observes
+   * it with a reason (the difference is observed with it and goes back to the cashier). LAUNCH P1-3.
+   */
+  async review(id: string, action: 'aprobar' | 'observar', motivo: string | undefined, user: User, sessionId?: string) {
     if (!isAdmin(user)) throw new ForbiddenException('Solo Administración o Contabilidad revisan los cierres');
-    const before = await this.prisma.cierreCaja.findUnique({ where: { id } });
+    const before = await this.prisma.cierreCaja.findUnique({ where: { id }, include: { diferenciaMovimiento: true } });
     if (!before) throw new NotFoundException('Cierre no encontrado');
-    if (before.revisadoAt) throw new BadRequestException('Este cierre ya está revisado');
-    const row = await this.prisma.cierreCaja.update({ where: { id }, data: { revisadoPorId: user.id, revisadoAt: new Date() }, include: CLOSE_DETAIL });
-    await this.audit.record({ user, sessionId, action: 'cashClose.review', entity: 'cashClose', id, patch: { revisado: true } });
+    const error = reviewError(before.revisionEstado, action, motivo);
+    if (error) throw new BadRequestException(error);
+    const movement = before.diferenciaMovimiento;
+    const open = movement && ['por_validar', 'observado'].includes(movement.estado);
+    const row = await this.prisma.$transaction(async (tx) => {
+      if (open && action === 'aprobar') {
+        await tx.cashMovement.update({ where: { id: movement.id }, data: { estado: 'validado', cajaId: before.cajaId, validadoPorId: user.id, validadoAt: new Date(), motivo: null } });
+      }
+      if (open && action === 'observar') {
+        await tx.cashMovement.update({ where: { id: movement.id }, data: { estado: 'observado', motivo: motivo!.trim() } });
+      }
+      return tx.cierreCaja.update({
+        where: { id },
+        data: {
+          revisionEstado: action === 'aprobar' ? 'aprobado' : 'observado',
+          revisionMotivo: action === 'observar' ? motivo!.trim() : null,
+          revisadoPorId: user.id,
+          revisadoAt: new Date(),
+        },
+        include: CLOSE_DETAIL,
+      });
+    });
+    await this.audit.record({
+      user,
+      sessionId,
+      action: `cashClose.${action}`,
+      entity: 'cashClose',
+      id,
+      patch: { revisionEstado: row.revisionEstado, ...(action === 'observar' ? { motivo: row.revisionMotivo } : {}) },
+      affects: open ? ['movement'] : [],
+    });
     return row;
   }
 }

@@ -755,6 +755,9 @@ model CierreCaja {
   revisadoPorId          String?
   revisadoPor            User?         @relation("CashCloseReviewedBy", fields: [revisadoPorId], references: [id], onDelete: SetNull)
   revisadoAt             DateTime?
+  /// LAUNCH P1-3: aprobado | observado (null = not reviewed yet); an observation says why.
+  revisionEstado         String?       @db.VarChar(16)
+  revisionMotivo         String?       @db.Text
   /// The faltante/sobrante movement it generated (por validar: Contabilidad decides).
   diferenciaMovimientoId String?       @unique
   diferenciaMovimiento   CashMovement? @relation("CashCloseDifference", fields: [diferenciaMovimientoId], references: [id], onDelete: SetNull)

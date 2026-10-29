@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CashCloseQuery {
   @ApiProperty()

@@ -97,3 +97,13 @@ export function closeRequirements(input: { dia: string; today: string; closed: b
     },
   ];
 }
+
+/**
+ * Reviewing a close (LAUNCH P1-3): Gerencia approves it (its difference is validated into the branch box) or observes
+ * it with a reason (the difference is observed too). An approved close is final; an observed one can be approved later.
+ */
+export function reviewError(revisionEstado: string | null, action: 'aprobar' | 'observar', motivo?: string): string | null {
+  if (revisionEstado === 'aprobado') return 'Este cierre ya está aprobado';
+  if (action === 'observar' && !motivo?.trim()) return 'Indica qué hay que revisar del cierre';
+  return null;
+}

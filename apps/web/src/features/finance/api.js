@@ -110,9 +110,13 @@ export function useCloseCash() {
   });
 }
 
+/** action: aprobar | observar ({ motivo }). Approving validates the difference; observing sends it back. */
 export function useReviewClose() {
   const queryClient = useQueryClient();
-  return useMutation({ mutationFn: (id) => apiClient.post(`finance/cierres/${id}/revisar`, {}, opts()), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashClose'] }) });
+  return useMutation({
+    mutationFn: ({ id, action, motivo }) => apiClient.post(`finance/cierres/${id}/${action}`, action === 'observar' ? { motivo } : {}, opts()),
+    onSuccess: () => Promise.all(['cashClose', 'movement'].map((key) => queryClient.invalidateQueries({ queryKey: [key] }))),
+  });
 }
 
 /** Advances still to be accounted for, with days late (FIN-04). */
