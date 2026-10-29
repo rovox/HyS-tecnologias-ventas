@@ -13,6 +13,7 @@ import { notify } from '@/shared/lib/notify.js';
 import { TONE } from '@/shared/lib/status.js';
 import { cn } from '@/lib/utils';
 import { useCashClosePreview, useCashCloses, useCloseCash } from '../api.js';
+import { differenceText, differenceTone } from './CloseReviewDialog.jsx';
 import { CONCEPTO_LABEL } from '../constants.js';
 
 /** Bolivian notes and coins, as the API counts them (cash-close.rules.ts). */
@@ -153,7 +154,8 @@ export function CashCloseView() {
         <section className={cn('space-y-1 rounded-md border p-3 text-sm', Number(closed.diferencia) === 0 ? TONE.success.badge : TONE.warning.badge)}>
           <p className="flex items-center gap-1.5 font-semibold"><Lock className="h-4 w-4" /> Cerrado por {closed.cerradoPor?.name} el {formatDateTime(closed.cerradoAt)}</p>
           <p>Contado {formatBs(closed.efectivoContado)} · Diferencia {formatBs(closed.diferencia)}{closed.motivoDiferencia ? ` · ${closed.motivoDiferencia}` : ''}</p>
-          {closed.revisadoPor && <p className="flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> Revisado por {closed.revisadoPor.name}</p>}
+          {closed.revisionEstado === 'aprobado' && <p className="flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> Aprobado por {closed.revisadoPor?.name}</p>}
+          {closed.revisionEstado === 'observado' && <p className="font-semibold">Observado por {closed.revisadoPor?.name}: {closed.revisionMotivo}</p>}
           <p className="text-xs">Un cierre no se edita: un error se corrige con un movimiento nuevo.</p>
         </section>
       ) : (
@@ -181,7 +183,7 @@ export function CashCloseView() {
           ))}
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm">Contado: <span className="font-bold tabular-nums">{formatBs(contado)}</span></p>
-            <p className="text-sm">Diferencia: <span className="font-bold tabular-nums">{formatBs(diferencia)}</span></p>
+            <p className="text-sm">Diferencia: <span className={cn('font-bold tabular-nums', TONE[differenceTone(diferencia)].text)}>{differenceText(diferencia)}</span></p>
             <span className={cn('rounded-md border px-2 py-1 text-sm font-semibold', TONE[state.tone].badge)} role="status">{state.text}</span>
           </div>
           {diferencia !== 0 && (
@@ -214,10 +216,8 @@ export function CashCloseView() {
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
                 <button type="button" className="font-medium text-primary hover:underline" onClick={() => setDia(c.dia)}>{c.dia}</button>
                 <span className="tabular-nums text-muted-foreground">Contado {formatBs(c.efectivoContado)}</span>
-                <span className={cn('tabular-nums font-semibold', Number(c.diferencia) < 0 ? TONE.danger.text : Number(c.diferencia) > 0 ? TONE.warning.text : TONE.success.text)}>
-                  {Number(c.diferencia) === 0 ? 'Cuadra' : `${Number(c.diferencia) < 0 ? 'Faltante' : 'Sobrante'} ${formatBs(Math.abs(c.diferencia))}`}
-                </span>
-                <span className="text-xs text-muted-foreground">{c.cerradoPor?.name}{c.revisadoPor ? ' · revisado' : ''}</span>
+                <span className={cn('tabular-nums font-semibold', TONE[differenceTone(c.diferencia)].text)}>{differenceText(c.diferencia)}</span>
+                <span className="text-xs text-muted-foreground">{c.cerradoPor?.name}{c.revisionEstado ? ` · ${c.revisionEstado}` : ''}</span>
               </li>
             ))}
           </ul>

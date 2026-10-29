@@ -36,10 +36,16 @@ export class FinanceController {
     return this.cashClose.close(dto, user, sessionId);
   }
 
-  @Post('cierres/:id/revisar')
-  @ApiOperation({ summary: 'Mark a close as reviewed (Administración, Contabilidad)' })
-  reviewClose(@Param('id') id: string, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
-    return this.cashClose.review(id, user, sessionId);
+  @Post('cierres/:id/aprobar')
+  @ApiOperation({ summary: 'Approve a close; its difference is validated into the branch box (Administración, Contabilidad)' })
+  approveClose(@Param('id') id: string, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.cashClose.review(id, 'aprobar', undefined, user, sessionId);
+  }
+
+  @Post('cierres/:id/observar')
+  @ApiOperation({ summary: 'Observe a close with a reason; its difference is observed too (Administración, Contabilidad)' })
+  observeClose(@Param('id') id: string, @Body() dto: ReasonDto, @CurrentUser() user: User, @CurrentSessionId() sessionId?: string) {
+    return this.cashClose.review(id, 'observar', dto.motivo, user, sessionId);
   }
 
   @Get('movements')

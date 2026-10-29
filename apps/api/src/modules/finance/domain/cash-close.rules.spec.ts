@@ -1,4 +1,4 @@
-import { closeError, closeRequirements, countError, countTotal, differenceMovement, expectedCash, otherMethods } from './cash-close.rules';
+import { closeError, closeRequirements, countError, countTotal, differenceMovement, expectedCash, otherMethods, reviewError } from './cash-close.rules';
 
 const mv = (id: string, tipo: string, monto: number, extra = {}) => ({ id, tipo, concepto: 'x', monto, estado: 'validado', metodo: 'efectivo', ...extra });
 
@@ -46,5 +46,12 @@ describe('daily cash close (FIN-04)', () => {
     const late = closeRequirements({ dia: '2026-10-29', today: '2026-10-29', closed: false, pendingDay: '2026-10-27' });
     expect(late.filter((r) => !r.ok).map((r) => r.texto)).toEqual(['Falta cerrar el 2026-10-27: los días con movimientos se cierran en orden']);
     expect(closeRequirements({ dia: '2026-10-29', today: '2026-10-29', closed: true, pendingDay: null }).find((r) => !r.ok)?.texto).toBe('Este día ya está cerrado');
+  });
+
+  it('a close is approved or observed with a reason; an approved one is final (LAUNCH P1-3)', () => {
+    expect(reviewError(null, 'aprobar')).toBeNull();
+    expect(reviewError(null, 'observar', ' ')).toMatch(/qué hay que revisar/);
+    expect(reviewError('observado', 'aprobar')).toBeNull();
+    expect(reviewError('aprobado', 'observar', 'x')).toBe('Este cierre ya está aprobado');
   });
 });

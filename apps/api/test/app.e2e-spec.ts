@@ -786,8 +786,21 @@ describe('hs-erp API (e2e)', () => {
       expect(Number(closed.diferencia)).toBeCloseTo(diff, 2);
       if (diff !== 0) expect(closed.diferenciaMovimiento).toMatchObject({ estado: 'por_validar', tipo: diff < 0 ? 'egreso' : 'ingreso', monto: String(Math.abs(diff)) });
       await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, motivoDiferencia: 'x' }).expect(409);
-      await http().post(`/api/finance/cierres/${closed.id}/revisar`).set(H(wilson)).expect(403);
-      expect((await http().post(`/api/finance/cierres/${closed.id}/revisar`).set(H(conta)).expect(201)).body.revisadoPor.name).toBe('Estefany Gonzales');
+      // LAUNCH P1-3: Gerencia observes (with a reason) or approves; approving validates the difference into the box.
+      await http().post(`/api/finance/cierres/${closed.id}/aprobar`).set(H(wilson)).expect(403);
+      await http().post(`/api/finance/cierres/${closed.id}/observar`).set(H(conta)).send({ motivo: '' }).expect(400);
+      const observed = (await http().post(`/api/finance/cierres/${closed.id}/observar`).set(H(conta)).send({ motivo: 'Falta el comprobante del taxi' }).expect(201)).body;
+      expect(observed).toMatchObject({ revisionEstado: 'observado', revisionMotivo: 'Falta el comprobante del taxi', revisadoPor: { name: 'Estefany Gonzales' } });
+      if (diff !== 0) expect(observed.diferenciaMovimiento.estado).toBe('observado');
+      const approved = (await http().post(`/api/finance/cierres/${closed.id}/aprobar`).set(H(conta)).expect(201)).body;
+      expect(approved).toMatchObject({ revisionEstado: 'aprobado', revisionMotivo: null });
+      if (diff !== 0) {
+        expect(approved.diferenciaMovimiento.estado).toBe('validado');
+        const movement = (await http().get(`/api/finance/movements/${approved.diferenciaMovimiento.id}`).set(H(conta)).expect(200)).body;
+        expect(movement.caja.id).toBe('caja_chica_punata');
+      }
+      await http().post(`/api/finance/cierres/${closed.id}/aprobar`).set(H(conta)).expect(400);
+      await http().post(`/api/finance/cierres/${closed.id}/observar`).set(H(conta)).send({ motivo: 'x' }).expect(400);
       const tomorrow = new Date(Date.now() + 2 * 86400e3).toISOString().slice(0, 10);
       await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, dia: tomorrow }).expect(400);
       const list = (await http().get(`/api/finance/cierres?sucursalId=suc_punata&desde=${day}&hasta=${day}`).set(H(conta)).expect(200)).body;
