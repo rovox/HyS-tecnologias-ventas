@@ -9,7 +9,7 @@ import { useClientOptions, useSucursales } from '@/features/catalogs';
 import { ClientPicker } from '@/features/clients';
 import { useProducts } from '@/features/inventory';
 import { SearchSelect } from '@/shared/views';
-import { formatBs } from '@/shared/lib/format.js';
+import { formatBs, roundCents } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { cn } from '@/lib/utils';
 import { useCreateDirectSale } from '../api.js';
@@ -18,13 +18,12 @@ import { useCreateDirectSale } from '../api.js';
 const CENTRAL = 'suc_central';
 const METHODS = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia' };
 const select = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
-const cents = (v) => Math.round(v * 100) / 100;
 const emptyLine = () => ({ key: Math.random().toString(36).slice(2), productoId: '', cantidad: '1', precioUnitario: '', descuento: '' });
 
 /** Same math as the API (direct-sales.rules saleTotals): line = qty × price − its discount; minus the sale discount. */
 function totalsOf(lines, descuento) {
-  const subtotal = cents(lines.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precioUnitario) || 0) - (Number(l.descuento) || 0), 0));
-  return { subtotal, total: cents(subtotal - (Number(descuento) || 0)) };
+  const subtotal = roundCents(lines.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precioUnitario) || 0) - (Number(l.descuento) || 0), 0));
+  return { subtotal, total: roundCents(subtotal - (Number(descuento) || 0)) };
 }
 
 /**
@@ -76,8 +75,8 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
   const setLine = (key, patch) => set({ lines: form.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) });
   const setPago = (i, patch) => set({ pagos: form.pagos.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const { subtotal, total } = totalsOf(form.lines, form.descuento);
-  const others = cents(form.pagos.slice(1).reduce((s, p) => s + (Number(p.monto) || 0), 0));
-  const first = cents(total - others);
+  const others = roundCents(form.pagos.slice(1).reduce((s, p) => s + (Number(p.monto) || 0), 0));
+  const first = roundCents(total - others);
   const pagos = form.pagos.map((p, i) => ({ medio: p.medio, monto: i === 0 ? first : Number(p.monto) || 0 }));
   const over = first < 0;
   const productOf = (id) => products.find((p) => p.id === id);

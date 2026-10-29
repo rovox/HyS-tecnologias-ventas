@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useSucursales } from '@/features/catalogs';
 import { useConfirm } from '@/shared/views';
-import { businessDayOf, formatBs, formatDateTime } from '@/shared/lib/format.js';
+import { businessDayOf, formatBs, formatDateTime, roundCents } from '@/shared/lib/format.js';
 import { notify } from '@/shared/lib/notify.js';
 import { TONE } from '@/shared/lib/status.js';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,6 @@ const NOTES = [200, 100, 50, 20, 10];
 const COINS = [5, 2, 1, 0.5, 0.2, 0.1];
 const REASONS = ['Error de cambio', 'Gasto sin registrar', 'Cobro sin registrar', 'Billete falso'];
 const select = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
-const cents = (v) => Math.round(v * 100) / 100;
 const label = (d) => (d < 1 ? `${Math.round(d * 100)} ctvs` : `Bs ${d}`);
 
 /** Green = it adds up; amber = a difference with its reason; red = a difference without reason (cannot close). */
@@ -74,9 +73,9 @@ export function CashCloseView() {
 
   const firstClose = day.saldoInicial === null;
   const saldoInicial = firstClose ? Number(inicial) || 0 : day.saldoInicial;
-  const esperado = cents(saldoInicial + day.ingresosEfectivo - day.egresosEfectivo);
-  const contado = cents([...NOTES, ...COINS].reduce((s, d) => s + d * (Number(conteo[d]) || 0), 0));
-  const diferencia = cents(contado - esperado);
+  const esperado = roundCents(saldoInicial + day.ingresosEfectivo - day.egresosEfectivo);
+  const contado = roundCents([...NOTES, ...COINS].reduce((s, d) => s + d * (Number(conteo[d]) || 0), 0));
+  const diferencia = roundCents(contado - esperado);
   const state = light(diferencia, motivo);
   const closed = day.cierre;
 

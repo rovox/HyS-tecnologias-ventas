@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Target, Users, Building2, Wrench, Pencil, Check, X, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { goalsService } from '@/services/goals/index.js';
+import { formatBs } from '@/shared/lib/format.js';
 import { apiClient, authToken } from '@/api/http.js';
 
 const ConfigurationPage = () => {
@@ -119,7 +120,7 @@ const ConfigurationPage = () => {
                                   autoFocus
                                 />
                               ) : (
-                                <span className="tabular-nums">Bs {Number(s.monthly_goal || 0).toLocaleString('es-BO')}</span>
+                                <span className="tabular-nums">{formatBs(s.monthly_goal)}</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">

@@ -105,8 +105,8 @@ await step('the técnico takes a payment', async () => {
   const dlg = p.getByRole('dialog').filter({ hasText: 'Registrar cobro' }).last();
   await dlg.getByLabel('Monto (Bs) *').fill('200');
   await dlg.getByRole('button', { name: 'Registrar' }).click(T);
-  await p.getByText('Cobro de Bs 200,00 registrado: queda por validar').waitFor(T);
-  await sheet(ventas.page).getByText('Bs 300,00').waitFor({ timeout: 4000 });
+  await p.getByText('Cobro de Bs 200.00 registrado: queda por validar').waitFor(T);
+  await sheet(ventas.page).getByText('Bs 300.00').waitFor({ timeout: 4000 });
 });
 await step('ventas moves it to the next day with "Editar trabajo"', async () => {
   const p = ventas.page;
