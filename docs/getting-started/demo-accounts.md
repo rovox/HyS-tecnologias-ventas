@@ -1,17 +1,18 @@
 # Demo accounts and roles
 
-The single roster is [`config/users.json`](../../config/users.json): the same emails as production, used by the local seed, the login chips, the e2e fixtures and the production users SQL. `localOnly` users (Marcos, técnico) exist only in the local seed and are hidden from the production chips.
+The single roster is [`config/users.json`](../../config/users.json): the same emails as production, used by the local seed, the login chips, the e2e fixtures and the production users SQL. `localOnly` users (Marcos, técnico; "Prueba Sin Acceso", for the no-access tests) exist only in the local seed and are hidden from the production chips.
 
 Passwords never go to git. Locally, `config/users.passwords.local.json` (gitignored, `{ "email": "password" }`) sets the real ones; any user missing there gets the lowercase first name (`julio`, `dennis`, `marcos`…), which is what CI uses. There is no shared fallback password.
 
 | Role | Users |
 |------|-------|
-| ADMINISTRADOR | Julio, Mavel, Elias, Estefany Gonzales |
-| VENTAS / ADMINISTRACIÓN | Dennis, Giovanni, Vanessa, Wilson |
-| SIN ACCESO | Marcelo, Ronald, Rodrigo |
-| SEGURIDAD ELECTRÓNICA | Marcos (local only) |
+| ADMINISTRADOR | Julio, Mavel, Elias |
+| CONTABILIDAD | Estefany Gonzales (same permissions as Administración) |
+| VENTAS / ADMINISTRACIÓN | Denis, Giovanny, Brian, Wilson |
+| SEGURIDAD ELECTRÓNICA (técnicos) | Marcelo, Ronald, Rodrigo; Marcos (local only) |
+| SIN ACCESO | Prueba Sin Acceso, local only |
 
-There are **four** administrators: Julio, Mavel, Elias and Estefany. The role **Contadora** was removed from the system — Estefany (previously the accounting demo user) is now a full administrator and validates income/expense movements like any other admin. Sales users only see their own quotations and their branch clients.
+Vanessa left the company (owner 2026-10-29): she is not in the roster, the local seed deactivates her and the production SQL does not create her. Sales users only see their own quotations and their branch clients.
 
 ## Auth
 
