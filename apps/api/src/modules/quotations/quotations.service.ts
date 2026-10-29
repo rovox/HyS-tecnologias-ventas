@@ -182,6 +182,8 @@ export class QuotationsService {
           ...(dto.tieneLicitacion !== undefined ? { tieneLicitacion: dto.tieneLicitacion } : {}),
           ...(dto.licitacionNumero !== undefined ? { licitacionNumero: dto.licitacionNumero || null } : {}),
           ...(dto.licitacionEntidad !== undefined ? { licitacionEntidad: dto.licitacionEntidad || null } : {}),
+          // Not a tender any more: its number and entity go too.
+          ...(dto.tieneLicitacion === false ? { licitacionNumero: null, licitacionEntidad: null } : {}),
           ...(dto.plazoFinal !== undefined ? { plazoFinal: dto.plazoFinal ? new Date(dto.plazoFinal) : null } : {}),
           ...(vendors ? { vendedorId: vendors[0].userId } : {}),
         },

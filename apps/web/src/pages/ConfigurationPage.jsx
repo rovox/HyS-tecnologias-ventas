@@ -19,9 +19,6 @@ const ConfigurationPage = () => {
   const [salespersonGoals, setSalespersonGoals] = useState([]);
   const [sucursales, setSucursales] = useState([]);
 
-  const [newSucursal, setNewSucursal] = useState({ nombre: '', codigo: '' });
-  const [editingSucursalId, setEditingSucursalId] = useState(null);
-  const [editSucursalForm, setEditSucursalForm] = useState({ nombre: '', codigo: '', activa: true });
   const [editingGoalId, setEditingGoalId] = useState(null);
   const [editGoalValue, setEditGoalValue] = useState('');
   const [savingGoal, setSavingGoal] = useState(false);
@@ -43,66 +40,6 @@ const ConfigurationPage = () => {
   }, [canAccessExecutivePanel]);
 
   if (!canAccessExecutivePanel()) return <Navigate to="/dashboard" replace />;
-
-  const reloadSucursales = async () => {
-    const fresh = await apiClient.get('sucursales', { token: authToken() });
-    setSucursales(fresh || []);
-  };
-
-  const handleAddSucursal = async (e) => {
-    e.preventDefault();
-    if (!newSucursal.nombre) return;
-    try {
-      await apiClient.post('sucursales', { nombre: newSucursal.nombre, codigo: newSucursal.codigo, activa: true }, { token: authToken() });
-      setNewSucursal({ nombre: '', codigo: '' });
-      await reloadSucursales();
-      toast.success('Sucursal registrada exitosamente');
-    } catch (err) {
-      toast.error(err.message || 'Error al registrar sucursal');
-    }
-  };
-
-  const handleDeleteSucursal = async (id) => {
-    try {
-      await apiClient.delete(`sucursales/${id}`, { token: authToken() });
-      await reloadSucursales();
-      toast.success('Sucursal eliminada');
-    } catch (err) {
-      toast.error(err.message || 'Error al eliminar sucursal');
-    }
-  };
-
-  const startEditSucursal = (s) => {
-    setEditingSucursalId(s.id);
-    setEditSucursalForm({ nombre: s.nombre || '', codigo: s.codigo || '', activa: !!s.activa });
-  };
-
-  const cancelEditSucursal = () => {
-    setEditingSucursalId(null);
-    setEditSucursalForm({ nombre: '', codigo: '', activa: true });
-  };
-
-  const handleSaveEditSucursal = async (id) => {
-    if (!editSucursalForm.nombre) { toast.error('El nombre es obligatorio'); return; }
-    try {
-      await apiClient.patch(`sucursales/${id}`, { nombre: editSucursalForm.nombre, codigo: editSucursalForm.codigo, activa: editSucursalForm.activa }, { token: authToken() });
-      await reloadSucursales();
-      cancelEditSucursal();
-      toast.success('Sucursal actualizada');
-    } catch (err) {
-      toast.error(err.message || 'Error al actualizar sucursal');
-    }
-  };
-
-  const handleToggleActivaSucursal = async (s) => {
-    try {
-      await apiClient.patch(`sucursales/${s.id}`, { activa: !s.activa }, { token: authToken() });
-      await reloadSucursales();
-      toast.success(!s.activa ? 'Sucursal activada' : 'Sucursal desactivada');
-    } catch (err) {
-      toast.error(err.message || 'Error al cambiar estado');
-    }
-  };
 
   const startEditGoal = (row) => {
     if (!canEditGoals) return;
@@ -220,85 +157,34 @@ const ConfigurationPage = () => {
             </TabsContent>
 
             <TabsContent value="branches" className="w-full space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-                <Card className="border-slate-200 shadow-sm h-fit w-full">
-                  <CardHeader><CardTitle>Crear Sucursal Base</CardTitle></CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleAddSucursal} className="space-y-4 w-full">
-                      <div className="w-full">
-                        <label className="block text-sm font-bold mb-1">Nombre (Ej: Central)</label>
-                        <input required type="text" value={newSucursal.nombre} onChange={(e) => setNewSucursal({ ...newSucursal, nombre: e.target.value })} className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900" />
-                      </div>
-                      <div className="w-full">
-                        <label className="block text-sm font-bold mb-1">Código (Opcional)</label>
-                        <input type="text" value={newSucursal.codigo} onChange={(e) => setNewSucursal({ ...newSucursal, codigo: e.target.value })} className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900" />
-                      </div>
-                      <Button type="submit" className="w-full">Registrar Sucursal Base</Button>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-2 border-slate-200 shadow-sm w-full">
-                  <CardHeader><CardTitle>Directorio de Sucursales</CardTitle></CardHeader>
-                  <CardContent className="w-full">
-                    <div className="overflow-x-auto w-full">
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-xs border-b">
-                          <tr>
-                            <th className="px-4 py-3">Nombre</th>
-                            <th className="px-4 py-3 text-center">Estado</th>
-                            <th className="px-4 py-3 text-right">Acción</th>
+              {/* Read-only (LAUNCH P0-6): branches are fixed catalog data; the API only lists them. */}
+              <Card className="border-slate-200 shadow-sm w-full">
+                <CardHeader><CardTitle>Sucursales</CardTitle></CardHeader>
+                <CardContent className="w-full">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-xs border-b">
+                        <tr>
+                          <th className="px-4 py-3">Nombre</th>
+                          <th className="px-4 py-3">Dirección</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {sucursales.map((s) => (
+                          <tr key={s.id}>
+                            <td className="px-4 py-3 font-bold">{s.nombre}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{s.direccion || '—'}</td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {sucursales.map(s => (
-                            editingSucursalId === s.id ? (
-                              <tr key={s.id} className="bg-blue-50/50">
-                                <td className="px-4 py-3">
-                                  <div className="flex gap-2">
-                                    <input type="text" value={editSucursalForm.nombre} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, nombre: e.target.value })} className="w-full p-1.5 rounded-md border border-slate-300 bg-white text-sm" placeholder="Nombre" />
-                                    <input type="text" value={editSucursalForm.codigo} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, codigo: e.target.value })} className="w-24 p-1.5 rounded-md border border-slate-300 bg-white text-sm" placeholder="Código" />
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <label className="inline-flex items-center gap-2 text-xs font-bold cursor-pointer">
-                                    <input type="checkbox" checked={editSucursalForm.activa} onChange={(e) => setEditSucursalForm({ ...editSucursalForm, activa: e.target.checked })} />
-                                    {editSucursalForm.activa ? 'Activa' : 'Inactiva'}
-                                  </label>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <Button variant="ghost" size="sm" onClick={() => handleSaveEditSucursal(s.id)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"><Check className="h-4 w-4"/></Button>
-                                    <Button variant="ghost" size="sm" onClick={cancelEditSucursal} className="text-slate-500"><X className="h-4 w-4"/></Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ) : (
-                              <tr key={s.id}>
-                                <td className="px-4 py-3 font-bold">{s.nombre} {s.codigo && <span className="text-muted-foreground ml-2">({s.codigo})</span>}</td>
-                                <td className="px-4 py-3 text-center">
-                                  <button type="button" onClick={() => handleToggleActivaSucursal(s)} className={`text-xs px-2 py-1 rounded-full font-bold transition-colors ${s.activa ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                    {s.activa ? 'Activa' : 'Inactiva'}
-                                  </button>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <Button variant="ghost" size="sm" onClick={() => startEditSucursal(s)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Pencil className="h-4 w-4"/></Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSucursal(s.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">X</Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            )
-                          ))}
-                          {sucursales.length === 0 && (
-                            <tr><td colSpan="3" className="text-center p-4 text-slate-500">No hay sucursales registradas.</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                        ))}
+                        {sucursales.length === 0 && (
+                          <tr><td colSpan="2" className="text-center p-4 text-slate-500">No hay sucursales registradas.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">Las sucursales son fijas; para agregar o cambiar una, pídelo al administrador del sistema.</p>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="tecnicos" className="w-full">

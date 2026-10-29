@@ -341,6 +341,11 @@ describe('hs-erp API (e2e)', () => {
       await http().post(`/api/quotations/${q.id}/status`).set(auth()).send({ estado: 'rechazado', motivoRechazo: 'x' }).expect(400);
       await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ monto: 900 }).expect(400);
       await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ titulo: 'Título nuevo' }).expect(200);
+      // LAUNCH P0-6: an emptied deadline and an unchecked tender are saved, not dropped.
+      const tender = (await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ tieneLicitacion: true, licitacionNumero: 'LP-7', licitacionEntidad: 'GAMC', plazoFinal: '2026-12-01' }).expect(200)).body;
+      expect(tender).toMatchObject({ tieneLicitacion: true, licitacionNumero: 'LP-7', licitacionEntidad: 'GAMC' });
+      const cleared = (await http().patch(`/api/quotations/${q.id}`).set(auth()).send({ tieneLicitacion: false, licitacionNumero: '', licitacionEntidad: '', plazoFinal: '' }).expect(200)).body;
+      expect(cleared).toMatchObject({ tieneLicitacion: false, licitacionNumero: null, licitacionEntidad: null, plazoFinal: null });
     });
   });
 
@@ -370,6 +375,16 @@ describe('hs-erp API (e2e)', () => {
       const reopened = (await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'pendiente' }).expect(200)).body;
       expect(reopened.archivadaAt).toBeNull();
       expect(reopened.asignado.id).toBe(me.id);
+      await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'descartada' }).expect(200);
+    });
+
+    it('clearing who is in charge and the deadline is saved (LAUNCH P0-6)', async () => {
+      const me = (await http().get('/api/auth/me').set(auth()).expect(200)).body;
+      const task = (await http().post('/api/tasks').set(auth()).send({ titulo: 'Revisar NVR', asignadoId: me.id, plazo: '2026-12-01' }).expect(201)).body;
+      expect(task.asignado.id).toBe(me.id);
+      const cleared = (await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ asignadoId: null, plazo: null }).expect(200)).body;
+      expect(cleared).toMatchObject({ asignadoId: null, plazo: null });
+      await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ plazo: 'mañana' }).expect(400);
       await http().patch(`/api/tasks/${task.id}`).set(auth()).send({ estado: 'descartada' }).expect(200);
     });
 
@@ -618,6 +633,10 @@ describe('hs-erp API (e2e)', () => {
       const seen = (await http().get(`/api/schedules/${job.id}`).set(tec()).expect(200)).body;
       expect(seen.project).toMatchObject({ id, cobrado: 100, saldo: 2400, pctCobrado: 4 });
       expect(seen.project.movements).toBeUndefined();
+      // LAUNCH P0-6: "Sin responsable" is saved.
+      await http().patch(`/api/projects/${id}`).set(ventas()).send({ responsableId: tecId }).expect(200);
+      const nobody = (await http().patch(`/api/projects/${id}`).set(ventas()).send({ responsableId: '' }).expect(200)).body;
+      expect(nobody.responsableId).toBeNull();
     });
   });
 
