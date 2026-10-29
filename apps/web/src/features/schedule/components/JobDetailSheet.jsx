@@ -21,7 +21,6 @@ import { MaterialDialog } from './MaterialDialog.jsx';
 import { useJobState } from './useJobState.js';
 import { ROLES } from '@/constants/roles.js';
 import { IncomeDialog } from '@/features/finance';
-import { useProject } from '@/features/projects';
 
 const TECNICO = ROLES.TEC;
 
@@ -30,7 +29,6 @@ export function JobDetailSheet({ jobId, onClose }) {
   const { currentUser, isVentasLevel, readsAll } = useAuth();
   const commercial = isVentasLevel();
   const { data: job, isLoading } = useJob(jobId);
-  const { data: project } = useProject(job?.projectId, Boolean(job?.projectId) && readsAll());
   const { data: users = [] } = useUserDirectory();
   const update = useUpdateJob();
   const jobState = useJobState();
@@ -130,10 +128,16 @@ export function JobDetailSheet({ jobId, onClose }) {
                 <LocationLink address={job.lugar} link={job.mapsLink} />
               </Field>
               {job.project ? (
+                <>
                 <Field label="Proyecto">
                   {readsAll() ? <Link className="text-primary hover:underline" to={`/projects/${job.project.id}`}>{job.project.codigo}</Link> : job.project.codigo}
                   <span className="block text-xs text-muted-foreground">Los cobros van al proyecto</span>
                 </Field>
+                <Field label="Saldo del proyecto">
+                  <Money value={job.project.saldo} kind="owed" />
+                  <span className="block text-xs text-muted-foreground">{job.project.pctCobrado}% cobrado</span>
+                </Field>
+                </>
               ) : (
                 Number(job.monto) > 0 && (
                   <>
@@ -164,8 +168,8 @@ export function JobDetailSheet({ jobId, onClose }) {
                 kind: 'job',
                 id: job.id,
                 title: job.project ? `el proyecto ${job.project.codigo}` : job.cliente?.nombre,
-                saldo: job.projectId ? project?.saldo : Number(job.saldo),
-                cobrado: job.projectId ? project?.cobrado : Number(job.adelanto),
+                saldo: job.project ? job.project.saldo : Number(job.saldo),
+                cobrado: job.project ? job.project.cobrado : Number(job.adelanto),
               }}
               open={paying}
               onOpenChange={setPaying}

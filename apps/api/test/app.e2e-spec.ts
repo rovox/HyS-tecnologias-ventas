@@ -614,6 +614,10 @@ describe('hs-erp API (e2e)', () => {
       const paid = (await http().post(`/api/projects/${id}/cobros`).set(tec()).send({ concepto: 'cobro', monto: 100 }).expect(201)).body;
       await http().patch(`/api/schedules/${job.id}`).set(tec()).send({ estado: 'cancelado' }).expect(403); // SCH-04: he starts and finishes, does not cancel
       expect(paid).toMatchObject({ cobrado: 100, porValidar: 100, saldo: 2400 });
+      // The técnico cannot open the project, but his job brings what the project still owes (LAUNCH P0-5).
+      const seen = (await http().get(`/api/schedules/${job.id}`).set(tec()).expect(200)).body;
+      expect(seen.project).toMatchObject({ id, cobrado: 100, saldo: 2400, pctCobrado: 4 });
+      expect(seen.project.movements).toBeUndefined();
     });
   });
 
