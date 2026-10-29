@@ -4,7 +4,8 @@ export const TIPO_LABEL = { ingreso: 'Ingreso', egreso: 'Egreso', transferencia:
 
 export const CONCEPTOS = {
   // A direct sale is registered from Ventas directas (VD-01), not by hand.
-  ingreso: { devolucion_anticipo: 'Devolución de anticipo', otro: 'Otro ingreso' },
+  // "Saldo inicial": the money each box already had, registered by its operator on first use and validated into it.
+  ingreso: { devolucion_anticipo: 'Devolución de anticipo', saldo_inicial: 'Saldo inicial', otro: 'Otro ingreso' },
   egreso: {
     material: 'Material',
     combustible: 'Combustible',
