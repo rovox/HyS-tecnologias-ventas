@@ -1,10 +1,11 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { validationMessages } from '../src/common/domain/validation-messages';
 import { ROLE_ACCOUNTS, credentialsFor } from '../../../config/users';
 
 describe('hs-erp API (e2e)', () => {
@@ -25,6 +26,7 @@ describe('hs-erp API (e2e)', () => {
         whitelist: true,
         transform: true,
         transformOptions: { enableImplicitConversion: true },
+        exceptionFactory: (errors) => new BadRequestException(validationMessages(errors)),
       }),
     );
     await app.init();
@@ -75,6 +77,12 @@ describe('hs-erp API (e2e)', () => {
     expect(ok.estado).toBe('validado');
     await http().post('/api/inventory/movements').set(as).send({ productoId: 'prd_dvr_8', tipo: 'ajuste', cantidad: 1, sucursalDestinoId: 'suc_central', motivo: 'Sobrante en conteo' }).expect(201);
     await http().post('/api/inventory/movements').set(as).send({ productoId: 'prd_dvr_8', tipo: 'entrada', cantidad: 1, costoUnitario: 1, sucursalDestinoId: 'suc_central' }).expect(201);
+  });
+
+  it('answers validation errors in Spanish', async () => {
+    const res = await request(app.getHttpServer()).post('/api/finance/movements').set('Authorization', `Bearer ${ventasToken}`).send({ tipo: 'egreso', concepto: 'viaticos', monto: 'abc' }).expect(400);
+    expect(res.body.message).toContain('monto: debe ser un número');
+    expect(res.body.message.join(' ')).not.toMatch(/\bmust\b|\bshould\b/);
   });
 
   it('clients have no DELETE route', async () => {

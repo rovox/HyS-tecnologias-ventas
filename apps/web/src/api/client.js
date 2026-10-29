@@ -39,7 +39,10 @@ async function request(method, path, { body, query, token } = {}) {
     }
   }
 
-  const response = await fetch(buildUrl(path, query), init);
+  // Without a connection the browser throws "Failed to fetch": say it in Spanish.
+  const response = await fetch(buildUrl(path, query), init).catch(() => {
+    throw new Error('No se pudo conectar con el servidor. Revisa tu conexión.');
+  });
   if (response.status === 401 && token) endSession();
   const contentType = response.headers.get('Content-Type') || '';
   const payload = contentType.includes('application/json')
@@ -48,7 +51,7 @@ async function request(method, path, { body, query, token } = {}) {
 
   if (!response.ok) {
     const raw = payload?.message;
-    const message = Array.isArray(raw) ? raw.join(', ') : raw || `HTTP ${response.status}`;
+    const message = spanishError(Array.isArray(raw) ? raw.join(', ') : raw, response.status);
     console.error(`[apiClient] ${method} ${path} → ${response.status}`, message, payload);
     const error = new Error(message);
     error.status = response.status;
@@ -56,6 +59,20 @@ async function request(method, path, { body, query, token } = {}) {
     throw error;
   }
   return payload;
+}
+
+/** NestJS's own English messages (a guard, a route that does not exist, a crash) in Spanish; the API's own stay. */
+const NEST_DEFAULTS = [
+  [/^Forbidden resource$/, 'No tienes permiso para esta acción'],
+  [/^Unauthorized$/, 'Tu sesión venció. Vuelve a entrar.'],
+  [/^Internal server error$/, 'Error del servidor. Intenta de nuevo en un momento.'],
+  [/Too Many Requests/, 'Demasiados intentos. Espera un momento.'],
+  [/^Cannot (GET|POST|PUT|PATCH|DELETE) /, 'Esa acción no existe en el servidor'],
+  [/^(Bad Request|Not Found|Conflict)$/, 'No se pudo completar la acción'],
+];
+function spanishError(message, status) {
+  if (!message || typeof message !== 'string') return `Error ${status} del servidor`;
+  return NEST_DEFAULTS.find(([pattern]) => pattern.test(message))?.[1] ?? message;
 }
 
 /** A file from the API (PDF, Excel) with the session token; same 401 handling as every other request. */

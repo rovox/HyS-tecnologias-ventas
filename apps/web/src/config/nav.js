@@ -31,7 +31,7 @@ const operationalMenuSections = [
   {
     title: 'PRINCIPAL',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', allowedRoles: ALL_ROLES },
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Panel', allowedRoles: ALL_ROLES },
     ],
   },
   {

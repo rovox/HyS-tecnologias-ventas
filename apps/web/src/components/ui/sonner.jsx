@@ -10,7 +10,9 @@ const Toaster = ({
     <Sonner
       theme={theme}
       className="toaster group"
+      containerAriaLabel="Notificaciones"
       toastOptions={{
+        closeButtonAriaLabel: "Cerrar aviso",
         classNames: {
           toast:
             "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
