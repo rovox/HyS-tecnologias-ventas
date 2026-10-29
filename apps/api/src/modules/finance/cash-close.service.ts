@@ -2,10 +2,11 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import type { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
-import { businessDayEnd, businessDayStart, businessToday } from '../../common/domain/calendar';
+import { businessDay, businessDayEnd, businessDayStart, businessToday } from '../../common/domain/calendar';
 import { isAdmin, isVentas, ROLES } from '../../common/policy/policy';
 import { CloseCashDto, ListCashClosesQuery } from './dto/cash-close.dto';
-import { closeError, countError, countTotal, differenceMovement, expectedCash, otherMethods } from './domain/cash-close.rules';
+import { closeError, closeRequirements, countError, countTotal, differenceMovement, expectedCash, otherMethods } from './domain/cash-close.rules';
+import { cashBoxBalance } from './domain/finance.rules';
 import { MOVEMENT_DETAIL, presentMovement } from './movement.presenter';
 
 const USER_NAME = { select: { id: true, name: true } } as const;
@@ -61,7 +62,26 @@ export class CashCloseService {
       }),
       this.prisma.directSale.aggregate({ where: { sucursalId, estado: 'registrada', fecha: { gte: businessDayStart(day), lte: businessDayEnd(day) } }, _count: true, _sum: { total: true } }),
     ]);
-    const saldoInicial = previous ? Number(previous.efectivoContado) : null;
+    // Opening cash: the previous count; on the branch's first close, the box balance before the day (it starts with the
+    // `saldo_inicial` loaded with the production database), never a number typed by the cashier.
+    const inBox = { OR: [{ cajaId: box.id }, { cajaDestinoId: box.id }] };
+    const saldoInicial = previous
+      ? Number(previous.efectivoContado)
+      : cashBoxBalance(box.id, await this.prisma.cashMovement.findMany({ where: { estado: 'validado', fecha: { lt: businessDayStart(day) }, ...inBox } }));
+    // A day after the last close with movements and no close of its own must be closed first.
+    const unclosed = previous
+      ? await this.prisma.cashMovement.findFirst({
+          where: {
+            estado: { not: 'anulado' },
+            concepto: { not: 'saldo_inicial' },
+            fecha: { gt: businessDayEnd(previous.dia), lt: businessDayStart(day) },
+            OR: [{ sucursalId }, { cajaId: box.id }, { cajaDestinoId: box.id }],
+          },
+          orderBy: { fecha: 'asc' },
+          select: { fecha: true },
+        })
+      : null;
+    const pendingDay = unclosed ? businessDay(unclosed.fecha) : null;
     // Money still waiting counts when the person holding it works at this branch's counter (not a técnico on a job).
     const counter = new Set((await this.prisma.user.findMany({ where: { sucursalId, active: true, role: { not: ROLES.TEC } }, select: { id: true } })).map((u) => u.id));
     const cash = expectedCash(saldoInicial ?? 0, movements, box.id, counter);
@@ -70,8 +90,8 @@ export class CashCloseService {
       sucursal: { id: sucursal.id, nombre: sucursal.nombre },
       caja: { id: box.id, nombre: box.nombre },
       dia: day,
-      /** null = first close of the branch: the cashier says how much there was. */
       saldoInicial,
+      requisitos: closeRequirements({ dia: day, today: businessToday(new Date()), closed: Boolean(existing), pendingDay }),
       cierreAnterior: previous ? { dia: previous.dia, efectivoContado: Number(previous.efectivoContado) } : null,
       ingresosEfectivo: cash.ingresos,
       egresosEfectivo: cash.egresos,
@@ -91,7 +111,9 @@ export class CashCloseService {
     if (countErr) throw new BadRequestException(countErr);
     const preview = await this.preview(dto.sucursalId, day, user);
     if (preview.cierre) throw new ConflictException(`La caja de ${preview.sucursal.nombre} ya se cerró el ${day}`);
-    const saldoInicial = preview.saldoInicial ?? dto.saldoInicial ?? 0;
+    const missing = preview.requisitos.find((r) => !r.ok);
+    if (missing) throw new BadRequestException(missing.texto);
+    const saldoInicial = preview.saldoInicial;
     const esperado = cents(saldoInicial + preview.ingresosEfectivo - preview.egresosEfectivo);
     const contado = countTotal(dto.conteo);
     const diferencia = cents(contado - esperado);
@@ -143,9 +165,11 @@ export class CashCloseService {
 
   async list(query: ListCashClosesQuery, user: User) {
     if (!isAdmin(user) && !isVentas(user)) throw new ForbiddenException('Sin acceso al cierre de caja');
+    // A seller sees the history of his own branch (LAUNCH P1-2).
+    const sucursalId = isAdmin(user) ? query.sucursalId : user.sucursalId;
     return this.prisma.cierreCaja.findMany({
       where: {
-        ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
+        ...(sucursalId ? { sucursalId } : {}),
         ...(query.desde || query.hasta ? { dia: { ...(query.desde ? { gte: query.desde.slice(0, 10) } : {}), ...(query.hasta ? { lte: query.hasta.slice(0, 10) } : {}) } } : {}),
       },
       include: CLOSE_DETAIL,

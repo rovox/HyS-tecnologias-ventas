@@ -18,13 +18,6 @@ export class CloseCashDto extends CashCloseQuery {
   @IsObject()
   conteo: Record<string, number>;
 
-  @ApiPropertyOptional({ description: 'Only for the first close of a branch (later it is the previous count)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  saldoInicial?: number;
-
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
