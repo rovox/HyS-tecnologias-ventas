@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Browser smoke for direct sales (VD-01/02/03), two live sessions: the Punata seller sells from Inventario › Vender
-// (his branch, a product, "Todo en efectivo") → the stored note opens in the app → Contabilidad sees the sale live in
+// (his branch, a product, paid in cash by default; a second method takes part of it and the first shows the rest) → the stored note opens in the app → Contabilidad sees the sale live in
 // Ventas directas; the branch stock went down and the ledger has the payment validated → the seller has no annul
 // buttons → Contabilidad annuls it with the red bin and a reason (stock back, note marked ANULADA) and corrects another
 // one ("Corregir" opens the same sale pre-filled; the new one is linked).
@@ -61,8 +61,13 @@ async function sell(s, name, qty) {
   await s.page.getByRole('option', { name: /UTP-CAT6/ }).first().click(T);
   await dlg.getByLabel('Cantidad 1').fill(String(qty));
   await dlg.getByLabel('Nombre en la nota').fill(name);
-  await dlg.getByRole('button', { name: 'Todo en efectivo' }).click(T);
-  await dlg.getByText('Cuadra con los pagos').waitFor(T);
+  // One method by default for the whole total; "Agregar medio" takes part of it and the first one shows the rest.
+  const total = (await dlg.getByRole('button', { name: /^Vender Bs/ }).innerText()).replace('Vender ', '');
+  if ((await dlg.getByLabel('Monto 1').innerText()) !== total) throw new Error(`first payment is not the total (${total})`);
+  await dlg.getByRole('button', { name: 'Agregar medio' }).click(T);
+  await dlg.getByLabel('Monto 2').fill('1');
+  if ((await dlg.getByLabel('Monto 1').innerText()) === total) throw new Error('the first payment did not take the rest');
+  await dlg.getByLabel('Quitar pago 2').click(T);
   await dlg.getByRole('button', { name: /^Vender Bs/ }).click(T);
 }
 
@@ -126,7 +131,6 @@ await step('"Corregir" annuls and opens the same sale pre-filled; the new one is
   await dlg.waitFor(T);
   if ((await dlg.getByLabel('Nombre en la nota').inputValue()) !== second) throw new Error('the correction is not pre-filled');
   await dlg.getByLabel('Precio 1').fill('6.5');
-  await dlg.getByRole('button', { name: 'Todo en efectivo' }).click(T);
   await dlg.getByRole('button', { name: /^Vender Bs/ }).click(T);
   await p.getByText(/^Venta NV-\d+ registrada/).first().waitFor(T);
   await closeViewer(p);

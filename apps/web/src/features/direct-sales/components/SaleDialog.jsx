@@ -54,6 +54,7 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
       lines: replaces?.items?.length
         ? replaces.items.map((i) => ({ ...emptyLine(), productoId: i.productoId, cantidad: String(Number(i.cantidad)), precioUnitario: String(Number(i.precioUnitario)), descuento: Number(i.descuento) ? String(Number(i.descuento)) : '' }))
         : [emptyLine()],
+      // The first payment is always the rest of the total; only the added ones take an amount.
       pagos: [{ medio: 'efectivo', monto: '' }],
     });
   }, [open, replaces, currentUser]);
@@ -69,8 +70,10 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
   const setLine = (key, patch) => set({ lines: form.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) });
   const setPago = (i, patch) => set({ pagos: form.pagos.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const { subtotal, total } = totalsOf(form.lines, form.descuento);
-  const paid = cents(form.pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0));
-  const pending = cents(total - paid);
+  const others = cents(form.pagos.slice(1).reduce((s, p) => s + (Number(p.monto) || 0), 0));
+  const first = cents(total - others);
+  const pagos = form.pagos.map((p, i) => ({ medio: p.medio, monto: i === 0 ? first : Number(p.monto) || 0 }));
+  const over = first < 0;
   const productOf = (id) => products.find((p) => p.id === id);
 
   function pickProduct(key, productoId) {
@@ -89,7 +92,7 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
     if (!lines.length) return notify.error('Agrega al menos un producto');
     const short = lines.find((l) => Number(l.cantidad) > stockOf(productOf(l.productoId)));
     if (short) return notify.error(`No hay stock suficiente de ${productOf(short.productoId)?.nombre} en esta sucursal`);
-    if (pending !== 0) return notify.error(pending > 0 ? `Faltan ${formatBs(pending)} por cobrar` : `Los pagos pasan el total por ${formatBs(-pending)}`);
+    if (over) return notify.error(`Los otros medios pasan el total por ${formatBs(-first)}`);
     try {
       const sale = await create.mutateAsync({
         sucursalId: form.sucursalId,
@@ -99,7 +102,7 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
         clienteNit: form.clienteNit.trim() || undefined,
         descuento: Number(form.descuento) || 0,
         items: lines.map((l) => ({ productoId: l.productoId, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario) || 0, descuento: Number(l.descuento) || 0 })),
-        pagos: form.pagos.filter((p) => Number(p.monto) > 0).map((p) => ({ medio: p.medio, monto: Number(p.monto) })),
+        pagos: pagos.filter((p) => p.monto > 0),
         ...(replaces ? { reemplazaAId: replaces.id } : {}),
       });
       notify.success(`Venta ${sale.codigo} registrada`, { description: 'El stock bajó y el cobro ya está en caja' });
@@ -180,22 +183,22 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
                   <select aria-label={`Medio de pago ${i + 1}`} className={cn(select, 'col-span-6')} value={p.medio} onChange={(e) => setPago(i, { medio: e.target.value })}>
                     {Object.entries(METHODS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                   </select>
-                  <Input className="col-span-5" aria-label={`Monto ${i + 1}`} type="number" min="0" step="0.01" value={p.monto} onChange={(e) => setPago(i, { monto: e.target.value })} />
-                  <Button type="button" variant="ghost" size="icon" className="col-span-1 h-9 w-9 text-danger-fg" aria-label={`Quitar pago ${i + 1}`} disabled={form.pagos.length === 1} onClick={() => set({ pagos: form.pagos.filter((_, j) => j !== i) })}>
+                  {i === 0 ? (
+                    <output aria-label="Monto 1" className={cn('col-span-5 flex h-9 items-center justify-end rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums', over && 'font-semibold text-danger-fg')}>
+                      {formatBs(first)}
+                    </output>
+                  ) : (
+                    <Input className="col-span-5" aria-label={`Monto ${i + 1}`} type="number" min="0" step="0.01" value={p.monto} onChange={(e) => setPago(i, { monto: e.target.value })} />
+                  )}
+                  <Button type="button" variant="ghost" size="icon" className="col-span-1 h-9 w-9 text-danger-fg" aria-label={`Quitar pago ${i + 1}`} disabled={i === 0} onClick={() => set({ pagos: form.pagos.filter((_, j) => j !== i) })}>
                     <Trash2 />
                   </Button>
                 </div>
               ))}
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(METHODS).map(([k, label]) => (
-                  <Button key={k} type="button" size="sm" variant="outline" disabled={!(total > 0)} onClick={() => set({ pagos: [{ medio: k, monto: String(total) }] })}>
-                    Todo en {label.toLowerCase()}
-                  </Button>
-                ))}
-                <Button type="button" size="sm" variant="ghost" onClick={() => set({ pagos: [...form.pagos, { medio: 'qr', monto: pending > 0 ? String(pending) : '' }] })}>
-                  <Plus /> Otro medio
-                </Button>
-              </div>
+              {form.pagos.length > 1 && <p className="text-xs text-muted-foreground">El primer medio cobra lo que falta del total.</p>}
+              <Button type="button" size="sm" variant="outline" onClick={() => set({ pagos: [...form.pagos, { medio: form.pagos.some((x) => x.medio === 'qr') ? 'transferencia' : 'qr', monto: '' }] })}>
+                <Plus /> Agregar medio
+              </Button>
             </div>
             <dl className="space-y-1 rounded-md border border-border bg-muted/40 p-3 text-sm">
               <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{formatBs(subtotal)}</dd></div>
@@ -204,16 +207,18 @@ export function SaleDialog({ open, onOpenChange, replaces, onSaved }) {
                 <dd><Input id="sale-desc" type="number" min="0" step="0.01" className="h-8 w-28 text-right" value={form.descuento} onChange={(e) => set({ descuento: e.target.value })} /></dd>
               </div>
               <div className="flex justify-between text-base font-bold"><dt>Total</dt><dd className="tabular-nums">{formatBs(total)}</dd></div>
-              <div className={cn('flex justify-between font-semibold', pending === 0 ? 'text-success-fg' : 'text-danger-fg')}>
-                <dt>{pending === 0 ? 'Cuadra con los pagos' : pending > 0 ? 'Falta cobrar' : 'Pagos de más'}</dt>
-                <dd className="tabular-nums">{pending === 0 ? '✓' : formatBs(Math.abs(pending))}</dd>
-              </div>
+              {over && (
+                <div className="flex justify-between font-semibold text-danger-fg">
+                  <dt>Pagos de más</dt>
+                  <dd className="tabular-nums">{formatBs(-first)}</dd>
+                </div>
+              )}
             </dl>
           </section>
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" variant="success" disabled={create.isPending || !(total > 0) || pending !== 0}>
+            <Button type="submit" variant="success" disabled={create.isPending || !(total > 0) || over}>
               {create.isPending ? 'Registrando…' : `Vender ${formatBs(total)}`}
             </Button>
           </DialogFooter>

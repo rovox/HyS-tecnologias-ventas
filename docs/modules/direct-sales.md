@@ -32,7 +32,7 @@ Vocabulario de `docs/domain/business-design.md` §4.3. Decisiones del dueño (20
 
 | # | Tarea | Rol | Pasos (≤ 5) | Confirmación / notificación | Resultado y dónde se actualiza |
 |---|---|---|---|---|---|
-| 1 | Vender | Ventas, Gerencia | 1. Nueva venta (o Inventario › Vender) 2. productos y cantidades 3. cliente (opcional) 4. "Todo en efectivo" u otros medios hasta que cuadre 5. Vender | toast "Venta NV-0445 registrada"; se abre la nota | stock de la sucursal, libro (cobros validados en su caja), cajas, lista de ventas — en vivo |
+| 1 | Vender | Ventas, Gerencia | 1. Nueva venta (o Inventario › Vender) 2. productos y cantidades 3. cliente (opcional) 4. medio de pago (uno por defecto por el total; "Agregar medio" reparte y el primero cobra lo que falta) 5. Vender | toast "Venta NV-0445 registrada"; se abre la nota | stock de la sucursal, libro (cobros validados en su caja), cajas, lista de ventas — en vivo |
 | 2 | Anular | Gerencia | 1. 🗑 en la fila 2. motivo 3. Anular | diálogo con el efecto | stock devuelto, cobros anulados, nota con copia ANULADA |
 | 3 | Corregir | Gerencia | 1. ✏️ en la fila 2. motivo (anula) 3. la venta nueva se abre con lo mismo 4. ajustar y Vender | toasts | la anulada dice "Corregida en NV-…", la nueva "Corrige NV-…" |
 

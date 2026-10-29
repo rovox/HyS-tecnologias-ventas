@@ -656,6 +656,8 @@ describe('hs-erp API (e2e)', () => {
       expect(none.body.message).toMatch(/Stock insuficiente/);
       const short = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }])).expect(400);
       expect(short.body.message).toMatch(/no suman el total/);
+      const over = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }, { medio: 'qr', monto: 3 }])).expect(400);
+      expect(over.body.message).toMatch(/no suman el total/);
       const tecToken = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico))).body.accessToken;
       await http().post('/api/direct-sales').set(H(tecToken)).send(sale('suc_central', 1, [{ medio: 'efectivo', monto: 7 }])).expect(403);
     });
