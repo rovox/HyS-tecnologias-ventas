@@ -5,7 +5,7 @@
 //   node scripts/smoke-projects.mjs [--web http://localhost:3000] [--api http://localhost:3001/api] [--shots dir]
 //
 // Creates its own approved quotation through the API. Exit code 1 when a step fails or the API answers 4xx/5xx
-// (the expected 400 of closing with a balance is allowed).
+// (the expected 400s of closing with a balance and of a payment above it are allowed).
 
 import { ROLE_ACCOUNTS, credentialsFor } from '../config/users.js';
 
@@ -50,7 +50,7 @@ async function session() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror ${e.message}`));
   page.on('response', (r) => {
-    const expected = r.status() === 400 && r.url().endsWith('/estado');
+    const expected = r.status() === 400 && (r.url().endsWith('/estado') || r.url().endsWith('/cobros'));
     if (r.url().startsWith(API) && r.status() >= 400 && !expected) errors.push(`${r.status()} ${r.request().method()} ${r.url().replace(API, '')}`);
   });
   return { page, errors };
@@ -92,11 +92,13 @@ await step('register an advance', async () => {
   await p.getByText('Cobro de Bs 1.000,00 registrado').waitFor(T);
   if (!(await saldoOf(p)).includes('2.000,00')) throw new Error(`saldo: ${await saldoOf(p)}`);
 });
-await step('a payment above the balance is blocked in the form', async () => {
+await step('a payment above the balance is refused by the API, with the reason', async () => {
   await p.getByRole('button', { name: 'Registrar cobro' }).click(T);
   await p.getByLabel('Monto (Bs) *').fill('5000');
-  await p.getByText(/Supera el saldo/).waitFor(T);
+  await p.getByRole('dialog').getByRole('button', { name: 'Registrar' }).click(T);
+  await p.getByText(/supera el saldo pendiente/).first().waitFor(T);
   await p.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click(T);
+  if (!(await saldoOf(p)).includes('2.000,00')) throw new Error(`saldo changed: ${await saldoOf(p)}`);
 });
 await step('add a job to the cronograma', async () => {
   await p.getByRole('button', { name: 'Nuevo trabajo' }).click(T);

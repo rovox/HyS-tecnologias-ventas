@@ -56,9 +56,9 @@ function useLedgerMutation(fn) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => {
-      for (const key of ['movement', 'project', 'schedule', 'relevamiento', 'client']) queryClient.invalidateQueries({ queryKey: [key] });
-    },
+    // Returned, so mutateAsync resolves after the balances (job, project, client) are fetched again: a dialog that
+    // closes on success never leaves the old saldo on screen.
+    onSuccess: () => Promise.all(['movement', 'project', 'schedule', 'relevamiento', 'client'].map((key) => queryClient.invalidateQueries({ queryKey: [key] }))),
   });
 }
 

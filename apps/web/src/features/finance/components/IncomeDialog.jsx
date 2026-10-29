@@ -41,7 +41,8 @@ export function IncomeDialog({ target, open, onOpenChange }) {
   const saldo = target.saldo;
   const monto = Number(form.monto);
   const reducesBalance = !['adicional', 'asistencia'].includes(form.concepto);
-  const error = !(monto > 0) ? 'Ingresa el monto' : reducesBalance && saldo !== undefined && monto > saldo ? `Supera el saldo (${formatBs(saldo)}): registra el excedente como adicional` : null;
+  // Whether it fits the balance is the API's call (it answers "registra el excedente como adicional").
+  const error = !(monto > 0) ? 'Ingresa el monto' : null;
   const holder = people.find((p) => p.id === form.recibidoPorId);
 
   async function submit(e) {

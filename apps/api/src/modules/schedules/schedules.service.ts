@@ -23,7 +23,16 @@ const include = {
   tecnico: { select: { id: true, name: true } },
   quotation: { select: { id: true, numero: true, titulo: true, monto: true } },
   categoria: { select: { id: true, label: true } },
-  project: { select: { id: true, codigo: true, estado: true } },
+  // The project's money, so a job of a project (also for a técnico, who cannot open the project) shows what is owed.
+  project: {
+    select: {
+      id: true,
+      codigo: true,
+      estado: true,
+      montoOficial: true,
+      movements: { where: { tipo: 'ingreso', estado: { not: 'anulado' } }, select: { tipo: true, concepto: true, monto: true, estado: true } },
+    },
+  },
   movements: {
     where: { tipo: 'ingreso' },
     select: { id: true, concepto: true, monto: true, estado: true, metodo: true, nota: true, fecha: true, tipo: true },
@@ -33,14 +42,28 @@ const include = {
 
 type ScheduleRow = Prisma.ScheduleGetPayload<{ include: typeof include }>;
 
+/** What a project owes, from the ledger (same math as the project screen). */
+function projectMoney({ movements, montoOficial, ...project }: NonNullable<ScheduleRow['project']>) {
+  const monto = Number(montoOficial);
+  const { cobrado } = incomeOf(movements);
+  return { ...project, monto, cobrado, saldo: balanceOf(monto, cobrado, project.estado === 'anulado'), pctCobrado: monto > 0 ? Math.min(100, Math.round((cobrado / monto) * 100)) : 0 };
+}
+
 /**
- * A stand-alone job owes its own amount, computed from the ledger; a job of a project carries no money (the project
- * does). `adelanto` and `saldo` keep their names for the cronograma screens.
+ * A stand-alone job owes its own amount, computed from the ledger; a job of a project carries no money of its own: its
+ * `project` brings the project's cobrado, saldo and % cobrado. `adelanto` and `saldo` keep their names for the
+ * cronograma screens.
  */
 function present(row: ScheduleRow) {
-  const { movements, ...job } = row;
+  const { movements, project, ...job } = row;
   const cobrado = row.projectId ? 0 : incomeOf(movements).cobrado;
-  return { ...job, adelanto: cobrado, saldo: row.projectId ? 0 : balanceOf(Number(row.monto), cobrado, row.estado === 'cancelado'), movements };
+  return {
+    ...job,
+    project: project ? projectMoney(project) : null,
+    adelanto: cobrado,
+    saldo: row.projectId ? 0 : balanceOf(Number(row.monto), cobrado, row.estado === 'cancelado'),
+    movements,
+  };
 }
 
 /** Jobs of a project move the project's lists and totals too. */
