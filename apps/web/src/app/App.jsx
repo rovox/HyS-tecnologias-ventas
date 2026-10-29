@@ -190,7 +190,7 @@ function App() {
               <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center p-4">
                 <h1 className="text-4xl font-bold mb-4 text-primary">404</h1>
                 <p className="text-muted-foreground font-semibold mb-6">La página no existe o no tienes permiso.</p>
-                <a href="/dashboard" className="text-primary hover:underline font-bold min-h-11 inline-flex items-center">Volver al Dashboard</a>
+                <a href="/dashboard" className="text-primary hover:underline font-bold min-h-11 inline-flex items-center">Volver al panel</a>
               </div>
             } />
           </Routes>

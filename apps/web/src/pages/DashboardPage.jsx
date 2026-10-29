@@ -18,7 +18,7 @@ const SalesActivityCharts = lazy(() => import('@/components/SalesActivityCharts.
  * the commercial metrics and, for Gerencia, the latest activity (Panel de control and Reportes merged here).
  */
 const DashboardPage = () => {
-  useDocumentTitle('Dashboard');
+  useDocumentTitle('Panel');
   const navigate = useNavigate();
   const { currentUser, isAdmin, isVentasLevel, isSeguridad } = useAuth();
   const commercial = isVentasLevel();

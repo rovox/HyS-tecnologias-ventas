@@ -51,7 +51,7 @@ const punataStock = async () => (await get(conta, '/inventory/products')).find((
 const client = `Cliente smoke ${Date.now()}`;
 const row = (page, text) => page.locator('tr', { hasText: text });
 // The PDF iframe may take the focus (Escape would not reach the dialog): close the viewer with its button.
-const closeViewer = (page) => page.getByRole('dialog').filter({ hasText: /Nota de venta NV-/ }).getByRole('button', { name: 'Close' }).click(T);
+const closeViewer = (page) => page.getByRole('dialog').filter({ hasText: /Nota de venta NV-/ }).getByRole('button', { name: 'Cerrar', exact: true }).last().click(T);
 let stockBefore = 0;
 
 async function sell(s, name, qty) {

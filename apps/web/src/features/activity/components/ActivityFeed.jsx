@@ -1,11 +1,13 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRelative } from '@/shared/lib/format.js';
 import { useActivityFeed } from '../api.js';
+import { verbOf } from '../verbs.js';
 
 /** What the records are called, for "who did what" (entity of the audit row). */
 const ENTITY = {
-  quotation: 'cotización', project: 'proyecto', schedule: 'trabajo', movement: 'movimiento', client: 'cliente', task: 'tarea',
-  stock: 'inventario', product: 'producto', directSale: 'venta directa', cashClose: 'cierre de caja', relevamiento: 'visita', pedido_interno: 'pedido interno',
+  quotation: 'Cotización', project: 'Proyecto', schedule: 'Trabajo', movement: 'Movimiento', client: 'Cliente', task: 'Tarea',
+  stock: 'Inventario', product: 'Producto', directSale: 'Venta directa', cashClose: 'Cierre de caja', relevamiento: 'Visita', pedido_interno: 'Pedido interno',
+  solicitud_web: 'Solicitud web', category: 'Categoría', payment: 'Cobro', user: 'Usuario',
 };
 
 /** The latest changes of the whole app (Gerencia, on the dashboard): who, what, when — the old control panel's audit. */
@@ -19,7 +21,7 @@ export function ActivityFeed() {
       <ul className="space-y-1.5 text-sm">
         {data.map((a) => (
           <li key={a.id} className="flex justify-between gap-2">
-            <span className="truncate"><span className="font-medium">{a.user?.name || 'Sistema'}</span> · {a.action.split('.').pop()} {ENTITY[a.entityType] || a.entityType}</span>
+            <span className="truncate"><span className="font-medium">{a.user?.name || 'Sistema'}</span> · {ENTITY[a.entityType] ? `${ENTITY[a.entityType]}: ` : ''}{verbOf(a.action)}</span>
             <span className="shrink-0 text-xs text-muted-foreground">{formatRelative(a.at)}</span>
           </li>
         ))}
