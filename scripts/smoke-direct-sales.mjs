@@ -34,7 +34,7 @@ async function session(email) {
   all.push(errors);
   return { page, token: login.accessToken, user: login.user };
 }
-const seller = await session('wilson@hscontrol.com'); // VENTAS, sucursal Punata
+const seller = await session('giovanny.collao@hys.com'); // VENTAS, sucursal Punata
 const conta = await session(ROLE_ACCOUNTS.contabilidad);
 const steps = [];
 let failed = false;

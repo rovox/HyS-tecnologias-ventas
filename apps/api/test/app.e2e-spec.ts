@@ -643,7 +643,7 @@ describe('hs-erp API (e2e)', () => {
   describe('direct sales per branch (VD-01)', () => {
     const http = () => request(app.getHttpServer());
     const H = (t: string) => ({ Authorization: `Bearer ${t}` });
-    let wilson = '';
+    let punataSeller = '';
     let conta = '';
     const stock = async () => (await http().get('/api/inventory/products').set(H(ventasToken)).expect(200)).body.find((p: { id: string }) => p.id === 'prd_utp6').stock;
     const box = async (id: string) => (await http().get('/api/finance/cajas').set(H(conta)).expect(200)).body.find((b: { id: string }) => b.id === id).saldo;
@@ -652,13 +652,13 @@ describe('hs-erp API (e2e)', () => {
     });
 
     beforeAll(async () => {
-      wilson = (await http().post('/api/auth/login').send(credentialsFor('wilson@hscontrol.com')).expect(201)).body.accessToken;
+      punataSeller = (await http().post('/api/auth/login').send(credentialsFor('giovanny.collao@hys.com')).expect(201)).body.accessToken;
       conta = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.contabilidad)).expect(201)).body.accessToken;
     });
 
     it('a seller sells from his branch: stock leaves it and each payment is validated into the box of its method', async () => {
       const [before, chica, qr] = [await stock(), await box('caja_chica_punata'), await box('caja_qr')];
-      const sold = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 3, [{ medio: 'efectivo', monto: 15 }, { medio: 'qr', monto: 6 }])).expect(201)).body;
+      const sold = (await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 3, [{ medio: 'efectivo', monto: 15 }, { medio: 'qr', monto: 6 }])).expect(201)).body;
       expect(sold).toMatchObject({ estado: 'registrada', total: '21', clienteNombre: 'JOSE TICONA', sucursal: { id: 'suc_punata' } });
       expect(sold.codigo).toMatch(/^NV-\d{4,}$/);
       expect(sold.tieneNota).toBe(true);
@@ -673,30 +673,30 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('sells from Central too, never from another branch, never without stock or with payments that do not add up', async () => {
-      await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_central', 1, [{ medio: 'efectivo', monto: 7 }])).expect(201);
-      await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_quillacollo', 1, [{ medio: 'efectivo', monto: 7 }])).expect(403);
-      const none = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 999999, [{ medio: 'efectivo', monto: 6999993 }])).expect(400);
+      await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_central', 1, [{ medio: 'efectivo', monto: 7 }])).expect(201);
+      await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_quillacollo', 1, [{ medio: 'efectivo', monto: 7 }])).expect(403);
+      const none = await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 999999, [{ medio: 'efectivo', monto: 6999993 }])).expect(400);
       expect(none.body.message).toMatch(/Stock insuficiente/);
-      const short = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }])).expect(400);
+      const short = await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }])).expect(400);
       expect(short.body.message).toMatch(/no suman el total/);
-      const over = await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }, { medio: 'qr', monto: 3 }])).expect(400);
+      const over = await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 5 }, { medio: 'qr', monto: 3 }])).expect(400);
       expect(over.body.message).toMatch(/no suman el total/);
       const tecToken = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.tecnico))).body.accessToken;
       await http().post('/api/direct-sales').set(H(tecToken)).send(sale('suc_central', 1, [{ medio: 'efectivo', monto: 7 }])).expect(403);
     });
 
     it('is annulled only by Gerencia with a reason: stock comes back, payments leave the boxes; "Corregir" links a new sale once', async () => {
-      const sold = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 2, [{ medio: 'efectivo', monto: 14 }])).expect(201)).body;
+      const sold = (await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 2, [{ medio: 'efectivo', monto: 14 }])).expect(201)).body;
       await http().patch(`/api/finance/movements/${sold.cobros[0].id}`).set(H(conta)).send({ monto: 1 }).expect(400);
       await http().post(`/api/finance/movements/${sold.cobros[0].id}/anular`).set(H(conta)).send({ motivo: 'x' }).expect(400);
       const [before, chica] = [await stock(), await box('caja_chica_punata')];
-      await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(wilson)).send({ motivo: 'Precio mal cargado' }).expect(403);
+      await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(punataSeller)).send({ motivo: 'Precio mal cargado' }).expect(403);
       await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: '' }).expect(400);
       const annulled = (await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: 'Precio mal cargado' }).expect(201)).body;
       expect(annulled).toMatchObject({ estado: 'anulada', motivoAnulacion: 'Precio mal cargado' });
       expect(annulled.cobros.every((c: { estado: string }) => c.estado === 'anulado')).toBe(true);
       // VD-03: the stored note is served as it was; the annulled sale shows its ANULADA copy, the original stays.
-      const pdf = (q = '') => http().get(`/api/direct-sales/${sold.id}/nota.pdf${q}`).set(H(wilson)).buffer(true)
+      const pdf = (q = '') => http().get(`/api/direct-sales/${sold.id}/nota.pdf${q}`).set(H(punataSeller)).buffer(true)
         .parse((res, cb) => { const chunks: Buffer[] = []; res.on('data', (c: Buffer) => chunks.push(c)); res.on('end', () => cb(null, Buffer.concat(chunks))); });
       const copy = await pdf().expect(200);
       expect(copy.headers['content-disposition']).toMatch(/-ANULADA\.pdf/);
@@ -706,10 +706,10 @@ describe('hs-erp API (e2e)', () => {
       expect((await stock()).suc_punata).toBe(before.suc_punata + 2);
       expect(await box('caja_chica_punata')).toBeCloseTo(chica - 14, 2);
       await http().post(`/api/direct-sales/${sold.id}/anular`).set(H(conta)).send({ motivo: 'otra vez' }).expect(400);
-      const fixed = (await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 2, [{ medio: 'efectivo', monto: 12 }], { items: [{ productoId: 'prd_utp6', cantidad: 2, precioUnitario: 6 }], reemplazaAId: sold.id })).expect(201)).body;
+      const fixed = (await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 2, [{ medio: 'efectivo', monto: 12 }], { items: [{ productoId: 'prd_utp6', cantidad: 2, precioUnitario: 6 }], reemplazaAId: sold.id })).expect(201)).body;
       expect(fixed.reemplazaA).toEqual({ id: sold.id, numero: sold.numero });
-      await http().post('/api/direct-sales').set(H(wilson)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 7 }], { reemplazaAId: sold.id })).expect(400);
-      const list = (await http().get(`/api/direct-sales?sucursalId=suc_punata&estado=anulada`).set(H(wilson)).expect(200)).body;
+      await http().post('/api/direct-sales').set(H(punataSeller)).send(sale('suc_punata', 1, [{ medio: 'efectivo', monto: 7 }], { reemplazaAId: sold.id })).expect(400);
+      const list = (await http().get(`/api/direct-sales?sucursalId=suc_punata&estado=anulada`).set(H(punataSeller)).expect(200)).body;
       expect(list.find((s: { id: string }) => s.id === sold.id).reemplazadaPor).toEqual({ id: fixed.id, numero: fixed.numero });
     });
   });
@@ -717,21 +717,21 @@ describe('hs-erp API (e2e)', () => {
   describe('daily cash close per branch (FIN-04)', () => {
     const http = () => request(app.getHttpServer());
     const H = (t: string) => ({ Authorization: `Bearer ${t}` });
-    let wilson = '';
+    let punataSeller = '';
     let conta = '';
     beforeAll(async () => {
-      wilson = (await http().post('/api/auth/login').send(credentialsFor('wilson@hscontrol.com')).expect(201)).body.accessToken;
+      punataSeller = (await http().post('/api/auth/login').send(credentialsFor('giovanny.collao@hys.com')).expect(201)).body.accessToken;
       conta = (await http().post('/api/auth/login').send(credentialsFor(ROLE_ACCOUNTS.contabilidad)).expect(201)).body.accessToken;
     });
 
     it('expects the cash of the day: a cash sale in the branch raises it, a QR one does not', async () => {
       const today = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
-      const preview = async () => (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${today}`).set(H(wilson)).expect(200)).body;
+      const preview = async () => (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${today}`).set(H(punataSeller)).expect(200)).body;
       const before = await preview();
       expect(before).toMatchObject({ caja: { id: 'caja_chica_punata' }, dia: today });
       const sale = (pagos: object[]) => ({ sucursalId: 'suc_punata', items: [{ productoId: 'prd_utp6', cantidad: 1, precioUnitario: 7 }], pagos });
-      await http().post('/api/direct-sales').set(H(wilson)).send(sale([{ medio: 'efectivo', monto: 7 }])).expect(201);
-      await http().post('/api/direct-sales').set(H(wilson)).send(sale([{ medio: 'qr', monto: 7 }])).expect(201);
+      await http().post('/api/direct-sales').set(H(punataSeller)).send(sale([{ medio: 'efectivo', monto: 7 }])).expect(201);
+      await http().post('/api/direct-sales').set(H(punataSeller)).send(sale([{ medio: 'qr', monto: 7 }])).expect(201);
       const after = await preview();
       expect(after.efectivoEsperado).toBeCloseTo(before.efectivoEsperado + 7, 2);
       expect(after.qr).toBeCloseTo(before.qr + 7, 2);
@@ -740,14 +740,14 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('an advance to account for needs who, what for and until when; it shows as pending until Gerencia settles it', async () => {
-      const wilsonId = (await http().get('/api/auth/me').set(H(wilson)).expect(200)).body.id;
+      const wilsonId = (await http().get('/api/auth/me').set(H(punataSeller)).expect(200)).body.id;
       const base = { tipo: 'egreso', concepto: 'anticipo_por_rendir', monto: 300, pagadoPor: 'empresa', sucursalId: 'suc_punata' };
       await http().post('/api/finance/movements').set(H(conta)).send({ ...base, responsableId: wilsonId, fechaLimite: '2026-10-01' }).expect(400);
       const advance = (await http().post('/api/finance/movements').set(H(conta)).send({ ...base, responsableId: wilsonId, asunto: 'Insumos de limpieza', fechaLimite: '2026-10-01' }).expect(201)).body;
       expect(advance).toMatchObject({ asunto: 'Insumos de limpieza', recibidoPor: { id: wilsonId } });
-      const mine = (await http().get('/api/finance/anticipos').set(H(wilson)).expect(200)).body;
+      const mine = (await http().get('/api/finance/anticipos').set(H(punataSeller)).expect(200)).body;
       expect(mine.find((a: { id: string }) => a.id === advance.id).diasAtraso).toBeGreaterThan(0);
-      await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(wilson)).send({}).expect(403);
+      await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(punataSeller)).send({}).expect(403);
       const settled = (await http().post(`/api/finance/movements/${advance.id}/rendido`).set(H(conta)).send({ nota: 'Facturas por Bs 280, devolvió 20' }).expect(201)).body;
       expect(settled.rendidoAt).toBeTruthy();
       expect((await http().get('/api/finance/anticipos').set(H(conta)).expect(200)).body.some((a: { id: string }) => a.id === advance.id)).toBe(false);
@@ -755,7 +755,7 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('the dashboard money: month cobrado ≥ en caja, every box, today per branch with sales and close (DASH-01)', async () => {
-      const r = (await http().get('/api/finance/resumen').set(H(wilson)).expect(200)).body;
+      const r = (await http().get('/api/finance/resumen').set(H(punataSeller)).expect(200)).body;
       expect(r.mes).toMatch(/^\d{4}-\d{2}$/);
       expect(r.cobrado).toBeGreaterThanOrEqual(r.enCaja);
       expect(r.neto).toBeCloseTo(r.enCaja - r.egresosValidados, 2);
@@ -768,9 +768,9 @@ describe('hs-erp API (e2e)', () => {
     it('closes once per branch and day; a difference needs a reason and goes to validation; Gerencia reviews', async () => {
       const day = new Date(Date.UTC(2024, 0, 1) + (Math.floor(Date.now() / 1000) % 700) * 86400e3).toISOString().slice(0, 10);
       const body = { sucursalId: 'suc_punata', dia: day, conteo: { '50': 1, '20': 2 } };
-      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, sucursalId: 'suc_quillacollo' }).expect(403);
-      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, conteo: { '300': 1 } }).expect(400);
-      const pre = (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${day}`).set(H(wilson)).expect(200)).body;
+      await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, sucursalId: 'suc_quillacollo' }).expect(403);
+      await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, conteo: { '300': 1 } }).expect(400);
+      const pre = (await http().get(`/api/finance/cierres/preview?sucursalId=suc_punata&dia=${day}`).set(H(punataSeller)).expect(200)).body;
       // LAUNCH P1-2: the opening cash always comes from the API, with the checklist to close.
       expect(typeof pre.saldoInicial).toBe('number');
       expect(pre.requisitos.map((r: { texto: string }) => r.texto)).toEqual(expect.arrayContaining(['El día ya llegó', 'Este día todavía no está cerrado']));
@@ -778,16 +778,16 @@ describe('hs-erp API (e2e)', () => {
       const counted = 90;
       const diff = Math.round((counted - (opening + pre.ingresosEfectivo - pre.egresosEfectivo)) * 100) / 100;
       if (diff !== 0) {
-        const noReason = await http().post('/api/finance/cierres').set(H(wilson)).send(body).expect(400);
+        const noReason = await http().post('/api/finance/cierres').set(H(punataSeller)).send(body).expect(400);
         expect(noReason.body.message).toMatch(/indica el motivo/);
       }
-      const closed = (await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, motivoDiferencia: 'Se pagó un taxi sin registrar' }).expect(201)).body;
-      expect(closed).toMatchObject({ dia: day, efectivoContado: '90', sucursal: { id: 'suc_punata' }, cerradoPor: { name: 'Wilson' } });
+      const closed = (await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, motivoDiferencia: 'Se pagó un taxi sin registrar' }).expect(201)).body;
+      expect(closed).toMatchObject({ dia: day, efectivoContado: '90', sucursal: { id: 'suc_punata' }, cerradoPor: { name: 'Giovanny Collao' } });
       expect(Number(closed.diferencia)).toBeCloseTo(diff, 2);
       if (diff !== 0) expect(closed.diferenciaMovimiento).toMatchObject({ estado: 'por_validar', tipo: diff < 0 ? 'egreso' : 'ingreso', monto: String(Math.abs(diff)) });
-      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, motivoDiferencia: 'x' }).expect(409);
+      await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, motivoDiferencia: 'x' }).expect(409);
       // LAUNCH P1-3: Gerencia observes (with a reason) or approves; approving validates the difference into the box.
-      await http().post(`/api/finance/cierres/${closed.id}/aprobar`).set(H(wilson)).expect(403);
+      await http().post(`/api/finance/cierres/${closed.id}/aprobar`).set(H(punataSeller)).expect(403);
       await http().post(`/api/finance/cierres/${closed.id}/observar`).set(H(conta)).send({ motivo: '' }).expect(400);
       const observed = (await http().post(`/api/finance/cierres/${closed.id}/observar`).set(H(conta)).send({ motivo: 'Falta el comprobante del taxi' }).expect(201)).body;
       expect(observed).toMatchObject({ revisionEstado: 'observado', revisionMotivo: 'Falta el comprobante del taxi', revisadoPor: { name: 'Estefany Gonzales' } });
@@ -802,7 +802,7 @@ describe('hs-erp API (e2e)', () => {
       await http().post(`/api/finance/cierres/${closed.id}/aprobar`).set(H(conta)).expect(400);
       await http().post(`/api/finance/cierres/${closed.id}/observar`).set(H(conta)).send({ motivo: 'x' }).expect(400);
       const tomorrow = new Date(Date.now() + 2 * 86400e3).toISOString().slice(0, 10);
-      await http().post('/api/finance/cierres').set(H(wilson)).send({ ...body, dia: tomorrow }).expect(400);
+      await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, dia: tomorrow }).expect(400);
       const list = (await http().get(`/api/finance/cierres?sucursalId=suc_punata&desde=${day}&hasta=${day}`).set(H(conta)).expect(200)).body;
       expect(list.map((c: { id: string }) => c.id)).toEqual([closed.id]);
     });
@@ -991,8 +991,8 @@ describe('hs-erp API (e2e)', () => {
     });
 
     it('a seller buys into Central, moves several products at once, removes from his branch; history and kardex agree (INV-03)', async () => {
-      const wilson = { Authorization: `Bearer ${(await http().post('/api/auth/login').send(credentialsFor('wilson@hscontrol.com')).expect(201)).body.accessToken}` };
-      const lote = (body: object) => http().post('/api/inventory/movements/lote').set(wilson).send(body);
+      const punataSeller = { Authorization: `Bearer ${(await http().post('/api/auth/login').send(credentialsFor('giovanny.collao@hys.com')).expect(201)).body.accessToken}` };
+      const lote = (body: object) => http().post('/api/inventory/movements/lote').set(punataSeller).send(body);
       const two = [{ productoId: 'prd_utp6', cantidad: 4, costoUnitario: 3 }, { productoId: 'prd_dvr_8', cantidad: 1, costoUnitario: 950 }];
       await lote({ tipo: 'entrada', sucursalDestinoId: 'suc_punata', items: two }).expect(403);
       const before = { utp: await stock('prd_utp6'), dvr: await stock('prd_dvr_8') };
