@@ -101,6 +101,7 @@ Volver atrás: `git revert` del cambio en `release` y push (se publica de nuevo 
 | Log con `$ vite build` o `spawn …/esbuild EACCES` | Framework = Vite o comando de build lleno (pasó en la web el 2026-10-28: `build_script` = `build`) | Framework **Other**, build **vacío** (hPanel o la API de Hostinger: `build_script` null) |
 | `ERR_PNPM_IGNORED_BUILDS` y falla la instalación | pnpm 11 bloquea los scripts de Prisma | ya resuelto con `allowBuilds` en `apps/api/pnpm-workspace.yaml`; si reaparece, revisar que la raíz sea `apps/api` |
 | `ERR_PNPM_OUTDATED_LOCKFILE` / `frozen-lockfile` | se subió algo a mano a `migration/backend-api` sin pasar por el workflow | publicar de nuevo desde `release` (el workflow genera `apps/*/pnpm-lock.yaml`) |
+| `Cannot find module '@foliojs-fork/pdfkit'` / `'jszip'` (venta, Excel) | Hostinger corre Node conservando los enlaces simbólicos y pnpm instala con enlaces | `nodeLinker: hoisted` en `apps/api/pnpm-workspace.yaml` (FIX-01) |
 | Página 404 de Hostinger | archivo de entrada vacío | API `dist/main.js`, web `serve-dist.mjs` |
 | `/api/health` 503 | la API no arrancó: falta `JWT_SECRET` o `CORS_ORIGIN`, o variable en minúsculas | revisar variables y **Reiniciar** |
 | `/api/health/db` con `"db":false` | `DATABASE_URL` mal armada (caracteres especiales en la contraseña) | cambiar la contraseña a letras y números, rearmar la URL, reiniciar |

@@ -11,3 +11,8 @@ allowBuilds:
   esbuild: false
   unrs-resolver: false
 strictDepBuilds: false
+
+# Hostinger runs Node with symlinks preserved (LiteSpeed lsnode): pnpm's symlinked layout hides the dependencies of
+# dependencies (pdfmake → @foliojs-fork/pdfkit, exceljs → jszip) and the sale note / Excel export fail. Flat
+# node_modules like npm (FIX-01, 2026-10-30). Local work installs from the monorepo root and is not affected.
+nodeLinker: hoisted
