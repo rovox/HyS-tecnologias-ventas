@@ -791,6 +791,8 @@ describe('hs-erp API (e2e)', () => {
       }
       const closed = (await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, motivoDiferencia: 'Se pagó un taxi sin registrar' }).expect(201)).body;
       expect(closed).toMatchObject({ dia: day, efectivoContado: '90', sucursal: { id: 'suc_punata' }, cerradoPor: { name: 'Giovanny Collao' } });
+      // FIX-02: the count is a JSON column; on MariaDB it must be saved and read back as the same object.
+      expect(closed.conteo).toEqual(body.conteo);
       expect(Number(closed.diferencia)).toBeCloseTo(diff, 2);
       if (diff !== 0) expect(closed.diferenciaMovimiento).toMatchObject({ estado: 'por_validar', tipo: diff < 0 ? 'egreso' : 'ingreso', monto: String(Math.abs(diff)) });
       await http().post('/api/finance/cierres').set(H(punataSeller)).send({ ...body, motivoDiferencia: 'x' }).expect(409);
@@ -968,7 +970,8 @@ describe('hs-erp API (e2e)', () => {
 
     it('lists products with stock per branch; técnico reads but does not manage the catalog', async () => {
       const utp = await stock('prd_utp6');
-      expect(utp.stock.suc_punata).toBeGreaterThanOrEqual(200);
+      // Stock per branch; the direct-sale tests above sell from Punata, so only that it has some (not a seed figure).
+      expect(utp.stock.suc_punata).toBeGreaterThan(0);
       expect(utp).toHaveProperty('stockBajo');
       await http().get('/api/inventory/products').set({ Authorization: `Bearer ${tecToken}` }).expect(200);
       const bare = { codigo: `E2E-${Date.now()}`, nombre: 'Producto E2E', categoriaId: 'computo_comunicacion', tipo: 'equipo', costo: 100 };

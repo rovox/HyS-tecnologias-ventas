@@ -10,7 +10,7 @@ Use the vocabulary of `business-design.md` (Proyecto, Actividad, Asistencia, Mov
 
 | Path | Stack |
 |---|---|
-| `apps/api` | NestJS 11, Prisma 6, MySQL 8 |
+| `apps/api` | NestJS 11, Prisma 6, MariaDB 11.8 (Hostinger; local and CI use the same) |
 | `apps/web` | React 18 (JS, migrating to TS), Vite, Tailwind 3, shadcn/ui |
 
 ## 2. Read before working
