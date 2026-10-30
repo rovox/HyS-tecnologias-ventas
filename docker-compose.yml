@@ -18,22 +18,23 @@ x-app: &app
     - hs_erp_web_node_modules:/app/apps/web/node_modules
 
 services:
+  # Same engine and version as production (Hostinger: MariaDB 11.8). MySQL 8.4 hid a JSON bug there (FIX-02).
   db:
-    image: mysql:8.4
+    image: mariadb:11.8
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: hys_sales
-      MYSQL_USER: hys
-      MYSQL_PASSWORD: hys
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: hys_sales
+      MARIADB_USER: hys
+      MARIADB_PASSWORD: hys
     ports:
       - "3307:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 3s
       timeout: 3s
       retries: 30
     volumes:
-      - hs_erp_mysql:/var/lib/mysql
+      - hs_erp_mariadb:/var/lib/mysql
 
   api:
     <<: *app
@@ -78,7 +79,7 @@ services:
       start_period: 10s
 
 volumes:
-  hs_erp_mysql:
+  hs_erp_mariadb:
   hs_erp_node_modules:
   hs_erp_api_node_modules:
   hs_erp_web_node_modules:

@@ -4,8 +4,8 @@
 
 | Env | Where | Who writes |
 |---|---|---|
-| **local** | Docker MySQL 8.4, `127.0.0.1:3307`, db `hys_sales` | you, freely (`pnpm db:reset`) |
-| production | Hostinger MySQL `u656468476_hys_sales` | **only** reviewed SQL, applied by a human |
+| **local** | Docker MariaDB 11.8 (same as production), `127.0.0.1:3307`, db `hys_sales` | you, freely (`pnpm db:reset`) |
+| production | Hostinger MariaDB 11.8 `u656468476_hys_sales` | **only** reviewed SQL, applied by a human |
 
 All current data is test data. Until go-live, production is not a testing ground: do not deploy to test.
 
@@ -25,6 +25,7 @@ Never run `prisma migrate deploy`, `db push` or `seed` against Hostinger. Never 
 - Every foreign key is a real Prisma relation (missing today: `QuotationSeller.userId`, `SaleJob.asignadoId`).
 - Totals stored on a parent (e.g. `Schedule.saldo`) are **recomputed in the same transaction** that writes the children.
 - Timestamps in UTC; the UI formats to local time.
+- The engine is **MariaDB 11.8** everywhere (production, local Docker, CI). Prisma uses the `mysql` provider with the `@prisma/adapter-mariadb` driver adapter, which must stay on the same version as `@prisma/client`: adapter 6.16.3 with client 6.19.3 failed every write to a `Json` column on MariaDB ("Conversion failed", FIX-02).
 
 ## Reading production safely (backups, schema checks)
 
