@@ -68,6 +68,12 @@ export function StockMovementDialog({ product, tipo, onClose }) {
           <DialogDescription>{product.nombre} (código {product.codigo})</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
+          {/* An entry adds new stock; it was used once to "move" material and Central kept its units (FIX-03). */}
+          {tipo === 'entrada' && (
+            <p className="rounded-md border border-info-border bg-info-soft px-2 py-1.5 text-xs text-info-fg">
+              Suma material nuevo (compra). Para pasar material de una sucursal a otra usa «Mover a otra sucursal». Un error se corrige con «Ajuste de inventario».
+            </p>
+          )}
           {tipo === 'ajuste' && (
             <div className="grid grid-cols-2 gap-2" role="radiogroup">
               {[['faltante', 'Faltante (baja)'], ['sobrante', 'Sobrante (sube)']].map(([k, label]) => (

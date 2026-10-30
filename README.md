@@ -94,7 +94,7 @@ Lista completa: [`docs/getting-started/demo-accounts.md`](./docs/getting-started
 
 ```
 apps/web  React (pages → features/hooks → services)   →  HTTP + SSE realtime
-apps/api  NestJS (controllers → services → domain/)    →  Prisma → MySQL 8
+apps/api  NestJS (controllers → services → domain/)    →  Prisma → MariaDB 11.8
 ```
 
 Reglas: [`docs/rules/architecture.md`](./docs/rules/architecture.md). Negocio y vocabulario: [`docs/domain/business-design.md`](./docs/domain/business-design.md).

@@ -19,17 +19,18 @@ jobs:
     permissions:
       contents: read
     services:
-      mysql:
-        image: mysql:8.4
+      # Same engine and version as production (Hostinger: MariaDB 11.8), FIX-02.
+      mariadb:
+        image: mariadb:11.8
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: ci
-          MYSQL_USER: ci
-          MYSQL_PASSWORD: ci
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: ci
+          MARIADB_USER: ci
+          MARIADB_PASSWORD: ci
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uci -pci"
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20

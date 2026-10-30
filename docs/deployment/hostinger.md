@@ -41,7 +41,7 @@ hPanel → Sitios web → (sitio) → **Despliegues / Configuración de Git**. E
 | `JWT_SECRET` | `openssl rand -hex 32` (obligatoria; la API no arranca sin ella) |
 | `CORS_ORIGIN` | `https://white-goat-213580.hostingersite.com` — con dominio propio, separados por coma: `https://white-goat-213580.hostingersite.com,https://erp.tudominio.com` |
 | `UPLOAD_DIR` | `/home/u656468476/hys-uploads/quotations` (fuera del repositorio: cada despliegue reemplaza la carpeta del sitio). Las fotos de visitas van en su subcarpeta `relevamientos/` |
-| `WEB_LEADS_KEY` | `openssl rand -hex 32`; el mismo valor en WordPress (`HS_ERP_LEADS_KEY`) para el formulario web |
+| `WEB_LEADS_KEY` | `openssl rand -hex 32`; el mismo valor en WordPress (`HS_ERP_LEADS_KEY`) para el formulario web. En `wp-config.php` de hstecnologias.com, antes de "That's all, stop editing": `define( 'HS_ERP_LEADS_URL', 'https://lime-chamois-337700.hostingersite.com/api/solicitudes-web/webhook' );` y `define( 'HS_ERP_LEADS_KEY', '<mismo valor>' );` (plugin `hs-service-funnel`) |
 | `DIGICORP_AUTO_SYNC` | `1` para que la Tienda Digicorp se actualice sola cada mes (DIGI-01). Sin ella, solo con "Actualizar ahora" (Gerencia). La primera carga tarda unos 3 minutos (≈50 páginas, una cada 3 s); si Digicorp bloquea, se detiene y lo muestra en la pestaña |
 
 `PORT` lo pone Hostinger. Después de cambiar variables: **Reiniciar** el sitio (Guardar no basta).
@@ -98,9 +98,10 @@ Volver atrás: `git revert` del cambio en `release` y push (se publica de nuevo 
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| Log con `$ vite build` o `spawn …/esbuild EACCES` | Framework = Vite o comando de build lleno | Framework **Other**, build **vacío** |
+| Log con `$ vite build` o `spawn …/esbuild EACCES` | Framework = Vite o comando de build lleno (pasó en la web el 2026-10-28: `build_script` = `build`) | Framework **Other**, build **vacío** (hPanel o la API de Hostinger: `build_script` null) |
 | `ERR_PNPM_IGNORED_BUILDS` y falla la instalación | pnpm 11 bloquea los scripts de Prisma | ya resuelto con `allowBuilds` en `apps/api/pnpm-workspace.yaml`; si reaparece, revisar que la raíz sea `apps/api` |
 | `ERR_PNPM_OUTDATED_LOCKFILE` / `frozen-lockfile` | se subió algo a mano a `migration/backend-api` sin pasar por el workflow | publicar de nuevo desde `release` (el workflow genera `apps/*/pnpm-lock.yaml`) |
+| `Cannot find module '@foliojs-fork/pdfkit'` / `'jszip'` (venta, Excel) | Hostinger corre Node conservando los enlaces simbólicos y pnpm instala con enlaces | `nodeLinker: hoisted` en `apps/api/pnpm-workspace.yaml` (FIX-01) |
 | Página 404 de Hostinger | archivo de entrada vacío | API `dist/main.js`, web `serve-dist.mjs` |
 | `/api/health` 503 | la API no arrancó: falta `JWT_SECRET` o `CORS_ORIGIN`, o variable en minúsculas | revisar variables y **Reiniciar** |
 | `/api/health/db` con `"db":false` | `DATABASE_URL` mal armada (caracteres especiales en la contraseña) | cambiar la contraseña a letras y números, rearmar la URL, reiniciar |
